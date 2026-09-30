@@ -1,0 +1,9 @@
+capacity,version,us_per_op,hit_rate
+16,list (v1),0.246,0.946
+16,OrderedDict (v2),0.151,0.946
+64,list (v1),0.554,0.987
+64,OrderedDict (v2),0.160,0.987
+256,list (v1),0.855,0.992
+256,OrderedDict (v2),0.138,0.992
+1024,list (v1),0.864,0.992
+1024,OrderedDict (v2),0.146,0.992

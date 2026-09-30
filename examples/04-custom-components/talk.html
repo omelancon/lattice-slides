@@ -1,0 +1,1076 @@
+<!doctype html>
+<html lang="en" data-lattice="1" data-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="lattice 0.2.2">
+<title>Extending Lattice</title>
+<style>:root{--lt-w:1280px;--lt-h:720px}</style>
+<style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--lt-backdrop);color:var(--lt-ink);overflow:hidden}
+body{font-family:var(--lt-font-body);-webkit-font-smoothing:antialiased}
+#lt-root{position:fixed;inset:0;display:flex}
+#lt-stage{position:relative;flex:1;overflow:hidden}
+#lt-viewport{position:absolute;left:0;top:0;width:var(--lt-w);height:var(--lt-h);transform-origin:0 0;
+  background:var(--lt-bg);overflow:hidden;box-shadow:0 0 0 1px var(--lt-rule)}
+html:not(.lt-ready) #lt-viewport{visibility:hidden}
+
+/* slides */
+.lt-slide{position:absolute;inset:0;padding:54px 72px 70px;display:flex;flex-direction:column;
+  font-size:28px;line-height:1.45}
+.lt-slide[hidden]{display:none}
+.lt-head{flex:none;margin-bottom:22px}
+.lt-title{font-family:var(--lt-font-head);font-weight:650;font-size:46px;line-height:1.12;margin:0;
+  letter-spacing:-.01em;color:var(--lt-ink)}
+.lt-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:18px}
+.lt-body>*{margin:0}
+.lt-body p{margin:0}
+.lt-body ul,.lt-body ol{margin:0;padding-left:1.1em}
+.lt-body li{margin:.18em 0}
+.lt-body li::marker{color:var(--lt-accent)}
+.lt-body h2{font-family:var(--lt-font-head);font-size:34px;font-weight:600;margin:0}
+.lt-body h3{font-family:var(--lt-font-head);font-size:28px;font-weight:600;margin:0;color:var(--lt-muted)}
+.lt-body a{color:var(--lt-accent);text-decoration-thickness:2px;text-underline-offset:4px}
+.lt-body img{max-width:100%;max-height:100%;object-fit:contain}
+.lt-body blockquote{margin:0;padding-left:24px;border-left:4px solid var(--lt-rule);color:var(--lt-muted)}
+.lt-body table{border-collapse:collapse;font-size:24px}
+.lt-body th,.lt-body td{padding:8px 16px;border-bottom:1px solid var(--lt-rule);text-align:left}
+.lt-body th{color:var(--lt-muted);font-weight:600}
+.lt-body code{font-family:var(--lt-font-code);font-size:.86em;background:var(--lt-panel);padding:.08em .3em;border-radius:4px}
+.lt-body hr{border:0;border-top:2px solid var(--lt-rule);width:100%}
+.lt-muted{color:var(--lt-muted)}
+kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-width:1.6em;padding:.05em .4em;
+  border:1.5px solid currentColor;border-radius:5px;text-align:center;line-height:1.3;opacity:.85}
+
+/* layouts and helper classes */
+.layout-title{justify-content:center;padding-left:110px}
+.layout-title .lt-title{font-size:72px;max-width:18ch}
+.layout-title .lt-body{flex:none;margin-top:18px;color:var(--lt-muted);font-size:30px}
+.lt-slide.center .lt-body{justify-content:center;align-items:center;text-align:center}
+.lt-slide.fullbleed{padding:0}
+.lt-slide.fullbleed .lt-body{gap:0}
+.lt-slide.small .lt-body{font-size:24px}
+
+/* detour slides carry a side rail: you are off the main road */
+.lt-slide.lt-in-detour::before{content:"";position:absolute;left:0;top:0;bottom:0;width:10px;background:var(--lt-detour)}
+
+/* reveal */
+[data-lt-reveal]{transition:opacity .25s ease}
+.lt-hidden{opacity:0;visibility:hidden}
+
+/* columns and callouts */
+.lt-columns{display:flex;gap:40px;min-height:0;flex:1}
+.lt-column{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:16px}
+/* a table never spills into the next column: if it cannot fit, it scrolls inside its own */
+.lt-column table{display:block;max-width:100%;overflow-x:auto}
+.lt-callout{padding:16px 22px;border-radius:10px;background:var(--lt-panel);border-left:6px solid var(--lt-accent)}
+.lt-callout-warn{border-left-color:var(--lt-warn)}
+.lt-callout-tip{border-left-color:var(--lt-good)}
+
+/* detour badges and branch menus */
+.lt-detour-badge{align-self:flex-start;display:inline-flex;align-items:center;gap:12px;font:inherit;font-size:21px;
+  color:var(--lt-detour-ink);background:transparent;border:2px dashed var(--lt-detour);border-radius:999px;
+  padding:6px 18px 6px 12px;cursor:pointer}
+.lt-detour-badge::before{content:"\2193";font-weight:700}
+.lt-detour-badge:hover,.lt-detour-badge:focus-visible{background:var(--lt-detour-soft);outline:none}
+.lt-branch{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+.lt-branch-opt{display:grid;grid-template-columns:auto 1fr;align-items:baseline;column-gap:18px;text-align:left;
+  font:inherit;font-size:28px;color:var(--lt-ink);background:var(--lt-panel);border:0;border-radius:10px;
+  padding:14px 22px;cursor:pointer;border-left:6px solid var(--lt-accent)}
+.lt-branch-opt:hover,.lt-branch-opt:focus-visible{background:var(--lt-accent-soft);outline:none}
+.lt-branch-opt kbd{color:var(--lt-accent)}
+.lt-branch-desc{grid-column:2;font-size:20px;color:var(--lt-muted)}
+.lt-branch-cards{flex-direction:row}
+.lt-branch-cards .lt-branch-opt{flex:1;grid-template-columns:1fr;row-gap:8px;border-left:0;border-top:6px solid var(--lt-accent)}
+.lt-branch-cards .lt-branch-desc{grid-column:1}
+.lt-branch-cards kbd{justify-self:start}
+.lt-branch-cards .lt-branch-opt{align-content:start}
+
+/* components */
+.lt-c{min-height:0;display:flex;flex-direction:column}
+.lt-code{background:var(--lt-code-bg);border-radius:10px;overflow:hidden;min-height:0;display:flex;flex-direction:column}
+.lt-code-title{font-family:var(--lt-font-code);font-size:16px;color:var(--lt-muted);padding:10px 20px 0}
+.lt-code pre{margin:0;padding:16px 0;overflow:auto;font-family:var(--lt-font-code);font-size:19px;line-height:1.5;
+  background:transparent !important}
+.lt-code code{background:none;padding:0;font-size:inherit}
+.lt-line{display:block;padding:0 22px;white-space:pre;transition:opacity .2s,background-color .2s;border-left:4px solid transparent}
+.lt-has-hl .lt-line{opacity:.38}
+.lt-has-hl .lt-line.lt-hl,.lt-line.lt-hl{opacity:1;background:var(--lt-hl-bg);border-left-color:var(--lt-hl)}
+.lt-column .lt-code pre{font-size:16.5px}
+.lt-ln{display:inline-block;width:2.6em;margin-left:-.4em;color:var(--lt-muted);opacity:.6;user-select:none}
+.lt-c-plot,.lt-c-dot{flex:1 1 0;min-height:120px}
+.lt-plot,.lt-dot{height:100%;display:flex;justify-content:center;color:var(--lt-ink)}
+.lt-dot svg text{fill:currentColor}
+.lt-plot svg,.lt-dot svg{height:100%;width:auto;max-width:100%;display:block}
+.lt-plot-vega,.lt-plot-plotly{height:auto;align-items:center}
+.lt-plot-vega svg{height:auto}
+.lt-diff-sign{display:inline-block;width:1.4em;color:var(--lt-muted);user-select:none}
+.lt-diff-add{background:var(--lt-add-bg)}
+.lt-diff-add .lt-diff-sign{color:var(--lt-good)}
+.lt-diff-del{background:var(--lt-del-bg);text-decoration:line-through;text-decoration-color:var(--lt-warn);opacity:.75}
+.lt-diff-del .lt-diff-sign{color:var(--lt-warn)}
+.lt-diff-gap{color:var(--lt-muted)}
+.lt-diff-stat{float:right;margin-left:20px}
+.lt-diff-pane[hidden]{display:none}
+.lt-diff-pane{display:flex;flex-direction:column;min-height:0}
+.lt-math-block{text-align:center;font-size:1.1em}
+.lt-error{color:var(--lt-warn);font-family:var(--lt-font-code);font-size:18px;border:2px dashed var(--lt-warn);padding:12px}
+
+/* graph and array animations */
+.lt-graph-anim,.lt-array-anim{container-type:inline-size;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+.lt-ga-main,.lt-aa-main{display:flex;gap:28px;min-height:0;flex:1;align-items:center}
+.lt-ga-canvas{flex:1;min-width:0;height:430px;display:flex}
+.lt-ga-svg{width:100%;height:100%;margin:0 auto}
+@container (max-width: 760px){
+  .lt-ga-main{flex-direction:column;align-items:stretch;gap:12px}
+  .lt-ga-panel{max-width:none;flex-direction:row;flex-wrap:wrap;gap:12px 28px}
+}
+.lt-ga-caption{font-size:22px;color:var(--lt-muted);min-height:1.5em;font-style:italic}
+.lt-ga-panel{flex:none;display:flex;flex-direction:column;gap:14px;font-size:19px;max-width:40%}
+.lt-pv-name{font-family:var(--lt-font-code);font-size:15px;color:var(--lt-muted);margin-bottom:4px}
+.lt-pv-map{border-collapse:collapse;font-family:var(--lt-font-code);font-size:18px}
+.lt-pv-map th{font-weight:600;color:var(--lt-muted);padding:2px 10px;border-bottom:1px solid var(--lt-rule)}
+.lt-pv-map td{padding:4px 10px;text-align:center}
+.lt-pv-list{display:flex;flex-wrap:wrap;gap:6px;font-family:var(--lt-font-code);font-size:18px}
+.lt-pv-list span{background:var(--lt-panel);padding:2px 10px;border-radius:6px}
+.lt-pv-scalar{font-family:var(--lt-font-code)}
+
+.lt-edge path{fill:none;stroke:var(--lt-edge);stroke-width:2.2}
+.lt-edge-label{font-family:var(--lt-font-code);font-size:13px;fill:var(--lt-muted);paint-order:stroke;stroke:var(--lt-bg);stroke-width:5px}
+.lt-node circle{fill:var(--lt-bg);stroke:var(--lt-edge);stroke-width:2.4}
+.lt-node-name{font-family:var(--lt-font-head);font-weight:650;font-size:15px;fill:var(--lt-ink)}
+.lt-node-badge{font-family:var(--lt-font-code);font-size:13px;font-weight:600;fill:var(--lt-accent)}
+.lt-arrow path{fill:var(--lt-edge)}
+.lt-animate .lt-node circle,.lt-animate .lt-edge path,.lt-animate .lt-node-name{transition:fill .3s,stroke .3s,stroke-width .3s,opacity .3s}
+.lt-node.st-active circle{fill:var(--lt-active);stroke:var(--lt-active)}
+.lt-node.st-active .lt-node-name{fill:var(--lt-on-strong)}
+.lt-node.st-frontier circle{fill:var(--lt-frontier-soft);stroke:var(--lt-frontier);stroke-dasharray:4 3}
+.lt-node.st-visited circle,.lt-node.st-done circle{fill:var(--lt-accent);stroke:var(--lt-accent)}
+.lt-node.st-visited .lt-node-name,.lt-node.st-done .lt-node-name{fill:var(--lt-on-strong)}
+.lt-node.st-path circle{fill:var(--lt-good);stroke:var(--lt-good)}
+.lt-node.st-path .lt-node-name{fill:var(--lt-on-strong)}
+.lt-node.st-error circle{fill:var(--lt-warn);stroke:var(--lt-warn)}
+.lt-node.st-dim{opacity:.35}
+.lt-edge.st-active path{stroke:var(--lt-active);stroke-width:4}
+.lt-arrow.st-active path{fill:var(--lt-active)}
+.lt-edge.st-tree path,.lt-edge.st-visited path{stroke:var(--lt-accent);stroke-width:3.6}
+.lt-arrow.st-tree path,.lt-arrow.st-visited path{fill:var(--lt-accent)}
+.lt-edge.st-path path{stroke:var(--lt-good);stroke-width:5}
+.lt-arrow.st-path path{fill:var(--lt-good)}
+.lt-edge.st-frontier path{stroke:var(--lt-frontier);stroke-dasharray:6 5}
+.lt-edge.st-dim{opacity:.25}
+.lt-edge.st-error path{stroke:var(--lt-warn)}
+.lt-gone{opacity:0}
+
+.lt-aa{flex:1;display:flex;flex-direction:column;gap:6px}
+.lt-aa-row,.lt-aa-ptr{display:grid;gap:8px}
+.lt-cell{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;height:250px;text-align:center}
+.lt-bar{background:var(--lt-cell);border-radius:6px 6px 2px 2px;margin:0 4px}
+.lt-v{font-family:var(--lt-font-code);font-size:22px;font-weight:600;padding:6px 0 0}
+.lt-i{font-family:var(--lt-font-code);font-size:14px;color:var(--lt-muted)}
+.lt-animate .lt-bar{transition:height .3s,background-color .3s}
+.lt-cell.st-compare .lt-bar{background:var(--lt-active)}
+.lt-cell.st-swap .lt-bar{background:var(--lt-warn)}
+.lt-cell.st-sorted .lt-bar,.lt-cell.st-done .lt-bar{background:var(--lt-accent)}
+.lt-cell.st-pivot .lt-bar{background:var(--lt-frontier)}
+.lt-cell.st-dim{opacity:.35}
+.lt-aa-ptr div{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:26px}
+.lt-aa-ptr span{font-family:var(--lt-font-code);font-size:16px;color:var(--lt-accent);font-weight:600}
+.lt-aa-ptr span::before{content:"\25B2 ";font-size:11px}
+
+/* HUD: where you are in the graph */
+#lt-hud{position:absolute;left:0;right:0;bottom:0;height:46px;padding:0 28px 0 72px;display:flex;align-items:center;
+  justify-content:space-between;gap:24px;font-size:16px;color:var(--lt-muted);border-top:1px solid var(--lt-rule);
+  background:var(--lt-bg)}
+#lt-crumbs{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#lt-crumbs b{color:var(--lt-ink);font-weight:600}
+.lt-sep{margin:0 10px;color:var(--lt-detour-ink)}
+#lt-progress{display:flex;align-items:center;gap:22px;white-space:nowrap}
+.lt-hint{display:inline-flex;align-items:center;gap:8px}
+.lt-hint kbd{font-size:13px}
+.lt-where{font-family:var(--lt-font-code);font-size:15px}
+.lt-steps{display:inline-flex;gap:5px}
+.lt-steps i{width:7px;height:7px;border-radius:50%;background:var(--lt-rule)}
+.lt-steps i.on{background:var(--lt-accent)}
+#lt-flash{position:absolute;left:50%;bottom:66px;transform:translate(-50%,8px);background:var(--lt-ink);color:var(--lt-bg);
+  padding:8px 18px;border-radius:8px;font-size:18px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
+#lt-flash.on{opacity:1;transform:translate(-50%,0)}
+
+/* overlays */
+#lt-overlay{position:fixed;inset:0;background:var(--lt-scrim);display:flex;align-items:flex-start;justify-content:center;
+  padding:6vh 20px;z-index:10;overflow:auto}
+#lt-overlay[hidden]{display:none}
+.lt-panel{background:var(--lt-bg);color:var(--lt-ink);border-radius:14px;padding:26px 30px;width:min(760px,100%);
+  box-shadow:0 20px 60px rgba(0,0,0,.25);font-size:16px}
+.lt-panel h2{margin:0 0 12px;font-family:var(--lt-font-head);font-size:22px}
+.lt-panel h3{margin:18px 0 8px;font-size:15px;color:var(--lt-muted);font-weight:600}
+.lt-overview{width:min(1200px,100%)}
+.lt-ov-map{overflow:auto;max-height:46vh;margin:0 0 16px;padding:8px;border-radius:10px;background:var(--lt-panel)}
+.lt-ov-map svg{display:block}
+.lt-ov-edges path{fill:none;stroke:var(--lt-edge);stroke-width:1.3}
+.lt-ov-edges path.k-branch{stroke:var(--lt-accent)}
+.lt-ov-edges path.k-detour{stroke:var(--lt-detour);stroke-dasharray:4 3}
+.lt-ov-edges path.k-link{stroke-dasharray:1.5 3}
+#lt-ov-arrow path{fill:var(--lt-edge)}
+.lt-ovn{cursor:pointer}
+.lt-ovn rect{fill:var(--lt-bg);stroke:var(--lt-edge);stroke-width:1.2}
+.lt-ovn text{font-size:11px;fill:var(--lt-ink);text-anchor:middle;dominant-baseline:central;font-family:var(--lt-font-body)}
+.lt-ovn.detour rect{stroke:var(--lt-detour);stroke-dasharray:4 2}
+.lt-ovn.offpath rect{stroke-dasharray:2 3}
+.lt-ovn.visited rect{fill:var(--lt-accent-soft)}
+.lt-ovn.current rect{fill:var(--lt-accent);stroke:var(--lt-accent)}
+.lt-ovn.current text{fill:var(--lt-on-strong);font-weight:600}
+.lt-ovn:hover rect{stroke:var(--lt-accent);stroke-width:2}
+.lt-overview ol,.lt-overview ul{list-style:none;margin:0;padding:0}
+.lt-ov-main>li{margin:2px 0}
+.lt-ov-detour,.lt-ov-branch{margin-left:26px !important;padding-left:14px !important;border-left:2px dashed var(--lt-detour) !important}
+.lt-ov-branch{border-left-style:solid !important;border-left-color:var(--lt-accent) !important}
+.lt-ov-label{color:var(--lt-muted);font-size:14px;padding:4px 0}
+.lt-ov-item{font:inherit;color:inherit;background:none;border:0;padding:4px 10px;border-radius:6px;cursor:pointer;text-align:left;width:100%}
+.lt-ov-item:hover,.lt-ov-item:focus-visible{background:var(--lt-panel);outline:none}
+.lt-ov-item.current{background:var(--lt-accent-soft);font-weight:600}
+.lt-goto input{width:100%;font:inherit;font-size:20px;padding:10px 14px;border:2px solid var(--lt-rule);border-radius:8px;
+  background:var(--lt-bg);color:var(--lt-ink)}
+.lt-goto input:focus{outline:none;border-color:var(--lt-accent)}
+.lt-goto ul{list-style:none;margin:10px 0 0;padding:0}
+.lt-goto button{display:flex;justify-content:space-between;width:100%;font:inherit;color:inherit;background:none;border:0;
+  padding:8px 12px;border-radius:6px;cursor:pointer;text-align:left}
+.lt-goto li.sel button,.lt-goto button:hover{background:var(--lt-accent-soft)}
+.lt-goto small{color:var(--lt-muted);font-family:var(--lt-font-code)}
+
+/* presenter view */
+.lt-presenter #lt-stage{flex:0 0 64%}
+#lt-presenter-panel{flex:1;overflow:auto;padding:24px 28px;background:var(--lt-panel);color:var(--lt-ink);font-size:17px;
+  border-left:1px solid var(--lt-rule)}
+#lt-presenter-panel[hidden]{display:none}
+#lt-presenter-panel h3{font-size:14px;color:var(--lt-muted);margin:22px 0 8px;font-weight:600}
+.lt-pp-top{display:flex;gap:18px;align-items:baseline;justify-content:space-between}
+.lt-pp-timer{font-family:var(--lt-font-code);font-size:30px;font-weight:600;cursor:pointer}
+.lt-pp-moves{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+.lt-pp-moves kbd{margin-right:10px;color:var(--lt-accent)}
+.lt-pp-notes{font-size:19px;line-height:1.5}
+.lt-pp-notes a{color:var(--lt-accent)}
+
+/* transitions */
+@keyframes lt-slide-in{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+@keyframes lt-slide-back{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
+@keyframes lt-zoom-in{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+@keyframes lt-zoom-out{from{opacity:0;transform:scale(1.05)}to{opacity:1;transform:none}}
+@keyframes lt-fade{from{opacity:0}to{opacity:1}}
+.lt-anim-slide{animation:lt-slide-in .28s ease-out}
+.lt-anim-slide-back{animation:lt-slide-back .28s ease-out}
+.lt-anim-zoom-in{animation:lt-zoom-in .3s ease-out}
+.lt-anim-zoom-out{animation:lt-zoom-out .3s ease-out}
+.lt-anim-fade{animation:lt-fade .25s ease-out}
+@media (prefers-reduced-motion:reduce){.lt-slide{animation:none !important}}
+/* Default light theme: cool paper, teal accent, amber for "happening now". */
+:root{
+  --lt-backdrop:#d9dde4;--lt-bg:#f7f8fa;--lt-panel:#eceff3;--lt-code-bg:#eef1f5;--lt-rule:#d5dae2;
+  --lt-ink:#1d2433;--lt-muted:#5d6778;--lt-accent:#0b6e7f;--lt-accent-soft:#d5ecef;
+  --lt-active:#c8741a;--lt-frontier:#6a4fb3;--lt-frontier-soft:#ebe5f7;--lt-good:#2f8f4e;--lt-warn:#b23a48;
+  --lt-edge:#98a2b3;--lt-cell:#b7c0cd;--lt-on-strong:#ffffff;
+  --lt-add-bg:#e3f3e7;--lt-del-bg:#fbe6e8;
+  --lt-hl:#c8741a;--lt-hl-bg:#fbeedd;
+  --lt-detour:#8b7bc4;--lt-detour-ink:#5b4a9c;--lt-detour-soft:#efeaf9;
+  --lt-scrim:rgba(29,36,51,.45);
+  --lt-font-head:"Avenir Next","Segoe UI Variable Display","Segoe UI","Helvetica Neue",system-ui,sans-serif;
+  --lt-font-body:"Avenir Next","Segoe UI","Helvetica Neue",system-ui,sans-serif;
+  --lt-font-code:"JetBrains Mono","SF Mono","Cascadia Code",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+pre { line-height: 125%; }
+td.linenos .normal { color: #666666; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: #666666; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.lt-code pre .hll { background-color: #ffffcc }
+.lt-code pre { background: #f0f0f0; }
+.lt-code pre .c { color: #60A0B0; font-style: italic } /* Comment */
+.lt-code pre .err { border: 1px solid #F00 } /* Error */
+.lt-code pre .k { color: #007020; font-weight: bold } /* Keyword */
+.lt-code pre .o { color: #666 } /* Operator */
+.lt-code pre .ch { color: #60A0B0; font-style: italic } /* Comment.Hashbang */
+.lt-code pre .cm { color: #60A0B0; font-style: italic } /* Comment.Multiline */
+.lt-code pre .cp { color: #007020 } /* Comment.Preproc */
+.lt-code pre .cpf { color: #60A0B0; font-style: italic } /* Comment.PreprocFile */
+.lt-code pre .c1 { color: #60A0B0; font-style: italic } /* Comment.Single */
+.lt-code pre .cs { color: #60A0B0; background-color: #FFF0F0 } /* Comment.Special */
+.lt-code pre .gd { color: #A00000 } /* Generic.Deleted */
+.lt-code pre .ge { font-style: italic } /* Generic.Emph */
+.lt-code pre .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.lt-code pre .gr { color: #F00 } /* Generic.Error */
+.lt-code pre .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.lt-code pre .gi { color: #00A000 } /* Generic.Inserted */
+.lt-code pre .go { color: #888 } /* Generic.Output */
+.lt-code pre .gp { color: #C65D09; font-weight: bold } /* Generic.Prompt */
+.lt-code pre .gs { font-weight: bold } /* Generic.Strong */
+.lt-code pre .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.lt-code pre .gt { color: #04D } /* Generic.Traceback */
+.lt-code pre .kc { color: #007020; font-weight: bold } /* Keyword.Constant */
+.lt-code pre .kd { color: #007020; font-weight: bold } /* Keyword.Declaration */
+.lt-code pre .kn { color: #007020; font-weight: bold } /* Keyword.Namespace */
+.lt-code pre .kp { color: #007020 } /* Keyword.Pseudo */
+.lt-code pre .kr { color: #007020; font-weight: bold } /* Keyword.Reserved */
+.lt-code pre .kt { color: #902000 } /* Keyword.Type */
+.lt-code pre .m { color: #40A070 } /* Literal.Number */
+.lt-code pre .s { color: #4070A0 } /* Literal.String */
+.lt-code pre .na { color: #4070A0 } /* Name.Attribute */
+.lt-code pre .nb { color: #007020 } /* Name.Builtin */
+.lt-code pre .nc { color: #0E84B5; font-weight: bold } /* Name.Class */
+.lt-code pre .no { color: #60ADD5 } /* Name.Constant */
+.lt-code pre .nd { color: #555; font-weight: bold } /* Name.Decorator */
+.lt-code pre .ni { color: #D55537; font-weight: bold } /* Name.Entity */
+.lt-code pre .ne { color: #007020 } /* Name.Exception */
+.lt-code pre .nf { color: #06287E } /* Name.Function */
+.lt-code pre .nl { color: #002070; font-weight: bold } /* Name.Label */
+.lt-code pre .nn { color: #0E84B5; font-weight: bold } /* Name.Namespace */
+.lt-code pre .nt { color: #062873; font-weight: bold } /* Name.Tag */
+.lt-code pre .nv { color: #BB60D5 } /* Name.Variable */
+.lt-code pre .ow { color: #007020; font-weight: bold } /* Operator.Word */
+.lt-code pre .w { color: #BBB } /* Text.Whitespace */
+.lt-code pre .mb { color: #40A070 } /* Literal.Number.Bin */
+.lt-code pre .mf { color: #40A070 } /* Literal.Number.Float */
+.lt-code pre .mh { color: #40A070 } /* Literal.Number.Hex */
+.lt-code pre .mi { color: #40A070 } /* Literal.Number.Integer */
+.lt-code pre .mo { color: #40A070 } /* Literal.Number.Oct */
+.lt-code pre .sa { color: #4070A0 } /* Literal.String.Affix */
+.lt-code pre .sb { color: #4070A0 } /* Literal.String.Backtick */
+.lt-code pre .sc { color: #4070A0 } /* Literal.String.Char */
+.lt-code pre .dl { color: #4070A0 } /* Literal.String.Delimiter */
+.lt-code pre .sd { color: #4070A0; font-style: italic } /* Literal.String.Doc */
+.lt-code pre .s2 { color: #4070A0 } /* Literal.String.Double */
+.lt-code pre .se { color: #4070A0; font-weight: bold } /* Literal.String.Escape */
+.lt-code pre .sh { color: #4070A0 } /* Literal.String.Heredoc */
+.lt-code pre .si { color: #70A0D0; font-style: italic } /* Literal.String.Interpol */
+.lt-code pre .sx { color: #C65D09 } /* Literal.String.Other */
+.lt-code pre .sr { color: #235388 } /* Literal.String.Regex */
+.lt-code pre .s1 { color: #4070A0 } /* Literal.String.Single */
+.lt-code pre .ss { color: #517918 } /* Literal.String.Symbol */
+.lt-code pre .bp { color: #007020 } /* Name.Builtin.Pseudo */
+.lt-code pre .fm { color: #06287E } /* Name.Function.Magic */
+.lt-code pre .vc { color: #BB60D5 } /* Name.Variable.Class */
+.lt-code pre .vg { color: #BB60D5 } /* Name.Variable.Global */
+.lt-code pre .vi { color: #BB60D5 } /* Name.Variable.Instance */
+.lt-code pre .vm { color: #BB60D5 } /* Name.Variable.Magic */
+.lt-code pre .il { color: #40A070 } /* Literal.Number.Integer.Long *//* Styles shipped with the local plugins; they use the theme's custom properties. */
+.truth-table{border-collapse:collapse;font-family:var(--lt-font-code);font-size:22px}
+.truth-table th{white-space:nowrap;font-weight:600;vertical-align:bottom;color:var(--lt-muted);padding:6px 18px;border-bottom:2px solid var(--lt-rule)}
+.truth-table th.wrap{white-space:normal;min-width:12ch}
+.truth-table td{text-align:center;padding:5px 18px}
+.truth-table td.t{color:var(--lt-accent);font-weight:700}
+.truth-table td.f{color:var(--lt-muted)}
+.cs-frames{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-height:300px;justify-content:flex-end}
+.cs-frames li{display:flex;justify-content:space-between;gap:20px;padding:10px 16px;border-radius:8px;
+  background:var(--lt-panel);font-size:20px;border-left:6px solid var(--lt-rule)}
+.cs-frames li.top{border-left-color:var(--lt-active)}
+.cs-frames li.ret{border-left-color:var(--lt-good)}
+.cs-frames li span{color:var(--lt-muted);font-size:17px}
+.cs-caption{font-style:italic;color:var(--lt-muted);font-size:22px;margin:12px 0 0}
+</style>
+
+</head>
+<body>
+<div id="lt-root">
+<main id="lt-stage"><div id="lt-viewport">
+<section class="lt-slide layout-title" id="s-extending-lattice" data-slide="extending-lattice" hidden><header class="lt-head"><h1 class="lt-title">Extending Lattice</h1></header><div class="lt-body"><p>Two custom components, written in a single <code>lattice_plugins.py</code> next to this deck.</p>
+</div></section>
+<section class="lt-slide layout-default" id="s-plugin-file" data-slide="plugin-file" hidden><header class="lt-head"><h1 class="lt-title">A plugin is a Python file</h1></header><div class="lt-body"><div class="lt-c lt-c-code-steps" data-component="code-steps" data-instance="plugin-file/c1"><div class="lt-code" data-lang="python"><pre><code><span class="lt-line" data-line="16"><span class="lt-ln">16</span><span class="nd">@register</span><span class="p">(</span><span class="s2">&quot;truth-table&quot;</span><span class="p">)</span></span><span class="lt-line" data-line="17"><span class="lt-ln">17</span><span class="k">class</span><span class="w"> </span><span class="nc">TruthTable</span><span class="p">(</span><span class="n">Component</span><span class="p">):</span></span><span class="lt-line" data-line="18"><span class="lt-ln">18</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;A static component: one boolean expression per line of the body.&quot;&quot;&quot;</span></span><span class="lt-line" data-line="19"><span class="lt-ln">19</span>    <span class="n">Options</span> <span class="o">=</span> <span class="n">TruthTableOptions</span></span><span class="lt-line" data-line="20"><span class="lt-ln">20</span>    <span class="n">body</span> <span class="o">=</span> <span class="s2">&quot;text&quot;</span></span><span class="lt-line" data-line="21"><span class="lt-ln">21</span>    <span class="n">css</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="s2">&quot;plugins.css&quot;</span><span class="p">))]</span></span><span class="lt-line" data-line="22"><span class="lt-ln">22</span> </span><span class="lt-line" data-line="23"><span class="lt-ln">23</span>    <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">opts</span><span class="p">,</span> <span class="n">ctx</span><span class="p">):</span></span><span class="lt-line" data-line="24"><span class="lt-ln">24</span>        <span class="n">exprs</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">block</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span></span><span class="lt-line" data-line="25"><span class="lt-ln">25</span>        <span class="k">if</span> <span class="ow">not</span> <span class="n">exprs</span><span class="p">:</span></span><span class="lt-line" data-line="26"><span class="lt-ln">26</span>            <span class="k">raise</span> <span class="n">ComponentError</span><span class="p">(</span><span class="s2">&quot;write one boolean expression per line&quot;</span><span class="p">)</span></span><span class="lt-line" data-line="27"><span class="lt-ln">27</span>        <span class="n">trees</span> <span class="o">=</span> <span class="p">[</span><span class="n">ast</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;eval&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">exprs</span><span class="p">]</span></span><span class="lt-line" data-line="28"><span class="lt-ln">28</span>        <span class="n">names</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">n</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trees</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">ast</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Name</span><span class="p">)})</span></span><span class="lt-line" data-line="29"><span class="lt-ln">29</span>        <span class="n">cell</span> <span class="o">=</span> <span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span> <span class="k">if</span> <span class="n">v</span> <span class="k">else</span> <span class="s2">&quot;0&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">opts</span><span class="o">.</span><span class="n">symbols</span> <span class="k">else</span> <span class="nb">str</span></span><span class="lt-line" data-line="30"><span class="lt-ln">30</span>        <span class="n">head</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&lt;th class=&quot;</span><span class="si">{</span><span class="s2">&quot;wrap&quot;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">14</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="si">}</span><span class="s1">&quot;&gt;</span><span class="si">{</span><span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="si">}</span><span class="s1">&lt;/th&gt;&#39;</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">names</span> <span class="o">+</span> <span class="n">exprs</span><span class="p">)</span></span><span class="lt-line" data-line="31"><span class="lt-ln">31</span>        <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span></span><span class="lt-line" data-line="32"><span class="lt-ln">32</span>        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)):</span></span><span class="lt-line" data-line="33"><span class="lt-ln">33</span>            <span class="n">env</span> <span class="o">=</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="n">i</span> <span class="o">&gt;&gt;</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">k</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">names</span><span class="p">)}</span></span><span class="lt-line" data-line="34"><span class="lt-ln">34</span>            <span class="n">vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">env</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span><span class="p">]</span></span><span class="lt-line" data-line="35"><span class="lt-ln">35</span>            <span class="n">vals</span> <span class="o">+=</span> <span class="p">[</span><span class="nb">eval</span><span class="p">(</span><span class="nb">compile</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="s2">&quot;&lt;expr&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;eval&quot;</span><span class="p">),</span> <span class="p">{</span><span class="s2">&quot;__builtins__&quot;</span><span class="p">:</span> <span class="p">{}},</span> <span class="n">env</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trees</span><span class="p">]</span></span><span class="lt-line" data-line="36"><span class="lt-ln">36</span>            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&lt;td class=&quot;</span><span class="si">{</span><span class="s2">&quot;t&quot;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;f&quot;</span><span class="si">}</span><span class="s1">&quot;&gt;</span><span class="si">{</span><span class="n">cell</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="si">}</span><span class="s1">&lt;/td&gt;&#39;</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vals</span><span class="p">))</span></span><span class="lt-line" data-line="37"><span class="lt-ln">37</span>        <span class="n">body</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&lt;tr&gt;</span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s2">&lt;/tr&gt;&quot;</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">)</span></span><span class="lt-line" data-line="38"><span class="lt-ln">38</span>        <span class="k">return</span> <span class="n">RenderResult</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&lt;table class=&quot;truth-table&quot;&gt;&lt;tr&gt;</span><span class="si">{</span><span class="n">head</span><span class="si">}</span><span class="s1">&lt;/tr&gt;</span><span class="si">{</span><span class="n">body</span><span class="si">}</span><span class="s1">&lt;/table&gt;&#39;</span><span class="p">)</span></span><span class="lt-line" data-line="39"><span class="lt-ln">39</span> </span><span class="lt-line" data-line="40"><span class="lt-ln">40</span> </span><span class="lt-line" data-line="41"><span class="lt-ln">41</span><span class="k">class</span><span class="w"> </span><span class="nc">CallStackOptions</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span></span><span class="lt-line" data-line="42"><span class="lt-ln">42</span>    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">extra</span><span class="o">=</span><span class="s2">&quot;allow&quot;</span><span class="p">)</span></span><span class="lt-line" data-line="43"><span class="lt-ln">43</span>    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span></span><span class="lt-line" data-line="44"><span class="lt-ln">44</span> </span><span class="lt-line" data-line="45"><span class="lt-ln">45</span> </span><span class="lt-line" data-line="46"><span class="lt-ln">46</span><span class="nd">@register</span><span class="p">(</span><span class="s2">&quot;call-stack&quot;</span><span class="p">)</span></span><span class="lt-line" data-line="47"><span class="lt-ln">47</span><span class="k">class</span><span class="w"> </span><span class="nc">CallStack</span><span class="p">(</span><span class="n">Component</span><span class="p">):</span></span><span class="lt-line" data-line="48"><span class="lt-ln">48</span><span class="w">    </span><span class="sd">&quot;&quot;&quot;An animated component with its own JavaScript runtime.&quot;&quot;&quot;</span></span><span class="lt-line" data-line="49"><span class="lt-ln">49</span>    <span class="n">Options</span> <span class="o">=</span> <span class="n">CallStackOptions</span></span><span class="lt-line" data-line="50"><span class="lt-ln">50</span>    <span class="n">body</span> <span class="o">=</span> <span class="s2">&quot;yaml&quot;</span></span><span class="lt-line" data-line="51"><span class="lt-ln">51</span>    <span class="n">runtime</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="s2">&quot;call_stack.js&quot;</span><span class="p">))</span></span><span class="lt-line" data-line="52"><span class="lt-ln">52</span>    <span class="n">css</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="s2">&quot;plugins.css&quot;</span><span class="p">))]</span></span><span class="lt-line" data-line="53"><span class="lt-ln">53</span> </span><span class="lt-line" data-line="54"><span class="lt-ln">54</span>    <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="n">opts</span><span class="p">,</span> <span class="n">ctx</span><span class="p">):</span></span><span class="lt-line" data-line="55"><span class="lt-ln">55</span>        <span class="n">trace</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="n">opts</span><span class="o">.</span><span class="n">source</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">opts</span><span class="o">.</span><span class="n">model_extra</span> <span class="ow">or</span> <span class="p">{}))</span></span><span class="lt-line" data-line="56"><span class="lt-ln">56</span>        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">Trace</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">trace</span><span class="p">):</span></span><span class="lt-line" data-line="57"><span class="lt-ln">57</span>            <span class="k">raise</span> <span class="n">ComponentError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">opts</span><span class="o">.</span><span class="n">source</span><span class="si">}</span><span class="s2"> must return a non-empty Trace&quot;</span><span class="p">)</span></span><span class="lt-line" data-line="58"><span class="lt-ln">58</span>        <span class="n">store</span> <span class="o">=</span> <span class="n">trace</span><span class="o">.</span><span class="n">frame_store</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">frames_config</span><span class="o">.</span><span class="n">max_full_bytes</span><span class="p">,</span> <span class="n">ctx</span><span class="o">.</span><span class="n">frames_config</span><span class="o">.</span><span class="n">keyframe_interval</span><span class="p">)</span></span><span class="lt-line" data-line="59"><span class="lt-ln">59</span>        <span class="k">return</span> <span class="n">RenderResult</span><span class="p">(</span><span class="s1">&#39;&lt;div class=&quot;call-stack&quot;&gt;&lt;/div&gt;&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;frames&quot;</span><span class="p">:</span> <span class="n">store</span><span class="p">},</span></span><span class="lt-line" data-line="60"><span class="lt-ln">60</span>                            <span class="n">positions</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">trace</span><span class="p">),</span> <span class="n">meta</span><span class="o">=</span><span class="n">trace</span><span class="o">.</span><span class="n">meta</span><span class="p">)</span></span></code></pre></div></div></div></section>
+<section class="lt-slide layout-default" id="s-truth" data-slide="truth" hidden><header class="lt-head"><h1 class="lt-title">Truth tables, computed at build time</h1></header><div class="lt-body"><div class="lt-columns"><div class="lt-column" style="flex:3 1 0"><div class="lt-c lt-c-truth-table" data-component="truth-table" data-instance="truth/c1"><table class="truth-table"><tr><th class="">a</th><th class="">b</th><th class="">a and b</th><th class="">a or b</th><th class="wrap">not (a and b) == (not a or not b)</th></tr><tr><td class="f">0</td><td class="f">0</td><td class="f">0</td><td class="f">0</td><td class="t">1</td></tr><tr><td class="f">0</td><td class="t">1</td><td class="f">0</td><td class="t">1</td><td class="t">1</td></tr><tr><td class="t">1</td><td class="f">0</td><td class="f">0</td><td class="t">1</td><td class="t">1</td></tr><tr><td class="t">1</td><td class="t">1</td><td class="t">1</td><td class="t">1</td><td class="t">1</td></tr></table></div></div><div class="lt-column" style="flex:2 1 0"><ul>
+<li data-lt-reveal="1">The body lists expressions; variables are found with <code>ast</code></li>
+<li data-lt-reveal="2">The last column checks De Morgan's law: it is always 1</li>
+<li data-lt-reveal="3">Nothing runs in the browser for this component</li>
+</ul>
+</div></div></div></section>
+<section class="lt-slide layout-default" id="s-stack" data-slide="stack" hidden><header class="lt-head"><h1 class="lt-title">The call stack of fib(4)</h1></header><div class="lt-body"><div class="lt-columns"><div class="lt-column" style="flex:5 1 0"><div class="lt-c lt-c-code" data-component="code" data-instance="stack/src"><div class="lt-code" data-lang="python"><pre><code><span class="lt-line" data-line="1"><span class="k">def</span><span class="w"> </span><span class="nf">fib</span><span class="p">(</span><span class="n">n</span><span class="p">):</span></span><span class="lt-line" data-line="2">    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span></span><span class="lt-line" data-line="3">        <span class="k">return</span> <span class="n">n</span></span><span class="lt-line" data-line="4">    <span class="k">return</span> <span class="n">fib</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">fib</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span></span></code></pre></div></div></div><div class="lt-column" style="flex:6 1 0"><div class="lt-c lt-c-call-stack" data-component="call-stack" data-instance="stack/calls"><div class="call-stack"></div></div></div></div></div></section>
+<section class="lt-slide layout-default" id="s-runtime" data-slide="runtime" hidden><header class="lt-head"><h1 class="lt-title">Its runtime, in a few lines</h1></header><div class="lt-body"><div class="lt-c lt-c-code-steps" data-component="code-steps" data-instance="runtime/c1"><div class="lt-code" data-lang="javascript"><pre><code><span class="lt-line" data-line="1"><span class="lt-ln">1</span><span class="c1">// Runtime for the `call-stack` component: draws the stack of calls, newest on top.</span></span><span class="lt-line" data-line="2"><span class="lt-ln">2</span><span class="nx">Lattice</span><span class="p">.</span><span class="nx">component</span><span class="p">(</span><span class="s2">&quot;call-stack&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span></span><span class="lt-line" data-line="3"><span class="lt-ln">3</span><span class="w">  </span><span class="nx">mount</span><span class="p">(</span><span class="nx">el</span><span class="p">,</span><span class="w"> </span><span class="nx">data</span><span class="p">,</span><span class="w"> </span><span class="nx">api</span><span class="p">)</span><span class="w"> </span><span class="p">{</span></span><span class="lt-line" data-line="4"><span class="lt-ln">4</span><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">root</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">el</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">&quot;.call-stack&quot;</span><span class="p">);</span></span><span class="lt-line" data-line="5"><span class="lt-ln">5</span><span class="w">    </span><span class="nx">root</span><span class="p">.</span><span class="nx">innerHTML</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;&lt;ol class=&quot;cs-frames&quot;&gt;&lt;/ol&gt;&lt;p class=&quot;cs-caption&quot;&gt;&lt;/p&gt;&#39;</span><span class="p">;</span></span><span class="lt-line" data-line="6"><span class="lt-ln">6</span><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">store</span><span class="o">:</span><span class="w"> </span><span class="nx">api</span><span class="p">.</span><span class="nx">frames</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">frames</span><span class="p">),</span><span class="w"> </span><span class="nx">list</span><span class="o">:</span><span class="w"> </span><span class="nx">root</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">&quot;ol&quot;</span><span class="p">),</span><span class="w"> </span><span class="nx">caption</span><span class="o">:</span><span class="w"> </span><span class="nx">root</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="s2">&quot;p&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">};</span></span><span class="lt-line" data-line="7"><span class="lt-ln">7</span><span class="w">  </span><span class="p">},</span></span><span class="lt-line" data-line="8"><span class="lt-ln">8</span><span class="w">  </span><span class="nx">show</span><span class="p">(</span><span class="nx">inst</span><span class="p">,</span><span class="w"> </span><span class="nx">position</span><span class="p">)</span><span class="w"> </span><span class="p">{</span></span><span class="lt-line" data-line="9"><span class="lt-ln">9</span><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">inst</span><span class="p">.</span><span class="nx">store</span><span class="p">.</span><span class="nx">at</span><span class="p">(</span><span class="nx">position</span><span class="p">);</span></span><span class="lt-line" data-line="10"><span class="lt-ln">10</span><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">frames</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">state</span><span class="p">.</span><span class="nx">stack</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p">[];</span></span><span class="lt-line" data-line="11"><span class="lt-ln">11</span><span class="w">    </span><span class="nx">inst</span><span class="p">.</span><span class="nx">list</span><span class="p">.</span><span class="nx">innerHTML</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">frames</span></span><span class="lt-line" data-line="12"><span class="lt-ln">12</span><span class="w">      </span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">f</span><span class="p">,</span><span class="w"> </span><span class="nx">i</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="sb">`&lt;li class=&quot;</span><span class="si">${</span><span class="nx">i</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="nx">frames</span><span class="p">.</span><span class="nx">length</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mf">1</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s2">&quot;top&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="si">}</span><span class="sb"> </span><span class="si">${</span><span class="nx">f</span><span class="p">.</span><span class="nx">ret</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s2">&quot;ret&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="si">}</span><span class="sb">&quot;&gt;`</span><span class="w"> </span><span class="o">+</span></span><span class="lt-line" data-line="13"><span class="lt-ln">13</span><span class="w">        </span><span class="sb">`&lt;code&gt;</span><span class="si">${</span><span class="nx">Lattice</span><span class="p">.</span><span class="nx">esc</span><span class="p">(</span><span class="nx">f</span><span class="p">.</span><span class="nx">call</span><span class="p">)</span><span class="si">}</span><span class="sb">&lt;/code&gt;&lt;span&gt;</span><span class="si">${</span><span class="nx">f</span><span class="p">.</span><span class="nx">ret</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s2">&quot;returns &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">Lattice</span><span class="p">.</span><span class="nx">esc</span><span class="p">(</span><span class="nx">f</span><span class="p">.</span><span class="nx">ret</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="nx">Lattice</span><span class="p">.</span><span class="nx">esc</span><span class="p">(</span><span class="nx">f</span><span class="p">.</span><span class="nx">note</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">)</span><span class="si">}</span><span class="sb">&lt;/span&gt;&lt;/li&gt;`</span><span class="p">)</span></span><span class="lt-line" data-line="14"><span class="lt-ln">14</span><span class="w">      </span><span class="p">.</span><span class="nx">reverse</span><span class="p">()</span></span><span class="lt-line" data-line="15"><span class="lt-ln">15</span><span class="w">      </span><span class="p">.</span><span class="nx">join</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">);</span></span><span class="lt-line" data-line="16"><span class="lt-ln">16</span><span class="w">    </span><span class="nx">inst</span><span class="p">.</span><span class="nx">caption</span><span class="p">.</span><span class="nx">textContent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">state</span><span class="p">.</span><span class="nx">caption</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">;</span></span><span class="lt-line" data-line="17"><span class="lt-ln">17</span><span class="w">  </span><span class="p">},</span></span><span class="lt-line" data-line="18"><span class="lt-ln">18</span><span class="p">});</span></span></code></pre></div></div></div></section>
+<section class="lt-slide layout-default center" id="s-thanks" data-slide="thanks" hidden><header class="lt-head"><h1 class="lt-title">Thanks</h1></header><div class="lt-body"><p>Components are Python classes plus optional JavaScript. See <code>docs/spec.md</code>, section 8.</p>
+</div></section>
+<div id="lt-hud"><div id="lt-crumbs"></div><div id="lt-progress"></div></div>
+</div></main>
+<aside id="lt-presenter-panel" hidden></aside>
+</div>
+<div id="lt-overlay" hidden></div>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.2.2","meta":{"title":"Extending Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"extending-lattice","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"slides":{"extending-lattice":{"title":"Extending Lattice","label":"Extending Lattice","scope":"root","next":{"slide":"plugin-file"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"plugin-file":{"title":"A plugin is a Python file","label":"A plugin is a Python file","scope":"root","next":{"slide":"truth"},"branches":[],"detours":[],"steps":7,"tracks":[{"id":"c1","kind":"component","instance":"plugin-file/c1"}],"positions":[[0],[1],[2],[3],[4],[5],[6]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>Lattice imports <code>lattice_plugins.py<\/code> automatically; installed packages are enabled with <code>plugins:<\/code> in the front matter.<\/p>\n"},"truth":{"title":"Truth tables, computed at build time","label":"Truth tables, computed at build time","scope":"root","next":{"slide":"stack"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":26}},"stack":{"title":"The call stack of fib(4)","label":"The call stack of fib(4)","scope":"root","next":{"slide":"runtime"},"branches":[],"detours":[],"steps":19,"tracks":[{"id":"src","kind":"component","instance":"stack/src","follow":"calls"},{"id":"calls","kind":"component","instance":"stack/calls"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18]],"offpath":false,"source":{"file":"talk.md","line":44}},"runtime":{"title":"Its runtime, in a few lines","label":"Its runtime, in a few lines","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"runtime/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":58}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":66}}},"detours":{},"instances":{"plugin-file/c1":{"component":"code-steps","slide":"plugin-file","data":"lt-data-plugin-file/c1"},"truth/c1":{"component":"truth-table","slide":"truth","data":null},"stack/src":{"component":"code","slide":"stack","data":"lt-data-stack/src"},"stack/calls":{"component":"call-stack","slide":"stack","data":"lt-data-stack/calls"},"runtime/c1":{"component":"code-steps","slide":"runtime","data":"lt-data-runtime/c1"}},"tours":{},"mainPath":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"overview":{"nodes":{"extending-lattice":{"x":67.0,"y":21.0,"w":118.0,"h":26.0,"label":"Extending Lattice"},"plugin-file":{"x":232.5,"y":21.0,"w":153.0,"h":26.0,"label":"A plugin is a Python file"},"truth":{"x":427.0,"y":21.0,"w":176.0,"h":26.0,"label":"Truth tables, computed at…"},"stack":{"x":617.5,"y":21.0,"w":145.0,"h":26.0,"label":"The call stack of fib(4)"},"runtime":{"x":801.5,"y":21.0,"w":163.0,"h":26.0,"label":"Its runtime, in a few lin…"},"thanks":{"x":942.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"extending-lattice","to":"plugin-file","kind":"next","path":"M126.1,21.0 C133.8,21.0 141.8,21.0 149.8,21.0 L155.8,21.0"},{"from":"plugin-file","to":"truth","kind":"next","path":"M309.0,21.0 C316.8,21.0 324.8,21.0 332.8,21.0 L338.9,21.0"},{"from":"truth","to":"stack","kind":"next","path":"M515.1,21.0 C522.8,21.0 530.7,21.0 538.4,21.0 L544.8,21.0"},{"from":"stack","to":"runtime","kind":"next","path":"M690.2,21.0 C697.9,21.0 705.9,21.0 713.8,21.0 L719.9,21.0"},{"from":"runtime","to":"thanks","kind":"next","path":"M883.4,21.0 C891.4,21.0 899.2,21.0 906.4,21.0 L912.8,21.0"}],"width":980.0,"height":42.0},"hash":"402d46df5e9259f9"}</script>
+<script type="application/json" id="lt-data-plugin-file/c1">{"steps":[[],[16,17,18,19,20,21],[23,24,25,26,27,28],[29,30,31,32,33,34,35,36,37],[38],[46,47,48,49,50,51,52],[54,55,56,57,58,59,60]]}</script>
+<script type="application/json" id="lt-data-stack/src">{"steps":[[2],[2],[2],[2],[3],[2],[3],[4],[2],[3],[4],[2],[2],[3],[2],[3],[4],[4],[1]]}</script>
+<script type="application/json" id="lt-data-stack/calls">{"frames":{"format":"full","count":19,"frames":[{"stack":[{"call":"fib(4)","note":"running"}],"caption":"Call fib(4)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"running"}],"caption":"Call fib(3)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"running"}],"caption":"Call fib(2)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running"}],"caption":"Call fib(0)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running","ret":0}],"caption":"Base case: fib(0) = 0"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)","ret":1}],"caption":"fib(2) = 1 + 0"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)","ret":2}],"caption":"fib(3) = 1 + 1"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"running"}],"caption":"Call fib(2)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running"}],"caption":"Call fib(0)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running","ret":0}],"caption":"Base case: fib(0) = 0"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)","ret":1}],"caption":"fib(2) = 1 + 0"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)","ret":3}],"caption":"fib(4) = 2 + 1"},{"stack":[],"caption":"fib(4) = 3 after 18 steps"}]}}</script>
+<script type="application/json" id="lt-data-runtime/c1">{"steps":[[],[2,3,4,5,6],[7,8,9,10,11,12,13,14,15,16,17]]}</script>
+<script type="module">
+// Lattice runtime: navigation state machine (spec section 7) and component host (spec section 10).
+const Lattice = (() => {
+  "use strict";
+  const registry = {};
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+  let deck = null;
+  let nav = null; // { cur: {slide, step}, H: [{slide, step, kind}], tour: string|null }
+  const sections = {};
+  const mounted = {}; // instanceId -> { ctl, inst, el }
+  const instancesBySlide = {};
+  const resizeCallbacks = [];
+  const dataStore = {}; // instanceId -> data fetched in directory mode
+  let presenter = false;
+  let channel = null;
+  let storageKey = "";
+  let hudTimer = null;
+  let timerStart = Date.now();
+
+  // ------------------------------------------------------------------ registry
+  function component(name, controller) {
+    registry[name] = controller;
+  }
+
+  // ------------------------------------------------------------------ frames (spec 9.3)
+  function applyDelta(state, delta) {
+    const out = Object.assign({}, state);
+    for (const [k, v] of Object.entries(delta || {})) {
+      if (v === null) delete out[k];
+      else if (v && typeof v === "object" && !Array.isArray(v) && out[k] && typeof out[k] === "object" && !Array.isArray(out[k])) out[k] = applyDelta(out[k], v);
+      else out[k] = v;
+    }
+    return out;
+  }
+
+  function frames(store) {
+    if (!store) return { count: 0, at: () => ({}) };
+    if (store.format === "full") return { count: store.count, at: (i) => store.frames[Math.max(0, Math.min(i, store.count - 1))] };
+    const cache = new Map();
+    return {
+      count: store.count,
+      at(i) {
+        i = Math.max(0, Math.min(i, store.count - 1));
+        if (cache.has(i)) return cache.get(i);
+        const k = Math.floor(i / store.interval);
+        let state = store.keyframes[k];
+        for (let j = k * store.interval + 1; j <= i; j++) state = applyDelta(state, store.deltas[j]);
+        if (cache.size > 64) cache.clear();
+        cache.set(i, state);
+        return state;
+      },
+    };
+  }
+
+  // ------------------------------------------------------------------ helpers
+  const slide = (id) => deck.slides[id];
+  const steps = (id) => slide(id).steps;
+  const label = (id) => (slide(id) ? slide(id).label : id);
+  const detourOf = (id) => {
+    const s = slide(id);
+    return s && s.scope !== "root" ? deck.detours[s.scope] : null;
+  };
+  function topExcursion() {
+    for (let i = nav.H.length - 1; i >= 0; i--) if (nav.H[i].kind === "excursion") return i;
+    return -1;
+  }
+  function resolveTarget(id) {
+    if (deck.slides[id]) return id;
+    if (deck.detours[id]) return deck.detours[id].entry;
+    return null;
+  }
+
+  // ------------------------------------------------------------------ state machine (spec 7.2)
+  function push(kind) {
+    nav.H.push({ slide: nav.cur.slide, step: nav.cur.step, kind });
+  }
+  function go(slideId, step, how) {
+    const prev = Object.assign({}, nav.cur);
+    nav.cur = { slide: slideId, step: Math.max(0, Math.min(step, steps(slideId) - 1)) };
+    render(prev, how);
+  }
+  function tourSuccessor() {
+    if (!nav.tour || !deck.tours[nav.tour]) return null;
+    const list = deck.tours[nav.tour];
+    const i = list.indexOf(nav.cur.slide);
+    return i >= 0 && i + 1 < list.length ? list[i + 1] : null;
+  }
+  function nextTarget() {
+    // What NEXT would do at the last step: { kind, slide } or null.
+    const t = tourSuccessor();
+    if (t) return { kind: "tour", slide: t };
+    const n = slide(nav.cur.slide).next;
+    if (n === "back") return { kind: "back", slide: returnTarget() };
+    if (n && n.slide) return { kind: "next", slide: n.slide };
+    return null;
+  }
+  function returnTarget() {
+    const i = topExcursion();
+    if (i >= 0) return nav.H[i].slide;
+    const d = detourOf(nav.cur.slide);
+    return d ? d.origin : null;
+  }
+
+  const actions = {
+    next() {
+      const cur = nav.cur;
+      if (cur.step < steps(cur.slide) - 1) return go(cur.slide, cur.step + 1, { kind: "step", dir: 1 });
+      const t = tourSuccessor();
+      if (t) { push("forward"); return go(t, 0, { kind: "next", dir: 1 }); }
+      const n = slide(cur.slide).next;
+      if (n === "back") return actions.return();
+      if (n && n.slide) { push("forward"); return go(n.slide, 0, { kind: "next", dir: 1 }); }
+      flash("End of path");
+    },
+    prev() {
+      const cur = nav.cur;
+      if (cur.step > 0) return go(cur.slide, cur.step - 1, { kind: "step", dir: -1 });
+      if (nav.H.length) {
+        const e = nav.H.pop();
+        return go(e.slide, e.step, { kind: e.kind === "excursion" ? "return" : "prev", dir: -1 });
+      }
+      flash("Start of history");
+    },
+    choose(key) {
+      const s = slide(nav.cur.slide);
+      const b = s.branches.find((o) => o.key === key);
+      if (b) { push("forward"); return go(b.target, 0, { kind: "branch", dir: 1 }); }
+      const dId = s.detours.find((id) => deck.detours[id].key === key);
+      if (dId) return actions.enter(dId);
+      return false;
+    },
+    down() {
+      const s = slide(nav.cur.slide);
+      if (s.detours.length) return actions.enter(s.detours[0]);
+      flash("No detour here");
+    },
+    enter(detourId) {
+      const d = deck.detours[detourId];
+      if (!d || !d.entry) return;
+      push("excursion");
+      go(d.entry, 0, { kind: "detour", dir: 1 });
+    },
+    jump(target) {
+      const t = resolveTarget(target);
+      if (!t || t === nav.cur.slide) return;
+      push("excursion");
+      go(t, 0, { kind: "link", dir: 1 });
+    },
+    return() {
+      const i = topExcursion();
+      if (i >= 0) {
+        const e = nav.H[i];
+        nav.H = nav.H.slice(0, i);
+        return go(e.slide, e.step, { kind: "return", dir: -1 });
+      }
+      const d = detourOf(nav.cur.slide);
+      if (d) return go(d.origin, steps(d.origin) - 1, { kind: "return", dir: -1 });
+      flash("Nothing to return to");
+    },
+    home() {
+      nav.H = [];
+      go(deck.start, 0, { kind: "link", dir: -1 });
+    },
+    tour() {
+      const names = Object.keys(deck.tours);
+      if (!names.length) return flash("No tours defined");
+      const i = nav.tour ? names.indexOf(nav.tour) : -1;
+      nav.tour = i + 1 < names.length ? names[i + 1] : null;
+      flash(nav.tour ? `Tour: ${nav.tour}` : "Tour off");
+      save();
+      broadcast();
+    },
+    overview() { openOverview(); },
+    goto() { openGoto(); },
+    presenter() {
+      if (presenter) return;
+      const url = location.pathname + location.search + (location.search ? "&" : "?") + "presenter" + location.hash;
+      window.open(url, "lattice-presenter");
+    },
+    "enter-detour"() { actions.down(); },
+  };
+
+  // ------------------------------------------------------------------ rendering
+  function transitionFor(how, target) {
+    if (!how || how.kind === "step" || how.kind === "sync") return null;
+    const back = (name) => (name === "zoom" ? "zoom-out" : name === "slide" ? "slide-back" : name);
+    if (how.kind === "return") return "zoom-out";
+    if (how.kind === "prev") return back(deck.transitions.next);
+    const name = slide(target).transition || deck.transitions[how.kind] || deck.transitions.next;
+    if (how.dir < 0) return back(name);
+    return name === "zoom" ? "zoom-in" : name;
+  }
+
+  // Panel of variables shared by animation components: scalars, lists and maps.
+  function renderPanel(el, panel, keys) {
+    if (!el) return;
+    const entries = Object.entries(panel || {}).filter(([k]) => !keys || keys.includes(k));
+    if (keys) entries.sort((a, b) => keys.indexOf(a[0]) - keys.indexOf(b[0]));
+    el.hidden = entries.length === 0;
+    el.innerHTML = entries.map(([k, v]) => {
+      let body;
+      if (Array.isArray(v)) body = `<div class="lt-pv-list">${v.map((x) => `<span>${esc(x)}</span>`).join("") || '<span class="lt-muted">empty</span>'}</div>`;
+      else if (v && typeof v === "object") body = `<table class="lt-pv-map"><tr>${Object.keys(v).map((x) => `<th>${esc(x)}</th>`).join("")}</tr><tr>${Object.values(v).map((x) => `<td>${esc(x)}</td>`).join("")}</tr></table>`;
+      else body = `<div class="lt-pv-scalar">${esc(v)}</div>`;
+      return `<div class="lt-pv"><div class="lt-pv-name">${esc(k)}</div>${body}</div>`;
+    }).join("");
+  }
+
+  function mountSlide(id) {
+    for (const instId of instancesBySlide[id] || []) {
+      if (mounted[instId]) continue;
+      const meta = deck.instances[instId];
+      const ctl = registry[meta.component];
+      if (!ctl || !(meta.data || meta.url)) continue; // static instances need no runtime
+      const el = sections[id].querySelector(`[data-instance="${CSS.escape(instId)}"]`);
+      if (!el) continue;
+      let data = dataStore[instId];
+      if (data === undefined) {
+        const dataEl = meta.data ? document.getElementById(meta.data) : null;
+        data = dataEl ? JSON.parse(dataEl.textContent) : null;
+      }
+      const api = {
+        instanceId: instId,
+        frames,
+        goto: (t) => actions.jump(t),
+        presenter,
+        onResize: (cb) => resizeCallbacks.push(cb),
+        palette: getComputedStyle(document.documentElement),
+      };
+      try {
+        mounted[instId] = { ctl, inst: ctl.mount(el, data, api), el };
+      } catch (err) {
+        console.error(`lattice: mount failed for ${instId}`, err);
+      }
+    }
+  }
+
+  function applyStep(id, step, info) {
+    const s = slide(id);
+    const row = s.positions[step] || [];
+    const posOf = {};
+    s.tracks.forEach((t, i) => { posOf[t.instance || t.id] = row[i] || 0; });
+    if ("reveal" in posOf) {
+      const shown = posOf.reveal;
+      for (const el of $$("[data-lt-reveal]", sections[id])) {
+        el.classList.toggle("lt-hidden", Number(el.dataset.ltReveal) > shown);
+      }
+    }
+    const prevRow = info.fromStep != null ? s.positions[info.fromStep] || [] : null;
+    for (const instId of instancesBySlide[id] || []) {
+      const m = mounted[instId];
+      if (!m) continue;
+      const tIndex = s.tracks.findIndex((t) => t.instance === instId);
+      const pos = tIndex >= 0 ? row[tIndex] : 0;
+      const from = prevRow && tIndex >= 0 ? prevRow[tIndex] : null;
+      if (info.sameSlide && from === pos && !info.force) continue;
+      try {
+        m.ctl.show(m.inst, pos, { from, direction: from == null ? 0 : Math.sign(pos - from), animate: info.animate });
+      } catch (err) {
+        console.error(`lattice: show failed for ${instId}`, err);
+      }
+    }
+  }
+
+  function render(prev, how) {
+    const id = nav.cur.slide;
+    const sameSlide = prev && prev.slide === id;
+    if (!sameSlide) {
+      if (prev && sections[prev.slide]) {
+        sections[prev.slide].hidden = true;
+        sections[prev.slide].classList.remove("lt-current");
+        for (const instId of instancesBySlide[prev.slide] || []) {
+          const m = mounted[instId];
+          if (m && m.ctl.leave) try { m.ctl.leave(m.inst); } catch (e) { console.error(e); }
+        }
+      }
+      const sec = sections[id];
+      sec.hidden = false;
+      sec.classList.add("lt-current");
+      mountSlide(id);
+      for (const instId of instancesBySlide[id] || []) {
+        const m = mounted[instId];
+        if (m && m.ctl.enter) try { m.ctl.enter(m.inst); } catch (e) { console.error(e); }
+      }
+      const tr = transitionFor(how, id);
+      sec.classList.remove(...Array.from(sec.classList).filter((c) => c.startsWith("lt-anim-")));
+      if (tr && tr !== "none") {
+        void sec.offsetWidth;
+        sec.classList.add(`lt-anim-${tr}`);
+      }
+    }
+    const adjacent = sameSlide && Math.abs(prev.step - nav.cur.step) === 1;
+    applyStep(id, nav.cur.step, { sameSlide, fromStep: sameSlide ? prev.step : null, animate: adjacent, force: !sameSlide });
+    updateHud();
+    updateHash();
+    save();
+    if (!how || how.kind !== "sync") broadcast();
+    if (presenter) updatePresenter();
+  }
+
+  // ------------------------------------------------------------------ HUD
+  function updateHud() {
+    const crumbs = $("#lt-crumbs");
+    const parts = nav.H.filter((e) => e.kind === "excursion").map((e) => esc(label(e.slide)));
+    const d = detourOf(nav.cur.slide);
+    if (!parts.length && d) parts.push(esc(label(d.origin)));
+    parts.push(`<b>${esc(label(nav.cur.slide))}</b>`);
+    crumbs.innerHTML = parts.join('<span class="lt-sep">\u21b3</span>');
+
+    const s = slide(nav.cur.slide);
+    const bits = [];
+    if (s.steps > 14) bits.push(`<span class="lt-where">step ${nav.cur.step + 1}/${s.steps}</span>`);
+    else if (s.steps > 1) {
+      bits.push(`<span class="lt-steps">${Array.from({ length: s.steps }, (_, i) => `<i class="${i <= nav.cur.step ? "on" : ""}"></i>`).join("")}</span>`);
+    }
+    if (s.detours.length) bits.push(`<span class="lt-hint"><kbd>\u2193</kbd>${esc(deck.detours[s.detours[0]].label)}</span>`);
+    if (topExcursion() >= 0 || d) bits.push(`<span class="lt-hint"><kbd>\u2191</kbd>${esc(label(returnTarget()))}</span>`);
+    const mp = deck.mainPath.indexOf(nav.cur.slide);
+    if (nav.tour) bits.push(`<span class="lt-where">tour ${esc(nav.tour)}</span>`);
+    if (mp >= 0) bits.push(`<span class="lt-where">${mp + 1}/${deck.mainPath.length}</span>`);
+    else if (d) bits.push(`<span class="lt-where">${d.slides.indexOf(nav.cur.slide) + 1}/${d.slides.length}</span>`);
+    else if (s.offpath) bits.push(`<span class="lt-where">off path</span>`);
+    $("#lt-progress").innerHTML = bits.join("");
+  }
+
+  function flash(message) {
+    let el = $("#lt-flash");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "lt-flash";
+      $("#lt-viewport").appendChild(el);
+    }
+    el.textContent = message;
+    el.classList.add("on");
+    clearTimeout(hudTimer);
+    hudTimer = setTimeout(() => el.classList.remove("on"), 1200);
+    return false;
+  }
+
+  // ------------------------------------------------------------------ persistence (spec 7.4)
+  function updateHash() {
+    const h = `#/${encodeURIComponent(nav.cur.slide)}/${nav.cur.step}`;
+    if (location.hash !== h) history.replaceState(null, "", h);
+  }
+  function save() {
+    try { sessionStorage.setItem(storageKey, JSON.stringify(nav)); } catch (e) { /* storage unavailable */ }
+  }
+  function parseHash() {
+    const m = /^#\/([^/]+)(?:\/(\d+))?$/.exec(location.hash);
+    if (!m) return null;
+    const id = resolveTarget(decodeURIComponent(m[1]));
+    return id ? { slide: id, step: Math.min(Number(m[2] || 0), steps(id) - 1) } : null;
+  }
+  function restore() {
+    const fromHash = parseHash();
+    let saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem(storageKey) || "null"); } catch (e) { saved = null; }
+    const valid = (e) => e && deck.slides[e.slide];
+    if (saved && valid(saved.cur) && (!fromHash || (fromHash.slide === saved.cur.slide && fromHash.step === saved.cur.step))) {
+      saved.H = (saved.H || []).filter(valid);
+      if (saved.tour && !deck.tours[saved.tour]) saved.tour = null;
+      return saved;
+    }
+    return { cur: fromHash || { slide: deck.start, step: 0 }, H: [], tour: null };
+  }
+
+  // ------------------------------------------------------------------ sync (spec 7.5)
+  function broadcast() {
+    if (channel) channel.postMessage({ nav: JSON.parse(JSON.stringify(nav)) });
+  }
+  function onRemote(msg) {
+    if (!msg || !msg.nav || !deck.slides[msg.nav.cur.slide]) return;
+    const prev = Object.assign({}, nav.cur);
+    nav = msg.nav;
+    render(prev, { kind: "sync", dir: 0 });
+  }
+
+  // ------------------------------------------------------------------ overlays
+  function closeOverlay() {
+    const o = $("#lt-overlay");
+    o.hidden = true;
+    o.innerHTML = "";
+  }
+  const overlayOpen = () => !$("#lt-overlay").hidden;
+
+  function slideButton(id, extra = "") {
+    const cur = id === nav.cur.slide ? " current" : "";
+    return `<button type="button" class="lt-ov-item${cur}" data-jump="${esc(id)}">${esc(label(id))}${extra}</button>`;
+  }
+
+  function openOverview() {
+    const listed = new Set();
+    const tree = (id, depth) => {
+      listed.add(id);
+      let out = `<li>${slideButton(id)}`;
+      const s = slide(id);
+      for (const dId of s.detours) {
+        const d = deck.detours[dId];
+        out += `<ul class="lt-ov-detour"><li class="lt-ov-label">${d.key ? `<kbd>${esc(d.key)}</kbd>` : "\u2193"} ${esc(d.label)}</li>`;
+        for (const x of d.slides) out += tree(x, depth + 1);
+        out += "</ul>";
+      }
+      if (s.branches.length) {
+        out += `<ul class="lt-ov-branch">`;
+        for (const b of s.branches) out += `<li class="lt-ov-label"><kbd>${esc(b.key)}</kbd> ${esc(b.label || label(b.target))}</li>`;
+        out += "</ul>";
+      }
+      return out + "</li>";
+    };
+    let html = `<div class="lt-panel lt-overview"><h2>Overview</h2>${overviewMap()}<ol class="lt-ov-main">`;
+    for (const id of deck.order) {
+      const s = slide(id);
+      if (s.scope !== "root" || s.offpath || listed.has(id)) continue;
+      html += tree(id, 0);
+    }
+    html += "</ol>";
+    const rest = deck.order.filter((id) => !listed.has(id));
+    if (rest.length) html += `<h3>Off path</h3><ul class="lt-ov-rest">${rest.map((id) => `<li>${slideButton(id)}</li>`).join("")}</ul>`;
+    html += "</div>";
+    const o = $("#lt-overlay");
+    o.innerHTML = html;
+    o.hidden = false;
+    const cur = $(".lt-ov-item.current", o);
+    if (cur) cur.focus({ preventScroll: true });
+    const node = $(".lt-ovn.current", o);
+    if (node) node.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+
+  function overviewMap() {
+    const ov = deck.overview;
+    if (!ov || !ov.nodes || !Object.keys(ov.nodes).length) return "";
+    const visited = new Set(nav.H.map((e) => e.slide));
+    const edges = ov.edges.map((e) => `<path class="k-${e.kind}" d="${e.path}"${e.kind === "link" ? "" : ' marker-end="url(#lt-ov-arrow)"'}/>`).join("");
+    const nodes = Object.entries(ov.nodes).map(([id, n]) => {
+      const s = slide(id);
+      const cls = ["lt-ovn", id === nav.cur.slide ? "current" : "", visited.has(id) ? "visited" : "",
+        s.offpath ? "offpath" : "", s.scope !== "root" ? "detour" : ""].join(" ");
+      return `<g class="${cls}" data-jump="${esc(id)}" transform="translate(${n.x - n.w / 2},${n.y - n.h / 2})">` +
+        `<rect width="${n.w}" height="${n.h}" rx="7"/><text x="${n.w / 2}" y="${n.h / 2}">${esc(n.label)}</text></g>`;
+    }).join("");
+    return `<div class="lt-ov-map"><svg viewBox="0 0 ${ov.width} ${ov.height}" width="${ov.width * 1.15}" height="${ov.height * 1.15}">` +
+      `<defs><marker id="lt-ov-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>` +
+      `<g class="lt-ov-edges">${edges}</g>${nodes}</svg></div>`;
+  }
+
+  function fuzzy(q, text) {
+    q = q.toLowerCase();
+    text = text.toLowerCase();
+    if (text.includes(q)) return 2;
+    let i = 0;
+    for (const c of text) if (c === q[i]) i++;
+    return i === q.length ? 1 : 0;
+  }
+
+  function openGoto() {
+    const o = $("#lt-overlay");
+    o.innerHTML = `<div class="lt-panel lt-goto"><input type="text" placeholder="Go to slide" aria-label="Go to slide"><ul></ul></div>`;
+    o.hidden = false;
+    const input = $("input", o);
+    const list = $("ul", o);
+    let sel = 0;
+    let matches = [];
+    const refresh = () => {
+      const q = input.value.trim();
+      matches = deck.order
+        .map((id) => ({ id, score: q ? Math.max(fuzzy(q, label(id)), fuzzy(q, id)) : 1 }))
+        .filter((m) => m.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 12);
+      sel = Math.min(sel, Math.max(0, matches.length - 1));
+      list.innerHTML = matches
+        .map((m, i) => `<li class="${i === sel ? "sel" : ""}"><button type="button" data-jump="${esc(m.id)}">${esc(label(m.id))}<small>${esc(m.id)}</small></button></li>`)
+        .join("");
+    };
+    input.addEventListener("input", () => { sel = 0; refresh(); });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { sel = Math.min(sel + 1, matches.length - 1); refresh(); e.preventDefault(); }
+      else if (e.key === "ArrowUp") { sel = Math.max(sel - 1, 0); refresh(); e.preventDefault(); }
+      else if (e.key === "Enter" && matches[sel]) { const t = matches[sel].id; closeOverlay(); actions.jump(t); }
+      else if (e.key === "Escape") closeOverlay();
+      e.stopPropagation();
+    });
+    refresh();
+    input.focus();
+  }
+
+  // ------------------------------------------------------------------ presenter view
+  function updatePresenter() {
+    const panel = $("#lt-presenter-panel");
+    const s = slide(nav.cur.slide);
+    const nt = nextTarget();
+    const moves = [];
+    if (nav.cur.step < s.steps - 1) moves.push(`<li><kbd>\u2192</kbd> step ${nav.cur.step + 2} of ${s.steps}</li>`);
+    else if (nt && nt.slide) moves.push(`<li><kbd>\u2192</kbd> ${nt.kind === "back" ? "return to " : ""}${esc(label(nt.slide))}</li>`);
+    else moves.push(`<li><kbd>\u2192</kbd> end of path</li>`);
+    for (const b of s.branches) moves.push(`<li><kbd>${esc(b.key)}</kbd> ${esc(b.label || label(b.target))}</li>`);
+    s.detours.forEach((dId, i) => {
+      const d = deck.detours[dId];
+      moves.push(`<li><kbd>${esc(d.key || (i === 0 ? "\u2193" : "?"))}</kbd> detour: ${esc(d.label)}</li>`);
+    });
+    const rt = returnTarget();
+    if (rt && (topExcursion() >= 0 || detourOf(nav.cur.slide))) moves.push(`<li><kbd>\u2191</kbd> return to ${esc(label(rt))}</li>`);
+    panel.innerHTML = `
+      <div class="lt-pp-top"><span class="lt-pp-timer" title="Click to reset">00:00</span><span>${esc(s.label)} \u00b7 step ${nav.cur.step + 1}/${s.steps}</span></div>
+      <h3>Moves</h3><ul class="lt-pp-moves">${moves.join("")}</ul>
+      <h3>Notes</h3><div class="lt-pp-notes">${s.notes || "<p class=\"lt-muted\">No notes for this slide.</p>"}</div>`;
+    renderMath(panel);
+    tickTimer();
+  }
+  function tickTimer() {
+    const el = $(".lt-pp-timer");
+    if (!el) return;
+    const secs = Math.floor((Date.now() - timerStart) / 1000);
+    el.textContent = `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
+  }
+
+  function renderMath(root) {
+    if (!window.katex) return;
+    for (const el of $$(".lt-math", root)) {
+      if (el.dataset.done) continue;
+      try {
+        window.katex.render(el.textContent, el, { displayMode: el.dataset.display === "1", throwOnError: false });
+        el.dataset.done = "1";
+      } catch (e) { console.error(e); }
+    }
+  }
+
+  // ------------------------------------------------------------------ input
+  function keyMap() {
+    const m = {};
+    for (const [action, keys] of Object.entries(deck.keys)) for (const k of keys) m[k] = action;
+    return m;
+  }
+
+  function onKey(e) {
+    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (overlayOpen()) {
+      if (e.key === "Escape" || (e.key === "o" && $(".lt-overview"))) { closeOverlay(); e.preventDefault(); }
+      return;
+    }
+    const s = slide(nav.cur.slide);
+    const slideKey = s.branches.some((b) => b.key === e.key) || s.detours.some((d) => deck.detours[d].key === e.key);
+    if (slideKey) { actions.choose(e.key); e.preventDefault(); return; }
+    const action = keyMap()[e.key];
+    if (action && actions[action]) { actions[action](); e.preventDefault(); }
+  }
+
+  function onClick(e) {
+    const jump = e.target.closest("[data-jump]");
+    if (jump) { e.preventDefault(); closeOverlay(); actions.jump(jump.dataset.jump); return; }
+    const link = e.target.closest("[data-lt-link]");
+    if (link) { e.preventDefault(); actions.jump(link.dataset.ltLink); return; }
+    const choose = e.target.closest("[data-lt-choose]");
+    if (choose) { e.preventDefault(); actions.choose(choose.dataset.ltChoose); return; }
+    const detour = e.target.closest("[data-lt-detour]");
+    if (detour) { e.preventDefault(); actions.enter(detour.dataset.ltDetour); return; }
+    if (e.target.closest(".lt-pp-timer")) { timerStart = Date.now(); tickTimer(); return; }
+    if (e.target.id === "lt-overlay") closeOverlay();
+  }
+
+  // ------------------------------------------------------------------ layout
+  function fit() {
+    const stage = $("#lt-stage");
+    const vp = $("#lt-viewport");
+    const W = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-w"));
+    const H = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-h"));
+    const r = stage.getBoundingClientRect();
+    const scale = Math.min(r.width / W, r.height / H);
+    vp.style.transform = `translate(${(r.width - W * scale) / 2}px, ${(r.height - H * scale) / 2}px) scale(${scale})`;
+    for (const cb of resizeCallbacks) try { cb(scale); } catch (e) { console.error(e); }
+  }
+
+  // ------------------------------------------------------------------ boot
+  async function loadData() {
+    const pending = Object.entries(deck.instances).filter(([, m]) => m.url);
+    await Promise.all(pending.map(async ([id, m]) => {
+      try {
+        const r = await fetch(m.url);
+        dataStore[id] = await r.json();
+      } catch (err) {
+        console.error(`lattice: cannot load ${m.url} (directory output must be served over HTTP)`, err);
+      }
+    }));
+  }
+
+  async function boot() {
+    deck = JSON.parse($("#lt-deck").textContent);
+    await loadData();
+    presenter = new URLSearchParams(location.search).has("presenter");
+    storageKey = `lattice:${deck.hash}:nav`;
+    for (const sec of $$(".lt-slide")) sections[sec.dataset.slide] = sec;
+    for (const [id, inst] of Object.entries(deck.instances)) (instancesBySlide[inst.slide] ||= []).push(id);
+    if (presenter) {
+      document.body.classList.add("lt-presenter");
+      $("#lt-presenter-panel").hidden = false;
+      setInterval(tickTimer, 1000);
+    }
+    renderMath(document);
+    nav = restore();
+    window.addEventListener("resize", fit);
+    window.addEventListener("pagehide", () => {
+      for (const m of Object.values(mounted)) {
+        if (m.ctl.destroy) try { m.ctl.destroy(m.inst); } catch (e) { console.error(e); }
+      }
+    });
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("click", onClick);
+    window.addEventListener("hashchange", () => {
+      const h = parseHash();
+      if (h && (h.slide !== nav.cur.slide || h.step !== nav.cur.step)) {
+        if (h.slide === nav.cur.slide) go(h.slide, h.step, { kind: "step", dir: 0 });
+        else { push("excursion"); go(h.slide, h.step, { kind: "link", dir: 1 }); }
+      }
+    });
+    if ("BroadcastChannel" in window) {
+      channel = new BroadcastChannel(`lattice:${deck.hash}`);
+      channel.onmessage = (e) => onRemote(e.data);
+    }
+    fit();
+    render(null, { kind: "sync", dir: 0 });
+    document.documentElement.classList.add("lt-ready");
+  }
+
+  return { component, boot, frames, applyDelta, renderPanel, esc, actions: () => actions, state: () => nav };
+})();
+window.Lattice = Lattice;
+
+// Runtime for the `call-stack` component: draws the stack of calls, newest on top.
+Lattice.component("call-stack", {
+  mount(el, data, api) {
+    const root = el.querySelector(".call-stack");
+    root.innerHTML = '<ol class="cs-frames"></ol><p class="cs-caption"></p>';
+    return { store: api.frames(data.frames), list: root.querySelector("ol"), caption: root.querySelector("p") };
+  },
+  show(inst, position) {
+    const state = inst.store.at(position);
+    const frames = state.stack || [];
+    inst.list.innerHTML = frames
+      .map((f, i) => `<li class="${i === frames.length - 1 ? "top" : ""} ${f.ret != null ? "ret" : ""}">` +
+        `<code>${Lattice.esc(f.call)}</code><span>${f.ret != null ? "returns " + Lattice.esc(f.ret) : Lattice.esc(f.note || "")}</span></li>`)
+      .reverse()
+      .join("");
+    inst.caption.textContent = state.caption || "";
+  },
+});
+
+// Line highlighting for `code` (as a follower) and `code-steps`.
+(() => {
+  const controller = {
+    mount(el, data) {
+      const box = el.querySelector(".lt-code");
+      const lines = new Map(Array.from(el.querySelectorAll(".lt-line")).map((l) => [Number(l.dataset.line), l]));
+      return { box, lines, steps: (data && data.steps) || [[]], pre: el.querySelector("pre") };
+    },
+    show(inst, position) {
+      const hl = new Set(inst.steps[position] || []);
+      let first = null;
+      for (const [n, line] of inst.lines) {
+        const on = hl.has(n);
+        line.classList.toggle("lt-hl", on);
+        if (on && !first) first = line;
+      }
+      inst.box.classList.toggle("lt-has-hl", hl.size > 0);
+      if (first && inst.pre.scrollHeight > inst.pre.clientHeight) {
+        inst.pre.scrollTo({ top: first.offsetTop - inst.pre.clientHeight / 3, behavior: "smooth" });
+      }
+    },
+  };
+  Lattice.component("code", controller);
+  Lattice.component("code-steps", controller);
+})();
+
+Lattice.boot();
+</script>
+</body>
+</html>

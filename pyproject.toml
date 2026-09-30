@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lattice-slides"
+version = "0.2.2"
+description = "Compile Markdown into non-linear HTML slide decks for computer science talks"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "markdown-it-py>=3.0",
+  "mdit-py-plugins>=0.4",
+  "PyYAML>=6.0",
+  "Pygments>=2.15",
+  "pydantic>=2.0",
+  "networkx>=3.0",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.7"]
+dev = ["pytest>=7", "matplotlib>=3.7", "playwright>=1.40"]
+
+[project.scripts]
+lattice = "lattice.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+lattice = ["runtime/*.js", "runtime/*.css", "runtime/themes/*.css", "runtime/components/*.js",
+           "runtime/vendor/*.js", "runtime/vendor/*.css", "runtime/vendor/*LICENSE",
+           "runtime/vendor/fonts/*.woff2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

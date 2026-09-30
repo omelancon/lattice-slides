@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 150" font-family="Helvetica, Arial, sans-serif" font-size="16">
+  <text x="10" y="24" fill="#5d6778">least recently used</text>
+  <text x="550" y="24" fill="#5d6778" text-anchor="end">most recently used</text>
+  <g stroke="#0b6e7f" stroke-width="2" fill="#d5ecef">
+    <rect x="10" y="50" width="90" height="56" rx="8"/><rect x="120" y="50" width="90" height="56" rx="8"/>
+    <rect x="230" y="50" width="90" height="56" rx="8"/><rect x="340" y="50" width="90" height="56" rx="8"/>
+    <rect x="450" y="50" width="100" height="56" rx="8" fill="#fbeedd" stroke="#c8741a"/>
+  </g>
+  <g fill="#1d2433" text-anchor="middle">
+    <text x="55" y="84">k7</text><text x="165" y="84">k2</text><text x="275" y="84">k9</text>
+    <text x="385" y="84">k4</text><text x="500" y="84">k1</text>
+  </g>
+  <text x="55" y="136" fill="#b23a48" text-anchor="middle">evicted next</text>
+  <text x="500" y="136" fill="#c8741a" text-anchor="middle">just used</text>
+</svg>

@@ -1,0 +1,14 @@
+/* Dark theme: slate night, cyan accent, amber for "happening now". */
+:root{
+  --lt-backdrop:#11151c;--lt-bg:#1e2430;--lt-panel:#283041;--lt-code-bg:#262d3b;--lt-rule:#384154;
+  --lt-ink:#e7eaf0;--lt-muted:#9aa4b5;--lt-accent:#5cc8d6;--lt-accent-soft:#23424b;
+  --lt-active:#f2b544;--lt-frontier:#b69cff;--lt-frontier-soft:#3a3354;--lt-good:#6fcf8a;--lt-warn:#ff7a85;
+  --lt-edge:#5d6882;--lt-cell:#4a5569;--lt-on-strong:#10151d;
+  --lt-add-bg:#1f3a2a;--lt-del-bg:#43252b;
+  --lt-hl:#f2b544;--lt-hl-bg:#3b3527;
+  --lt-detour:#9a86e0;--lt-detour-ink:#c3b5f5;--lt-detour-soft:#2f2a45;
+  --lt-scrim:rgba(0,0,0,.55);
+  --lt-font-head:"Avenir Next","Segoe UI Variable Display","Segoe UI","Helvetica Neue",system-ui,sans-serif;
+  --lt-font-body:"Avenir Next","Segoe UI","Helvetica Neue",system-ui,sans-serif;
+  --lt-font-code:"JetBrains Mono","SF Mono","Cascadia Code",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}

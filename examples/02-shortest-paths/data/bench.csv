@@ -1,0 +1,15 @@
+vertices,queue,ms
+1000,binary heap,1.05
+1000,unsorted array,1.22
+2000,binary heap,2.30
+2000,unsorted array,4.64
+5000,binary heap,6.45
+5000,unsorted array,28.10
+10000,binary heap,13.95
+10000,unsorted array,111.20
+20000,binary heap,30.00
+20000,unsorted array,442.40
+50000,binary heap,81.95
+50000,unsorted array,2756.00
+100000,binary heap,174.40
+100000,unsorted array,11012.00

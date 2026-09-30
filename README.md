@@ -1,0 +1,178 @@
+# Lattice
+
+Lattice compiles Markdown into **non-linear** slide decks: one self-contained HTML file per deck,
+made for computer science talks. Slides form a graph with a main path, detours, branches and links,
+and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
+
+This is version 0.2.2. This README covers usage. The documentation in `docs/` covers the rest:
+
+- [`docs/spec.md`](docs/spec.md) defines the syntax, navigation, components and output exactly.
+- [`docs/design-report.md`](docs/design-report.md) explains the design and holds the roadmap.
+- [`docs/SKILL.md`](docs/SKILL.md) is the starting point for contributors.
+
+## Install
+
+```bash
+pip install -e .              # core
+pip install -e ".[plot]"      # + matplotlib for the plot component
+pip install -e ".[dev]"       # + pytest, matplotlib, playwright
+```
+
+Python 3.10 or newer. The Graphviz `dot` program is needed for `dot` diagrams, `.dot` graph files
+and the overview map; without it, animated graphs fall back to a NetworkX layout and the overview
+shows only an outline.
+
+## Quick start
+
+```bash
+lattice new my-talk                  # scaffold my-talk/talk.md
+lattice serve my-talk/talk.md        # live preview at http://127.0.0.1:8000
+lattice build my-talk/talk.md        # writes my-talk/talk.html
+lattice build my-talk/talk.md --dir out   # index.html + assets/ + data/, to serve over HTTP
+lattice check my-talk/talk.md        # diagnostics only (exit code 1 on errors)
+lattice graph my-talk/talk.md        # print the slide graph (--dot for Graphviz)
+```
+
+The output HTML works offline from any folder: images, fonts for math, styles, scripts and data are
+embedded. Libraries are only included when a deck uses them (KaTeX for math, Vega for
+`backend=vega`, Plotly for `backend=plotly`, which adds about 4.4 MB).
+
+## Authoring in one screen
+
+````markdown
+---
+title: Shortest Paths
+theme: default            # or dark
+tours:
+  short: [intro, dijkstra, end]
+---
+
+# Shortest Paths {#intro layout=title}
+
+# Dijkstra's algorithm {#dijkstra}
+
+{.reveal}
+- Every `#` heading starts a slide; a bare `#` makes an untitled one
+- `{.reveal}` shows list items one step at a time
+- Link anywhere with [[proof]] or [[proof|a custom label]]
+
+::: detour {label="Refresher: heaps" key=h}
+# Binary heaps
+The last slide of a detour returns to where you came from.
+:::
+
+::: branch
+- [[in-python|Python]] the short version
+- [[in-rust|Rust]] {key=2} the fast version
+:::
+
+::include{file="parts/backup.md" offpath=true}
+````
+
+| Syntax | Meaning |
+|---|---|
+| `# Title {#id .class next=id offpath=true layout=title}` | Slide boundary and attributes (`next` also accepts `back` and `none`) |
+| `::include{file="x.md"}` | Splice the slides of another file here (also inside a detour) |
+| `::: detour {#id label=... key=k}` | Nested slides entered with Down or `k`, returning automatically |
+| `::: branch` with a list of `[[target\|label]]` | A choice point, keys 1 to 9 by default |
+| `::: notes` | Speaker notes, shown in presenter view |
+| `::: columns` / `::: column {width=2fr}` | Layout (the outer fence needs more colons: `::::`) |
+| `::: callout {kind=info\|tip\|warn}` | Highlighted box |
+| `{.reveal}` on the line before a block | Fragment (list items reveal one by one) |
+| `$...$`, `$$...$$` | Math, rendered with an embedded KaTeX |
+
+The complete syntax, including slide attributes, layouts and ids, is in spec sections 2 and 3.
+
+## Components
+
+A fenced block whose info string names a component renders it; any other name is treated as a
+code language.
+
+| Block | What it does |
+|---|---|
+| ` ```python {highlight=2-3 title="x.py" linenos=true} ` | Highlighted code (any Pygments language) |
+| ` ```code {lang=python file="algo.py" symbol=dijkstra} ` | Code from a file, a line range or a Python symbol; with `follow=trace` it highlights the lines named by an animation |
+| ` ```code-steps {file=... lang=...} ` + `steps: [1-3, 5]` | Walk through code, one highlighted range per step |
+| ` ```graph-anim {#trace source="algos.py:bfs" graph="city.dot"} ` | Animated graph from a `GraphTrace` built in Python |
+| ` ```array-anim {source="sorts.py:bubble"} ` + `values: [...]` | Animated array from an `ArrayTrace` |
+| ` ```plot {data="bench.csv" x=n y=ms group=algo logy=true} ` | Chart from a CSV with matplotlib (static SVG), or `backend=vega` / `backend=plotly` for interactive charts; also `source="file.py:fn"` or a raw `spec:` |
+| ` ```diff-steps {lang=python context=3} ` + `versions: [...]` | Step through versions of a file; each step marks added and removed lines |
+| ` ```dot ` | Graphviz diagram, themed |
+| ` ```timeline ` | Orders the steps of several stepping elements on one slide |
+
+Animations are computed at build time. A trace function receives the graph (or values) and
+keyword options from the block, and records frames as deltas:
+
+```python
+from lattice import GraphTrace
+
+def bfs(g, start="A"):
+    t = GraphTrace(g)
+    t.frame(nodes={start: {"state": "frontier", "label": 0}}, caption="start", meta={"line": 3})
+    ...
+    return t
+```
+
+Every option of every component is listed in spec section 8.8; the trace classes and the states
+the themes style are in spec section 9.1.
+
+## Navigation
+
+| Key | Action |
+|---|---|
+| Right, Space | Next step, then next slide |
+| Left | Undo the last move (history) |
+| Down | Enter the slide's first detour |
+| Up, Backspace | Return to where the current detour or jump started |
+| 1 to 9, custom keys | Choose a branch option or detour |
+| `o` / `g` | Overview (a map of the slide graph plus an outline) / go to a slide by name |
+| `p` | Open the synchronized presenter view (notes, moves, timer) |
+| `t` | Cycle through tours |
+| Home | Back to the start, clearing history |
+
+The URL keeps the position (`#/slide-id/step`), and a reload restores the history. Keys can be
+changed with `keys:` in the front matter; the exact behavior of each move is spec section 7.
+
+## Writing your own components
+
+Put a `lattice_plugins.py` next to the deck (it is imported automatically), or list installed
+packages under `plugins:` in the front matter.
+
+```python
+from lattice import Component, RenderResult, register
+
+@register("shout")
+class Shout(Component):
+    body = "text"
+    def render(self, block, opts, ctx):
+        return RenderResult(f"<p>{block.body.upper()}</p>")
+```
+
+An animated component returns `positions > 1` plus `data`, and names a JavaScript `runtime` that calls
+`Lattice.component(name, {mount, show})`. See `examples/04-custom-components` and spec section 8.
+
+## Examples
+
+Each folder in [`examples/`](examples) holds a deck and its built `talk.html`:
+
+1. `01-getting-started`: slides, fragments, code, math, a detour, links, an off-path slide, Graphviz.
+2. `02-shortest-paths`: a multi-file lecture with BFS and Dijkstra animations, code following the
+   animation, a timeline, a benchmark plot and a reusable detour included from `shared/`.
+3. `03-sorting-workshop`: a dark-theme workshop where the audience picks an algorithm (branches that
+   converge), array animations and a comparison plot computed at build time.
+4. `04-custom-components`: two local plugins, a static truth table and an animated call stack with its
+   own runtime.
+5. `05-refactoring-a-cache`: `diff-steps` through three versions of an LRU cache, an embedded image,
+   and the same benchmark as an interactive Vega-Lite chart and a Plotly bar chart.
+
+Rebuild them all with `python scripts/build_examples.py`.
+
+## Status
+
+Version 0.2.2 implements everything in the spec; spec section 15 lists how it changed since the
+first draft. Planned work is in the roadmap, design report section 6.
+
+## Contributing
+
+Start with [`docs/SKILL.md`](docs/SKILL.md): setup, project structure, tests, pitfalls, the release
+steps and the rules for keeping these documents coherent.

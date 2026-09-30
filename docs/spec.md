@@ -1,0 +1,1141 @@
+# Lattice Specification
+
+*Normative specification of Lattice, current as of v0.2.2 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+
+---
+
+## 0. Conventions
+
+- **MUST**, **MUST NOT**, **SHOULD** and **MAY** are used as in RFC 2119.
+- An **error** stops the build. A **warning** is reported and the build continues. Every diagnostic has a code (section 12) and a source location `file:line:col`.
+- Grammars use EBNF: `{ x }` is zero or more, `[ x ]` is optional, `|` is alternation, `SP` is a space or tab, `NL` is a line ending.
+- Identifiers in examples use `code font`.
+- The document describes the **authoring format**, the **build pipeline** and the **runtime behavior**. Anything not described here is implementation-defined.
+
+---
+
+## 1. Terminology
+
+| Term | Definition |
+|---|---|
+| **Root file** | The Markdown file passed to the CLI. It alone may contain front matter. |
+| **Scope** | The container that owns a slide: either the root scope (`root`) or a detour, identified by the detour id. |
+| **Origin** | The slide in whose body a detour is declared. |
+| **Edge** | A directed relation between slides: `next`, `branch`, `detour` or `link`. |
+| **Main path** | The chain of `next` edges followed from the start slide. |
+| **Offpath slide** | A slide excluded from implicit `next` chains (backup material). |
+| **Excursion** | A move that can later be undone as a whole with Return: entering a detour, following a link, go-to, overview click. |
+| **Track** | Something on a slide that changes with steps: the reveal track or a component instance. |
+| **Position** | The state index of a track. Position 0 is the state shown on arrival at step 0. |
+| **Cue** | One slide step: an assignment of positions to tracks. |
+| **Follower** | A component instance whose position is always equal to another track's position. |
+| **Frame store** | The serialized frames of an animation (section 9). |
+
+---
+
+## 2. Project and Files
+
+### 2.1 Files
+
+- Source files MUST be UTF-8. Line endings are normalized to `\n`.
+- Relative paths in a file (includes, component options, images) are resolved against **the directory of the file containing them**, not the root file.
+- A file `lattice_plugins.py` next to the root file, if present, is imported before rendering (section 8.1).
+- The build cache lives in `.lattice-cache/` next to the root file.
+
+### 2.2 Front matter
+
+The root file MAY start with a YAML front matter block delimited by `---` lines. Included files MUST NOT have front matter (LT003).
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `title` | string | root file stem | Deck title |
+| `author`, `date` | string | none | Metadata, available to themes |
+| `theme` | `default` or `dark` | `default` | Built-in theme; an unknown name falls back to `default` with warning LT052 |
+| `aspect` | `16:9`, `16:10`, `4:3` | `16:9` | Slide aspect ratio |
+| `start` | id | first root, non-offpath slide | Start slide |
+| `plugins` | list of strings | `[]` | Plugin packages to activate (section 8.1) |
+| `keys` | map action to key or list of keys | section 7.6 | Key binding overrides |
+| `transitions` | map edge kind to transition name (`slide`, `zoom`, `fade`, `none`) | `next: slide`, `branch: slide`, `detour: zoom`, `link: fade` | Default transitions; moving backward plays the reverse (`slide` from the left, `zoom` out) |
+| `tours` | map name to list of ids, or the string `main` | `{}` | Named tours (section 5.7) |
+| `build.cache` | bool | `true` | Enable the render cache |
+| `build.output` | `single`, `dir` | `single` | Output mode (section 11.4) |
+| `build.frames.max_full_bytes` | int | `2097152` | Threshold for keyframed frame stores |
+| `build.frames.keyframe_interval` | int | `16` | Keyframe spacing |
+
+Unknown top-level keys produce warning LT040 and are otherwise ignored.
+
+### 2.3 Includes
+
+````markdown
+::include{file="parts/dijkstra.md"}
+::include{file="parts/backup.md" offpath=true}
+````
+
+- An include is a **leaf directive**: a line starting with `::include` followed by an attribute block (section 3.4). Attributes: `file` (required), `offpath` (bool, default `false`).
+- An include MAY appear at the top level of any source file or at the top level of a detour container. It MUST NOT appear inside any other container (LT034).
+- An include acts as a slide boundary: it ends the current slide, and the included slides are spliced into the enclosing scope at that point, in order.
+- The included file MUST start (after blank lines) with a slide heading or another include (LT002).
+- `offpath=true` marks every slide of the included file (and of its nested includes) as offpath.
+- Include cycles are an error (LT004). Including the same file twice anywhere in the deck is an error (LT005), since it would duplicate ids.
+
+---
+
+## 3. Authoring Syntax
+
+### 3.1 Base Markdown
+
+The base language is CommonMark plus GFM tables and strikethrough, and inline (`$...$`) and display (`$$...$$`) math. Lattice adds: heading attributes, attribute lines, wiki links, containers, leaf directives and component fenced blocks. Parsing is done with markdown-it-py; the grammar below is expressed over the resulting block structure, not raw characters.
+
+### 3.2 Document grammar
+
+```ebnf
+document       = [ front_matter ] { top_item } ;
+top_item       = slide | include ;
+slide          = slide_heading { slide_block } ;
+slide_heading  = "#" [ SP { SP } title ] [ SP { SP } attr_block ] { SP } NL ;
+slide_block    = markdown_block | attr_line | container | detour
+               | branch | fenced_block ;
+detour         = ":::" { ":" } SP "detour" [ SP attr_block ] NL
+                 { detour_item }
+                 ":::" { ":" } NL ;
+detour_item    = slide | include ;
+include        = "::include" attr_block NL ;
+container      = ":::" { ":" } SP NAME [ SP attr_block ] NL
+                 { slide_block }
+                 ":::" { ":" } NL ;
+fenced_block   = FENCE NAME [ SP attr_block ] NL BODY FENCE ;
+```
+
+Notes:
+
+- A `slide_heading` is recognized only at the top level of a file or at the top level of a detour container. Everywhere else, `#` headings are ordinary content and produce warning LT041 (a level-1 heading inside a container is almost always a mistake).
+- Non-blank content before the first slide heading of a file (or of a detour) is an error (LT002).
+- Setext level-1 headings (a line underlined with `=`) are an error (LT001).
+- Containers nest in the markdown-it-container way: an outer fence uses more colons than the fences it contains.
+
+### 3.3 Slide headings and titles
+
+| Heading | Result |
+|---|---|
+| `# Dijkstra's Algorithm` | Titled slide, auto id |
+| `# Dijkstra's Algorithm {#dijkstra}` | Titled slide, explicit id |
+| `#` | Untitled slide, auto id |
+| `# {#overview .fullbleed}` | Untitled slide with attributes |
+
+- The title is inline Markdown. Its HTML goes into the slide's `<h1>`; its plain text is used by the overview map and go-to search.
+- An untitled slide renders no `<h1>`. Its plain-text title for the overview and go-to is its id.
+- A trailing `{...}` is treated as an attribute block only if it is the last element of the heading line. If it looks like an attribute block but fails to parse, that is an error (LT009). Use `\{` for a literal brace.
+
+### 3.4 Attribute blocks
+
+```ebnf
+attr_block = "{" { SP } [ attr { SP { SP } attr } ] { SP } "}" ;
+attr       = "#" IDENT | "." CLASS | KEY "=" value ;
+value      = BARE | '"' { any char except '"' | '\"' } '"'
+                  | "'" { any char except "'" | "\'" } "'" ;
+IDENT      = ALNUM { ALNUM | "-" | "_" } ;
+CLASS      = ( ALPHA | "_" | "-" ) { ALNUM | "-" | "_" } ;
+KEY        = ( ALPHA | "_" ) { ALNUM | "-" | "_" } ;
+BARE       = 1*( any char except SP, "{", "}", '"', "'" ) ;
+```
+
+- At most one `#id` per block (LT009). Classes accumulate. A repeated key is an error (LT009).
+- All values are strings at parse time. Typed consumers (slide attributes, component options) coerce them: `true`/`false` to bool, digits to int, and so on. A failed coercion is an error (LT021 for components, LT009 otherwise).
+- **Attribute lines**: a line containing only an attribute block, placed directly before a block, applies to that block (markdown-it `attrs_block` behavior). When the line is directly followed by paragraph text (no blank line), it applies to the rest of that paragraph. This is how reveal fragments are declared (section 3.12).
+
+### 3.5 Slide attributes
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `#id` | IDENT | generated (3.6) | Slide id |
+| `.class` | CLASS | none | CSS classes on the slide element |
+| `next` | IDENT, `back` or `none` | implicit (5.2) | Explicit next target |
+| `offpath` | bool | `false` | Exclude from implicit next chains |
+| `layout` | string | `default` | Adds the class `layout-NAME` to the slide; built-in layouts: `default`, `title` |
+| `transition` | string | per edge kind | Transition used when entering this slide |
+
+Any other key produces warning LT010 and is kept as a `data-*` attribute on the slide element for themes. The built-in themes also style the helper classes `.center` (centered body), `.fullbleed` (no padding) and `.small` (smaller body text).
+
+### 3.6 Identifiers
+
+- Slide ids and detour ids share **one global namespace** across all files. A wiki link can target either.
+- Ids are case-sensitive and match `IDENT`.
+- **Auto ids for titled slides**: take the plain-text title, apply Unicode NFKD, remove combining marks, remove apostrophes (`'` and `’`), lowercase, replace every run of characters outside `[a-z0-9]` with `-`, trim leading and trailing `-`. `Dijkstra's Algorithm` gives `dijkstras-algorithm`. If the result is empty, the untitled rule applies.
+- **Auto ids for untitled slides**: `<file-stem>-<n>`, where `n` is the 1-based index of the slide within its source file.
+- **Auto ids for detours**: `<origin-id>-detour-<n>`, where `n` is the 1-based index of the detour within the origin slide.
+- Two explicit ids that collide are an error (LT007). An auto id that collides with any other id gets the smallest suffix `-2`, `-3`, ... that makes it unique, with warning LT008. Explicit ids are assigned first, then auto ids in document order.
+
+### 3.7 Wiki links
+
+```ebnf
+wiki_link = "[[" IDENT [ "|" label ] "]]" ;
+```
+
+- `label` is inline Markdown. Default label: the target's plain-text title.
+- Wiki links are recognized in slide bodies, titles and notes, but not in code spans or code blocks. `\[[` is literal.
+- A link to a detour id targets the detour's entry slide.
+- An unknown target is an error (LT011).
+- Following a link is an excursion (section 7).
+
+### 3.8 Containers
+
+| Name | Purpose | Attributes |
+|---|---|---|
+| `detour` | Nested slides (3.9) | `#id`, `label`, `key`, `badge` |
+| `branch` | Choice point (3.10) | `layout` (`menu` or `cards`) |
+| `notes` | Speaker notes (3.14) | none |
+| `columns` | Horizontal layout; direct children are `column` containers | `gap` |
+| `column` | One column | `width` (CSS length or fraction like `2fr`) |
+| `callout` | Highlighted box | `kind` (`info`, `tip`, `warn`) |
+| any other name | Rendered as `<div class="NAME">`, a styling hook for themes | any |
+
+An unknown container name within edit distance 2 of a built-in name produces warning LT019 (likely typo).
+
+Content never paints outside its column: a table wider than its column scrolls horizontally inside it.
+
+### 3.9 Detours
+
+````markdown
+::: detour {#heap-refresher label="Refresher: binary heaps" key=h}
+# What is a binary heap?
+...
+
+# Heap operations
+...
+:::
+````
+
+- A detour container MUST appear at the top level of a slide body (LT034 inside another container). That slide is its **origin**.
+- Its body MUST contain at least one slide (directly or through includes) (LT016).
+- `label` defaults to the plain-text title of the entry slide. `badge` (bool, default `true`) controls whether a badge is rendered at the container's position in the origin slide. Without a badge the detour is still reachable by key, Down, links and the overview.
+- Detours MAY nest. A nested detour's origin is the detour slide that contains it.
+- The container is removed from the origin's content; only the badge remains.
+
+### 3.10 Branches
+
+````markdown
+::: branch
+- [[impl-python|Python]] {key=1}
+- [[impl-rust|Rust]] {key=2} fast and safe
+- [[impl-c]]
+:::
+````
+
+- The body MUST be exactly one bullet list. Each item MUST start with one wiki link, optionally followed by an attribute block (only `key` is allowed) and optional inline text shown as a description (LT017).
+- Items without `key` get the lowest unused digit `1`..`9`, in order.
+- A slide MUST NOT contain more than one branch (LT017).
+- Branch targets MUST be in the same scope as the slide (LT013).
+
+### 3.11 Keys on a slide
+
+The keys of a slide's branch options and detours MUST be unique within that slide (LT018) and MUST NOT collide with a global binding (LT018).
+
+### 3.12 Reveal fragments
+
+````markdown
+{.reveal}
+- Greedy choice
+- Priority queue
+- No negative weights
+
+{.reveal}
+Final remark, revealed as one block.
+````
+
+- An attribute line containing the class `reveal` marks the next block as revealable. If the block is a list, each top-level item is one fragment; otherwise the whole block is one fragment.
+- Fragments are numbered 1, 2, 3, ... in document order across the slide (excluding detour content).
+- All fragments of a slide form the single **reveal track** (section 6.1).
+
+### 3.13 Fenced component blocks
+
+````markdown
+```graph-anim {#trace source="algos.py:dijkstra_trace" graph="data/city.dot"}
+start: A
+panel: [dist, queue]
+```
+````
+
+The info string is `NAME [attr_block]`. `NAME` is resolved in this order:
+
+1. `timeline`: the slide's timeline (section 3.15).
+2. A registered component name (section 8).
+3. A Pygments lexer alias: rendered by the built-in `code` component with `lang=NAME`.
+4. Otherwise: plain preformatted text, with warning LT020. An empty info string gives plain text without a warning.
+
+Because registered names win over lexers, components MUST NOT be registered under common language names; this is why the diff component is `diff-steps` and ` ```diff ` still highlights unified diffs.
+
+Reserved attributes, handled by the core and not passed to component options: `#id`, classes, `follow`.
+
+### 3.14 Speaker notes
+
+A `notes` container's content goes to presenter view only. A slide MAY have several `notes` containers; they are concatenated in order. Wiki links in notes are clickable in presenter view and create link edges.
+
+### 3.15 Timelines
+
+At most one `timeline` block per slide (LT029). Its body is not YAML; it has its own line grammar:
+
+```ebnf
+timeline  = { line } ;
+line      = { SP } ( cue | ) [ comment ] NL ;
+cue       = assign { { SP } "," { SP } assign } ;
+assign    = TRACK SP { SP } position ;
+position  = INT
+          | ( "+" | "-" ) INT
+          | INT ".." ( INT | "end" )
+          | "end" ;
+TRACK     = IDENT ;          (* "reveal" or a component id on this slide *)
+comment   = "#" { any char } ;
+```
+
+Example:
+
+````markdown
+```timeline
+reveal 1            # first bullet
+trace 1..4          # four cues, one frame each
+code 2, trace 5     # both change on the same step
+trace end
+```
+````
+
+Semantics are defined in section 6.3.
+
+---
+
+## 4. Deck Model
+
+The build produces this model after parsing, include expansion, id assignment and graph resolution. Rendering then fills the track fields. Types are given as Python annotations; the implementation (`src/lattice/model.py`) uses dataclasses, and pydantic for the front matter. A slide body is kept as rendered HTML in which component blocks and the branch menu are placeholders, replaced once components are rendered and all titles are known.
+
+```python
+class SourceLoc:
+    file: Path          # relative to the root file's directory
+    line: int           # 1-based
+    col: int            # 1-based
+
+class Attrs:
+    id: str | None
+    classes: list[str]
+    kv: dict[str, str]
+
+# Next specification as written by the author, before resolution
+NextSpec = Explicit(target: str) | Back | End | Implicit
+
+class Slide:
+    id: str
+    title_html: str               # "" when untitled
+    title_text: str               # plain text; the id when untitled
+    untitled: bool
+    classes: list[str]
+    data: dict[str, str]          # unknown attributes, exposed as data-*
+    scope: str                    # "root" or a detour id
+    file_index: int               # 1-based index within its source file
+    loc: SourceLoc
+    next_spec: NextSpec
+    offpath: bool
+    layout: str
+    transition: str | None
+    body_html: str                # rendered body with component placeholders
+    components: list[ComponentBlock]
+    reveal_count: int
+    detours: list[str]            # detour ids, document order
+    branch: Branch | None
+    links: list[str]              # link targets (body, title, notes), deduplicated
+    notes_html: str | None
+    timeline: TimelineSpec | None
+    # resolved (section 5)
+    next: str | Literal["back"] | None
+    # filled after rendering (section 6)
+    tracks: list[Track]
+    positions: list[list[int]]    # positions[step][track_index]
+
+class Detour:
+    id: str
+    origin: str
+    label: str
+    key: str | None
+    badge: bool
+    slides: list[str]             # in document order; slides[0] is the entry
+    loc: SourceLoc
+
+class Branch:
+    options: list[BranchOption]
+    layout: Literal["menu", "cards"]
+
+class BranchOption:
+    target: str
+    label_html: str
+    description_html: str | None
+    key: str
+
+ComponentBlock(name: str, id: str | None, attrs: Attrs, body: str, loc: SourceLoc,
+               follow: str | None)
+
+class TimelineSpec:
+    lines: list[TimelineLine]     # parsed cues with source locations
+
+class Track:
+    id: str                       # "reveal" or component id
+    kind: Literal["reveal", "component"]
+    instance: str | None          # "<slide-id>/<component-id>"
+    positions: int                # count, at least 1
+    follow: str | None            # leader track id
+
+class Edge:
+    source: str
+    target: str
+    kind: Literal["next", "branch", "detour", "link"]
+    key: str | None
+    implicit: bool
+
+class Deck:
+    meta: FrontMatter
+    slides: dict[str, Slide]      # insertion order = document order after includes
+    detours: dict[str, Detour]
+    edges: list[Edge]
+    start: str
+    main_path: list[str]
+    tours: dict[str, list[str]]
+    diagnostics: list[Diagnostic]
+```
+
+---
+
+## 5. Graph Resolution
+
+### 5.1 Scope sequences
+
+For each scope `X`, `seq(X)` is the list of slides whose scope is `X`, in document order after include expansion.
+
+### 5.2 Resolving `next`
+
+For each slide `s`, `s.next` is computed as follows, in order:
+
+1. `next_spec` is `Explicit(t)`: `t` MUST exist (LT012). If `s.scope` is a detour, `t` MUST have the same scope (LT013). If `t` is a detour id, it resolves to that detour's entry slide. Result: `t`.
+2. `next_spec` is `Back`: result `back`.
+3. `next_spec` is `End`: result `None`.
+4. `next_spec` is `Implicit`:
+   1. if `s.branch` is set: `None` (the presenter must choose);
+   2. else if `s.offpath`: `back`;
+   3. else the first slide after `s` in `seq(s.scope)` that is not offpath, if any;
+   4. else `None` in the root scope, `back` in a detour scope.
+
+`next=back` is legal in the root scope: it returns from whatever excursion brought the presenter there.
+
+### 5.3 Edges
+
+- One `next` edge per slide whose `next` is a slide id (`implicit` is true when rule 4 produced it).
+- One `branch` edge per branch option, with its key.
+- One `detour` edge from each origin to each of its detours' entry slides, with the detour key.
+- One `link` edge per distinct `(source, target)` wiki link pair.
+
+### 5.4 Start and main path
+
+- `start` is the front matter `start` (resolved like a link target, LT012 if unknown), else the first root-scope slide that is not offpath. A deck with no such slide is an error (LT042).
+- `main_path` starts at `start` and follows `next` while it is a slide id. Visiting a slide twice is an error (LT014).
+
+### 5.5 Detour termination
+
+For every detour, following `next` from its entry slide MUST reach `back` without revisiting a slide (LT035). With implicit edges this always holds; explicit `next` can break it.
+
+### 5.6 Reachability
+
+A breadth-first search from `start` over all edge kinds determines reachable slides. Each unreachable slide produces warning LT015. Offpath slides reachable only through links are fine.
+
+### 5.7 Tours
+
+- A tour is a list of ids. A detour id in the list expands to that detour's slides in `next` order. The value `main` means the computed main path.
+- Unknown ids are an error (LT012). A slide MAY appear only once per tour (LT043).
+
+---
+
+## 6. Steps and Tracks
+
+### 6.1 Tracks
+
+A slide has these tracks, in this order:
+
+1. The **reveal track** (`reveal`), if the slide has at least one fragment. With `m` fragments it has `m + 1` positions: position `k` shows fragments `1..k`.
+2. One **component track** per component instance whose render result has `positions > 1` or that is a follower. Its id is the block's `#id`.
+
+A track is **independent** if it is not a follower and has more than one position.
+
+### 6.2 Component ids and followers
+
+- A component without `#id` receives the id `cN`, where `N` is its 1-based index among the slide's components. A component with more than one position MUST have an explicit `#id` when the slide needs a timeline (LT033), and a leader needs one so that `follow=` can name it.
+- `follow=LEADER` makes a block a follower of track `LEADER` on the same slide (LT028 if unknown). Followers MAY be chained; cycles are an error (LT028). A follower MUST report the same number of positions as its leader (LT027).
+
+### 6.3 Compiling steps
+
+Let `I` be the independent tracks and `last(t) = positions(t) - 1`.
+
+**Without a timeline:**
+
+- `|I| = 0`: the slide has 1 step.
+- `|I| = 1`, track `t`: equivalent to the timeline `t 1..end`.
+- `|I| >= 2`: error LT023.
+
+**With a timeline**, cues are compiled by this algorithm:
+
+```python
+pos = {t: 0 for t in I}
+table = [dict(pos)]                              # step 0
+
+for line in timeline.lines:
+    ranges = [a for a in line.assigns if a.is_range]
+    if len(ranges) > 1: error("LT031")
+    for cue in expand(line):                     # see below
+        for a in cue:
+            if a.track not in I: error("LT024")  # includes followers
+            pos[a.track] = resolve(a, pos[a.track], last(a.track))
+            if not 0 <= pos[a.track] <= last(a.track): error("LT025")
+        if pos == table[-1]: warn("LT030")       # cue changes nothing
+        table.append(dict(pos))
+
+for t in I:
+    if all(row[t] == 0 for row in table): warn("LT026")  # never advanced
+```
+
+- `resolve`: `INT` is absolute; `+N` and `-N` are relative to the current position; `end` is `last(t)`.
+- `expand`: a line without a range is one cue. A line with the range `t a..b` produces one cue per value from `a` to `b` (ascending or descending, `end` meaning `last(t)`); the line's other assignments are applied in the first of these cues only.
+
+The number of steps is `len(table)`. Follower columns are then added by copying their leader's column. The final table is stored in `Slide.positions` with columns in track order.
+
+---
+
+## 7. Navigation Semantics
+
+### 7.1 State
+
+```text
+cur   = (slide, step)                          current position
+H     = [ Entry ]                              history stack, top = last element
+Entry = (slide, step, kind)                    kind in { forward, excursion }
+tour  = tour name or none
+S(x)  = number of steps of slide x
+```
+
+Initial state: `cur = (start, 0)`, `H = []`, `tour = none` (subject to 7.4).
+
+`push(k)` means: append `(cur.slide, cur.step, k)` to `H`. `go(x, i)` means: set `cur = (x, i)` and render.
+
+### 7.2 Events
+
+| Event | Guard | Effect |
+|---|---|---|
+| **NEXT** | `cur.step < S(cur.slide) - 1` | `cur.step += 1` |
+| | else, `tour` set, `cur.slide` in tour with a successor `u` | `push(forward)`, `go(u, 0)` |
+| | else, `next(cur.slide)` is a slide `t` | `push(forward)`, `go(t, 0)` |
+| | else, `next(cur.slide)` is `back` | **RETURN** |
+| | else | no-op (end-of-path indicator) |
+| **PREV** | `cur.step > 0` | `cur.step -= 1` |
+| | else, `H` not empty | `e = pop(H)`, `go(e.slide, e.step)` |
+| | else | no-op |
+| **CHOOSE(k)** | `k` is a branch option key of `cur.slide`, target `t` | `push(forward)`, `go(t, 0)` |
+| | `k` is a detour key of `cur.slide` | **ENTER(d)** |
+| | else | no-op |
+| **DOWN** | `cur.slide` has at least one detour | **ENTER(first detour)** |
+| **ENTER(d)** | | `push(excursion)`, `go(entry(d), 0)` |
+| **JUMP(t)** (link click, go-to, overview click, `api.goto`, manual edit of the URL hash) | `t != cur.slide` | `push(excursion)`, `go(t, 0)` |
+| **RETURN** (Up, or `next = back`) | `H` contains an excursion entry | let `i` be the index of the topmost one, `e = H[i]`; `H = H[0:i]`; `go(e.slide, e.step)` |
+| | else, `cur.slide` is in a detour `D` | structural fallback: `go(origin(D), S(origin(D)) - 1)` |
+| | else | no-op |
+| **HOME** | | `H = []`, `go(start, 0)` |
+| **SET_TOUR(n)** | | `tour = n` (no move) |
+
+Consequences, stated for clarity:
+
+- Branch choices are forward moves: PREV after a choice returns to the branch slide.
+- RETURN discards the excursion from history: PREV afterwards continues from what preceded the origin.
+- Every forward move leaves a slide at its last step, so PREV into it restores that last step. Excursions store the step they were started from and restore it.
+- The structural fallback only applies when history does not know the origin (after a reload with a deep link, or inside a tour).
+
+### 7.3 Worked trace
+
+Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-ops`), `complexity`.
+
+| Event | `cur` | `H` |
+|---|---|---|
+| start | (intro, 0) | [] |
+| NEXT | (dijkstra, 0) | [(intro,0,fwd)] |
+| NEXT, NEXT | (dijkstra, 2) | [(intro,0,fwd)] |
+| DOWN | (heap-what, 0) | [(intro,0,fwd), (dijkstra,2,exc)] |
+| NEXT | (heap-ops, 0) | [..., (dijkstra,2,exc), (heap-what,0,fwd)] |
+| NEXT (`next = back`) | (dijkstra, 2) | [(intro,0,fwd)] |
+| PREV | (dijkstra, 1) | [(intro,0,fwd)] |
+| NEXT, NEXT | (complexity, 0) | [(intro,0,fwd), (dijkstra,2,fwd)] |
+
+### 7.4 URL and persistence
+
+- The URL hash is `#/<slide-id>/<step>`, updated on every move with `history.replaceState` (browser history is not used for navigation).
+- `H` and `tour` are saved in `sessionStorage` under `lattice:<deck-hash>:nav` after every event.
+- On load: if the hash names a valid position and the saved state's `cur` equals it, the saved `H` and `tour` are restored. Otherwise `cur` comes from the hash (or `start`), and `H = []`.
+- A step beyond `S - 1` in the hash is clamped.
+
+### 7.5 Presenter view
+
+- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, the available moves (what NEXT does, branch options, detours and the return target, each with its key) and the notes.
+- Audience and presenter windows share state over a `BroadcastChannel` named `lattice:<deck-hash>`. After every event, the window that handled it broadcasts `{cur, H, tour}`; the other window adopts it without re-running the event. Either window may drive.
+
+### 7.6 Default bindings
+
+| Action | Keys |
+|---|---|
+| `next` | `ArrowRight`, `Space`, `PageDown` |
+| `prev` | `ArrowLeft`, `PageUp` |
+| `enter-detour` | `ArrowDown` |
+| `return` | `ArrowUp`, `Backspace` |
+| `choose` | digits `1`..`9` and custom keys from the slide |
+| `overview` | `o` |
+| `goto` | `g` |
+| `presenter` | `p` |
+| `tour` | `t` |
+| `home` | `Home` |
+
+Bindings are overridable in front matter under `keys`. Slide-level keys (branch options and detours) never override global bindings: a collision is an error (LT018).
+
+---
+
+## 8. Component Contract (Python)
+
+### 8.1 Registration and plugin loading
+
+- Components are classes registered with `@lattice.register(name)`.
+- Installed packages expose plugins through the entry point group `lattice.plugins`. A plugin is **activated** only if listed in the front matter `plugins`, which keeps builds deterministic.
+- Built-in components are always active. `lattice_plugins.py` next to the root file is always imported. Python code referenced by a deck is trusted and executed without confirmation.
+- Registering a name twice is an error (LT044), including a plugin shadowing a built-in. Re-importing the same class (for example after a live reload) is not a conflict.
+
+### 8.2 Component class
+
+```python
+class Component:
+    name: ClassVar[str]
+    version: ClassVar[str] = "1"                 # part of the cache key
+    Options: ClassVar[type[BaseModel]] = NoOptions
+    body: ClassVar[Literal["yaml", "text", "none"]] = "yaml"
+    runtime: ClassVar[str | None] = None         # file in lattice/runtime/components, or an absolute path
+    css: ClassVar[list[str]] = []                # same resolution as runtime
+    requires: ClassVar[list[str]] = []          # shared libraries for every instance: "plotly", "vega", "katex"
+
+    def render(self, block: ComponentBlock, opts: BaseModel,
+               ctx: RenderContext) -> RenderResult: ...
+```
+
+Option construction:
+
+- `body = "yaml"`: the body MUST be empty or a YAML mapping (LT021). Its keys are merged with the non-reserved attributes; a key present in both is an error (LT036). The merge is validated with `Options`.
+- `body = "text"`: attributes alone are validated with `Options`; the raw body is in `block.body`.
+- `body = "none"`: a non-empty body is an error (LT021).
+- An `Options` model declaring `extra="allow"` accepts unknown options; `graph-anim` and `array-anim` pass them to the trace function as keyword arguments, reading attribute values as YAML scalars (`push=1` gives the integer 1).
+
+### 8.3 RenderContext
+
+| Member | Description |
+|---|---|
+| `meta` | Front matter |
+| `slide_id`, `instance_id` | `instance_id` is `<slide-id>/<component-id or cN>` |
+| `root_dir`, `file_dir` | Root directory and directory of the file containing the block |
+| `path(p) -> Path` | Resolve `p` against `file_dir` and register it as a dependency (LT045 if missing, raised as `MissingFileError`) |
+| `depends(p)` | Register an extra dependency for caching |
+| `call(ref, **kwargs)` | `ref` is `"file.py:function"`: import the file (relative to `file_dir`), call the function, register the file as a dependency |
+| `load_graph(p)` | Load `.dot`, `.gml` or `.json` (node-link) into a NetworkX graph |
+| `layout(graph, engine="auto")` | Stable positions for nodes and edge routes, in points. `auto` is Graphviz `dot` with `rankdir=LR` (wide layouts suit slides); without Graphviz, a seeded NetworkX spring layout |
+| `palette` | Theme colors for build-time rendering: `ink`, `muted`, `accent`, `grid` and a `series` list |
+| `seed` | Integer derived from `instance_id`, for deterministic randomness |
+| `leader` | The leader's `RenderResult` for a follower, else `None` |
+| `frames_config` | `max_full_bytes`, `keyframe_interval` |
+| `warn(msg)` | Emit warning LT046 at the block's location |
+
+### 8.4 RenderResult
+
+```python
+@dataclass
+class RenderResult:
+    html: str                          # placed at the block's position
+    data: Any = None                   # JSON-serializable, delivered to the runtime
+    positions: int = 1                 # 1 means static
+    meta: list[dict] | None = None     # per-position metadata, build time only
+    assets: list[Asset] = field(default_factory=list)   # extra files to embed
+    requires: list[str] = field(default_factory=list)   # shared libraries for this instance only
+```
+
+- `positions` MUST be at least 1. `meta`, if present, MUST have length `positions` (LT047).
+- A component with `positions > 1` MUST declare a `runtime` (LT047), since only the runtime can change what is shown.
+- `requires` adds shared libraries for this instance only (a `plot` needs Vega only with `backend=vega`). Libraries are embedded only in decks that use them.
+
+### 8.5 Render order
+
+- Within a slide, leaders render before their followers (topological order).
+- Slides render independently; the implementation MAY render them in parallel processes. `render` MUST be a pure function of its inputs (options, body, dependencies, leader result).
+
+### 8.6 Caching
+
+The cache key is the SHA-256 of: the Lattice version and a hash of its Python sources, the component's name, version and module, canonical JSON of the options, the body, the block's directory, the leader's cache key and the theme palette; a cached entry is used only if the content hash of every registered dependency is unchanged. Only files registered through `path`, `depends` and `call` are tracked; modules imported indirectly by a called file are not. `lattice build --no-cache` bypasses the cache.
+
+### 8.7 Errors
+
+A `ComponentError` raised by `render` becomes error LT022 at the block's location (LT045 for `MissingFileError`). Any other exception also becomes LT022, with the last frames of the traceback in the message.
+
+### 8.8 Built-in components
+
+| Name | Body | Positions | Main options |
+|---|---|---|---|
+| `code` | text | 1, or leader's count when following | `lang`, `file`, `lines`, `symbol`, `highlight`, `title`, `linenos`, `line_base` (`snippet` or `file`: how highlighted line numbers are counted); as a follower, highlights `meta[i]["line"]` or `meta[i]["lines"]` |
+| `code-steps` | yaml | `len(steps) + 1` | same as `code` (`file` required); body `steps: [line ranges]` |
+| `diff-steps` | yaml | number of versions | `lang`, `context` (lines around changes), `title`; body `versions:` file paths, or mappings with `file` or `code` and an optional `label` |
+| `plot` | yaml | 1 | `backend` (`matplotlib`: static SVG; `vega`: Vega-Lite compiled in the browser; `plotly`), `source`, `spec` (raw Vega-Lite spec or Plotly figure), `data` (CSV), shorthand `kind`, `x`, `y`, `group`, `xlabel`, `ylabel`, `title`, `logx`, `logy`, `width`, `height` (inches, 96 px per inch for vega and plotly), `legend`. Theme colors and fonts are merged into the spec's `config` or `layout`; values given by the author win |
+| `dot` | text | 1 | `engine` |
+| `graph-anim` | yaml | number of frames | `source`, `graph` or `edges` (inline `"u v weight"` lines), `directed`, `engine`, `rankdir`, `panel`, `edge_labels`, `height`; other keys are passed to the trace function |
+| `array-anim` | yaml | number of frames | `source`, `values`, `panel`; other keys are passed to the trace function |
+| `math` | text | 1 | display math block |
+
+The exact option schemas are the pydantic `Options` models in `src/lattice/components/`.
+
+---
+
+## 9. Animation Frames
+
+### 9.1 Authoring
+
+```python
+from lattice.anim import GraphTrace
+
+def dijkstra_trace(graph, start):
+    t = GraphTrace(graph)
+    dist = {v: None for v in graph}
+    dist[start] = 0
+    t.frame(nodes={start: {"state": "active", "label": "0"}},
+            panel={"dist": dist}, caption="Start at A", meta={"line": 4})
+    ...
+    return t
+```
+
+- `Trace.frame(delta=None, *, meta=None, transient=None, **parts)` appends one frame. `parts` are merged into `delta` (for example `nodes=`, `edges=`, `panel=`, `caption=`). `transient` values apply to that frame only.
+- Frame 0 is the base state with the first delta applied. The number of positions equals the number of `frame` calls (at least 1).
+- `meta` is kept per frame for followers and is not emitted unless the component includes it in `data`.
+- `GraphTrace` defines the conventional state shape below; node and edge values may be a state string or a mapping, and edges may be given as `(u, v)` tuples.
+- `ArrayTrace(values)` uses `values`, `cells` (persistent per-index states), `marks` (transient per-frame highlights), `pointers` (name to index, `None` removes), `caption` and `panel`.
+- States styled by the built-in themes: nodes and edges `active`, `frontier`, `visited`, `done`, `tree`, `path`, `dim`, `error`; array cells `compare`, `swap`, `pivot`, `sorted`, `done`, `dim`.
+
+```json
+{
+  "nodes":   { "A": { "state": "active", "label": "0" } },
+  "edges":   { "A->B": { "state": "relaxed" } },
+  "panel":   { "dist": { "A": 0, "B": 4 } },
+  "caption": "Relax A -> B"
+}
+```
+
+Edge keys are `u->v` for directed and `u--v` for undirected graphs; for undirected graphs the runtime also accepts `v--u`.
+
+### 9.2 Delta semantics
+
+`apply(state, delta)`: for each key of `delta`, if its value is `null` the key is removed; if both values are objects, apply recursively; otherwise the value replaces the old one. Arrays are replaced as a whole.
+
+### 9.3 Frame stores
+
+`trace.frame_store(max_full_bytes, keyframe_interval)` (values from `ctx.frames_config`) materializes the frames and returns one of:
+
+```json
+{ "format": "full", "count": 42, "frames": [ {...}, {...} ] }
+```
+
+```json
+{ "format": "keyframed", "count": 600, "interval": 16,
+  "keyframes": [ {...}, {...} ],
+  "deltas": [ null, {...}, {...} ] }
+```
+
+- `full` is used unless its canonical JSON exceeds `build.frames.max_full_bytes`.
+- In `keyframed`, `keyframes[j]` is the full state of frame `j * interval`, and `deltas[i]` is the delta from frame `i - 1` to frame `i` (`null` at keyframe indexes).
+- Identical consecutive states are allowed; they cost little in either format.
+
+### 9.4 Layout stability
+
+`ctx.layout` MUST be computed once per instance, on the union of the base graph and every element that appears in any frame. Elements absent from a frame are hidden, never re-laid out.
+
+---
+
+## 10. Runtime Contract (JavaScript)
+
+### 10.1 Registration
+
+A component runtime is a script that registers a controller when it runs. Runtimes are concatenated after the core, so they MUST NOT use `import` or `export`; they run as a module in single-file output and as a deferred classic script in directory output.
+
+```js
+Lattice.component("graph-anim", {
+  mount(el, data, api) { /* build DOM once; return an instance object */ },
+  show(inst, position, info) { /* render the state at this absolute position */ },
+  enter(inst) {},
+  leave(inst) {},
+  destroy(inst) {},
+});
+```
+
+`info = { from: number | null, direction: -1 | 0 | 1, animate: boolean }`. `animate` is true only for single-step moves (NEXT or PREV within the slide); jumps, restores and scrubbing use `false`.
+
+### 10.2 Lifecycle
+
+1. `mount` is called once, the first time the slide becomes current. Only instances with `data` are mounted; static components (plain code, matplotlib plots, diagrams) need no runtime.
+2. Each time the slide becomes current: `enter`, then `show` with the position for the current step.
+3. On each step change where the instance's position changes: `show`.
+4. When the slide stops being current: `leave`. Timers and animations MUST stop.
+5. `destroy` is called on page unload.
+
+Requirements:
+
+- `show` MUST be idempotent and MUST depend only on `position` (plus `info` for transition effects). It MUST work for any position, in any order.
+- Controllers MUST NOT register global keyboard listeners. Pointer and wheel events inside `el` are allowed.
+
+### 10.3 The `api` object
+
+| Member | Description |
+|---|---|
+| `api.instanceId` | Instance id |
+| `api.frames(store)` | Returns `{ count, at(i) }` for a frame store, regardless of format, with a small cache |
+| `api.goto(id)` | Performs JUMP |
+| `api.palette` | Computed style of the root element; read tokens with `api.palette.getPropertyValue("--lt-accent")` |
+| `api.presenter` | `true` in presenter view |
+| `api.onResize(cb)` | Called when the slide scale changes |
+
+### 10.4 Core-managed features
+
+- Reveal: elements carry `data-lt-reveal="k"`; the core shows fragment `k` when the reveal position is at least `k`, using `visibility: hidden` so layout does not shift.
+- Branch menus, detour badges, wiki links, transitions, overview, go-to and presenter view are implemented by the core.
+- The core exports helpers for runtimes: `Lattice.frames(store)`, `Lattice.applyDelta`, `Lattice.renderPanel(el, panel, keys)` (the variable panel of the animation components) and `Lattice.esc` (HTML escaping).
+
+---
+
+## 11. Output Format
+
+### 11.1 Single-file document
+
+```html
+<!doctype html>
+<html lang="en" data-lattice="1" data-theme="default">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="lattice 0.2.2">
+  <title>Shortest Paths</title>
+  <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
+  <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
+  <script>/* shared libraries (KaTeX, Vega, Plotly), only those the deck requires */</script>
+</head>
+<body>
+  <div id="lt-root">
+    <main id="lt-stage"><div id="lt-viewport">          <!-- scaled to fit the window -->
+      <section class="lt-slide layout-default" id="s-dijkstra" data-slide="dijkstra" hidden>
+        <header class="lt-head"><h1 class="lt-title">Dijkstra's algorithm</h1></header>
+        <div class="lt-body">
+          <div class="lt-c lt-c-graph-anim" data-component="graph-anim" data-instance="dijkstra/trace">
+            <div class="lt-graph-anim"></div>
+          </div>
+          <button class="lt-detour-badge" data-lt-detour="heap-refresher"><kbd>h</kbd><span>Refresher: binary heaps</span></button>
+        </div>
+      </section>
+      <!-- one section per slide, detour slides included, document order -->
+      <div id="lt-hud"><div id="lt-crumbs"></div><div id="lt-progress"></div></div>
+    </div></main>
+    <aside id="lt-presenter-panel" hidden></aside>
+  </div>
+  <div id="lt-overlay" hidden></div>
+  <script type="application/json" id="lt-deck">{ ... }</script>
+  <script type="application/json" id="lt-data-dijkstra/trace">{ ... }</script>
+  <script type="module">/* core runtime, then component runtimes, then Lattice.boot() */</script>
+</body>
+</html>
+```
+
+- Relative image sources are embedded as `data:` URIs; a missing image produces LT051.
+- Component data lives in separate `<script type="application/json">` tags, parsed on first mount.
+- Speaker notes are stored in the deck JSON, not in slide sections.
+- The command line warns (LT032) when the file exceeds 50 MB.
+
+### 11.2 Deck JSON
+
+```ts
+interface DeckJSON {
+  lattice: 1;                              // format version
+  hash: string;                            // content hash, used for storage keys
+  version: string;                         // Lattice version that built the deck
+  meta: { title: string; author?: string; date?: string;
+          aspect: string; theme: string };
+  start: string;
+  keys: Record<string, string[]>;          // action -> keys
+  transitions: Record<"next" | "branch" | "detour" | "link", string>;
+  order: string[];                         // slide ids, document order
+  slides: Record<string, SlideJSON>;
+  detours: Record<string, DetourJSON>;
+  instances: Record<string, InstanceJSON>;
+  tours: Record<string, string[]>;
+  mainPath: string[];
+  overview: {                              // empty nodes and edges without Graphviz
+    width: number; height: number;
+    nodes: Record<string, { x: number; y: number; w: number; h: number; label: string }>;
+    edges: (EdgeJSON & { path: string })[];  // path: SVG path of the drawn edge
+  };
+}
+
+interface SlideJSON {
+  title: string;                           // plain text; "" when untitled
+  label: string;                           // title, or the id when untitled (overview, go-to)
+  scope: string;                           // "root" or detour id
+  next: { slide: string } | "back" | null;
+  branches: { target: string; key: string; label: string }[];
+  detours: string[];
+  steps: number;
+  tracks: { id: string; kind: "reveal" | "component";
+            instance?: string; follow?: string }[];
+  positions: number[][];                   // [step][trackIndex]
+  offpath: boolean;
+  transition?: string;
+  notes?: string;                          // HTML
+  source: { file: string; line: number };
+}
+
+interface DetourJSON {
+  origin: string; entry: string; label: string;
+  key?: string; slides: string[];
+}
+
+interface InstanceJSON {
+  component: string;
+  slide: string;
+  data: string | null;                     // id of the JSON script tag (single file), or null
+  url?: string;                            // data/<instance>.json (directory output)
+}
+
+interface EdgeJSON {
+  from: string; to: string;
+  kind: "next" | "branch" | "detour" | "link";
+  key?: string;
+}
+```
+
+### 11.3 Deck hash
+
+`hash` is the SHA-256 (first 16 hex digits) of the canonical deck JSON without the `hash` field. It changes whenever the deck changes, which invalidates stale session state.
+
+### 11.4 Directory output
+
+With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.html`, `assets/` (stylesheet, runtime, shared libraries, `media/` for images) and `data/<instance>.json`. The runtime is a deferred classic script and fetches every data file before the first slide renders, so the folder MUST be served over HTTP (for example `python -m http.server -d OUT`); `file://` works only for single-file output. Math fonts stay embedded in the stylesheet.
+
+---
+
+## 12. Diagnostics
+
+| Code | Severity | Condition |
+|---|---|---|
+| LT001 | error | Setext level-1 heading |
+| LT002 | error | Content before the first slide of a file or detour |
+| LT003 | error | Front matter in an included file |
+| LT004 | error | Include cycle |
+| LT005 | error | File included more than once |
+| LT006 | error | Included file not found |
+| LT007 | error | Duplicate explicit id |
+| LT008 | warning | Auto id renamed to avoid a collision |
+| LT009 | error | Malformed attribute block or invalid attribute value |
+| LT010 | warning | Unknown slide attribute |
+| LT011 | error | Wiki link to an unknown id |
+| LT012 | error | Unknown id in `next`, `start` or a tour |
+| LT013 | error | `next` or branch target outside the detour's scope |
+| LT014 | error | Cycle on the main path |
+| LT015 | warning | Unreachable slide |
+| LT016 | error | Detour without slides |
+| LT017 | error | Malformed branch, or more than one branch on a slide |
+| LT018 | error | Duplicate key on a slide, or collision with a global binding |
+| LT019 | warning | Unknown container name close to a built-in (likely typo) |
+| LT020 | warning | Unknown fenced block name, rendered as plain text |
+| LT021 | error | Invalid component options or body |
+| LT022 | error | Component render failed |
+| LT023 | error | Several independent tracks and no timeline |
+| LT024 | error | Timeline references an unknown track or a follower |
+| LT025 | error | Timeline position out of range |
+| LT026 | warning | Independent track never advanced |
+| LT027 | error | Follower position count differs from its leader |
+| LT028 | error | Unknown leader or follow cycle |
+| LT029 | error | More than one timeline on a slide |
+| LT030 | warning | Timeline cue changes nothing |
+| LT031 | error | More than one range on a timeline line |
+| LT032 | warning | Single-file output larger than 50 MB |
+| LT033 | error | Component track needs an `#id` |
+| LT034 | error | Include inside a container other than a detour |
+| LT035 | error | Detour does not terminate with `back` |
+| LT036 | error | Option given both as attribute and in the YAML body |
+| LT040 | warning | Unknown front matter key |
+| LT041 | warning | Level-1 heading inside a container |
+| LT042 | error | No start slide |
+| LT043 | error | Slide repeated in a tour |
+| LT044 | error | Component name registered twice |
+| LT045 | error | Referenced file not found |
+| LT046 | warning | Warning emitted by a component |
+| LT047 | error | Invalid render result |
+| LT048 | error | Invalid front matter (YAML or value) |
+| LT049 | error | Timeline syntax error, or a track twice in one cue |
+| LT050 | error | Plugin or `lattice_plugins.py` failed to load |
+| LT051 | warning | Image referenced by a slide not found |
+| LT052 | warning | Unknown theme (the default theme is used) |
+
+Diagnostics are printed as `file:line:col: severity LTnnn: message`. `lattice check` exits with status 1 if any error is reported, 0 otherwise (`--strict` also fails on warnings).
+
+---
+
+## 13. Complete Example
+
+### Files
+
+`talk.md` (root):
+
+````markdown
+---
+title: Shortest Paths
+tours:
+  short: [intro, dijkstra, end]
+---
+
+# Shortest Paths {#intro}
+
+{.reveal}
+- Single source
+- Non-negative weights
+
+::include{file="parts/dijkstra.md"}
+
+# Questions? {#end}
+
+::include{file="parts/backup.md" offpath=true}
+````
+
+`parts/dijkstra.md`:
+
+````markdown
+# Dijkstra's Algorithm {#dijkstra}
+
+```code {#code lang=python file="../algos.py" symbol=dijkstra follow=trace}
+```
+
+```graph-anim {#trace source="../algos.py:dijkstra_trace" graph="../data/city.dot"}
+start: A
+panel: [dist]
+```
+
+::: detour {#heap-refresher label="Refresher: binary heaps" key=h}
+::include{file="../shared/heaps.md"}
+:::
+
+::: notes
+If someone asks about negative weights, go to [[bellman-ford]].
+:::
+
+# Complexity {#complexity}
+
+$$O((V + E) \log V)$$
+````
+
+`shared/heaps.md`:
+
+````markdown
+# What is a binary heap? {#heap-what}
+...
+
+# Heap operations {#heap-ops}
+...
+````
+
+`parts/backup.md`:
+
+````markdown
+# Bellman-Ford {#bellman-ford}
+...
+````
+
+### Resolution
+
+| Slide | Scope | `next` | Notes |
+|---|---|---|---|
+| `intro` | root | `dijkstra` | 2 fragments, so 3 steps |
+| `dijkstra` | root | `complexity` | One independent track (`trace`, say 12 frames), `code` follows it: 12 steps, no timeline needed |
+| `heap-what` | `heap-refresher` | `heap-ops` | |
+| `heap-ops` | `heap-refresher` | `back` | Last slide of the detour |
+| `complexity` | root | `end` | |
+| `end` | root | `None` | End of main path |
+| `bellman-ford` | root | `back` | Offpath, reachable through the notes link |
+
+Main path: `intro`, `dijkstra`, `complexity`, `end`. Edges: 4 `next` (implicit, including `heap-what` to `heap-ops`), 1 `detour` (`dijkstra` to `heap-what`, key `h`), 1 `link` (`dijkstra` to `bellman-ford`). No unreachable slides.
+
+### Excerpt of the deck JSON
+
+```json
+{
+  "lattice": 1,
+  "start": "intro",
+  "order": ["intro", "dijkstra", "heap-what", "heap-ops",
+            "complexity", "end", "bellman-ford"],
+  "slides": {
+    "dijkstra": {
+      "title": "Dijkstra's Algorithm",
+      "label": "Dijkstra's Algorithm",
+      "scope": "root",
+      "next": { "slide": "complexity" },
+      "branches": [],
+      "detours": ["heap-refresher"],
+      "steps": 12,
+      "tracks": [
+        { "id": "trace", "kind": "component", "instance": "dijkstra/trace" },
+        { "id": "code", "kind": "component", "instance": "dijkstra/code", "follow": "trace" }
+      ],
+      "positions": [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5],
+                    [6, 6], [7, 7], [8, 8], [9, 9], [10, 10], [11, 11]],
+      "notes": "<p>If someone asks about negative weights, go to <a data-lt-link=\"bellman-ford\">Bellman-Ford</a>.</p>",
+      "source": { "file": "parts/dijkstra.md", "line": 1 }
+    },
+    "heap-ops": {
+      "title": "Heap operations",
+      "scope": "heap-refresher",
+      "next": "back",
+      "branches": [], "detours": [],
+      "steps": 1, "tracks": [], "positions": [[]],
+      "source": { "file": "shared/heaps.md", "line": 4 }
+    }
+  },
+  "detours": {
+    "heap-refresher": {
+      "origin": "dijkstra", "entry": "heap-what",
+      "label": "Refresher: binary heaps", "key": "h",
+      "slides": ["heap-what", "heap-ops"]
+    }
+  },
+  "tours": { "short": ["intro", "dijkstra", "end"] }
+}
+```
+
+---
+
+## 14. Not Yet Specified
+
+Planned features (spatial mode, PDF export, presenter scrubber, more trace types, plugin hooks and others) are tracked in the roadmap of `design-report.md`, section 6. They are specified here when they are implemented.
+
+---
+
+## 15. Changes Since Draft 1
+
+A record of departures from the first draft. Each rule lives in the section cited; this list holds no rules of its own.
+
+| Version | Change | Sections |
+|---|---|---|
+| 0.1 | Attribute lines may be followed directly by paragraph text | 3.4 |
+| 0.1 | Extra options passed to trace functions as keyword arguments | 8.2 |
+| 0.1 | Runtime and CSS paths may be absolute (local plugins) | 8.2 |
+| 0.1 | Only instances with data are mounted | 10.2 |
+| 0.1 | Cache key includes a hash of the Lattice sources | 8.6 |
+| 0.1 | Graph layouts default to Graphviz `dot` left to right | 8.3 |
+| 0.1 | Id-less components are named `cN` | 6.2 |
+| 0.1 | Diagnostics LT048 to LT050 | 12 |
+| 0.2 | The diff component is `diff-steps` | 3.13, 8.8 |
+| 0.2 | Per-instance libraries (`RenderResult.requires`) | 8.4 |
+| 0.2 | Vega-Lite and Plotly backends for `plot` | 8.8 |
+| 0.2 | Image embedding, LT051 | 11.1 |
+| 0.2 | Directory output | 11.4 |
+| 0.2 | Overview map layout in the deck JSON | 11.2 |
+| 0.2.1 | Columns contain their content | 3.8 |
+| 0.2.2 | Presenter view described as implemented (no scrubber) | 7.5 |
+| 0.2.2 | Built-in themes only, LT052; LT045 and LT032 implemented; `destroy` called on page unload | 2.2, 8.7, 11.1, 10.2 |

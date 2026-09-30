@@ -1,0 +1,14 @@
+/* Styles shipped with the local plugins; they use the theme's custom properties. */
+.truth-table{border-collapse:collapse;font-family:var(--lt-font-code);font-size:22px}
+.truth-table th{white-space:nowrap;font-weight:600;vertical-align:bottom;color:var(--lt-muted);padding:6px 18px;border-bottom:2px solid var(--lt-rule)}
+.truth-table th.wrap{white-space:normal;min-width:12ch}
+.truth-table td{text-align:center;padding:5px 18px}
+.truth-table td.t{color:var(--lt-accent);font-weight:700}
+.truth-table td.f{color:var(--lt-muted)}
+.cs-frames{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-height:300px;justify-content:flex-end}
+.cs-frames li{display:flex;justify-content:space-between;gap:20px;padding:10px 16px;border-radius:8px;
+  background:var(--lt-panel);font-size:20px;border-left:6px solid var(--lt-rule)}
+.cs-frames li.top{border-left-color:var(--lt-active)}
+.cs-frames li.ret{border-left-color:var(--lt-good)}
+.cs-frames li span{color:var(--lt-muted);font-size:17px}
+.cs-caption{font-style:italic;color:var(--lt-muted);font-size:22px;margin:12px 0 0}
