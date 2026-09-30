@@ -46,12 +46,15 @@ src/lattice/
   emit.py         deck JSON, single-file HTML, directory output, image embedding
   graphs.py       graph loading, Graphviz layouts, overview map layout, tree layouts per frame
   anim.py         Trace, GraphTrace, ArrayTrace, TreeTrace, GridTrace, deltas, frame stores
+  bbv/            basic block versioning: types.py (lattice, contexts), prims.py, ir.py (programs, .bbv
+                  syntax, liveness), sbbv.py, lv.py, heuristics.py, trace.py (events to frames),
+                  layout.py (block bands), pseudocode/ (the thesis algorithms, for code following)
   pdf.py          PDF export: pdf step selection, the page plan (tour and appendix), driving Chromium
   model.py        dataclasses and pydantic front matter
   diagnostics.py  Diagnostic, BuildError
   themes.py       theme table: CSS file, Pygments style, palette for components
   server.py       dev server: polling watcher and server-sent events for reload
-  components/     base.py (contract, registry, RenderContext), code.py, visual.py, animations.py
+  components/     base.py (contract, registry, RenderContext), code.py, visual.py, animations.py, bbv.py
   runtime/
     lattice.js    navigation state machine, overlays, presenter view (preview, scrubber), print mode,
                   component host
@@ -59,7 +62,7 @@ src/lattice/
     components/   one runtime per animated or interactive component
     vendor/       KaTeX, Vega, Vega-Lite, Plotly (with licenses), embedded only when used
 tests/            pytest suites (see Verification)
-examples/         six decks with their built talk.html; they double as integration tests
+examples/         seven decks with their built talk.html; they double as integration tests
 scripts/          build_examples.py, snapshot.py (drive a deck in Chromium, take screenshots),
                   check_docs.py (mechanical documentation checks)
 docs/             this file, the spec and the design report
@@ -102,10 +105,11 @@ Run `pytest` after every change; it takes about twenty seconds. The suites:
 | `test_parsing.py` | attributes, ids, includes, links, reveal, containers |
 | `test_graph.py` | next resolution, detours, branches, keys, tours |
 | `test_steps.py` | tracks, timelines, followers, deltas, frame stores, tree and grid traces, tree layouts |
+| `test_bbv.py` | the type lattice, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), frames, layout, the two components |
 | `test_output.py` | plot backends, diff-steps, images, directory output, overview map, library inclusion |
 | `test_pdf.py` | `pdf` steps and LT053, the page plan (tour, appendix, back links), a real export in Chromium |
 | `test_cli.py` | CLI commands and building every example |
-| `test_runtime.py` | the navigation state machine, the presenter preview and scrubber, tree and grid runtimes, in Chromium |
+| `test_runtime.py` | the navigation state machine, the presenter preview and scrubber, tree, grid and versioning runtimes, in Chromium |
 | `test_layout.py` | no content spills out of a column, on every example slide |
 
 Tests prove structure, not appearance. After any visual change (CSS, runtime rendering, a component's HTML, an example), rebuild the examples and look at screenshots of the affected slides:
@@ -127,6 +131,8 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 - **Counting key presses** in `snapshot.py`: a slide with `n` steps needs `n` presses to leave it (steps 1 to `n-1`, then the move).
 - **Step numbers differ by audience.** The URL hash and the `pdf` attribute count steps from 0; the HUD and the presenter view show them from 1.
 - **Element ids in component HTML** are duplicated in the PDF (one copy per page). Print mode renames ids and `url(#...)` or `href="#..."` references inside each copy; a component that refers to its ids another way (for example from CSS) breaks in print.
+- **Versioning programs.** `tests/test_bbv.py` pins properties of the thesis figures (which versions exist, which tests disappear, how many return points), not exact drawings: the thesis took liberties with types and heuristics to keep its figures short, so the algorithm's real output differs in details. When changing `sbbv.py` or `lv.py`, rerun the example and look at the captions; a wrong cascade shows up as return points that flicker between frames.
+- **Container nesting again.** A detour holding slides that use `::::` columns needs `:::::` fences (see `examples/07-basic-block-versioning`).
 - **Writing style.** The project owner avoids em dashes in prose; use colons, commas or parentheses.
 
 ## Release
@@ -135,7 +141,7 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 2. `pytest`, then `python scripts/build_examples.py`, then check screenshots of anything visual.
    (The version must also appear in the introductions of the README, the spec and the report; `check_docs.py` enforces it.)
 3. Run the documentation coherence pass below.
-4. Remove `.lattice-cache/`, `__pycache__/`, `*.egg-info/` and `.pytest_cache/`, then archive the repository with `lattice/` as the root folder: `tar -cf lattice-vX.Y.Z.tar lattice`.
+4. Remove `.lattice-cache/`, `__pycache__/`, `*.egg-info/` and `.pytest_cache/`.
 
 ## Keeping the documentation coherent
 

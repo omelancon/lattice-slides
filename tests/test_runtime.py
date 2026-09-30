@@ -157,3 +157,54 @@ def test_tree_and_grid_runtimes_step_both_ways(tmp_path):
             pytest.skip("Chromium for Playwright is not installed")
         raise
     assert not errors
+
+
+def test_bbv_runtime_steps_both_ways(tmp_path):
+    """Every position of the versioning animations renders forward and backward without errors,
+    the source CFG follows the animation, and versions come and go with the frames."""
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parent.parent / "examples" / "07-basic-block-versioning" / "talk.md"
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+            page.goto(out.as_uri() + "#/find-sbbv/0")
+            visible = "document.querySelectorAll('#s-find-sbbv %s .lt-bbv-node:not(.lt-gone)').length"
+            assert page.evaluate(visible % ".lt-c-bbv-anim") == 1  # the generic entry only
+            assert page.evaluate("document.querySelectorAll('.lt-c-bbv-cfg .lt-bbv-node.mk-active').length") == 1
+            seen = set()
+            for _ in range(600):
+                cur = page.evaluate("Lattice.state().cur")
+                if (cur["slide"], cur["step"]) in seen:
+                    break
+                seen.add((cur["slide"], cur["step"]))
+                page.keyboard.press("ArrowRight")
+            assert any(s == "find-sbbv" for s, _ in seen)
+            page.evaluate("location.hash = '#/fact-lv/0'")  # off the main path (after the branch)
+            page.wait_for_timeout(100)
+            for _ in range(400):
+                cur = page.evaluate("Lattice.state().cur")
+                if (cur["slide"], cur["step"]) in seen:
+                    break
+                seen.add((cur["slide"], cur["step"]))
+                page.keyboard.press("ArrowRight")
+            assert sum(1 for s, _ in seen if s == "fact-lv") > 50
+            for _ in range(len(seen)):
+                page.keyboard.press("ArrowLeft")
+            # jump to the last step: the final specialized CFG of figure 6 has 14 versions
+            page.evaluate("location.hash = '#/find-sbbv/999'")
+            page.wait_for_timeout(200)
+            assert page.evaluate("Lattice.state().cur")["slide"] == "find-sbbv"
+            assert page.evaluate(visible % ".lt-c-bbv-anim") == 14
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors

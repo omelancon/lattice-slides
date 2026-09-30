@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.3.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.4.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -683,7 +683,7 @@ A `ComponentError` raised by `render` becomes error LT022 at the block's locatio
 
 | Name | Body | Positions | Main options |
 |---|---|---|---|
-| `code` | text | 1, or leader's count when following | `lang`, `file`, `lines`, `symbol`, `highlight`, `title`, `linenos`, `line_base` (`snippet` or `file`: how highlighted line numbers are counted); as a follower, highlights `meta[i]["line"]` or `meta[i]["lines"]` |
+| `code` | text | 1, or leader's count when following | `lang`, `file` (a file of the deck, or `lattice:PATH` for a file bundled with Lattice, such as `lattice:bbv/pseudocode/sbbv.txt`), `lines`, `symbol`, `highlight`, `title`, `linenos`, `line_base` (`snippet` or `file`: how highlighted line numbers are counted); as a follower, highlights `meta[i]["lines"]` or `meta[i]["line"]`, or `meta[i][KEY]` with `meta=KEY` |
 | `code-steps` | yaml | `len(steps) + 1` | same as `code` (`file` required); body `steps: [line ranges]` |
 | `diff-steps` | yaml | number of versions | `lang`, `context` (lines around changes), `title`; body `versions:` file paths, or mappings with `file` or `code` and an optional `label` |
 | `plot` | yaml | 1 | `backend` (`matplotlib`: static SVG; `vega`: Vega-Lite compiled in the browser; `plotly`), `source`, `spec` (raw Vega-Lite spec or Plotly figure), `data` (CSV), shorthand `kind`, `x`, `y`, `group`, `xlabel`, `ylabel`, `title`, `logx`, `logy`, `width`, `height` (inches, 96 px per inch for vega and plotly), `legend`. Theme colors and fonts are merged into the spec's `config` or `layout`; values given by the author win |
@@ -692,6 +692,8 @@ A `ComponentError` raised by `render` becomes error LT022 at the block's locatio
 | `array-anim` | yaml | number of frames | `source`, `values`, `panel`; other keys are passed to the trace function |
 | `tree-anim` | yaml | number of frames | `source` (returns a `TreeTrace`), `values` (passed as the first argument), `layout` (`auto`, `binary`, `tidy`; `auto` is `binary` when every node has zero or two child slots), `panel`, `height`; other keys are passed to the trace function |
 | `grid-anim` | yaml | number of frames | `source` (returns a `GridTrace`), `values` (passed as the first argument), `cell` (cell size in drawing units, default 48, relative to the text), `panel`, `height`; other keys are passed to the trace function |
+| `bbv-anim` | yaml | number of frames | `program` (a `.bbv` file, or `file.py:function` returning a `Program` or its text) or `source` (the program text), `algorithm` (`sbbv` or `lv`), `limit` (default 2), `limits` (per function, `none` for no limit), `heuristic` (`similarity`, `arithmetic`, `random`), `entry` (the function traversed first; default the first one), `functions` (drawn, in that order; hidden functions are analysed but not drawn), `events` (kinds kept as frames), `granularity` (`block`, or `instruction` for one frame per specialized instruction), `until` (stop after that many frames), `show` (node contents among `label`, `context`, `code`), `colors` (`origin` or `none`), `direction` (`TB` or `LR`), `wrap` (versions per line of a rank before it wraps, default 4), `call_edges`, `panel` (keys among `queue`, `versions`, `checks`, `merges`, `limit`), `caption` (`auto` or `none`), `prims` (extra primitives), `height`, `max_steps`; other keys are passed to the program function (section 9.5) |
+| `bbv-cfg` | yaml | 1, or leader's count when following | `program` or `source`, `functions`, `show` (default `label` and `code`), `colors`, `direction`, `prims`, `height`; as a follower of a `bbv-anim`, highlights the block named by `meta[i]["block"]` |
 | `math` | text | 1 | display math block |
 
 The exact option schemas are the pydantic `Options` models in `src/lattice/components/`.
@@ -722,7 +724,8 @@ def dijkstra_trace(graph, start):
 - `ArrayTrace(values)` uses `values`, `cells` (persistent per-index states), `marks` (transient per-frame highlights), `pointers` (name to index, `None` removes), `caption` and `panel`.
 - `TreeTrace(root=None, *, key="key", children=("left", "right"))` traces a tree whose shape changes. `frame(root=...)` takes a snapshot of the author's own node objects and stores it as `tree: {"root": name, "kids": {name: [child name or null, ...]}}` (nodes without children are omitted from `kids`). A frame without `root` keeps the previous shape; a new shape replaces the old one as a whole instead of being merged. `key` is an attribute or mapping key, or a callable, giving the node's name; `children` is a tuple of attributes read as fixed slots (`None` allowed), one attribute holding a list, or a callable. Tuples `(name, child, ...)` and bare scalars (leaves) are nodes too. A name appearing twice in one snapshot (duplicate or cycle) is an error. `nodes`, `edges` (keys `parent->child`, or `(parent, child)` tuples), `panel` and `caption` work as in `GraphTrace`.
 - `GridTrace(values, *, rows=None, cols=None)` traces a 2D grid. State: `values` (list of rows; a string row is one cell per character), `rows` and `cols` (header labels), `cells` (persistent per-cell states), `marks` (transient), `pointers` (name to `[row, col]`, `None` removes), `arrows` (`"r,c->r,c"` to a state, `None` removes), `caption`, `panel`. Cell keys are `(row, col)` tuples or `"r,c"` strings. `frame(put={cell: value})` changes single values; `frame(values=...)` replaces the grid.
-- States styled by the built-in themes: graph and tree nodes and edges `active`, `frontier`, `visited`, `done`, `tree`, `path`, `dim`, `error`; array cells `compare`, `swap`, `pivot`, `sorted`, `done`, `dim`; grid cells `active`, `compare`, `frontier`, `visited`, `done`, `path`, `wall`, `start`, `goal`, `dim`, `error`; grid arrows `active`, `path`, `dim`.
+- `VersioningTrace(program, algorithm=..., limit=..., ...)` runs basic block versioning on a program and records one frame per event; it is built by `bbv-anim` rather than by an author's function, and section 9.5 defines its frames.
+- States styled by the built-in themes: graph and tree nodes and edges `active`, `frontier`, `visited`, `done`, `tree`, `path`, `dim`, `error`; array cells `compare`, `swap`, `pivot`, `sorted`, `done`, `dim`; grid cells `active`, `compare`, `frontier`, `visited`, `done`, `path`, `wall`, `start`, `goal`, `dim`, `error`; grid arrows `active`, `path`, `dim`; versioning nodes `queued`, `done` with marks `active`, `new`, `back`, `merge`, `merged`, `gone`, and edges `new`, `gone`.
 
 ```json
 {
@@ -762,6 +765,52 @@ Edge keys are `u->v` for directed and `u--v` for undirected graphs; for undirect
 `ctx.layout` MUST be computed once per instance, on the union of the base graph and every element that appears in any frame. Elements absent from a frame are hidden, never re-laid out.
 
 Trees are the exception, since insertions and rotations move nodes. `tree-anim` computes positions per frame at build time and stores them in the frame as `pos` (node name to `[x, y]`), all in one box sized for the largest frame, each frame centered horizontally in it. The `binary` layout places a node by its in-order rank and its depth, so a rotation keeps every node's x and only changes depths; `tidy` gives leaves consecutive slots and centers a parent over its children. On a single step the runtime moves nodes from their old to their new positions; any other move places them directly.
+
+### 9.5 Basic block versioning
+
+`bbv-anim` and `bbv-cfg` work on a **program**: functions made of basic blocks, in the shape that Static Basic Block Versioning (SBBV) and Lambda Versioning (ΛV) expect (a CPS-like form where every block lists the variables it receives). The Python package `lattice.bbv` holds the model (`ir`), the type lattice and contexts (`types`), the primitives (`prims`), the two algorithms (`sbbv`, `lv`), the merge heuristics (`heuristics`), the frames (`trace`) and the layout (`layout`).
+
+**Text syntax.** A `.bbv` file (or the `source` option) is a sequence of functions; `;` starts a comment.
+
+```ebnf
+program     = { function } ;
+function    = "function" SP NAME "(" [ params ] ")" { SP option } NL { block } ;
+option      = "hidden" | "limit=" ( INT | "none" ) ;
+block       = LABEL [ "(" [ params ] ")" ] ":" [ SP instr ] NL { SP instr NL } ;
+instr       = VAR "=" PRIM "(" [ args ] ")" | VAR "=" arg
+            | "if" SP test SP "goto" SP LABEL SP "else" SP "goto" SP LABEL
+            | "goto" SP LABEL [ "(" [ binds | args ] ")" ]
+            | "call" SP callee "(" [ args ] ")" SP "->" SP LABEL [ "(" [ params ] ")" ]
+            | "return" SP ( arg | PRIM "(" [ args ] ")" ) | "fail" ;
+test        = PRIM "(" arg ")" | VAR ;          (* a type test, or the truthiness of a variable *)
+binds       = VAR "=" arg { "," VAR "=" arg } ;  (* rebinding of the target's parameters by name *)
+arg         = VAR | INT | FLOAT | STRING | "#t" | "#f" | "nil" ;
+```
+
+- The first block of a function is its entry. Every block ends with `if`, `goto`, `call`, `return` or `fail`. Labels are local to their function.
+- A block's **parameters** are the variables live at its entry plus the function's parameters (always tracked, as ΛV contexts do), or the explicit list when one is written (which MUST cover the variables used; the function's parameters and `#res` are added). A block reached by a `call` is a **return block**: it also receives `#res`, the returned value. `goto A(x=y)` rebinds the parameter `x` of `A` to `y`; positional arguments are allowed only when `A` declares its parameters; a function parameter cannot be rebound.
+- `call f(args) -> K` continues at the return block `K`; `-> K(vars)` names the variables passed to it (by default the ones live at `K`). `f` is a function of the program, or a variable holding a procedure. Under SBBV every call is opaque (`#res` is `any`); under ΛV a call to a known function requests a specialized entry point and receives one return point per exit contract of that entry (thesis chapter 3).
+- Primitives come from a table (`lattice.bbv.prims`): type tests (`fixnum?`, `flonum?`, `bignum?`, `number?`, `pair?`, `null?`, `procedure?`, `boolean?`, `string?`, `integer?`), fixnum operations (`fx+`, `fx-`, `fx*`, the overflow-checking `fx+?`, `fx-?`, `fx*?` returning `fx | #f`, comparisons), flonum operations (`fl+`, `fl-`, `fl*`, `fl/`, comparisons), generic arithmetic (`+`, `-`, `*`, `/`, `##+` and so on: arguments are narrowed to numbers, two fixnums may overflow to a bignum), `car`, `cdr`, `##car`, `##cdr`, `cons`, `eq?`, `eqv?`, `equal?`, `not`, `display`, `read`. A `prims` option adds or overrides entries: `{name: {args: [fx, fx], result: "fx | #f"}}` or `{name: {test: pair}}`. A primitive whose argument requirements cannot be met in a context makes the block fail at that point.
+- Types are sets of `fx`, `bg`, `fl`, `#t`, `#f`, `nil`, `pair`, `str`, `proc`, `other`, written `fx | fl`, `!fx`, `bool`, `num`, `any`, `⊥`; a procedure value may carry the function it is known to be (`proc(square)`). Contexts map variables to types and keep equivalence classes of variables holding the same value, printed `a/b: fx`. Type tests narrow both branches; assignments break equivalences; `x = y` creates one.
+- A program may also be built in Python (`lattice.bbv.ir.Program`, `Function`, `Block` and the instruction classes) and returned by the function named in `program`, which then receives the block's extra options as keyword arguments; it may also return the program text.
+
+**Algorithms.** `algorithm: sbbv` implements thesis algorithms 1.1 to 1.7: breadth-first traversal of versions, `mergeSome` when a block has more reachable versions than its limit (pairs are merged until the limit holds, the pair chosen by the heuristic), reachability recomputed after every change, versions skipped while unreachable and requeued when reconnected. `algorithm: lv` implements algorithms 2.1 to 2.10 on top: specialized entry points at call sites, exit sites, return points computed as `callContext ∩ exitSite.contextAfter`, cascading additions before removals, generic entries of the other functions queued when the queue first empties, return point indices allocated at the end (one index per distinct exit contract of a function, reachable exits first). Jump cascades are not removed. Version labels are the block name followed by the creation rank of the version among the block's versions (`A1`, `A2`; `J2.1` when the block name ends with a digit).
+
+**Frames.** One frame per event, in this order of kinds: `start`, `dequeue`, `must-merge`, `merge`, `specialize` (or one `instruction` frame per instruction with `granularity: instruction`), `entry`, `exit`, `return-points`, `generic-entries`, `done`. Events touching only hidden functions produce no frame. A frame is:
+
+```json
+{
+  "nodes": { "7": { "state": "queued", "mark": "new", "entry": true } },
+  "edges": { "3->7:true": { "kind": "true", "state": "new" }, "5->9:return": { "kind": "return", "label": "[1]" } },
+  "pos": { "7": [312.0, 96.0] },
+  "caption": "Specialize A1: queue B1 and L1.",
+  "panel": { "queue": ["B1", "L1"], "versions": { "A": 1 }, "checks": 3, "merges": 0, "limit": 2 }
+}
+```
+
+`state` is `queued` or `done` (`shown`, in instruction frames, is the number of code lines specialized so far); `mark` is `active` (the version being processed), `new`, `back` (reachable again), `merge` (a merge candidate), `merged` (the result) or `gone` (unreachable since this frame, drawn once more at its old place). Edge kinds are `goto`, `true`, `false`, `return` (dashed, labelled with the return point indices) and `call` (drawn only with `call_edges`). Static text lives in `data.tables`: per version its label, block, context lines, specialized code (with removed tests marked) and exit context; per function its blocks. `meta[i]` holds `event`, `block` (the origin block, for `bbv-cfg`), `function`, `lines` and `line` (the program lines of that block, or of the instruction), and `algo` (the lines of the bundled pseudo-code listing `lattice:bbv/pseudocode/sbbv.txt` or `lv.txt` executed by the event, for a `code` block with `meta=algo`).
+
+**Layout** (block bands). The source CFG of each function is laid out once with Graphviz when available (ranks and left-to-right order; without Graphviz, longest paths and declaration order). Per frame, the live versions of a rank are packed along it, sorted by their block's order and creation id, in lines of at most `wrap` versions, and centred in the function's column (`TB`) or band (`LR`); functions sit side by side in the order of `functions`. Node sizes come from the text shown, so a version never resizes; the drawing box is the union over all frames. Back edges travel along a lane beside the function. On a single step the runtime glides nodes between their two known positions; any other move places them directly.
 
 ---
 
@@ -824,7 +873,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.3.0">
+  <meta name="generator" content="lattice 0.4.0">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -1162,3 +1211,5 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.3 | Tree and grid traces, `tree-anim` and `grid-anim`; tree layouts per frame | 8.8, 9.1, 9.4 |
 | 0.3 | Presenter view: preview of the next position and step scrubber | 7.5, 10.4 |
 | 0.3 | PDF export, `pdf` slide attribute, LT053 | 3.5, 11.5, 12 |
+| 0.4 | Basic block versioning: `bbv-anim`, `bbv-cfg`, the `.bbv` program syntax, SBBV and ΛV frames, block bands layout | 8.8, 9.1, 9.5 |
+| 0.4 | `code`: `meta=` picks the leader's meta key; `file="lattice:..."` reads a bundled file | 8.8 |

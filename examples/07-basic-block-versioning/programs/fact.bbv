@@ -1,0 +1,31 @@
+; Thesis figure 16: fact with =, - and * as hyperfunctions of the runtime
+function fact(n)
+A:  call =(n, 0) -> B
+B:  if #res goto C else goto D
+C:  return 1
+D:  call -(n, 1) -> E
+E:  call fact(#res) -> F
+F:  call *(n, #res) -> G
+G:  return #res
+
+function = (a, b) hidden limit=none
+X:  if fixnum?(a) goto X1 else goto X3
+X1: if fixnum?(b) goto X2 else goto X3
+X2: return fx=(a, b)
+X3: return ##=(a, b)
+
+function - (a, b) hidden limit=none
+S:  if fixnum?(a) goto S1 else goto S3
+S1: if fixnum?(b) goto S2 else goto S3
+S2: tmp = fx-?(a, b)
+    if tmp goto S4 else goto S3
+S3: return ##-(a, b)
+S4: return tmp
+
+function * (a, b) hidden limit=none
+M:  if fixnum?(a) goto M1 else goto M3
+M1: if fixnum?(b) goto M2 else goto M3
+M2: tmp = fx*?(a, b)
+    if tmp goto M4 else goto M3
+M3: return ##*(a, b)
+M4: return tmp

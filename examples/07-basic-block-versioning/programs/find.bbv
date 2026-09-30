@@ -1,0 +1,18 @@
+; The find function of thesis figure 6, with the run-time checks of car, cdr and the call inlined.
+function find(p, lst)
+A:  if pair?(lst) goto B else goto L
+L:  return #f
+B:  if procedure?(p) goto D else goto E
+E:  fail
+D:  if pair?(lst) goto F else goto K
+K:  fail
+F:  tmp = ##car(lst)
+    call p(tmp) -> G
+G:  if #res goto H else goto J
+H:  if pair?(lst) goto I2 else goto I
+I:  fail
+I2: return ##car(lst)
+J:  if pair?(lst) goto J2 else goto M
+M:  fail
+J2: lst = ##cdr(lst)
+    goto A

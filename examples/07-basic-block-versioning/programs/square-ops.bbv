@@ -1,0 +1,16 @@
+; Thesis figure 15: square calls the * operator, itself a hyperfunction with unlimited versions.
+; The two arguments of the call are the same variable, so the entry contexts of * keep a and b
+; in one equivalence class (a/b) and a single type test covers both.
+function square(x)
+A:  call *(x, x) -> B
+B:  return #res
+
+function * (a, b) limit=none
+T:  if fixnum?(a) goto U else goto X
+U:  tmp = fx*?(a, b)
+    if tmp goto V else goto W
+V:  return tmp
+W:  return ##*(a, b)
+X:  if flonum?(a) goto Z else goto Y
+Y:  return ##*(a, b)
+Z:  return fl*(a, b)

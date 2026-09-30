@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lattice-slides"
-version = "0.3.0"
+version = "0.4.0"
 description = "Compile Markdown into non-linear HTML slide decks for computer science talks"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -31,7 +31,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 lattice = ["runtime/*.js", "runtime/*.css", "runtime/themes/*.css", "runtime/components/*.js",
            "runtime/vendor/*.js", "runtime/vendor/*.css", "runtime/vendor/*LICENSE",
-           "runtime/vendor/fonts/*.woff2"]
+           "runtime/vendor/fonts/*.woff2", "bbv/pseudocode/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

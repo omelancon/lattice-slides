@@ -1,0 +1,15 @@
+; Thesis figures 13 and 14: square and power4 with inlined arithmetic
+function square(x)
+T:  if fixnum?(x) goto U else goto X
+U:  tmp = fx*?(x, x)
+    if tmp goto V else goto W
+V:  return tmp
+W:  return ##*(x, x)
+X:  if flonum?(x) goto Z else goto Y
+Y:  return ##*(x, x)
+Z:  return fl*(x, x)
+
+function power4(y)
+A:  call square(y) -> B
+B:  call square(#res) -> C
+C:  return #res

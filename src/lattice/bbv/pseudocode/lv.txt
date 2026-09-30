@@ -1,0 +1,76 @@
+lambdaVersioning(entry, limit):
+    entryVersion ← getOrCreateVersion(entry, ⊤)
+    markEntry(entryVersion)
+    while version ← queue.dequeue():
+        if version is not reachable or version is done: continue
+        if |version.block.reachableVersions| > limit: mergeSome(version.block)
+        if version is reachable: specialize(version)
+
+specialize(version):
+    context ← version.context
+    for instr in version.block.body:
+        match instr.kind:
+            case "goto": context, newInstr ← specializeGoto(version, context, instr)
+            case "exit": context, newInstr ← specializeExit(version, context, instr)
+            case "call": context, newInstr ← specializeCall(version, context, instr)
+            ...
+        version.body.append(newInstr)
+        if newInstr always halts: break
+    version.contextAfter ← context
+
+specializeGoto(version, context, instruction):
+    targetContext ← context.filter(var ⇒ var is in instruction.target.parameters)
+    targetVersion ← getOrCreateVersion(instruction.target, targetContext)
+    newPaths ← addEdge(version, targetVersion)
+    for (in, out) in newPaths: addReturnPoints(in, out)
+    return (context, new Instruction("goto", targetVersion.id))
+
+specializeExit(version, context, instruction):
+    entries ← markExit(version)
+    for entry in entries: addReturnPoints(entry, version)
+    return (context, new Instruction("exit"))
+
+specializeCall(version, context, instruction):
+    hyperfunctions ← context[instruction.target].hyperfunctions
+    if |hyperfunctions| = 1:
+        calleeContext ← new Context(p: context[a] for (p, a) in params ⊗ args)
+        entry ← getOrCreateVersion(hyperfunctions[0].entry, calleeContext)
+        markEntry(entry)
+        entry.callSites.add(version)
+        for exitSite in entry.exitSites:
+            exitContext ← context ∩ exitSite.contextAfter
+            if exitContext = ⊥: continue
+            returnPoint ← getOrCreateVersion(instruction.returnPoint, exitContext)
+            newPaths ← addEdge(version, returnPoint)
+            for (in, out) in newPaths: addReturnPoints(in, out)
+        return (context, new Instruction("specialized-call", entry))
+    else return (context, new Instruction("generic-call", instruction.target))
+
+addReturnPoints(entryPoint, exitSite):
+    if exitSite in entryPoint.exitSites: return
+    entryPoint.exitSites.add(exitSite)
+    for callSite in entryPoint.callSites:
+        exitContext ← callSite.contextAfter ∩ exitSite.contextAfter
+        if exitContext = ⊥: continue
+        returnPoint ← getOrCreateVersion(callInstruction.returnPoint, exitContext)
+        newPaths ← addEdge(callSite, returnPoint)
+        for (in, out) in newPaths: addReturnPoints(in, out)
+
+removeReturnPoints(entryPoint, exitSite):
+    if exitSite not in entryPoint.exitSites: return
+    entryPoint.exitSites.remove(exitSite)
+    for callSite in entryPoint.callSites:
+        exitContext ← callSite.contextAfter ∩ exitSite.contextAfter
+        if exitContext = ⊥: continue
+        returnPoint ← getVersion(callInstruction.returnPoint, exitContext)
+        oldPaths ← removeEdge(callSite, returnPoint)
+        for (in, out) in oldPaths: removeReturnPoints(in, out)
+
+mergeSome(block):
+    versions ← mergeHeuristic(block.reachableVersions)
+    newVersion ← getOrCreateVersion(block, ⋃ v.context for v in versions)
+    for version in versions \ {newVersion}:
+        version.merged ← newVersion
+    newPaths, oldPaths ← redirectEdges(versions, newVersion)
+    for (in, out) in newPaths: addReturnPoints(in, out)
+    for (in, out) in oldPaths: removeReturnPoints(in, out)

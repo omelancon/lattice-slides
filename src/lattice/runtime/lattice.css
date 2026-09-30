@@ -206,6 +206,35 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-gr-ptr rect{fill:none;stroke:var(--lt-accent);stroke-width:3}
 .lt-gr-ptr text{font-family:var(--lt-font-code);font-size:.5em;font-weight:700;fill:var(--lt-accent)}
 
+/* basic block versioning: versions of a CFG, in the style of the thesis figures */
+.lt-bbv-anim{container-type:inline-size;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+.lt-bbv-header{font-family:var(--lt-font-head);font-size:15px;font-weight:600;fill:var(--lt-muted)}
+.lt-bbv-node rect{fill:var(--lt-bg);stroke:var(--lt-edge);stroke-width:1.6}
+.lt-bbv-node.has-origin rect{fill:color-mix(in srgb,var(--origin) 16%,var(--lt-bg))}
+.lt-bbv-node.st-queued rect{stroke-dasharray:6 4}
+.lt-bbv-node.mk-active rect{stroke:var(--lt-active);stroke-width:3.5}
+.lt-bbv-node.mk-new rect{stroke:var(--lt-accent);stroke-width:3}
+.lt-bbv-node.mk-back rect{stroke:var(--lt-accent);stroke-width:3;stroke-dasharray:2 3}
+.lt-bbv-node.mk-merge rect{stroke:var(--lt-warn);stroke-width:3.5}
+.lt-bbv-node.mk-merged rect{stroke:var(--lt-good);stroke-width:3.5}
+.lt-bbv-node.mk-gone{opacity:.22}
+.lt-bbv-node.lt-gone{opacity:0;pointer-events:none}
+.lt-bbv-label{font-family:var(--lt-font-head);font-weight:650;font-size:15px;fill:var(--lt-ink)}
+.lt-bbv-star{fill:var(--lt-accent);font-weight:700}
+.lt-bbv-ctx{font-family:var(--lt-font-code);font-size:12px;font-style:italic;fill:var(--lt-muted)}
+.lt-bbv-code{font-family:var(--lt-font-code);font-size:12.5px;fill:var(--lt-ink);white-space:pre}
+.lt-bbv-removed{text-decoration:line-through;fill:var(--lt-muted)}
+.lt-bbv-ellipsis{fill:var(--lt-muted)}
+.lt-bbv-edge path{fill:none;stroke:var(--lt-edge);stroke-width:1.8}
+.lt-bbv-edge.k-return path{stroke-dasharray:6 4}
+.lt-bbv-edge.k-call path{stroke-dasharray:2 4;opacity:.7}
+.lt-bbv-edge.st-new path{stroke:var(--lt-accent);stroke-width:3}
+.lt-bbv-edge.st-active path{stroke:var(--lt-active);stroke-width:3}
+.lt-bbv-edge.st-gone{opacity:.22}
+.lt-bbv-edge.lt-gone{opacity:0}
+.lt-bbv-edge-label{font-family:var(--lt-font-code);font-size:12px;fill:var(--lt-muted);paint-order:stroke;stroke:var(--lt-bg);stroke-width:5px}
+.lt-animate .lt-bbv-node rect,.lt-animate .lt-bbv-node,.lt-animate .lt-bbv-edge,.lt-animate .lt-bbv-edge path{transition:stroke .3s,stroke-width .3s,opacity .3s,fill .3s}
+
 /* HUD: where you are in the graph */
 #lt-hud{position:absolute;left:0;right:0;bottom:0;height:46px;padding:0 28px 0 72px;display:flex;align-items:center;
   justify-content:space-between;gap:24px;font-size:16px;color:var(--lt-muted);border-top:1px solid var(--lt-rule);

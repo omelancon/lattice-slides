@@ -1,0 +1,57 @@
+staticBasicBlockVersioning(entry, limit):
+    getOrCreateVersion(entry, ⊤)
+    while version ← queue.dequeue():
+        if version is not reachable or version is done: continue
+        if |version.block.reachableVersions| > limit: mergeSome(version.block)
+        if version is reachable: specialize(version)
+
+getOrCreateVersion(block, context):
+    version ← getVersion(block, context)
+    if version: return version
+    newVersion ← new Version(block, context)
+    block.allVersions[context] ← newVersion
+    queue.enqueue(newVersion)
+    return newVersion
+
+getVersion(block, context):
+    version ← block.allVersions[context]
+    if not version: return false
+    while version.merged: version ← version.merged
+    return version
+
+specialize(version):
+    context ← version.context
+    for instr in version.block.body:
+        match instr.kind:
+            case "goto": context, newInstr ← specializeGoto(version, context, instr)
+            case "if":   context, newInstr ← specializeIf(version, context, instr)
+            ...
+        version.body.append(newInstr)
+        if newInstr always halts: break
+    version.contextAfter ← context
+
+specializeGoto(version, context, instruction):
+    targetContext ← context.filter(var ⇒ var is in instruction.target.parameters)
+    targetVersion ← getOrCreateVersion(instruction.target, targetContext)
+    return (context, new Instruction("goto", targetVersion.id))
+
+specializeIf(version, context, instruction):
+    condition ← instruction.condition
+    trueContext ← context.narrowConditionTrue(condition)
+    falseContext ← context.narrowConditionFalse(condition)
+    if trueContext = ⊥:
+        targetVersion ← getOrCreateVersion(instruction.targetFalse, falseContext)
+        return (context, new Instruction("goto", targetVersion.id))
+    else if falseContext = ⊥:
+        targetVersion ← getOrCreateVersion(instruction.targetTrue, trueContext)
+        return (context, new Instruction("goto", targetVersion.id))
+    else:
+        targetTrue ← getOrCreateVersion(instruction.targetTrue, trueContext)
+        targetFalse ← getOrCreateVersion(instruction.targetFalse, falseContext)
+        return (context, new Instruction("if", condition, targetTrue.id, targetFalse.id))
+
+mergeSome(block):
+    versions ← mergeHeuristic(block.reachableVersions)
+    newVersion ← getOrCreateVersion(block, ⋃ v.context for v in versions)
+    for version in versions \ {newVersion}:
+        version.merged ← newVersion

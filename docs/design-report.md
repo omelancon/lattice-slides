@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.3.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.4.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -81,6 +81,14 @@ The preview pane is a second, passive copy of the deck rather than a cloned slid
 
 A PDF is linear, so the export follows a tour and moves the rest of the graph into an appendix: detours, branch options not taken and linked backup slides (decision 11). Chromium prints what the runtime rendered, so every component looks as it does on screen, including plots drawn in the browser. Each page is a static copy of a rendered slide, and all copies are printed in one pass, which keeps links between pages working inside the PDF; printing each position separately and merging the files would lose them and need a PDF library.
 
+### 3.10 Basic block versioning runs at build time (spec section 9.5)
+
+Compiler talks want to show an algorithm that rewrites a graph while it traverses it, which no fixed drawing conveys. Rather than asking authors to hand-draw frames, Lattice runs a faithful model of Static Basic Block Versioning and Lambda Versioning (the algorithms of the thesis, chapters 2 and 3) on a small program written in a CFG language, and records one frame per event with an automatic caption. Authors control what is shown (limit, heuristic, hidden functions, event kinds, instruction-level frames) rather than how it is drawn, and every slide stays true to the algorithm.
+
+Versions of one block are drawn on that block's row, in creation order, with positions recomputed per frame and gliding on single steps (decision 12). One Graphviz layout over every version ever created would leave holes when versions merge and would not read like the figures of the thesis; per-frame Graphviz layouts would move everything at every step. Block bands keep the source CFG's shape visible in the specialized CFG, which is what the technique is about. The style copies the thesis figures (context header, code, starred entries, dashed indexed return edges), with the blog post's origin colours as a fill so that versions of the same block are recognized at a glance.
+
+Companions are followers: `bbv-cfg` highlights the origin block being specialized, and a `code` block follows either the program or the bundled pseudo-code of the algorithm through a `meta=` key, so a single mechanism pairs the animation with what the audience reads.
+
 ---
 
 ## 4. Use Cases
@@ -109,7 +117,11 @@ A research group presents benchmark results. Plots are generated from the latest
 
 A lecture on balanced trees animates each insertion and rotation from the actual implementation used in the lab assignment, and grids show a maze search and a dynamic programming table filling up. (`examples/06-trees-and-grids`)
 
-### 4.7 Handouts
+### 4.7 Compiler lecture on specialization
+
+A lecture on ahead-of-time optimization of dynamic languages shows Static Basic Block Versioning specializing `find` while the source CFG highlights the block at hand, then a branch lets the lecturer pick the version limit the audience asks about, and Lambda Versioning shows entry points and return points growing across two functions. (`examples/07-basic-block-versioning`)
+
+### 4.8 Handouts
 
 After the lecture, the teacher exports the main path to PDF with the detours as an appendix and posts it. Students who missed a detour find it at the end, one click away from the slide that leads to it.
 
@@ -142,11 +154,14 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.3 (done).** Tree traces (insertions, rotations) and grid traces (maze search, dynamic programming tables); PDF export following a tour, with detours, branch options and linked slides as an appendix and animations exported as selected frames; presenter view with a preview of what comes next and a step scrubber.
 
+**v0.4 (done).** Basic block versioning: a build-time model of SBBV and ΛV on programs written in a small CFG language, `bbv-anim` with one frame per event (block or instruction granularity), automatic captions, the block bands layout, `bbv-cfg` as a follower, `code` following the program or the bundled pseudo-code of the algorithms.
+
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
 - Plugin hooks beyond components (new syntax, generated slides, custom checks).
 - Custom themes as folders, and layout templates.
 - Pyodide for live Python, Mermaid diagrams, preloading of neighbor slides, editor integration.
+- Basic block versioning: an importer for the state stream of the Gambit implementation (`--plot`), a Scheme front end producing `.bbv` programs, jump cascade removal in the final frame, other traversal orders.
 
 ---
 
@@ -167,3 +182,4 @@ Decisions taken while writing the specification, and since.
 | 9 | Import from other tools | Not supported. |
 | 10 | Tree layout | Positions per frame, computed at build time in one shared box; in-order layout for binary trees. Graphs keep one layout for all frames. |
 | 11 | PDF contents | The tour (default: main path), then an appendix of detours, branch options not taken and linked off-path slides. Steps per slide: `last` by default, a `pdf` attribute otherwise, numbered from 0 as in the URL. |
+| 12 | Versioning animations | Built-in components, not a plugin. Programs in a text CFG language (or Python objects). The thesis type lattice with `#f` as its own type. Thesis figure style with origin colours. Block bands layout, top to bottom by default, functions side by side, positions per frame. Companions through followers. Version limits compared with branches or detours, not a live control. One frame per event by default. |

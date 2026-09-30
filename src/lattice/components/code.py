@@ -25,6 +25,7 @@ class CodeOptions(BaseModel):
     linenos: bool = False
     line_base: Literal["snippet", "file"] = "snippet"
     title: str | None = None
+    meta: str | None = None  # as a follower: the leader's per-position meta key holding the lines
 
 
 class CodeStepsOptions(CodeOptions):
@@ -73,10 +74,23 @@ def extract_symbol(source: str, symbol: str) -> tuple[int, int]:
     return start, target.end_lineno
 
 
+def read_source_file(file: str, ctx) -> str:
+    """A file of the deck, or ``lattice:PATH`` for a file bundled with Lattice (for example
+    ``lattice:bbv/pseudocode/sbbv.txt``)."""
+    if file.startswith("lattice:"):
+        from importlib import resources
+
+        res = resources.files("lattice") / file[len("lattice:"):]
+        if not res.is_file():
+            raise ComponentError(f"no bundled file {file!r}")
+        return res.read_text(encoding="utf-8")
+    return ctx.path(file).read_text(encoding="utf-8")
+
+
 def load_source(opts: CodeOptions, body: str, ctx) -> tuple[str, int]:
     """Return the snippet text and the file line number of its first line."""
     if opts.file:
-        text = ctx.path(opts.file).read_text(encoding="utf-8")
+        text = read_source_file(opts.file, ctx)
         all_lines = text.split("\n")
         first = 1
         if opts.symbol:
@@ -133,7 +147,7 @@ class Code(Component):
             return RenderResult(html_)
         steps = []
         for m in (ctx.leader.meta or [{}] * ctx.leader.positions):
-            lines = m.get("lines", m.get("line"))
+            lines = m.get(opts.meta) if opts.meta else m.get("lines", m.get("line"))
             if isinstance(lines, (list, tuple)):
                 steps.append([int(x) for x in lines])
             else:
