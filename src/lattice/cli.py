@@ -1,4 +1,4 @@
-"""Command line interface: build, check, serve, graph, new."""
+"""Command line interface: build, check, serve, graph, pdf, new."""
 from __future__ import annotations
 
 import argparse
@@ -138,6 +138,31 @@ def cmd_graph(args) -> int:
     return 0
 
 
+def cmd_pdf(args) -> int:
+    from .build import build_deck
+    from .pdf import PdfError, export_pdf
+
+    src = Path(args.deck)
+    try:
+        deck = build_deck(src, use_cache=not args.no_cache)
+    except BuildError as e:
+        return _print_diags(e.diagnostics) or 1
+    except FileNotFoundError:
+        print(f"lattice: no such file: {src}", file=sys.stderr)
+        return 2
+    out = Path(args.output) if args.output else src.with_suffix(".pdf")
+    try:
+        pages, errors = export_pdf(deck, out, tour=args.tour, steps=args.steps, appendix=not args.no_appendix)
+    except PdfError as e:
+        print(f"lattice: {e}", file=sys.stderr)
+        return 2
+    _print_diags(deck.diagnostics)
+    for err in errors:
+        print(f"lattice: page error: {err}", file=sys.stderr)
+    print(f"lattice: wrote {out} ({pages} pages)")
+    return 0
+
+
 def cmd_new(args) -> int:
     target = Path(args.path)
     if target.suffix != ".md":
@@ -182,6 +207,16 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--dot", action="store_true", help="output Graphviz DOT")
     g.add_argument("--no-cache", action="store_true")
     g.set_defaults(func=cmd_graph)
+
+    f = sub.add_parser("pdf", help="export a tour of the deck to PDF (needs Playwright and Chromium)")
+    f.add_argument("deck")
+    f.add_argument("-o", "--output", help="output PDF file (default: next to the deck)")
+    f.add_argument("--tour", help="tour to follow (default: the main path)")
+    f.add_argument("--steps", default="last", choices=["first", "last", "all"],
+                   help="steps printed for slides without a pdf attribute (default: last)")
+    f.add_argument("--no-appendix", action="store_true", help="leave out detours and linked off-path slides")
+    f.add_argument("--no-cache", action="store_true")
+    f.set_defaults(func=cmd_pdf)
 
     n = sub.add_parser("new", help="scaffold a new deck")
     n.add_argument("path")

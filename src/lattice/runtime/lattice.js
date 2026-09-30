@@ -14,6 +14,10 @@ const Lattice = (() => {
   const resizeCallbacks = [];
   const dataStore = {}; // instanceId -> data fetched in directory mode
   let presenter = false;
+  let passive = false; // preview (the presenter's "next" pane) and print: no input, history, storage or sync
+  let printing = false;
+  let previewFrame = null;
+  let previewReady = false;
   let channel = null;
   let storageKey = "";
   let hudTimer = null;
@@ -184,7 +188,7 @@ const Lattice = (() => {
 
   // ------------------------------------------------------------------ rendering
   function transitionFor(how, target) {
-    if (!how || how.kind === "step" || how.kind === "sync") return null;
+    if (!how || how.kind === "step" || how.kind === "sync" || how.kind === "scrub") return null;
     const back = (name) => (name === "zoom" ? "zoom-out" : name === "slide" ? "slide-back" : name);
     if (how.kind === "return") return "zoom-out";
     if (how.kind === "prev") return back(deck.transitions.next);
@@ -268,7 +272,7 @@ const Lattice = (() => {
     const id = nav.cur.slide;
     const sameSlide = prev && prev.slide === id;
     if (!sameSlide) {
-      if (prev && sections[prev.slide]) {
+      if (prev && prev.slide && sections[prev.slide]) {
         sections[prev.slide].hidden = true;
         sections[prev.slide].classList.remove("lt-current");
         for (const instId of instancesBySlide[prev.slide] || []) {
@@ -291,9 +295,11 @@ const Lattice = (() => {
         sec.classList.add(`lt-anim-${tr}`);
       }
     }
-    const adjacent = sameSlide && Math.abs(prev.step - nav.cur.step) === 1;
+    // scrubbing, previews and printing never animate (spec 10.1)
+    const adjacent = sameSlide && Math.abs(prev.step - nav.cur.step) === 1 && !passive && !(how && how.kind === "scrub");
     applyStep(id, nav.cur.step, { sameSlide, fromStep: sameSlide ? prev.step : null, animate: adjacent, force: !sameSlide });
     updateHud();
+    if (passive) return;
     updateHash();
     save();
     if (!how || how.kind !== "sync") broadcast();
@@ -486,7 +492,58 @@ const Lattice = (() => {
     input.focus();
   }
 
-  // ------------------------------------------------------------------ presenter view
+  // ------------------------------------------------------------------ presenter view (spec 7.5)
+  function buildPresenter() {
+    const panel = $("#lt-presenter-panel");
+    const W = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-w"));
+    const H = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-h"));
+    panel.innerHTML = `
+      <div class="lt-pp-top"><span class="lt-pp-timer" title="Click to reset">00:00</span><span class="lt-pp-where"></span></div>
+      <div class="lt-pp-scrub" hidden><input type="range" min="0" max="1" step="1" value="0" aria-label="Step of the current slide"><span class="lt-pp-scrub-label"></span></div>
+      <h3>Next <span class="lt-pp-next-label"></span></h3>
+      <div class="lt-pp-next"><iframe class="lt-pp-preview" title="Next" tabindex="-1" style="aspect-ratio:${W} / ${H}"></iframe><div class="lt-pp-next-none" hidden></div></div>
+      <h3>Moves</h3><ul class="lt-pp-moves"></ul>
+      <h3>Notes</h3><div class="lt-pp-notes"></div>`;
+    const range = $(".lt-pp-scrub input", panel);
+    range.addEventListener("input", () => {
+      const i = Number(range.value);
+      if (i !== nav.cur.step) go(nav.cur.slide, i, { kind: "scrub", dir: 0 });
+    });
+    range.addEventListener("change", () => range.blur()); // arrow keys go back to the deck
+    previewFrame = $(".lt-pp-preview", panel);
+    window.addEventListener("message", (e) => {
+      if (e.source === previewFrame.contentWindow && e.data && e.data.lattice === "preview-ready") {
+        previewReady = true;
+        updatePreview();
+      }
+    });
+    previewFrame.src = location.pathname + "?preview";
+  }
+
+  // What NEXT would show: the next step of this slide, else the slide NEXT moves to, at the step it lands on.
+  function previewTarget() {
+    const s = slide(nav.cur.slide);
+    if (nav.cur.step < s.steps - 1) return { slide: nav.cur.slide, step: nav.cur.step + 1, label: `step ${nav.cur.step + 2} of ${s.steps}` };
+    const nt = nextTarget();
+    if (!nt || !nt.slide) return { slide: null, label: s.branches.length ? "choose a branch" : "end of path" };
+    if (nt.kind === "back") {
+      const i = topExcursion();
+      return { slide: nt.slide, step: i >= 0 ? nav.H[i].step : steps(nt.slide) - 1, label: `return to ${label(nt.slide)}` };
+    }
+    return { slide: nt.slide, step: 0, label: label(nt.slide) };
+  }
+
+  function updatePreview() {
+    if (!previewFrame) return;
+    const t = previewTarget();
+    $(".lt-pp-next-label").textContent = t.label ? `\u00b7 ${t.label}` : "";
+    const none = $(".lt-pp-next-none");
+    none.hidden = !!t.slide;
+    none.textContent = t.slide ? "" : t.label;
+    previewFrame.style.visibility = t.slide ? "visible" : "hidden";
+    if (previewReady && t.slide) previewFrame.contentWindow.postMessage({ lattice: "preview", slide: t.slide, step: t.step }, "*");
+  }
+
   function updatePresenter() {
     const panel = $("#lt-presenter-panel");
     const s = slide(nav.cur.slide);
@@ -502,11 +559,18 @@ const Lattice = (() => {
     });
     const rt = returnTarget();
     if (rt && (topExcursion() >= 0 || detourOf(nav.cur.slide))) moves.push(`<li><kbd>\u2191</kbd> return to ${esc(label(rt))}</li>`);
-    panel.innerHTML = `
-      <div class="lt-pp-top"><span class="lt-pp-timer" title="Click to reset">00:00</span><span>${esc(s.label)} \u00b7 step ${nav.cur.step + 1}/${s.steps}</span></div>
-      <h3>Moves</h3><ul class="lt-pp-moves">${moves.join("")}</ul>
-      <h3>Notes</h3><div class="lt-pp-notes">${s.notes || "<p class=\"lt-muted\">No notes for this slide.</p>"}</div>`;
-    renderMath(panel);
+    $(".lt-pp-where", panel).textContent = `${s.label} \u00b7 step ${nav.cur.step + 1}/${s.steps}`;
+    const scrub = $(".lt-pp-scrub", panel);
+    scrub.hidden = s.steps < 2;
+    const range = $("input", scrub);
+    range.max = String(Math.max(1, s.steps - 1));
+    range.value = String(nav.cur.step);
+    $(".lt-pp-scrub-label", scrub).textContent = `${nav.cur.step + 1} / ${s.steps}`;
+    $(".lt-pp-moves", panel).innerHTML = moves.join("");
+    const notes = $(".lt-pp-notes", panel);
+    notes.innerHTML = s.notes || "<p class=\"lt-muted\">No notes for this slide.</p>";
+    renderMath(notes);
+    updatePreview();
     tickTimer();
   }
   function tickTimer() {
@@ -527,6 +591,107 @@ const Lattice = (() => {
     }
   }
 
+  // ------------------------------------------------------------------ print (spec 11.5)
+  // Each page of the plan is rendered, then its slide is copied into a static page. Chromium prints
+  // the copies in one pass, so links between pages become links inside the PDF.
+  const nextFrame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  function renameIds(root, suffix) {
+    const ids = new Map();
+    for (const el of [root, ...$$("[id]", root)]) {
+      if (!el.id) continue;
+      ids.set(el.id, el.id + suffix);
+      el.id += suffix;
+    }
+    const fix = (v) => v.replace(/url\(\s*(['"]?)#([^)'"]+)\1\s*\)/g, (m, q, id) => (ids.has(id) ? `url(#${ids.get(id)})` : m));
+    for (const el of [root, ...$$("*", root)]) {
+      for (const a of Array.from(el.attributes)) {
+        if (!a.value.includes("#")) continue;
+        let v = fix(a.value);
+        if ((a.name === "href" || a.name === "xlink:href") && v.startsWith("#") && ids.has(v.slice(1))) v = `#${ids.get(v.slice(1))}`;
+        if (v !== a.value) el.setAttribute(a.name, v);
+      }
+    }
+  }
+
+  function pageLink(el, page, extra) {
+    const a = document.createElement("a");
+    for (const at of Array.from(el.attributes)) if (!at.name.startsWith("data-") && at.name !== "type") a.setAttribute(at.name, at.value);
+    a.innerHTML = el.innerHTML + (extra || "");
+    if (page) a.href = `#lt-page-${page}`;
+    else a.classList.add("lt-print-nolink");
+    el.replaceWith(a);
+  }
+
+  function snapshot(entry, plan) {
+    const sec = sections[entry.slide];
+    const clone = sec.cloneNode(true);
+    clone.hidden = false;
+    clone.classList.remove(...Array.from(clone.classList).filter((c) => c.startsWith("lt-anim-")));
+    const src = $$("canvas", sec);
+    $$("canvas", clone).forEach((c, i) => {
+      try {
+        const img = document.createElement("img");
+        img.src = src[i].toDataURL("image/png");
+        img.style.cssText = c.style.cssText;
+        img.style.width = `${src[i].clientWidth}px`;
+        img.style.height = `${src[i].clientHeight}px`;
+        c.replaceWith(img);
+      } catch (e) { console.error(e); }
+    });
+    renameIds(clone, `-p${entry.n}`);
+    const ref = (page) => (page ? `<span class="lt-print-ref">p.\u00a0${page}</span>` : "");
+    for (const a of $$("a[data-lt-link]", clone)) {
+      const t = resolveTarget(a.dataset.ltLink);
+      const page = t && plan.pageOf[t];
+      if (page) a.setAttribute("href", `#lt-page-${page}`);
+      else { a.removeAttribute("href"); a.classList.add("lt-print-nolink"); }
+    }
+    for (const b of $$("[data-lt-detour]", clone)) {
+      const d = deck.detours[b.dataset.ltDetour];
+      const page = d && plan.pageOf[d.entry];
+      pageLink(b, page, ref(page));
+    }
+    const s = slide(entry.slide);
+    for (const b of $$("[data-lt-choose]", clone)) {
+      const opt = s.branches.find((o) => o.key === b.dataset.ltChoose);
+      const page = opt && plan.pageOf[opt.target];
+      pageLink(b, page, ref(page));
+    }
+    const page = document.createElement("div");
+    page.className = "lt-print-page";
+    page.id = `lt-page-${entry.n}`;
+    page.appendChild(clone);
+    const sec2 = entry.section != null ? plan.sections[entry.section] : null;
+    let where = esc(plan.title);
+    if (sec2) {
+      where = `Appendix ${esc(sec2.code)} \u00b7 ${esc(sec2.title)}`;
+      if (entry.from) where += ` \u00b7 <a href="#lt-page-${entry.from}">from p.\u00a0${entry.from}</a>`;
+    }
+    const stepInfo = s.steps > 1 ? ` \u00b7 step ${entry.step + 1}/${s.steps}` : "";
+    page.insertAdjacentHTML("beforeend",
+      `<div class="lt-print-foot"><span>${where}</span><span>${esc(s.label)}${stepInfo}<b>${entry.n}</b></span></div>`);
+    return page;
+  }
+
+  async function print(plan) {
+    const holder = document.createElement("div");
+    holder.id = "lt-print-pages";
+    document.body.appendChild(holder);
+    for (const entry of plan.pages) {
+      const prev = Object.assign({}, nav.cur);
+      nav.cur = { slide: entry.slide, step: Math.max(0, Math.min(entry.step, steps(entry.slide) - 1)) };
+      render(prev, { kind: "sync", dir: 0 });
+      await nextFrame();
+      if (prev.slide !== entry.slide && (instancesBySlide[entry.slide] || []).length) await sleep(120); // async renderers (Vega)
+      holder.appendChild(snapshot(entry, plan));
+    }
+    $("#lt-root").hidden = true;
+    document.documentElement.classList.add("lt-printed");
+    return plan.pages.length;
+  }
+
   // ------------------------------------------------------------------ input
   function keyMap() {
     const m = {};
@@ -536,6 +701,7 @@ const Lattice = (() => {
 
   function onKey(e) {
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target && e.target.closest && e.target.closest("input, textarea, select")) return;
     if (overlayOpen()) {
       if (e.key === "Escape" || (e.key === "o" && $(".lt-overview"))) { closeOverlay(); e.preventDefault(); }
       return;
@@ -585,26 +751,52 @@ const Lattice = (() => {
     }));
   }
 
+  function bootPassive() {
+    // A passive window renders what it is told: the presenter's preview pane, or the PDF export.
+    nav = { cur: { slide: deck.start, step: 0 }, H: [], tour: null };
+    fit();
+    render(null, { kind: "sync", dir: 0 });
+    if (printing) return;
+    window.addEventListener("message", (e) => {
+      const m = e.data;
+      if (e.source !== window.parent || !m || m.lattice !== "preview" || !deck.slides[m.slide]) return;
+      const prev = Object.assign({}, nav.cur);
+      nav.cur = { slide: m.slide, step: Math.max(0, Math.min(m.step || 0, steps(m.slide) - 1)) };
+      render(prev, { kind: "sync", dir: 0 });
+    });
+    if (window.parent !== window) window.parent.postMessage({ lattice: "preview-ready" }, "*");
+  }
+
   async function boot() {
     deck = JSON.parse($("#lt-deck").textContent);
     await loadData();
-    presenter = new URLSearchParams(location.search).has("presenter");
+    const params = new URLSearchParams(location.search);
+    printing = params.has("print");
+    passive = printing || params.has("preview");
+    presenter = !passive && params.has("presenter");
     storageKey = `lattice:${deck.hash}:nav`;
     for (const sec of $$(".lt-slide")) sections[sec.dataset.slide] = sec;
     for (const [id, inst] of Object.entries(deck.instances)) (instancesBySlide[inst.slide] ||= []).push(id);
-    if (presenter) {
-      document.body.classList.add("lt-presenter");
-      $("#lt-presenter-panel").hidden = false;
-      setInterval(tickTimer, 1000);
-    }
     renderMath(document);
-    nav = restore();
     window.addEventListener("resize", fit);
     window.addEventListener("pagehide", () => {
       for (const m of Object.values(mounted)) {
         if (m.ctl.destroy) try { m.ctl.destroy(m.inst); } catch (e) { console.error(e); }
       }
     });
+    if (passive) {
+      document.documentElement.classList.add(printing ? "lt-print" : "lt-preview");
+      bootPassive();
+      document.documentElement.classList.add("lt-ready");
+      return;
+    }
+    if (presenter) {
+      document.body.classList.add("lt-presenter");
+      $("#lt-presenter-panel").hidden = false;
+      buildPresenter();
+      setInterval(tickTimer, 1000);
+    }
+    nav = restore();
     document.addEventListener("keydown", onKey);
     document.addEventListener("click", onClick);
     window.addEventListener("hashchange", () => {
@@ -623,6 +815,6 @@ const Lattice = (() => {
     document.documentElement.classList.add("lt-ready");
   }
 
-  return { component, boot, frames, applyDelta, renderPanel, esc, actions: () => actions, state: () => nav };
+  return { component, boot, frames, applyDelta, renderPanel, esc, print, actions: () => actions, state: () => nav };
 })();
 window.Lattice = Lattice;

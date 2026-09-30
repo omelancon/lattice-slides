@@ -263,3 +263,66 @@ def overview_layout(deck) -> dict:
         edges.append({"from": pair[0], "to": pair[1], "kind": kind, "path": d})
     return {"nodes": nodes, "edges": edges, "width": round(x1 - x0 + 2 * pad, 1),
             "height": round(y1 - y0 + 2 * pad, 1)}
+
+
+def tree_positions(tree: dict, binary: bool) -> dict[str, tuple[float, int]]:
+    """Abstract positions ``name -> (x, depth)`` of one tree shape, x in node slots.
+
+    ``binary``: in-order rank, so a rotation keeps every node's x and only changes depths. Otherwise a
+    tidy layout: leaves take consecutive slots and a parent is centered over its children.
+    """
+    kids = tree.get("kids", {})
+    root = tree.get("root")
+    out: dict[str, tuple[float, int]] = {}
+    if root is None:
+        return out
+    counter = [0]
+
+    def inorder(n: str, depth: int) -> None:
+        ch = kids.get(n, [])
+        left, right = (ch[0] if ch else None), [c for c in ch[1:] if c is not None]
+        if left is not None:
+            inorder(left, depth + 1)
+        out[n] = (counter[0], depth)
+        counter[0] += 1
+        for c in right:
+            inorder(c, depth + 1)
+
+    def tidy(n: str, depth: int) -> float:
+        ch = [c for c in kids.get(n, []) if c is not None]
+        if not ch:
+            x = counter[0]
+            counter[0] += 1
+        else:
+            xs = [tidy(c, depth + 1) for c in ch]
+            x = (xs[0] + xs[-1]) / 2
+        out[n] = (x, depth)
+        return x
+
+    (inorder if binary else tidy)(root, 0)
+    return out
+
+
+def tree_layouts(trees: list[dict], mode: str = "auto", dx: float = 64, dy: float = 78,
+                 r: float = 21) -> tuple[dict, list[dict]]:
+    """Positions for every frame, in points, in one shared box (spec 9.4).
+
+    Returns ``(size, positions)``: ``size`` is ``{"width", "height", "r"}``; ``positions[i]`` maps each
+    node of frame ``i`` to ``[x, y]``. Each frame is centered horizontally in the box.
+    """
+    binary = mode == "binary" or (mode == "auto" and all(
+        len(k) in (0, 2) for t in trees for k in t.get("kids", {}).values()))
+    abstract = [tree_positions(t, binary) for t in trees]
+    span = max((max(x for x, _ in p.values()) for p in abstract if p), default=0)
+    depth = max((max(d for _, d in p.values()) for p in abstract if p), default=0)
+    pad = r + 16
+    width, height = span * dx + 2 * pad, depth * dy + 2 * pad
+    positions = []
+    for p in abstract:
+        if not p:
+            positions.append({})
+            continue
+        lo, hi = min(x for x, _ in p.values()), max(x for x, _ in p.values())
+        off = pad + ((span - (hi - lo)) * dx) / 2 - lo * dx
+        positions.append({n: [round(off + x * dx, 1), round(pad + d * dy, 1)] for n, (x, d) in p.items()})
+    return {"width": round(width, 1), "height": round(height, 1), "r": r}, positions

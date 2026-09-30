@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.2.2">
+<meta name="generator" content="lattice 0.3.0">
 <title>Refactoring a cache</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -117,8 +117,8 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-math-block{text-align:center;font-size:1.1em}
 .lt-error{color:var(--lt-warn);font-family:var(--lt-font-code);font-size:18px;border:2px dashed var(--lt-warn);padding:12px}
 
-/* graph and array animations */
-.lt-graph-anim,.lt-array-anim{container-type:inline-size;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+/* graph, array, tree and grid animations */
+.lt-graph-anim,.lt-array-anim,.lt-tree-anim,.lt-grid-anim{container-type:inline-size;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
 .lt-ga-main,.lt-aa-main{display:flex;gap:28px;min-height:0;flex:1;align-items:center}
 .lt-ga-canvas{flex:1;min-width:0;height:430px;display:flex}
 .lt-ga-svg{width:100%;height:100%;margin:0 auto}
@@ -178,6 +178,41 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-aa-ptr div{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:26px}
 .lt-aa-ptr span{font-family:var(--lt-font-code);font-size:16px;color:var(--lt-accent);font-weight:600}
 .lt-aa-ptr span::before{content:"\25B2 ";font-size:11px}
+
+/* trees: nodes and edges reuse the graph styles; nodes leaving the tree fade out */
+.lt-ta-out{opacity:0;pointer-events:none}
+.lt-animate .lt-ta-out,.lt-tree-anim.lt-animate .lt-node{transition:opacity .3s}
+.lt-ta-badge{font-size:12px;paint-order:stroke;stroke:var(--lt-bg);stroke-width:4px}
+
+/* grids: mazes and dynamic programming tables */
+.lt-gc rect{fill:var(--lt-bg);stroke:var(--lt-rule);stroke-width:1.5}
+.lt-gc text{font-family:var(--lt-font-code);font-weight:600;fill:var(--lt-ink)}
+.lt-animate .lt-gc rect{transition:fill .25s,stroke .25s}
+.lt-gc-out{display:none}
+.lt-gc.st-active rect,.lt-gc.st-compare rect{fill:var(--lt-active);stroke:var(--lt-active)}
+.lt-gc.st-active text,.lt-gc.st-compare text{fill:var(--lt-on-strong)}
+.lt-gc.st-frontier rect{fill:var(--lt-frontier-soft);stroke:var(--lt-frontier);stroke-dasharray:4 3}
+.lt-gc.st-visited rect{fill:var(--lt-accent-soft)}
+.lt-gc.st-done rect{fill:var(--lt-accent);stroke:var(--lt-accent)}
+.lt-gc.st-done text{fill:var(--lt-on-strong)}
+.lt-gc.st-path rect{fill:var(--lt-good);stroke:var(--lt-good)}
+.lt-gc.st-path text{fill:var(--lt-on-strong)}
+.lt-gc.st-wall rect{fill:var(--lt-wall);stroke:var(--lt-wall)}
+.lt-gc.st-wall text{fill:var(--lt-bg)}
+.lt-gc.st-start rect{stroke:var(--lt-accent);stroke-width:4}
+.lt-gc.st-goal rect{stroke:var(--lt-good);stroke-width:4}
+.lt-gc.st-error rect{fill:var(--lt-warn);stroke:var(--lt-warn)}
+.lt-gc.st-dim{opacity:.35}
+.lt-gr-heads text{font-family:var(--lt-font-code);fill:var(--lt-muted)}
+.lt-gr-arrow path{fill:none;stroke:var(--lt-edge);stroke-width:2.2}
+.lt-gr-head path{fill:var(--lt-edge)}
+.lt-gr-arrow.st-active path{stroke:var(--lt-active);stroke-width:3}
+.lt-gr-head.st-active path{fill:var(--lt-active)}
+.lt-gr-arrow.st-path path{stroke:var(--lt-ink);stroke-width:3.4}
+.lt-gr-head.st-path path{fill:var(--lt-ink)}
+.lt-gr-arrow.st-dim{opacity:.3}
+.lt-gr-ptr rect{fill:none;stroke:var(--lt-accent);stroke-width:3}
+.lt-gr-ptr text{font-family:var(--lt-font-code);font-size:.5em;font-weight:700;fill:var(--lt-accent)}
 
 /* HUD: where you are in the graph */
 #lt-hud{position:absolute;left:0;right:0;bottom:0;height:46px;padding:0 28px 0 72px;display:flex;align-items:center;
@@ -251,6 +286,38 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-pp-moves kbd{margin-right:10px;color:var(--lt-accent)}
 .lt-pp-notes{font-size:19px;line-height:1.5}
 .lt-pp-notes a{color:var(--lt-accent)}
+.lt-pp-scrub{display:flex;align-items:center;gap:14px;margin-top:18px}
+.lt-pp-scrub[hidden]{display:none}
+.lt-pp-scrub input{flex:1;min-width:0;accent-color:var(--lt-accent);cursor:pointer}
+.lt-pp-scrub-label{font-family:var(--lt-font-code);font-size:15px;color:var(--lt-muted);min-width:7ch;text-align:right}
+.lt-pp-next-label{font-weight:400}
+.lt-pp-next{position:relative}
+.lt-pp-preview{display:block;width:100%;border:0;border-radius:8px;background:var(--lt-backdrop);pointer-events:none}
+.lt-pp-next-none{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--lt-muted);
+  border:2px dashed var(--lt-rule);border-radius:8px}
+.lt-pp-next-none[hidden]{display:none}
+/* the preview pane is a passive copy of the deck */
+.lt-preview #lt-hud,.lt-preview #lt-flash{display:none}
+.lt-preview #lt-viewport{box-shadow:none}
+
+/* print mode (PDF export): static copies of each page, one per PDF page */
+@page{margin:0}
+html.lt-print,html.lt-print body{overflow:visible;height:auto}
+html.lt-print *{transition:none !important;animation:none !important}
+html.lt-print #lt-hud{display:none}
+#lt-root[hidden]{display:none}
+.lt-print-page{position:relative;width:var(--lt-w);height:var(--lt-h);overflow:hidden;background:var(--lt-bg);
+  break-after:page;page-break-after:always}
+.lt-print-page:last-child{break-after:auto;page-break-after:auto}
+.lt-print-page .lt-slide{position:absolute;inset:0}
+.lt-print-foot{position:absolute;left:0;right:0;bottom:0;height:46px;padding:0 28px 0 72px;display:flex;align-items:center;
+  justify-content:space-between;gap:24px;font-size:16px;color:var(--lt-muted);border-top:1px solid var(--lt-rule);white-space:nowrap}
+.lt-print-foot span:first-child{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lt-print-foot a{color:var(--lt-accent)}
+.lt-print-foot b{font-family:var(--lt-font-code);font-weight:600;color:var(--lt-ink);margin-left:22px}
+.lt-print-ref{font-family:var(--lt-font-code);font-size:.8em;color:var(--lt-muted);margin-left:.6em}
+a.lt-detour-badge,a.lt-branch-opt{text-decoration:none}
+.lt-print-nolink{text-decoration:none;color:inherit}
 
 /* transitions */
 @keyframes lt-slide-in{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
@@ -269,7 +336,7 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
   --lt-backdrop:#d9dde4;--lt-bg:#f7f8fa;--lt-panel:#eceff3;--lt-code-bg:#eef1f5;--lt-rule:#d5dae2;
   --lt-ink:#1d2433;--lt-muted:#5d6778;--lt-accent:#0b6e7f;--lt-accent-soft:#d5ecef;
   --lt-active:#c8741a;--lt-frontier:#6a4fb3;--lt-frontier-soft:#ebe5f7;--lt-good:#2f8f4e;--lt-warn:#b23a48;
-  --lt-edge:#98a2b3;--lt-cell:#b7c0cd;--lt-on-strong:#ffffff;
+  --lt-wall:#3d4556;--lt-edge:#98a2b3;--lt-cell:#b7c0cd;--lt-on-strong:#ffffff;
   --lt-add-bg:#e3f3e7;--lt-del-bg:#fbe6e8;
   --lt-hl:#c8741a;--lt-hl-bg:#fbeedd;
   --lt-detour:#8b7bc4;--lt-detour-ink:#5b4a9c;--lt-detour-soft:#efeaf9;
@@ -389,7 +456,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.2.2","meta":{"title":"Refactoring a cache","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"refactoring-a-cache","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"slides":{"refactoring-a-cache":{"title":"Refactoring a cache","label":"Refactoring a cache","scope":"root","next":{"slide":"idea"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"idea":{"title":"What an LRU cache keeps","label":"What an LRU cache keeps","scope":"root","next":{"slide":"diff"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>The image is embedded in the HTML at build time, like everything else.<\/p>\n"},"diff":{"title":"From a list to an OrderedDict, then to statistics","label":"From a list to an OrderedDict, then to statistics","scope":"root","next":{"slide":"bench"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"diff/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":20},"notes":"<p>Step 1 is the original. Step 2 removes <code>order.remove(key)<\/code>, which is linear in the cache size.<\/p>\n"},"bench":{"title":"Was it worth it?","label":"Was it worth it?","scope":"root","next":{"slide":"hits"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":33}},"hits":{"title":"Hit rate by capacity","label":"Hit rate by capacity","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":42}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":51}}},"detours":{},"instances":{"diff/c1":{"component":"diff-steps","slide":"diff","data":"lt-data-diff/c1"},"bench/c1":{"component":"plot","slide":"bench","data":"lt-data-bench/c1"},"hits/c1":{"component":"plot","slide":"hits","data":"lt-data-hits/c1"}},"tours":{},"mainPath":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"overview":{"nodes":{"refactoring-a-cache":{"x":73.0,"y":21.0,"w":130.0,"h":26.0,"label":"Refactoring a cache"},"idea":{"x":251.0,"y":21.0,"w":166.0,"h":26.0,"label":"What an LRU cache keeps"},"diff":{"x":451.5,"y":21.0,"w":175.0,"h":26.0,"label":"From a list to an Ordered…"},"bench":{"x":623.5,"y":21.0,"w":109.0,"h":26.0,"label":"Was it worth it?"},"hits":{"x":773.0,"y":21.0,"w":130.0,"h":26.0,"label":"Hit rate by capacity"},"thanks":{"x":897.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"refactoring-a-cache","to":"idea","kind":"next","path":"M138.0,21.0 C145.8,21.0 153.8,21.0 161.8,21.0 L168.0,21.0"},{"from":"idea","to":"diff","kind":"next","path":"M334.2,21.0 C342.0,21.0 349.9,21.0 357.9,21.0 L363.9,21.0"},{"from":"diff","to":"bench","kind":"next","path":"M539.5,21.0 C547.3,21.0 555.0,21.0 562.5,21.0 L568.7,21.0"},{"from":"bench","to":"hits","kind":"next","path":"M678.2,21.0 C685.9,21.0 693.8,21.0 701.8,21.0 L707.8,21.0"},{"from":"hits","to":"thanks","kind":"next","path":"M838.1,21.0 C846.3,21.0 854.3,21.0 861.8,21.0 L867.8,21.0"}],"width":935.0,"height":42.0},"hash":"eb9c13dad2f58eec"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.3.0","meta":{"title":"Refactoring a cache","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"refactoring-a-cache","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"slides":{"refactoring-a-cache":{"title":"Refactoring a cache","label":"Refactoring a cache","scope":"root","next":{"slide":"idea"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"idea":{"title":"What an LRU cache keeps","label":"What an LRU cache keeps","scope":"root","next":{"slide":"diff"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>The image is embedded in the HTML at build time, like everything else.<\/p>\n"},"diff":{"title":"From a list to an OrderedDict, then to statistics","label":"From a list to an OrderedDict, then to statistics","scope":"root","next":{"slide":"bench"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"diff/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":20},"notes":"<p>Step 1 is the original. Step 2 removes <code>order.remove(key)<\/code>, which is linear in the cache size.<\/p>\n"},"bench":{"title":"Was it worth it?","label":"Was it worth it?","scope":"root","next":{"slide":"hits"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":33}},"hits":{"title":"Hit rate by capacity","label":"Hit rate by capacity","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":42}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":51}}},"detours":{},"instances":{"diff/c1":{"component":"diff-steps","slide":"diff","data":"lt-data-diff/c1"},"bench/c1":{"component":"plot","slide":"bench","data":"lt-data-bench/c1"},"hits/c1":{"component":"plot","slide":"hits","data":"lt-data-hits/c1"}},"tours":{},"mainPath":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"overview":{"nodes":{"refactoring-a-cache":{"x":73.0,"y":21.0,"w":130.0,"h":26.0,"label":"Refactoring a cache"},"idea":{"x":251.0,"y":21.0,"w":166.0,"h":26.0,"label":"What an LRU cache keeps"},"diff":{"x":451.5,"y":21.0,"w":175.0,"h":26.0,"label":"From a list to an Ordered…"},"bench":{"x":623.5,"y":21.0,"w":109.0,"h":26.0,"label":"Was it worth it?"},"hits":{"x":773.0,"y":21.0,"w":130.0,"h":26.0,"label":"Hit rate by capacity"},"thanks":{"x":897.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"refactoring-a-cache","to":"idea","kind":"next","path":"M138.0,21.0 C145.8,21.0 153.8,21.0 161.8,21.0 L168.0,21.0"},{"from":"idea","to":"diff","kind":"next","path":"M334.2,21.0 C342.0,21.0 349.9,21.0 357.9,21.0 L363.9,21.0"},{"from":"diff","to":"bench","kind":"next","path":"M539.5,21.0 C547.3,21.0 555.0,21.0 562.5,21.0 L568.7,21.0"},{"from":"bench","to":"hits","kind":"next","path":"M678.2,21.0 C685.9,21.0 693.8,21.0 701.8,21.0 L707.8,21.0"},{"from":"hits","to":"thanks","kind":"next","path":"M838.1,21.0 C846.3,21.0 854.3,21.0 861.8,21.0 L867.8,21.0"}],"width":935.0,"height":42.0},"hash":"cec92d35427f4483"}</script>
 <script type="application/json" id="lt-data-diff/c1">{"count":3}</script>
 <script type="application/json" id="lt-data-bench/c1">{"backend":"vega","spec":{"mark":{"type":"line","point":true},"encoding":{"x":{"field":"capacity","type":"quantitative","title":"capacity (log scale)","scale":{"type":"log"}},"y":{"field":"us_per_op","type":"quantitative","title":"microseconds per operation"},"color":{"field":"version","type":"nominal","title":null},"tooltip":[{"field":"capacity"},{"field":"us_per_op"},{"field":"version"}]},"data":{"values":[{"capacity":16,"version":"list (v1)","us_per_op":0.246,"hit_rate":0.946},{"capacity":16,"version":"OrderedDict (v2)","us_per_op":0.151,"hit_rate":0.946},{"capacity":64,"version":"list (v1)","us_per_op":0.554,"hit_rate":0.987},{"capacity":64,"version":"OrderedDict (v2)","us_per_op":0.16,"hit_rate":0.987},{"capacity":256,"version":"list (v1)","us_per_op":0.855,"hit_rate":0.992},{"capacity":256,"version":"OrderedDict (v2)","us_per_op":0.138,"hit_rate":0.992},{"capacity":1024,"version":"list (v1)","us_per_op":0.864,"hit_rate":0.992},{"capacity":1024,"version":"OrderedDict (v2)","us_per_op":0.146,"hit_rate":0.992}]},"width":864,"height":326,"config":{"background":"transparent","font":"Avenir Next, Segoe UI, Helvetica Neue, Arial, DejaVu Sans","axis":{"labelColor":"#5d6778","titleColor":"#1d2433","gridColor":"#e3e7ee","domainColor":"#5d6778","tickColor":"#5d6778","labelFontSize":16,"titleFontSize":17,"titleFontWeight":500,"titlePadding":10},"legend":{"labelColor":"#1d2433","titleColor":"#5d6778","labelFontSize":16,"symbolSize":120},"title":{"color":"#1d2433","fontSize":18},"range":{"category":["#0b6e7f","#c8741a","#6a4fb3","#2f8f4e","#b23a48","#5d6778"]},"view":{"stroke":null},"line":{"strokeWidth":2.5},"point":{"size":60}},"$schema":"https://vega.github.io/schema/vega-lite/v5.json"}}</script>
 <script type="application/json" id="lt-data-hits/c1">{"backend":"plotly","spec":{"data":[{"type":"bar","name":"list (v1)","x":[16,64,256,1024],"y":[0.946,0.987,0.992,0.992]},{"type":"bar","name":"OrderedDict (v2)","x":[16,64,256,1024],"y":[0.946,0.987,0.992,0.992]}],"layout":{"width":864,"height":365,"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","font":{"family":"Avenir Next, Segoe UI, Helvetica Neue, Arial, DejaVu Sans","color":"#1d2433","size":15},"colorway":["#0b6e7f","#c8741a","#6a4fb3","#2f8f4e","#b23a48","#5d6778"],"xaxis":{"gridcolor":"#e3e7ee","zerolinecolor":"#e3e7ee","linecolor":"#5d6778","tickfont":{"color":"#5d6778"},"title":{"text":"capacity"},"type":"category"},"yaxis":{"gridcolor":"#e3e7ee","zerolinecolor":"#e3e7ee","linecolor":"#5d6778","tickfont":{"color":"#5d6778"},"title":{"text":"hit rate"}},"margin":{"l":70,"r":20,"t":16,"b":60},"legend":{"bgcolor":"rgba(0,0,0,0)"},"showlegend":true}}}</script>
@@ -410,6 +477,10 @@ const Lattice = (() => {
   const resizeCallbacks = [];
   const dataStore = {}; // instanceId -> data fetched in directory mode
   let presenter = false;
+  let passive = false; // preview (the presenter's "next" pane) and print: no input, history, storage or sync
+  let printing = false;
+  let previewFrame = null;
+  let previewReady = false;
   let channel = null;
   let storageKey = "";
   let hudTimer = null;
@@ -580,7 +651,7 @@ const Lattice = (() => {
 
   // ------------------------------------------------------------------ rendering
   function transitionFor(how, target) {
-    if (!how || how.kind === "step" || how.kind === "sync") return null;
+    if (!how || how.kind === "step" || how.kind === "sync" || how.kind === "scrub") return null;
     const back = (name) => (name === "zoom" ? "zoom-out" : name === "slide" ? "slide-back" : name);
     if (how.kind === "return") return "zoom-out";
     if (how.kind === "prev") return back(deck.transitions.next);
@@ -664,7 +735,7 @@ const Lattice = (() => {
     const id = nav.cur.slide;
     const sameSlide = prev && prev.slide === id;
     if (!sameSlide) {
-      if (prev && sections[prev.slide]) {
+      if (prev && prev.slide && sections[prev.slide]) {
         sections[prev.slide].hidden = true;
         sections[prev.slide].classList.remove("lt-current");
         for (const instId of instancesBySlide[prev.slide] || []) {
@@ -687,9 +758,11 @@ const Lattice = (() => {
         sec.classList.add(`lt-anim-${tr}`);
       }
     }
-    const adjacent = sameSlide && Math.abs(prev.step - nav.cur.step) === 1;
+    // scrubbing, previews and printing never animate (spec 10.1)
+    const adjacent = sameSlide && Math.abs(prev.step - nav.cur.step) === 1 && !passive && !(how && how.kind === "scrub");
     applyStep(id, nav.cur.step, { sameSlide, fromStep: sameSlide ? prev.step : null, animate: adjacent, force: !sameSlide });
     updateHud();
+    if (passive) return;
     updateHash();
     save();
     if (!how || how.kind !== "sync") broadcast();
@@ -882,7 +955,58 @@ const Lattice = (() => {
     input.focus();
   }
 
-  // ------------------------------------------------------------------ presenter view
+  // ------------------------------------------------------------------ presenter view (spec 7.5)
+  function buildPresenter() {
+    const panel = $("#lt-presenter-panel");
+    const W = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-w"));
+    const H = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-h"));
+    panel.innerHTML = `
+      <div class="lt-pp-top"><span class="lt-pp-timer" title="Click to reset">00:00</span><span class="lt-pp-where"></span></div>
+      <div class="lt-pp-scrub" hidden><input type="range" min="0" max="1" step="1" value="0" aria-label="Step of the current slide"><span class="lt-pp-scrub-label"></span></div>
+      <h3>Next <span class="lt-pp-next-label"></span></h3>
+      <div class="lt-pp-next"><iframe class="lt-pp-preview" title="Next" tabindex="-1" style="aspect-ratio:${W} / ${H}"></iframe><div class="lt-pp-next-none" hidden></div></div>
+      <h3>Moves</h3><ul class="lt-pp-moves"></ul>
+      <h3>Notes</h3><div class="lt-pp-notes"></div>`;
+    const range = $(".lt-pp-scrub input", panel);
+    range.addEventListener("input", () => {
+      const i = Number(range.value);
+      if (i !== nav.cur.step) go(nav.cur.slide, i, { kind: "scrub", dir: 0 });
+    });
+    range.addEventListener("change", () => range.blur()); // arrow keys go back to the deck
+    previewFrame = $(".lt-pp-preview", panel);
+    window.addEventListener("message", (e) => {
+      if (e.source === previewFrame.contentWindow && e.data && e.data.lattice === "preview-ready") {
+        previewReady = true;
+        updatePreview();
+      }
+    });
+    previewFrame.src = location.pathname + "?preview";
+  }
+
+  // What NEXT would show: the next step of this slide, else the slide NEXT moves to, at the step it lands on.
+  function previewTarget() {
+    const s = slide(nav.cur.slide);
+    if (nav.cur.step < s.steps - 1) return { slide: nav.cur.slide, step: nav.cur.step + 1, label: `step ${nav.cur.step + 2} of ${s.steps}` };
+    const nt = nextTarget();
+    if (!nt || !nt.slide) return { slide: null, label: s.branches.length ? "choose a branch" : "end of path" };
+    if (nt.kind === "back") {
+      const i = topExcursion();
+      return { slide: nt.slide, step: i >= 0 ? nav.H[i].step : steps(nt.slide) - 1, label: `return to ${label(nt.slide)}` };
+    }
+    return { slide: nt.slide, step: 0, label: label(nt.slide) };
+  }
+
+  function updatePreview() {
+    if (!previewFrame) return;
+    const t = previewTarget();
+    $(".lt-pp-next-label").textContent = t.label ? `\u00b7 ${t.label}` : "";
+    const none = $(".lt-pp-next-none");
+    none.hidden = !!t.slide;
+    none.textContent = t.slide ? "" : t.label;
+    previewFrame.style.visibility = t.slide ? "visible" : "hidden";
+    if (previewReady && t.slide) previewFrame.contentWindow.postMessage({ lattice: "preview", slide: t.slide, step: t.step }, "*");
+  }
+
   function updatePresenter() {
     const panel = $("#lt-presenter-panel");
     const s = slide(nav.cur.slide);
@@ -898,11 +1022,18 @@ const Lattice = (() => {
     });
     const rt = returnTarget();
     if (rt && (topExcursion() >= 0 || detourOf(nav.cur.slide))) moves.push(`<li><kbd>\u2191</kbd> return to ${esc(label(rt))}</li>`);
-    panel.innerHTML = `
-      <div class="lt-pp-top"><span class="lt-pp-timer" title="Click to reset">00:00</span><span>${esc(s.label)} \u00b7 step ${nav.cur.step + 1}/${s.steps}</span></div>
-      <h3>Moves</h3><ul class="lt-pp-moves">${moves.join("")}</ul>
-      <h3>Notes</h3><div class="lt-pp-notes">${s.notes || "<p class=\"lt-muted\">No notes for this slide.</p>"}</div>`;
-    renderMath(panel);
+    $(".lt-pp-where", panel).textContent = `${s.label} \u00b7 step ${nav.cur.step + 1}/${s.steps}`;
+    const scrub = $(".lt-pp-scrub", panel);
+    scrub.hidden = s.steps < 2;
+    const range = $("input", scrub);
+    range.max = String(Math.max(1, s.steps - 1));
+    range.value = String(nav.cur.step);
+    $(".lt-pp-scrub-label", scrub).textContent = `${nav.cur.step + 1} / ${s.steps}`;
+    $(".lt-pp-moves", panel).innerHTML = moves.join("");
+    const notes = $(".lt-pp-notes", panel);
+    notes.innerHTML = s.notes || "<p class=\"lt-muted\">No notes for this slide.</p>";
+    renderMath(notes);
+    updatePreview();
     tickTimer();
   }
   function tickTimer() {
@@ -923,6 +1054,107 @@ const Lattice = (() => {
     }
   }
 
+  // ------------------------------------------------------------------ print (spec 11.5)
+  // Each page of the plan is rendered, then its slide is copied into a static page. Chromium prints
+  // the copies in one pass, so links between pages become links inside the PDF.
+  const nextFrame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  function renameIds(root, suffix) {
+    const ids = new Map();
+    for (const el of [root, ...$$("[id]", root)]) {
+      if (!el.id) continue;
+      ids.set(el.id, el.id + suffix);
+      el.id += suffix;
+    }
+    const fix = (v) => v.replace(/url\(\s*(['"]?)#([^)'"]+)\1\s*\)/g, (m, q, id) => (ids.has(id) ? `url(#${ids.get(id)})` : m));
+    for (const el of [root, ...$$("*", root)]) {
+      for (const a of Array.from(el.attributes)) {
+        if (!a.value.includes("#")) continue;
+        let v = fix(a.value);
+        if ((a.name === "href" || a.name === "xlink:href") && v.startsWith("#") && ids.has(v.slice(1))) v = `#${ids.get(v.slice(1))}`;
+        if (v !== a.value) el.setAttribute(a.name, v);
+      }
+    }
+  }
+
+  function pageLink(el, page, extra) {
+    const a = document.createElement("a");
+    for (const at of Array.from(el.attributes)) if (!at.name.startsWith("data-") && at.name !== "type") a.setAttribute(at.name, at.value);
+    a.innerHTML = el.innerHTML + (extra || "");
+    if (page) a.href = `#lt-page-${page}`;
+    else a.classList.add("lt-print-nolink");
+    el.replaceWith(a);
+  }
+
+  function snapshot(entry, plan) {
+    const sec = sections[entry.slide];
+    const clone = sec.cloneNode(true);
+    clone.hidden = false;
+    clone.classList.remove(...Array.from(clone.classList).filter((c) => c.startsWith("lt-anim-")));
+    const src = $$("canvas", sec);
+    $$("canvas", clone).forEach((c, i) => {
+      try {
+        const img = document.createElement("img");
+        img.src = src[i].toDataURL("image/png");
+        img.style.cssText = c.style.cssText;
+        img.style.width = `${src[i].clientWidth}px`;
+        img.style.height = `${src[i].clientHeight}px`;
+        c.replaceWith(img);
+      } catch (e) { console.error(e); }
+    });
+    renameIds(clone, `-p${entry.n}`);
+    const ref = (page) => (page ? `<span class="lt-print-ref">p.\u00a0${page}</span>` : "");
+    for (const a of $$("a[data-lt-link]", clone)) {
+      const t = resolveTarget(a.dataset.ltLink);
+      const page = t && plan.pageOf[t];
+      if (page) a.setAttribute("href", `#lt-page-${page}`);
+      else { a.removeAttribute("href"); a.classList.add("lt-print-nolink"); }
+    }
+    for (const b of $$("[data-lt-detour]", clone)) {
+      const d = deck.detours[b.dataset.ltDetour];
+      const page = d && plan.pageOf[d.entry];
+      pageLink(b, page, ref(page));
+    }
+    const s = slide(entry.slide);
+    for (const b of $$("[data-lt-choose]", clone)) {
+      const opt = s.branches.find((o) => o.key === b.dataset.ltChoose);
+      const page = opt && plan.pageOf[opt.target];
+      pageLink(b, page, ref(page));
+    }
+    const page = document.createElement("div");
+    page.className = "lt-print-page";
+    page.id = `lt-page-${entry.n}`;
+    page.appendChild(clone);
+    const sec2 = entry.section != null ? plan.sections[entry.section] : null;
+    let where = esc(plan.title);
+    if (sec2) {
+      where = `Appendix ${esc(sec2.code)} \u00b7 ${esc(sec2.title)}`;
+      if (entry.from) where += ` \u00b7 <a href="#lt-page-${entry.from}">from p.\u00a0${entry.from}</a>`;
+    }
+    const stepInfo = s.steps > 1 ? ` \u00b7 step ${entry.step + 1}/${s.steps}` : "";
+    page.insertAdjacentHTML("beforeend",
+      `<div class="lt-print-foot"><span>${where}</span><span>${esc(s.label)}${stepInfo}<b>${entry.n}</b></span></div>`);
+    return page;
+  }
+
+  async function print(plan) {
+    const holder = document.createElement("div");
+    holder.id = "lt-print-pages";
+    document.body.appendChild(holder);
+    for (const entry of plan.pages) {
+      const prev = Object.assign({}, nav.cur);
+      nav.cur = { slide: entry.slide, step: Math.max(0, Math.min(entry.step, steps(entry.slide) - 1)) };
+      render(prev, { kind: "sync", dir: 0 });
+      await nextFrame();
+      if (prev.slide !== entry.slide && (instancesBySlide[entry.slide] || []).length) await sleep(120); // async renderers (Vega)
+      holder.appendChild(snapshot(entry, plan));
+    }
+    $("#lt-root").hidden = true;
+    document.documentElement.classList.add("lt-printed");
+    return plan.pages.length;
+  }
+
   // ------------------------------------------------------------------ input
   function keyMap() {
     const m = {};
@@ -932,6 +1164,7 @@ const Lattice = (() => {
 
   function onKey(e) {
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target && e.target.closest && e.target.closest("input, textarea, select")) return;
     if (overlayOpen()) {
       if (e.key === "Escape" || (e.key === "o" && $(".lt-overview"))) { closeOverlay(); e.preventDefault(); }
       return;
@@ -981,26 +1214,52 @@ const Lattice = (() => {
     }));
   }
 
+  function bootPassive() {
+    // A passive window renders what it is told: the presenter's preview pane, or the PDF export.
+    nav = { cur: { slide: deck.start, step: 0 }, H: [], tour: null };
+    fit();
+    render(null, { kind: "sync", dir: 0 });
+    if (printing) return;
+    window.addEventListener("message", (e) => {
+      const m = e.data;
+      if (e.source !== window.parent || !m || m.lattice !== "preview" || !deck.slides[m.slide]) return;
+      const prev = Object.assign({}, nav.cur);
+      nav.cur = { slide: m.slide, step: Math.max(0, Math.min(m.step || 0, steps(m.slide) - 1)) };
+      render(prev, { kind: "sync", dir: 0 });
+    });
+    if (window.parent !== window) window.parent.postMessage({ lattice: "preview-ready" }, "*");
+  }
+
   async function boot() {
     deck = JSON.parse($("#lt-deck").textContent);
     await loadData();
-    presenter = new URLSearchParams(location.search).has("presenter");
+    const params = new URLSearchParams(location.search);
+    printing = params.has("print");
+    passive = printing || params.has("preview");
+    presenter = !passive && params.has("presenter");
     storageKey = `lattice:${deck.hash}:nav`;
     for (const sec of $$(".lt-slide")) sections[sec.dataset.slide] = sec;
     for (const [id, inst] of Object.entries(deck.instances)) (instancesBySlide[inst.slide] ||= []).push(id);
-    if (presenter) {
-      document.body.classList.add("lt-presenter");
-      $("#lt-presenter-panel").hidden = false;
-      setInterval(tickTimer, 1000);
-    }
     renderMath(document);
-    nav = restore();
     window.addEventListener("resize", fit);
     window.addEventListener("pagehide", () => {
       for (const m of Object.values(mounted)) {
         if (m.ctl.destroy) try { m.ctl.destroy(m.inst); } catch (e) { console.error(e); }
       }
     });
+    if (passive) {
+      document.documentElement.classList.add(printing ? "lt-print" : "lt-preview");
+      bootPassive();
+      document.documentElement.classList.add("lt-ready");
+      return;
+    }
+    if (presenter) {
+      document.body.classList.add("lt-presenter");
+      $("#lt-presenter-panel").hidden = false;
+      buildPresenter();
+      setInterval(tickTimer, 1000);
+    }
+    nav = restore();
     document.addEventListener("keydown", onKey);
     document.addEventListener("click", onClick);
     window.addEventListener("hashchange", () => {
@@ -1019,7 +1278,7 @@ const Lattice = (() => {
     document.documentElement.classList.add("lt-ready");
   }
 
-  return { component, boot, frames, applyDelta, renderPanel, esc, actions: () => actions, state: () => nav };
+  return { component, boot, frames, applyDelta, renderPanel, esc, print, actions: () => actions, state: () => nav };
 })();
 window.Lattice = Lattice;
 

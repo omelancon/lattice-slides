@@ -109,8 +109,8 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-math-block{text-align:center;font-size:1.1em}
 .lt-error{color:var(--lt-warn);font-family:var(--lt-font-code);font-size:18px;border:2px dashed var(--lt-warn);padding:12px}
 
-/* graph and array animations */
-.lt-graph-anim,.lt-array-anim{container-type:inline-size;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+/* graph, array, tree and grid animations */
+.lt-graph-anim,.lt-array-anim,.lt-tree-anim,.lt-grid-anim{container-type:inline-size;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
 .lt-ga-main,.lt-aa-main{display:flex;gap:28px;min-height:0;flex:1;align-items:center}
 .lt-ga-canvas{flex:1;min-width:0;height:430px;display:flex}
 .lt-ga-svg{width:100%;height:100%;margin:0 auto}
@@ -170,6 +170,41 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-aa-ptr div{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:26px}
 .lt-aa-ptr span{font-family:var(--lt-font-code);font-size:16px;color:var(--lt-accent);font-weight:600}
 .lt-aa-ptr span::before{content:"\25B2 ";font-size:11px}
+
+/* trees: nodes and edges reuse the graph styles; nodes leaving the tree fade out */
+.lt-ta-out{opacity:0;pointer-events:none}
+.lt-animate .lt-ta-out,.lt-tree-anim.lt-animate .lt-node{transition:opacity .3s}
+.lt-ta-badge{font-size:12px;paint-order:stroke;stroke:var(--lt-bg);stroke-width:4px}
+
+/* grids: mazes and dynamic programming tables */
+.lt-gc rect{fill:var(--lt-bg);stroke:var(--lt-rule);stroke-width:1.5}
+.lt-gc text{font-family:var(--lt-font-code);font-weight:600;fill:var(--lt-ink)}
+.lt-animate .lt-gc rect{transition:fill .25s,stroke .25s}
+.lt-gc-out{display:none}
+.lt-gc.st-active rect,.lt-gc.st-compare rect{fill:var(--lt-active);stroke:var(--lt-active)}
+.lt-gc.st-active text,.lt-gc.st-compare text{fill:var(--lt-on-strong)}
+.lt-gc.st-frontier rect{fill:var(--lt-frontier-soft);stroke:var(--lt-frontier);stroke-dasharray:4 3}
+.lt-gc.st-visited rect{fill:var(--lt-accent-soft)}
+.lt-gc.st-done rect{fill:var(--lt-accent);stroke:var(--lt-accent)}
+.lt-gc.st-done text{fill:var(--lt-on-strong)}
+.lt-gc.st-path rect{fill:var(--lt-good);stroke:var(--lt-good)}
+.lt-gc.st-path text{fill:var(--lt-on-strong)}
+.lt-gc.st-wall rect{fill:var(--lt-wall);stroke:var(--lt-wall)}
+.lt-gc.st-wall text{fill:var(--lt-bg)}
+.lt-gc.st-start rect{stroke:var(--lt-accent);stroke-width:4}
+.lt-gc.st-goal rect{stroke:var(--lt-good);stroke-width:4}
+.lt-gc.st-error rect{fill:var(--lt-warn);stroke:var(--lt-warn)}
+.lt-gc.st-dim{opacity:.35}
+.lt-gr-heads text{font-family:var(--lt-font-code);fill:var(--lt-muted)}
+.lt-gr-arrow path{fill:none;stroke:var(--lt-edge);stroke-width:2.2}
+.lt-gr-head path{fill:var(--lt-edge)}
+.lt-gr-arrow.st-active path{stroke:var(--lt-active);stroke-width:3}
+.lt-gr-head.st-active path{fill:var(--lt-active)}
+.lt-gr-arrow.st-path path{stroke:var(--lt-ink);stroke-width:3.4}
+.lt-gr-head.st-path path{fill:var(--lt-ink)}
+.lt-gr-arrow.st-dim{opacity:.3}
+.lt-gr-ptr rect{fill:none;stroke:var(--lt-accent);stroke-width:3}
+.lt-gr-ptr text{font-family:var(--lt-font-code);font-size:.5em;font-weight:700;fill:var(--lt-accent)}
 
 /* HUD: where you are in the graph */
 #lt-hud{position:absolute;left:0;right:0;bottom:0;height:46px;padding:0 28px 0 72px;display:flex;align-items:center;
@@ -243,6 +278,38 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-pp-moves kbd{margin-right:10px;color:var(--lt-accent)}
 .lt-pp-notes{font-size:19px;line-height:1.5}
 .lt-pp-notes a{color:var(--lt-accent)}
+.lt-pp-scrub{display:flex;align-items:center;gap:14px;margin-top:18px}
+.lt-pp-scrub[hidden]{display:none}
+.lt-pp-scrub input{flex:1;min-width:0;accent-color:var(--lt-accent);cursor:pointer}
+.lt-pp-scrub-label{font-family:var(--lt-font-code);font-size:15px;color:var(--lt-muted);min-width:7ch;text-align:right}
+.lt-pp-next-label{font-weight:400}
+.lt-pp-next{position:relative}
+.lt-pp-preview{display:block;width:100%;border:0;border-radius:8px;background:var(--lt-backdrop);pointer-events:none}
+.lt-pp-next-none{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--lt-muted);
+  border:2px dashed var(--lt-rule);border-radius:8px}
+.lt-pp-next-none[hidden]{display:none}
+/* the preview pane is a passive copy of the deck */
+.lt-preview #lt-hud,.lt-preview #lt-flash{display:none}
+.lt-preview #lt-viewport{box-shadow:none}
+
+/* print mode (PDF export): static copies of each page, one per PDF page */
+@page{margin:0}
+html.lt-print,html.lt-print body{overflow:visible;height:auto}
+html.lt-print *{transition:none !important;animation:none !important}
+html.lt-print #lt-hud{display:none}
+#lt-root[hidden]{display:none}
+.lt-print-page{position:relative;width:var(--lt-w);height:var(--lt-h);overflow:hidden;background:var(--lt-bg);
+  break-after:page;page-break-after:always}
+.lt-print-page:last-child{break-after:auto;page-break-after:auto}
+.lt-print-page .lt-slide{position:absolute;inset:0}
+.lt-print-foot{position:absolute;left:0;right:0;bottom:0;height:46px;padding:0 28px 0 72px;display:flex;align-items:center;
+  justify-content:space-between;gap:24px;font-size:16px;color:var(--lt-muted);border-top:1px solid var(--lt-rule);white-space:nowrap}
+.lt-print-foot span:first-child{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lt-print-foot a{color:var(--lt-accent)}
+.lt-print-foot b{font-family:var(--lt-font-code);font-weight:600;color:var(--lt-ink);margin-left:22px}
+.lt-print-ref{font-family:var(--lt-font-code);font-size:.8em;color:var(--lt-muted);margin-left:.6em}
+a.lt-detour-badge,a.lt-branch-opt{text-decoration:none}
+.lt-print-nolink{text-decoration:none;color:inherit}
 
 /* transitions */
 @keyframes lt-slide-in{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}

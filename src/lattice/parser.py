@@ -18,7 +18,7 @@ from .model import Detour, FrontMatter, Slide
 
 _TAG_RE = re.compile(r"<[^>]+>")
 _PLACEHOLDER_RE = re.compile(r"\x00T:([^\x00]*)\x00")
-SLIDE_ATTRS = {"next", "offpath", "layout", "transition"}
+SLIDE_ATTRS = {"next", "offpath", "layout", "transition", "pdf"}
 
 
 def html_to_text(fragment: str) -> str:
@@ -232,6 +232,13 @@ class Loader:
                     s.layout = val
                 elif key == "transition":
                     s.transition = val
+                elif key == "pdf":
+                    from .pdf import parse_steps
+
+                    try:
+                        s.pdf_steps = parse_steps(val)
+                    except ValueError as e:
+                        self.d.error("LT053", str(e), s.loc)
                 else:
                     self.d.warn("LT010", f"unknown slide attribute {key!r}", s.loc)
                     s.data[key] = val

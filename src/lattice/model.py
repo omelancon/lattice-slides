@@ -144,6 +144,7 @@ class Slide:
     next_spec: str | None = None  # explicit target, "back", "none" or None (implicit)
     layout: str = "default"
     transition: str | None = None
+    pdf_steps: str | list | None = None  # steps printed by the PDF export (spec 11.5); None: the default
     data: dict[str, str] = field(default_factory=dict)
     # built from the body
     body_html: str = ""

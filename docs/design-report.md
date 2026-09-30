@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.2.2. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.3.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -65,7 +65,21 @@ A single HTML file embeds styles, scripts, data, images and math fonts, and incl
 
 ### 3.6 Built-in components
 
-Code with highlighting, stepping and diffs; plots with matplotlib, Vega-Lite and Plotly; Graphviz diagrams; math; animated graphs and arrays. The list with options is spec section 8.8, and `examples/` shows each one in use.
+Code with highlighting, stepping and diffs; plots with matplotlib, Vega-Lite and Plotly; Graphviz diagrams; math; animated graphs, arrays, trees and grids. The list with options is spec section 8.8, and `examples/` shows each one in use.
+
+### 3.7 Trees move, graphs do not (spec sections 9.1 and 9.4)
+
+A graph animation colors a fixed drawing, so one layout over every element keeps nodes still and the eye on what changes. A tree animation is about the shape itself: an insertion pushes nodes aside and a rotation lifts one node over another, so positions must change (decision 10). They are still computed in Python, per frame, in one shared box; the runtime only interpolates between two known positions on a single step. The binary layout places nodes by in-order rank, which a rotation preserves: nodes move only up or down, which is what a rotation means.
+
+`TreeTrace` snapshots the author's own node objects rather than asking for a new description of the tree, so the animation runs the implementation students use, as graph traces already do.
+
+### 3.8 The presenter sees what comes next (spec section 7.5)
+
+The preview pane is a second, passive copy of the deck rather than a cloned slide, because only a real copy mounts components and shows their true state at a given position. It renders exactly what NEXT would show, including the next step of an animation. The scrubber sets the step directly: steps are positions, not history, so scrubbing never changes where Left or Up lead.
+
+### 3.9 A PDF is a tour, printed (spec section 11.5)
+
+A PDF is linear, so the export follows a tour and moves the rest of the graph into an appendix: detours, branch options not taken and linked backup slides (decision 11). Chromium prints what the runtime rendered, so every component looks as it does on screen, including plots drawn in the browser. Each page is a static copy of a rendered slide, and all copies are printed in one pass, which keeps links between pages working inside the PDF; printing each position separately and merging the files would lose them and need a PDF library.
 
 ---
 
@@ -91,9 +105,13 @@ A code review talk includes the real source file with `code-steps`, highlighting
 
 A research group presents benchmark results. Plots are generated from the latest CSV at build time, and interactive Vega-Lite or Plotly charts allow hovering on outliers during discussion. Rebuilding after a new benchmark run updates every figure.
 
-### 4.6 Data structures course (planned)
+### 4.6 Data structures course
 
-A lecture on balanced trees animates each insertion and rotation from the actual implementation used in the lab assignment. This needs a tree trace (roadmap, section 6).
+A lecture on balanced trees animates each insertion and rotation from the actual implementation used in the lab assignment, and grids show a maze search and a dynamic programming table filling up. (`examples/06-trees-and-grids`)
+
+### 4.7 Handouts
+
+After the lecture, the teacher exports the main path to PDF with the detours as an appendix and posts it. Students who missed a detour find it at the end, one click away from the slide that leads to it.
 
 ---
 
@@ -112,6 +130,7 @@ A lecture on balanced trees animates each insertion and rotation from the actual
 | Runtime | Vanilla JavaScript, no build step | Small, readable, no framework lock-in; runs as a module or a classic script |
 | Dev server | Standard library HTTP server, polling watcher, server-sent events | No extra dependencies; fast enough for decks |
 | Browser tests and screenshots | Playwright with Chromium (extra `dev`) | Tests the real navigation and layout |
+| PDF export | Chromium through Playwright (extra `pdf`) | Prints what the runtime renders, with vector text and internal links; no PDF library needed |
 
 ---
 
@@ -121,10 +140,7 @@ A lecture on balanced trees animates each insertion and rotation from the actual
 
 **v0.2 (done).** Vega-Lite and Plotly backends, `diff-steps`, directory output, image embedding, the graph-shaped overview map; columns that contain their content (0.2.1); built-in theme validation and the remaining diagnostics (0.2.2).
 
-**v0.3 (next).**
-- More traces: trees (insertions, rotations) and grids (maze search, dynamic programming tables).
-- PDF export following a tour, with detours as an appendix and animations exported as selected frames.
-- Presenter view: preview of the next slide and a scrubber for animations.
+**v0.3 (done).** Tree traces (insertions, rotations) and grid traces (maze search, dynamic programming tables); PDF export following a tour, with detours, branch options and linked slides as an appendix and animations exported as selected frames; presenter view with a preview of what comes next and a step scrubber.
 
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
@@ -136,7 +152,7 @@ A lecture on balanced trees animates each insertion and rotation from the actual
 
 ## 7. Design Decisions
 
-Decisions taken while writing the specification.
+Decisions taken while writing the specification, and since.
 
 | # | Question | Decision |
 |---|---|---|
@@ -149,3 +165,5 @@ Decisions taken while writing the specification.
 | 7 | Security | Personal use: Python referenced by a deck runs at build time without any trust flag. |
 | 8 | Accessibility | Not supported. |
 | 9 | Import from other tools | Not supported. |
+| 10 | Tree layout | Positions per frame, computed at build time in one shared box; in-order layout for binary trees. Graphs keep one layout for all frames. |
+| 11 | PDF contents | The tour (default: main path), then an appendix of detours, branch options not taken and linked off-path slides. Steps per slide: `last` by default, a `pdf` attribute otherwise, numbered from 0 as in the URL. |

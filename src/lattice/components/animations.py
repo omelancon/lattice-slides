@@ -1,9 +1,11 @@
-"""Animated components: ``graph-anim`` and ``array-anim`` (spec sections 7.4 and 9)."""
+"""Animated components: ``graph-anim``, ``array-anim``, ``tree-anim`` and ``grid-anim`` (spec sections 8.8 and 9)."""
 from __future__ import annotations
+
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from ..anim import ArrayTrace, GraphTrace, Trace
+from ..anim import ArrayTrace, GraphTrace, GridTrace, Trace, TreeTrace, frame_store
 from .base import Component, ComponentError, RenderResult, register
 
 
@@ -25,6 +27,24 @@ class ArrayAnimOptions(BaseModel):
     source: str
     values: list | None = None
     panel: list[str] | None = None
+
+
+class TreeAnimOptions(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    source: str
+    values: list | None = None
+    layout: Literal["auto", "binary", "tidy"] = "auto"
+    panel: list[str] | None = None
+    height: int | None = None
+
+
+class GridAnimOptions(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    source: str
+    values: list | None = None
+    panel: list[str] | None = None
+    cell: int = 48
+    height: int | None = None
 
 
 def _extras(opts) -> dict:
@@ -105,3 +125,55 @@ class ArrayAnim(Component):
         data = {"frames": _store(trace, ctx), "panel": opts.panel}
         return RenderResult('<div class="lt-array-anim"></div>', data=data, positions=len(trace),
                             meta=trace.meta)
+
+
+def _call(opts, ctx):
+    extras = _extras(opts)
+    if opts.values is not None:
+        return ctx.call(opts.source, list(opts.values), **extras)
+    return ctx.call(opts.source, **extras)
+
+
+@register("tree-anim")
+class TreeAnim(Component):
+    Options = TreeAnimOptions
+    body = "yaml"
+    runtime = "tree-anim.js"
+
+    def render(self, block, opts: TreeAnimOptions, ctx) -> RenderResult:
+        from ..graphs import tree_layouts
+
+        trace = _call(opts, ctx)
+        if not isinstance(trace, TreeTrace):
+            raise ComponentError(f"{opts.source} must return a TreeTrace")
+        if not len(trace):
+            raise ComponentError(f"{opts.source} produced no frames")
+        size, positions = tree_layouts([f.get("tree", {}) for f in trace.frames], opts.layout)
+        frames = [{**f, "pos": p} for f, p in zip(trace.frames, positions)]
+        cfg = ctx.frames_config
+        data = {"size": size, "frames": frame_store(frames, cfg.max_full_bytes, cfg.keyframe_interval),
+                "panel": opts.panel, "height": opts.height}
+        return RenderResult('<div class="lt-tree-anim"></div>', data=data, positions=len(trace), meta=trace.meta)
+
+
+@register("grid-anim")
+class GridAnim(Component):
+    Options = GridAnimOptions
+    body = "yaml"
+    runtime = "grid-anim.js"
+
+    def render(self, block, opts: GridAnimOptions, ctx) -> RenderResult:
+        trace = _call(opts, ctx)
+        if not isinstance(trace, GridTrace):
+            raise ComponentError(f"{opts.source} must return a GridTrace")
+        if not len(trace):
+            raise ComponentError(f"{opts.source} produced no frames")
+        rows = max(len(f.get("values", [])) for f in trace.frames)
+        cols = max((len(r) for f in trace.frames for r in f.get("values", [])), default=0)
+        if not rows or not cols:
+            raise ComponentError(f"{opts.source} produced an empty grid")
+        dims = {"rows": rows, "cols": cols, "cell": opts.cell,
+                "rowHead": any("rows" in f for f in trace.frames),
+                "colHead": any("cols" in f for f in trace.frames)}
+        data = {"dims": dims, "frames": _store(trace, ctx), "panel": opts.panel, "height": opts.height}
+        return RenderResult('<div class="lt-grid-anim"></div>', data=data, positions=len(trace), meta=trace.meta)

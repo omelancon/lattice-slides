@@ -15,6 +15,7 @@ from .graph import resolve_target, resolve_graph
 from .markdown import create_markdown
 from .model import Deck
 from .parser import Loader
+from .pdf import check_steps
 from .render import render_components
 
 _TITLE_RE = re.compile(r"\x00T:([^\x00]*)\x00")
@@ -79,6 +80,7 @@ def build_deck(path: str | Path, *, use_cache: bool = True) -> Deck:
     diags.raise_if_errors()
 
     render_components(deck, use_cache=use_cache)
+    check_steps(deck)
 
     def title(m: re.Match) -> str:
         t = resolve_target(deck, m.group(1))

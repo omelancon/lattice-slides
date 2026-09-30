@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.2.2. This README covers usage. The documentation in `docs/` covers the rest:
+This is version 0.3.0. This README covers usage. The documentation in `docs/` covers the rest:
 
 - [`docs/spec.md`](docs/spec.md) defines the syntax, navigation, components and output exactly.
 - [`docs/design-report.md`](docs/design-report.md) explains the design and holds the roadmap.
@@ -15,6 +15,7 @@ This is version 0.2.2. This README covers usage. The documentation in `docs/` co
 ```bash
 pip install -e .              # core
 pip install -e ".[plot]"      # + matplotlib for the plot component
+pip install -e ".[pdf]"       # + playwright for PDF export (then: playwright install chromium)
 pip install -e ".[dev]"       # + pytest, matplotlib, playwright
 ```
 
@@ -31,6 +32,7 @@ lattice build my-talk/talk.md        # writes my-talk/talk.html
 lattice build my-talk/talk.md --dir out   # index.html + assets/ + data/, to serve over HTTP
 lattice check my-talk/talk.md        # diagnostics only (exit code 1 on errors)
 lattice graph my-talk/talk.md        # print the slide graph (--dot for Graphviz)
+lattice pdf my-talk/talk.md          # PDF of the main path, detours and branches as an appendix
 ```
 
 The output HTML works offline from any folder: images, fonts for math, styles, scripts and data are
@@ -72,6 +74,7 @@ The last slide of a detour returns to where you came from.
 | Syntax | Meaning |
 |---|---|
 | `# Title {#id .class next=id offpath=true layout=title}` | Slide boundary and attributes (`next` also accepts `back` and `none`) |
+| `# Title {pdf="0,3,end"}` | Steps printed by `lattice pdf` for this slide (`first`, `last`, `all` or a list; numbered from 0) |
 | `::include{file="x.md"}` | Splice the slides of another file here (also inside a detour) |
 | `::: detour {#id label=... key=k}` | Nested slides entered with Down or `k`, returning automatically |
 | `::: branch` with a list of `[[target\|label]]` | A choice point, keys 1 to 9 by default |
@@ -95,6 +98,8 @@ code language.
 | ` ```code-steps {file=... lang=...} ` + `steps: [1-3, 5]` | Walk through code, one highlighted range per step |
 | ` ```graph-anim {#trace source="algos.py:bfs" graph="city.dot"} ` | Animated graph from a `GraphTrace` built in Python |
 | ` ```array-anim {source="sorts.py:bubble"} ` + `values: [...]` | Animated array from an `ArrayTrace` |
+| ` ```tree-anim {source="avl.py:avl_trace"} ` + `values: [...]` | Animated tree from a `TreeTrace`: insertions, deletions and rotations, nodes glide to their new places |
+| ` ```grid-anim {source="grids.py:lcs_trace"} ` | Animated grid from a `GridTrace`: mazes, dynamic programming tables with headers and arrows |
 | ` ```plot {data="bench.csv" x=n y=ms group=algo logy=true} ` | Chart from a CSV with matplotlib (static SVG), or `backend=vega` / `backend=plotly` for interactive charts; also `source="file.py:fn"` or a raw `spec:` |
 | ` ```diff-steps {lang=python context=3} ` + `versions: [...]` | Step through versions of a file; each step marks added and removed lines |
 | ` ```dot ` | Graphviz diagram, themed |
@@ -113,6 +118,8 @@ def bfs(g, start="A"):
     return t
 ```
 
+A `TreeTrace` reads your own node objects (`t.frame(root=root)` after each change), so an
+implementation from a lab assignment can be traced as it is; see `examples/06-trees-and-grids`.
 Every option of every component is listed in spec section 8.8; the trace classes and the states
 the themes style are in spec section 9.1.
 
@@ -126,12 +133,19 @@ the themes style are in spec section 9.1.
 | Up, Backspace | Return to where the current detour or jump started |
 | 1 to 9, custom keys | Choose a branch option or detour |
 | `o` / `g` | Overview (a map of the slide graph plus an outline) / go to a slide by name |
-| `p` | Open the synchronized presenter view (notes, moves, timer) |
+| `p` | Open the synchronized presenter view (notes, moves, timer, a preview of what comes next and a step scrubber) |
 | `t` | Cycle through tours |
 | Home | Back to the start, clearing history |
 
 The URL keeps the position (`#/slide-id/step`), and a reload restores the history. Keys can be
 changed with `keys:` in the front matter; the exact behavior of each move is spec section 7.
+
+## PDF export
+
+`lattice pdf talk.md` prints the main path, or a tour with `--tour NAME`, one page per slide at its
+last step (`--steps first|all`, or a `pdf=` attribute per slide). Detours, branch options not taken
+and linked backup slides follow as an appendix, and links between pages are clickable. It needs
+`pip install -e ".[pdf]"` and `playwright install chromium`. Details: spec section 11.5.
 
 ## Writing your own components
 
@@ -164,12 +178,15 @@ Each folder in [`examples/`](examples) holds a deck and its built `talk.html`:
    own runtime.
 5. `05-refactoring-a-cache`: `diff-steps` through three versions of an LRU cache, an embedded image,
    and the same benchmark as an interactive Vega-Lite chart and a Plotly bar chart.
+6. `06-trees-and-grids`: AVL insertions with rotations traced from the lab's own code (followed by the
+   code), a rotation in a detour, breadth-first search in a maze and a longest common subsequence
+   table with backpointer arrows; `pdf=` picks the frames printed.
 
 Rebuild them all with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.2.2 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.3.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

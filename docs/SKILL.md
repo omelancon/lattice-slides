@@ -1,6 +1,6 @@
 ---
 name: lattice-development
-description: Onboarding and working rules for the Lattice codebase, a Python library that compiles Markdown into non-linear HTML slide decks for computer science talks (slide graph with detours, branches and links; animated graph and array traces; code stepping; plots). Use this skill before any work in the Lattice repository, even small edits, including changing the parser, graph resolution, components, the JavaScript runtime, themes, examples, tests or documentation, adding a component or diagnostic, fixing a rendering bug, preparing a release, or answering questions about how Lattice works internally.
+description: Onboarding and working rules for the Lattice codebase, a Python library that compiles Markdown into non-linear HTML slide decks for computer science talks (slide graph with detours, branches and links; animated graph, array, tree and grid traces; code stepping; plots; presenter view; PDF export). Use this skill before any work in the Lattice repository, even small edits, including changing the parser, graph resolution, components, the JavaScript runtime, themes, examples, tests or documentation, adding a component or diagnostic, fixing a rendering bug, preparing a release, or answering questions about how Lattice works internally.
 ---
 
 # Working on Lattice
@@ -22,19 +22,19 @@ This file is for contributors. It explains where things live, how to verify chan
 
 ```bash
 pip install -e ".[dev]"          # core + pytest, matplotlib, playwright
-playwright install chromium      # browser tests and screenshots
+playwright install chromium      # browser tests, screenshots and PDF export
 dot -V                           # Graphviz CLI; needed for dot diagrams, .dot graphs and the overview map
 pytest                           # the full suite, including browser tests; must pass before and after your change
 python scripts/build_examples.py # rebuilds examples/*/talk.html
 ```
 
-Python 3.10 or newer. Without Graphviz, animated graphs fall back to a NetworkX layout and the overview map is empty; without Chromium the browser tests skip, so a green run without Chromium proves less than it seems.
+Python 3.10 or newer. Without Graphviz, animated graphs fall back to a NetworkX layout and the overview map is empty; without Chromium the browser tests and the PDF export test skip, so a green run without Chromium proves less than it seems.
 
 ## Project structure
 
 ```
 src/lattice/
-  cli.py          commands: new, build (--dir), check, serve, graph
+  cli.py          commands: new, build (--dir), check, serve, graph, pdf
   build.py        pipeline orchestration and plugin loading
   markdown.py     markdown-it setup: containers, ::include, [[links]], $math$
   parser.py       Loader: files, includes, h1 segmentation, detours, ids, slide attributes
@@ -44,39 +44,42 @@ src/lattice/
   timeline.py     timeline parsing and step compilation
   render.py       component rendering, cache, tracks
   emit.py         deck JSON, single-file HTML, directory output, image embedding
-  graphs.py       graph loading, Graphviz layouts, overview map layout
-  anim.py         Trace, GraphTrace, ArrayTrace, deltas, frame stores
+  graphs.py       graph loading, Graphviz layouts, overview map layout, tree layouts per frame
+  anim.py         Trace, GraphTrace, ArrayTrace, TreeTrace, GridTrace, deltas, frame stores
+  pdf.py          PDF export: pdf step selection, the page plan (tour and appendix), driving Chromium
   model.py        dataclasses and pydantic front matter
   diagnostics.py  Diagnostic, BuildError
   themes.py       theme table: CSS file, Pygments style, palette for components
   server.py       dev server: polling watcher and server-sent events for reload
   components/     base.py (contract, registry, RenderContext), code.py, visual.py, animations.py
   runtime/
-    lattice.js    navigation state machine, overlays, presenter view, component host
+    lattice.js    navigation state machine, overlays, presenter view (preview, scrubber), print mode,
+                  component host
     lattice.css   layout and component styles; themes/*.css hold custom properties only
     components/   one runtime per animated or interactive component
     vendor/       KaTeX, Vega, Vega-Lite, Plotly (with licenses), embedded only when used
 tests/            pytest suites (see Verification)
-examples/         five decks with their built talk.html; they double as integration tests
+examples/         six decks with their built talk.html; they double as integration tests
 scripts/          build_examples.py, snapshot.py (drive a deck in Chromium, take screenshots),
                   check_docs.py (mechanical documentation checks)
 docs/             this file, the spec and the design report
 ```
 
-The build pipeline, in order: `Loader.load` (files, includes, slides, detours, ids) then `BodyBuilder.build` per slide, then `resolve_graph`, then `render_components` (which also compiles steps), then wiki-link title substitution, then `emit_html` or `emit_dir`. Errors stop the build between phases (`diags.raise_if_errors()`), so structural errors never trigger component execution.
+The build pipeline, in order: `Loader.load` (files, includes, slides, detours, ids) then `BodyBuilder.build` per slide, then `resolve_graph`, then `render_components` (which also compiles steps), then `check_steps` (LT053), then wiki-link title substitution, then `emit_html` or `emit_dir`. `lattice pdf` then opens the single-file output in Chromium with `?print` and prints the pages of `pdf_plan`. Errors stop the build between phases (`diags.raise_if_errors()`), so structural errors never trigger component execution.
 
 ## Invariants worth protecting
 
 Each of these was decided deliberately; the reasoning is in the report (sections 3 and 7) or the spec. Breaking one usually breaks several features at once.
 
 - **Build time does the work, the browser replays.** Components produce data; runtimes render it. Do not add computation to the runtime that could run in Python.
-- **Positions are absolute.** `show(inst, position, info)` must render any position in any order (spec 10.2). Backward navigation, scrubbing, reloads and timelines all depend on it. This is also why frame stores hold full states (spec 9.3).
+- **Positions are absolute.** `show(inst, position, info)` must render any position in any order (spec 10.2). Backward navigation, the presenter scrubber and preview, PDF export, reloads and timelines all depend on it. This is also why frame stores hold full states (spec 9.3). Motion between positions (tree nodes gliding) is an effect of `info.animate` only, never state.
+- **Passive windows stay passive.** The preview pane and print mode (`?preview`, `?print`) must not read keys, save to `sessionStorage`, update the hash or broadcast; otherwise they would steer the presenter's deck.
 - **Navigation is the history model** (spec 7.2): Left undoes the last move, Up returns from the latest excursion. Any change to `actions` in `lattice.js` must keep `tests/test_runtime.py`, which encodes the worked trace of spec 7.3, green.
 - **Ids are global** across files, detours are nested only, and `#` is the only slide boundary (report section 7, decisions 1 to 3).
 - **Registered components take precedence over Pygments lexers** (spec 3.13). Never register a component under a common language name; that is why the diff component is `diff-steps`.
 - **Output is self-contained.** Images, fonts, data and libraries are embedded in single-file mode. Heavy libraries are embedded only when an instance requires them (`RenderResult.requires`).
 - **Columns contain their content.** Nothing may paint outside its column; `tests/test_layout.py` checks every example slide.
-- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT052. New code, new row in spec section 12.
+- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT053. New code, new row in spec section 12.
 
 ## Common tasks
 
@@ -98,10 +101,11 @@ Run `pytest` after every change; it takes about twenty seconds. The suites:
 |---|---|
 | `test_parsing.py` | attributes, ids, includes, links, reveal, containers |
 | `test_graph.py` | next resolution, detours, branches, keys, tours |
-| `test_steps.py` | tracks, timelines, followers, deltas, frame stores |
+| `test_steps.py` | tracks, timelines, followers, deltas, frame stores, tree and grid traces, tree layouts |
 | `test_output.py` | plot backends, diff-steps, images, directory output, overview map, library inclusion |
+| `test_pdf.py` | `pdf` steps and LT053, the page plan (tour, appendix, back links), a real export in Chromium |
 | `test_cli.py` | CLI commands and building every example |
-| `test_runtime.py` | the navigation state machine in Chromium |
+| `test_runtime.py` | the navigation state machine, the presenter preview and scrubber, tree and grid runtimes, in Chromium |
 | `test_layout.py` | no content spills out of a column, on every example slide |
 
 Tests prove structure, not appearance. After any visual change (CSS, runtime rendering, a component's HTML, an example), rebuild the examples and look at screenshots of the affected slides:
@@ -111,7 +115,7 @@ python scripts/build_examples.py
 python scripts/snapshot.py examples/04-custom-components/talk.html /tmp/shots "ArrowRight*4" --shots=4
 ```
 
-Take the screenshot after the last edit, not before it. A column overlap once shipped because a stylesheet was changed after the slide had been checked.
+Take the screenshot after the last edit, not before it. A column overlap once shipped because a stylesheet was changed after the slide had been checked. `snapshot.py --presenter` shows the presenter view. For print changes, export a deck (`lattice pdf examples/02-shortest-paths/talk.md -o /tmp/t.pdf --tour short`) and look at its pages, for example after `pdftoppm -png`.
 
 ## Pitfalls
 
@@ -121,6 +125,8 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 - **DOT keywords.** `graph`, `node`, `edge`, `digraph`, `subgraph` and `strict` cannot be bare node names in `dot` blocks.
 - **Line-based references.** `code-steps` steps, `lines=` ranges and `meta["line"]` in traces point at line numbers. Editing a referenced file (for example `examples/04-custom-components/lattice_plugins.py`) can silently shift highlights; recheck those slides.
 - **Counting key presses** in `snapshot.py`: a slide with `n` steps needs `n` presses to leave it (steps 1 to `n-1`, then the move).
+- **Step numbers differ by audience.** The URL hash and the `pdf` attribute count steps from 0; the HUD and the presenter view show them from 1.
+- **Element ids in component HTML** are duplicated in the PDF (one copy per page). Print mode renames ids and `url(#...)` or `href="#..."` references inside each copy; a component that refers to its ids another way (for example from CSS) breaks in print.
 - **Writing style.** The project owner avoids em dashes in prose; use colons, commas or parentheses.
 
 ## Release

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lattice-slides"
-version = "0.2.2"
+version = "0.3.0"
 description = "Compile Markdown into non-linear HTML slide decks for computer science talks"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,6 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 plot = ["matplotlib>=3.7"]
+pdf = ["playwright>=1.40"]
 dev = ["pytest>=7", "matplotlib>=3.7", "playwright>=1.40"]
 
 [project.scripts]

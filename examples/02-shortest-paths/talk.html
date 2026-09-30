@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.2.2">
+<meta name="generator" content="lattice 0.3.0">
 <title>Shortest Paths</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -117,8 +117,8 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-math-block{text-align:center;font-size:1.1em}
 .lt-error{color:var(--lt-warn);font-family:var(--lt-font-code);font-size:18px;border:2px dashed var(--lt-warn);padding:12px}
 
-/* graph and array animations */
-.lt-graph-anim,.lt-array-anim{container-type:inline-size;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+/* graph, array, tree and grid animations */
+.lt-graph-anim,.lt-array-anim,.lt-tree-anim,.lt-grid-anim{container-type:inline-size;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
 .lt-ga-main,.lt-aa-main{display:flex;gap:28px;min-height:0;flex:1;align-items:center}
 .lt-ga-canvas{flex:1;min-width:0;height:430px;display:flex}
 .lt-ga-svg{width:100%;height:100%;margin:0 auto}
@@ -178,6 +178,41 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-aa-ptr div{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:26px}
 .lt-aa-ptr span{font-family:var(--lt-font-code);font-size:16px;color:var(--lt-accent);font-weight:600}
 .lt-aa-ptr span::before{content:"\25B2 ";font-size:11px}
+
+/* trees: nodes and edges reuse the graph styles; nodes leaving the tree fade out */
+.lt-ta-out{opacity:0;pointer-events:none}
+.lt-animate .lt-ta-out,.lt-tree-anim.lt-animate .lt-node{transition:opacity .3s}
+.lt-ta-badge{font-size:12px;paint-order:stroke;stroke:var(--lt-bg);stroke-width:4px}
+
+/* grids: mazes and dynamic programming tables */
+.lt-gc rect{fill:var(--lt-bg);stroke:var(--lt-rule);stroke-width:1.5}
+.lt-gc text{font-family:var(--lt-font-code);font-weight:600;fill:var(--lt-ink)}
+.lt-animate .lt-gc rect{transition:fill .25s,stroke .25s}
+.lt-gc-out{display:none}
+.lt-gc.st-active rect,.lt-gc.st-compare rect{fill:var(--lt-active);stroke:var(--lt-active)}
+.lt-gc.st-active text,.lt-gc.st-compare text{fill:var(--lt-on-strong)}
+.lt-gc.st-frontier rect{fill:var(--lt-frontier-soft);stroke:var(--lt-frontier);stroke-dasharray:4 3}
+.lt-gc.st-visited rect{fill:var(--lt-accent-soft)}
+.lt-gc.st-done rect{fill:var(--lt-accent);stroke:var(--lt-accent)}
+.lt-gc.st-done text{fill:var(--lt-on-strong)}
+.lt-gc.st-path rect{fill:var(--lt-good);stroke:var(--lt-good)}
+.lt-gc.st-path text{fill:var(--lt-on-strong)}
+.lt-gc.st-wall rect{fill:var(--lt-wall);stroke:var(--lt-wall)}
+.lt-gc.st-wall text{fill:var(--lt-bg)}
+.lt-gc.st-start rect{stroke:var(--lt-accent);stroke-width:4}
+.lt-gc.st-goal rect{stroke:var(--lt-good);stroke-width:4}
+.lt-gc.st-error rect{fill:var(--lt-warn);stroke:var(--lt-warn)}
+.lt-gc.st-dim{opacity:.35}
+.lt-gr-heads text{font-family:var(--lt-font-code);fill:var(--lt-muted)}
+.lt-gr-arrow path{fill:none;stroke:var(--lt-edge);stroke-width:2.2}
+.lt-gr-head path{fill:var(--lt-edge)}
+.lt-gr-arrow.st-active path{stroke:var(--lt-active);stroke-width:3}
+.lt-gr-head.st-active path{fill:var(--lt-active)}
+.lt-gr-arrow.st-path path{stroke:var(--lt-ink);stroke-width:3.4}
+.lt-gr-head.st-path path{fill:var(--lt-ink)}
+.lt-gr-arrow.st-dim{opacity:.3}
+.lt-gr-ptr rect{fill:none;stroke:var(--lt-accent);stroke-width:3}
+.lt-gr-ptr text{font-family:var(--lt-font-code);font-size:.5em;font-weight:700;fill:var(--lt-accent)}
 
 /* HUD: where you are in the graph */
 #lt-hud{position:absolute;left:0;right:0;bottom:0;height:46px;padding:0 28px 0 72px;display:flex;align-items:center;
@@ -251,6 +286,38 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-pp-moves kbd{margin-right:10px;color:var(--lt-accent)}
 .lt-pp-notes{font-size:19px;line-height:1.5}
 .lt-pp-notes a{color:var(--lt-accent)}
+.lt-pp-scrub{display:flex;align-items:center;gap:14px;margin-top:18px}
+.lt-pp-scrub[hidden]{display:none}
+.lt-pp-scrub input{flex:1;min-width:0;accent-color:var(--lt-accent);cursor:pointer}
+.lt-pp-scrub-label{font-family:var(--lt-font-code);font-size:15px;color:var(--lt-muted);min-width:7ch;text-align:right}
+.lt-pp-next-label{font-weight:400}
+.lt-pp-next{position:relative}
+.lt-pp-preview{display:block;width:100%;border:0;border-radius:8px;background:var(--lt-backdrop);pointer-events:none}
+.lt-pp-next-none{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--lt-muted);
+  border:2px dashed var(--lt-rule);border-radius:8px}
+.lt-pp-next-none[hidden]{display:none}
+/* the preview pane is a passive copy of the deck */
+.lt-preview #lt-hud,.lt-preview #lt-flash{display:none}
+.lt-preview #lt-viewport{box-shadow:none}
+
+/* print mode (PDF export): static copies of each page, one per PDF page */
+@page{margin:0}
+html.lt-print,html.lt-print body{overflow:visible;height:auto}
+html.lt-print *{transition:none !important;animation:none !important}
+html.lt-print #lt-hud{display:none}
+#lt-root[hidden]{display:none}
+.lt-print-page{position:relative;width:var(--lt-w);height:var(--lt-h);overflow:hidden;background:var(--lt-bg);
+  break-after:page;page-break-after:always}
+.lt-print-page:last-child{break-after:auto;page-break-after:auto}
+.lt-print-page .lt-slide{position:absolute;inset:0}
+.lt-print-foot{position:absolute;left:0;right:0;bottom:0;height:46px;padding:0 28px 0 72px;display:flex;align-items:center;
+  justify-content:space-between;gap:24px;font-size:16px;color:var(--lt-muted);border-top:1px solid var(--lt-rule);white-space:nowrap}
+.lt-print-foot span:first-child{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lt-print-foot a{color:var(--lt-accent)}
+.lt-print-foot b{font-family:var(--lt-font-code);font-weight:600;color:var(--lt-ink);margin-left:22px}
+.lt-print-ref{font-family:var(--lt-font-code);font-size:.8em;color:var(--lt-muted);margin-left:.6em}
+a.lt-detour-badge,a.lt-branch-opt{text-decoration:none}
+.lt-print-nolink{text-decoration:none;color:inherit}
 
 /* transitions */
 @keyframes lt-slide-in{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
@@ -269,7 +336,7 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
   --lt-backdrop:#d9dde4;--lt-bg:#f7f8fa;--lt-panel:#eceff3;--lt-code-bg:#eef1f5;--lt-rule:#d5dae2;
   --lt-ink:#1d2433;--lt-muted:#5d6778;--lt-accent:#0b6e7f;--lt-accent-soft:#d5ecef;
   --lt-active:#c8741a;--lt-frontier:#6a4fb3;--lt-frontier-soft:#ebe5f7;--lt-good:#2f8f4e;--lt-warn:#b23a48;
-  --lt-edge:#98a2b3;--lt-cell:#b7c0cd;--lt-on-strong:#ffffff;
+  --lt-wall:#3d4556;--lt-edge:#98a2b3;--lt-cell:#b7c0cd;--lt-on-strong:#ffffff;
   --lt-add-bg:#e3f3e7;--lt-del-bg:#fbe6e8;
   --lt-hl:#c8741a;--lt-hl-bg:#fbeedd;
   --lt-detour:#8b7bc4;--lt-detour-ink:#5b4a9c;--lt-detour-soft:#efeaf9;
@@ -410,16 +477,16 @@ z
      <g id="line2d_1">
       <path d="M 73.73289 203.184 
 L 73.73289 3.6 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_2">
       <defs>
-       <path id="m2766ed1b78" d="M 0 0 
+       <path id="m6ab6c15f2c" d="M 0 0 
 L 0 3.5 
 " style="stroke: #5d6778; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#m2766ed1b78" x="73.73289" y="203.184" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m6ab6c15f2c" x="73.73289" y="203.184" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_1">
@@ -430,11 +497,11 @@ L 0 3.5
      <g id="line2d_3">
       <path d="M 165.964295 203.184 
 L 165.964295 3.6 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_4">
       <g>
-       <use xlink:href="#m2766ed1b78" x="165.964295" y="203.184" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m6ab6c15f2c" x="165.964295" y="203.184" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_2">
@@ -445,11 +512,11 @@ L 165.964295 3.6
      <g id="line2d_5">
       <path d="M 258.1957 203.184 
 L 258.1957 3.6 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_6">
       <g>
-       <use xlink:href="#m2766ed1b78" x="258.1957" y="203.184" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m6ab6c15f2c" x="258.1957" y="203.184" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_3">
@@ -460,11 +527,11 @@ L 258.1957 3.6
      <g id="line2d_7">
       <path d="M 350.427105 203.184 
 L 350.427105 3.6 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_8">
       <g>
-       <use xlink:href="#m2766ed1b78" x="350.427105" y="203.184" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m6ab6c15f2c" x="350.427105" y="203.184" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_4">
@@ -475,11 +542,11 @@ L 350.427105 3.6
      <g id="line2d_9">
       <path d="M 442.65851 203.184 
 L 442.65851 3.6 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_10">
       <g>
-       <use xlink:href="#m2766ed1b78" x="442.65851" y="203.184" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m6ab6c15f2c" x="442.65851" y="203.184" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_5">
@@ -490,11 +557,11 @@ L 442.65851 3.6
      <g id="line2d_11">
       <path d="M 534.889915 203.184 
 L 534.889915 3.6 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_12">
       <g>
-       <use xlink:href="#m2766ed1b78" x="534.889915" y="203.184" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m6ab6c15f2c" x="534.889915" y="203.184" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_6">
@@ -510,16 +577,16 @@ L 534.889915 3.6
      <g id="line2d_13">
       <path d="M 55.517188 195.068204 
 L 557.717188 195.068204 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_14">
       <defs>
-       <path id="m7bca59ff4a" d="M 0 0 
+       <path id="m8c193f78f0" d="M 0 0 
 L -3.5 0 
 " style="stroke: #5d6778; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#m7bca59ff4a" x="55.517188" y="195.068204" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m8c193f78f0" x="55.517188" y="195.068204" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_8">
@@ -537,11 +604,11 @@ L -3.5 0
      <g id="line2d_15">
       <path d="M 55.517188 149.941474 
 L 557.717188 149.941474 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_16">
       <g>
-       <use xlink:href="#m7bca59ff4a" x="55.517188" y="149.941474" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m8c193f78f0" x="55.517188" y="149.941474" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_9">
@@ -559,11 +626,11 @@ L 557.717188 149.941474
      <g id="line2d_17">
       <path d="M 55.517188 104.814744 
 L 557.717188 104.814744 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_18">
       <g>
-       <use xlink:href="#m7bca59ff4a" x="55.517188" y="104.814744" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m8c193f78f0" x="55.517188" y="104.814744" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_10">
@@ -581,11 +648,11 @@ L 557.717188 104.814744
      <g id="line2d_19">
       <path d="M 55.517188 59.688015 
 L 557.717188 59.688015 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_20">
       <g>
-       <use xlink:href="#m7bca59ff4a" x="55.517188" y="59.688015" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m8c193f78f0" x="55.517188" y="59.688015" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_11">
@@ -603,11 +670,11 @@ L 557.717188 59.688015
      <g id="line2d_21">
       <path d="M 55.517188 14.561285 
 L 557.717188 14.561285 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_22">
       <g>
-       <use xlink:href="#m7bca59ff4a" x="55.517188" y="14.561285" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m8c193f78f0" x="55.517188" y="14.561285" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_12">
@@ -624,250 +691,250 @@ L 557.717188 14.561285
     <g id="ytick_6">
      <g id="line2d_23">
       <defs>
-       <path id="m1ba185653d" d="M 0 0 
+       <path id="mf3dc23881c" d="M 0 0 
 L -2 0 
 " style="stroke: #5d6778; stroke-width: 0.6"/>
       </defs>
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="202.058423" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="202.058423" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_7">
      <g id="line2d_24">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="199.441436" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="199.441436" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_8">
      <g id="line2d_25">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="197.13309" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="197.13309" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_9">
      <g id="line2d_26">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="181.483705" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="181.483705" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_10">
      <g id="line2d_27">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="173.537282" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="173.537282" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_11">
      <g id="line2d_28">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="167.899205" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="167.899205" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_12">
      <g id="line2d_29">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="163.525973" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="163.525973" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_13">
      <g id="line2d_30">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="159.952783" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="159.952783" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_14">
      <g id="line2d_31">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="156.931693" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="156.931693" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_15">
      <g id="line2d_32">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="154.314706" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="154.314706" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_16">
      <g id="line2d_33">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="152.00636" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="152.00636" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_17">
      <g id="line2d_34">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="136.356975" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="136.356975" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_18">
      <g id="line2d_35">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="128.410552" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="128.410552" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_19">
      <g id="line2d_36">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="122.772476" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="122.772476" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_20">
      <g id="line2d_37">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="118.399244" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="118.399244" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_21">
      <g id="line2d_38">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="114.826053" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="114.826053" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_22">
      <g id="line2d_39">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="111.804963" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="111.804963" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_23">
      <g id="line2d_40">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="109.187976" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="109.187976" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_24">
      <g id="line2d_41">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="106.87963" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="106.87963" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_25">
      <g id="line2d_42">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="91.230245" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="91.230245" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_26">
      <g id="line2d_43">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="83.283822" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="83.283822" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_27">
      <g id="line2d_44">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="77.645746" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="77.645746" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_28">
      <g id="line2d_45">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="73.272514" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="73.272514" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_29">
      <g id="line2d_46">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="69.699323" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="69.699323" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_30">
      <g id="line2d_47">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="66.678233" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="66.678233" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_31">
      <g id="line2d_48">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="64.061247" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="64.061247" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_32">
      <g id="line2d_49">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="61.7529" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="61.7529" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_33">
      <g id="line2d_50">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="46.103515" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="46.103515" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_34">
      <g id="line2d_51">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="38.157093" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="38.157093" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_35">
      <g id="line2d_52">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="32.519016" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="32.519016" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_36">
      <g id="line2d_53">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="28.145784" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="28.145784" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_37">
      <g id="line2d_54">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="24.572593" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="24.572593" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_38">
      <g id="line2d_55">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="21.551504" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="21.551504" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_39">
      <g id="line2d_56">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="18.934517" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="18.934517" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_40">
      <g id="line2d_57">
       <g>
-       <use xlink:href="#m1ba185653d" x="55.517188" y="16.626171" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#mf3dc23881c" x="55.517188" y="16.626171" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
@@ -883,9 +950,9 @@ L 119.848592 143.417313
 L 165.964295 128.410552 
 L 304.311402 108.715997 
 L 534.889915 93.914542 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #0b6e7f; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #0b6e7f; stroke-width: 2.4; stroke-linecap: square"/>
     <defs>
-     <path id="mb787bd0c27" d="M 0 3 
+     <path id="m36a61b17c0" d="M 0 3 
 C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
 C 2.683901 1.55874 3 0.795609 3 0 
 C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
@@ -897,14 +964,14 @@ C -1.55874 2.683901 -0.795609 3 0 3
 z
 " style="stroke: #0b6e7f"/>
     </defs>
-    <g clip-path="url(#p67ad9d0544)">
-     <use xlink:href="#mb787bd0c27" x="78.34446" y="194.112" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#mb787bd0c27" x="82.95603" y="178.744609" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#mb787bd0c27" x="96.790741" y="158.535421" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#mb787bd0c27" x="119.848592" y="143.417313" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#mb787bd0c27" x="165.964295" y="128.410552" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#mb787bd0c27" x="304.311402" y="108.715997" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#mb787bd0c27" x="534.889915" y="93.914542" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+    <g clip-path="url(#p333b31ca74)">
+     <use xlink:href="#m36a61b17c0" x="78.34446" y="194.112" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m36a61b17c0" x="82.95603" y="178.744609" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m36a61b17c0" x="96.790741" y="158.535421" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m36a61b17c0" x="119.848592" y="143.417313" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m36a61b17c0" x="165.964295" y="128.410552" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m36a61b17c0" x="304.311402" y="108.715997" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m36a61b17c0" x="534.889915" y="93.914542" style="fill: #0b6e7f; stroke: #0b6e7f"/>
     </g>
    </g>
    <g id="line2d_59">
@@ -915,9 +982,9 @@ L 119.848592 102.734186
 L 165.964295 75.67122 
 L 304.311402 39.819653 
 L 534.889915 12.672 
-" clip-path="url(#p67ad9d0544)" style="fill: none; stroke: #c8741a; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p333b31ca74)" style="fill: none; stroke: #c8741a; stroke-width: 2.4; stroke-linecap: square"/>
     <defs>
-     <path id="m6081661736" d="M 0 3 
+     <path id="m09b521c34e" d="M 0 3 
 C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
 C 2.683901 1.55874 3 0.795609 3 0 
 C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
@@ -929,14 +996,14 @@ C -1.55874 2.683901 -0.795609 3 0 3
 z
 " style="stroke: #c8741a"/>
     </defs>
-    <g clip-path="url(#p67ad9d0544)">
-     <use xlink:href="#m6081661736" x="78.34446" y="191.171067" style="fill: #c8741a; stroke: #c8741a"/>
-     <use xlink:href="#m6081661736" x="82.95603" y="164.990427" style="fill: #c8741a; stroke: #c8741a"/>
-     <use xlink:href="#m6081661736" x="96.790741" y="129.692825" style="fill: #c8741a; stroke: #c8741a"/>
-     <use xlink:href="#m6081661736" x="119.848592" y="102.734186" style="fill: #c8741a; stroke: #c8741a"/>
-     <use xlink:href="#m6081661736" x="165.964295" y="75.67122" style="fill: #c8741a; stroke: #c8741a"/>
-     <use xlink:href="#m6081661736" x="304.311402" y="39.819653" style="fill: #c8741a; stroke: #c8741a"/>
-     <use xlink:href="#m6081661736" x="534.889915" y="12.672" style="fill: #c8741a; stroke: #c8741a"/>
+    <g clip-path="url(#p333b31ca74)">
+     <use xlink:href="#m09b521c34e" x="78.34446" y="191.171067" style="fill: #c8741a; stroke: #c8741a"/>
+     <use xlink:href="#m09b521c34e" x="82.95603" y="164.990427" style="fill: #c8741a; stroke: #c8741a"/>
+     <use xlink:href="#m09b521c34e" x="96.790741" y="129.692825" style="fill: #c8741a; stroke: #c8741a"/>
+     <use xlink:href="#m09b521c34e" x="119.848592" y="102.734186" style="fill: #c8741a; stroke: #c8741a"/>
+     <use xlink:href="#m09b521c34e" x="165.964295" y="75.67122" style="fill: #c8741a; stroke: #c8741a"/>
+     <use xlink:href="#m09b521c34e" x="304.311402" y="39.819653" style="fill: #c8741a; stroke: #c8741a"/>
+     <use xlink:href="#m09b521c34e" x="534.889915" y="12.672" style="fill: #c8741a; stroke: #c8741a"/>
     </g>
    </g>
    <g id="patch_3">
@@ -956,7 +1023,7 @@ L 406.313281 159.297281
 L 421.313281 159.297281 
 " style="fill: none; stroke: #0b6e7f; stroke-width: 2.4; stroke-linecap: square"/>
      <g>
-      <use xlink:href="#mb787bd0c27" x="406.313281" y="159.297281" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+      <use xlink:href="#m36a61b17c0" x="406.313281" y="159.297281" style="fill: #0b6e7f; stroke: #0b6e7f"/>
      </g>
     </g>
     <g id="text_14">
@@ -968,7 +1035,7 @@ L 406.313281 181.314469
 L 421.313281 181.314469 
 " style="fill: none; stroke: #c8741a; stroke-width: 2.4; stroke-linecap: square"/>
      <g>
-      <use xlink:href="#m6081661736" x="406.313281" y="181.314469" style="fill: #c8741a; stroke: #c8741a"/>
+      <use xlink:href="#m09b521c34e" x="406.313281" y="181.314469" style="fill: #c8741a; stroke: #c8741a"/>
      </g>
     </g>
     <g id="text_15">
@@ -978,7 +1045,7 @@ L 421.313281 181.314469
   </g>
  </g>
  <defs>
-  <clipPath id="p67ad9d0544">
+  <clipPath id="p333b31ca74">
    <rect x="55.517188" y="3.6" width="502.2" height="199.584"/>
   </clipPath>
  </defs>
@@ -1120,7 +1187,7 @@ so <span class="lt-math" data-display="0">y</span> would have been popped before
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.2.2","meta":{"title":"Shortest Paths","author":"Algorithms, week 5","date":null,"aspect":"16:9","theme":"default"},"start":"shortest-paths","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["shortest-paths","problem","bfs","dijkstra","complexity","heap-what","heap-ops","questions","bellman-ford","dijkstra-proof"],"slides":{"shortest-paths":{"title":"Shortest Paths","label":"Shortest Paths","scope":"root","next":{"slide":"problem"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":9}},"problem":{"title":"The problem","label":"The problem","scope":"root","next":{"slide":"bfs"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"parts/intro.md","line":1},"notes":"<p>Ask the room for other applications before revealing the list.<\/p>\n"},"bfs":{"title":"Unweighted warm-up: BFS","label":"Unweighted warm-up: BFS","scope":"root","next":{"slide":"dijkstra"},"branches":[],"detours":[],"steps":21,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"bfs","kind":"component","instance":"bfs/bfs"}],"positions":[[0,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12],[2,13],[2,14],[2,15],[2,16],[2,17],[2,18],[3,18]],"offpath":false,"source":{"file":"parts/intro.md","line":14}},"dijkstra":{"title":"Dijkstra's algorithm","label":"Dijkstra's algorithm","scope":"root","next":{"slide":"complexity"},"branches":[],"detours":[],"steps":36,"tracks":[{"id":"code","kind":"component","instance":"dijkstra/code","follow":"trace"},{"id":"trace","kind":"component","instance":"dijkstra/trace"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26],[27,27],[28,28],[29,29],[30,30],[31,31],[32,32],[33,33],[34,34],[35,35]],"offpath":false,"source":{"file":"parts/dijkstra.md","line":1},"notes":"<p>The code on the left follows the animation: each frame names the line it executes.\nIf someone asks about negative weights, go to <a class=\"lt-link\" href=\"#/bellman-ford/0\" data-lt-link=\"bellman-ford\">Negative weights: Bellman-Ford<\/a>.\nFor the correctness argument, see <a class=\"lt-link\" href=\"#/dijkstra-proof/0\" data-lt-link=\"dijkstra-proof\">Why Dijkstra is correct<\/a>.<\/p>\n"},"complexity":{"title":"Complexity","label":"Complexity","scope":"root","next":{"slide":"questions"},"branches":[],"detours":["heap-refresher"],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"parts/dijkstra.md","line":22},"notes":"<p>Numbers in the chart are illustrative, generated for this example.<\/p>\n"},"heap-what":{"title":"What is a binary heap?","label":"What is a binary heap?","scope":"heap-refresher","next":{"slide":"heap-ops"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"shared/heaps.md","line":1}},"heap-ops":{"title":"Push: sift up","label":"Push: sift up","scope":"heap-refresher","next":"back","branches":[],"detours":[],"steps":6,"tracks":[{"id":"c1","kind":"component","instance":"heap-ops/c1"}],"positions":[[0],[1],[2],[3],[4],[5]],"offpath":false,"source":{"file":"shared/heaps.md","line":21}},"questions":{"title":"Questions?","label":"Questions?","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":16}},"bellman-ford":{"title":"Negative weights: Bellman-Ford","label":"Negative weights: Bellman-Ford","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"parts/backup.md","line":1}},"dijkstra-proof":{"title":"Why Dijkstra is correct","label":"Why Dijkstra is correct","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"parts/backup.md","line":14}}},"detours":{"heap-refresher":{"origin":"complexity","entry":"heap-what","label":"Refresher: binary heaps","key":"h","slides":["heap-what","heap-ops"]}},"instances":{"bfs/bfs":{"component":"graph-anim","slide":"bfs","data":"lt-data-bfs/bfs"},"dijkstra/code":{"component":"code","slide":"dijkstra","data":"lt-data-dijkstra/code"},"dijkstra/trace":{"component":"graph-anim","slide":"dijkstra","data":"lt-data-dijkstra/trace"},"complexity/c1":{"component":"plot","slide":"complexity","data":null},"heap-what/c1":{"component":"dot","slide":"heap-what","data":null},"heap-ops/c1":{"component":"array-anim","slide":"heap-ops","data":"lt-data-heap-ops/c1"},"bellman-ford/c1":{"component":"dot","slide":"bellman-ford","data":null}},"tours":{"short":["shortest-paths","problem","dijkstra","complexity","questions"],"full":["shortest-paths","problem","bfs","dijkstra","complexity","questions"]},"mainPath":["shortest-paths","problem","bfs","dijkstra","complexity","questions"],"overview":{"nodes":{"shortest-paths":{"x":58.5,"y":63.0,"w":101.0,"h":26.0,"label":"Shortest Paths"},"problem":{"x":184.0,"y":63.0,"w":90.0,"h":26.0,"label":"The problem"},"bfs":{"x":344.0,"y":63.0,"w":170.0,"h":26.0,"label":"Unweighted warm-up: BFS"},"dijkstra":{"x":525.0,"y":63.0,"w":132.0,"h":26.0,"label":"Dijkstra's algorithm"},"complexity":{"x":662.0,"y":63.0,"w":82.0,"h":26.0,"label":"Complexity"},"heap-what":{"x":807.0,"y":21.0,"w":148.0,"h":26.0,"label":"What is a binary heap?"},"heap-ops":{"x":1002.5,"y":21.0,"w":88.0,"h":26.0,"label":"Push: sift up"},"questions":{"x":807.0,"y":63.0,"w":81.0,"h":26.0,"label":"Questions?"},"bellman-ford":{"x":1002.5,"y":70.0,"w":183.0,"h":26.0,"label":"Negative weights: Bellman…"},"dijkstra-proof":{"x":1002.5,"y":127.0,"w":150.0,"h":26.0,"label":"Why Dijkstra is correct"}},"edges":[{"from":"shortest-paths","to":"problem","kind":"next","path":"M109.0,63.0 C116.7,63.0 124.6,63.0 132.3,63.0 L138.7,63.0"},{"from":"problem","to":"bfs","kind":"next","path":"M229.0,63.0 C236.5,63.0 244.5,63.0 252.7,63.0 L259.0,63.0"},{"from":"problem","to":"bellman-ford","kind":"link","path":"M224.2,76.1 C235.3,79.2 247.5,82.2 259.0,84.0 C532.2,126.3 606.1,125.3 881.0,96.0 C902.7,93.7 926.2,89.1 946.7,84.4 L952.6,83.0"},{"from":"bfs","to":"dijkstra","kind":"next","path":"M429.3,63.0 C437.1,63.0 444.9,63.0 452.6,63.0 L458.9,63.0"},{"from":"dijkstra","to":"complexity","kind":"next","path":"M591.1,63.0 C599.0,63.0 607.0,63.0 614.5,63.0 L620.8,63.0"},{"from":"dijkstra","to":"bellman-ford","kind":"link","path":"M575.5,76.1 C590.0,79.3 606.1,82.4 621.0,84.0 C735.9,96.5 765.6,90.7 881.0,84.0 C888.7,83.6 896.7,82.9 904.7,82.2 L910.8,81.7"},{"from":"dijkstra","to":"dijkstra-proof","kind":"link","path":"M558.4,76.1 C576.5,82.9 599.7,90.6 621.0,95.0 C723.1,116.2 843.4,123.4 921.0,125.8 L927.5,126.0"},{"from":"complexity","to":"heap-what","kind":"detour","path":"M703.3,50.8 C713.0,47.9 723.4,44.8 733.0,42.0 C739.9,40.0 747.2,37.8 754.4,35.8 L760.4,34.0"},{"from":"complexity","to":"questions","kind":"next","path":"M703.2,63.0 C720.9,63.0 741.7,63.0 760.0,63.0 L766.1,63.0"},{"from":"heap-what","to":"heap-ops","kind":"next","path":"M881.1,21.0 C904.8,21.0 930.5,21.0 952.0,21.0 L958.3,21.0"}],"width":1102.0,"height":148.0},"hash":"cf9eec2ce3b22648"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.3.0","meta":{"title":"Shortest Paths","author":"Algorithms, week 5","date":null,"aspect":"16:9","theme":"default"},"start":"shortest-paths","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["shortest-paths","problem","bfs","dijkstra","complexity","heap-what","heap-ops","questions","bellman-ford","dijkstra-proof"],"slides":{"shortest-paths":{"title":"Shortest Paths","label":"Shortest Paths","scope":"root","next":{"slide":"problem"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":9}},"problem":{"title":"The problem","label":"The problem","scope":"root","next":{"slide":"bfs"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"parts/intro.md","line":1},"notes":"<p>Ask the room for other applications before revealing the list.<\/p>\n"},"bfs":{"title":"Unweighted warm-up: BFS","label":"Unweighted warm-up: BFS","scope":"root","next":{"slide":"dijkstra"},"branches":[],"detours":[],"steps":21,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"bfs","kind":"component","instance":"bfs/bfs"}],"positions":[[0,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12],[2,13],[2,14],[2,15],[2,16],[2,17],[2,18],[3,18]],"offpath":false,"source":{"file":"parts/intro.md","line":14}},"dijkstra":{"title":"Dijkstra's algorithm","label":"Dijkstra's algorithm","scope":"root","next":{"slide":"complexity"},"branches":[],"detours":[],"steps":36,"tracks":[{"id":"code","kind":"component","instance":"dijkstra/code","follow":"trace"},{"id":"trace","kind":"component","instance":"dijkstra/trace"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26],[27,27],[28,28],[29,29],[30,30],[31,31],[32,32],[33,33],[34,34],[35,35]],"offpath":false,"source":{"file":"parts/dijkstra.md","line":1},"notes":"<p>The code on the left follows the animation: each frame names the line it executes.\nIf someone asks about negative weights, go to <a class=\"lt-link\" href=\"#/bellman-ford/0\" data-lt-link=\"bellman-ford\">Negative weights: Bellman-Ford<\/a>.\nFor the correctness argument, see <a class=\"lt-link\" href=\"#/dijkstra-proof/0\" data-lt-link=\"dijkstra-proof\">Why Dijkstra is correct<\/a>.<\/p>\n"},"complexity":{"title":"Complexity","label":"Complexity","scope":"root","next":{"slide":"questions"},"branches":[],"detours":["heap-refresher"],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"parts/dijkstra.md","line":22},"notes":"<p>Numbers in the chart are illustrative, generated for this example.<\/p>\n"},"heap-what":{"title":"What is a binary heap?","label":"What is a binary heap?","scope":"heap-refresher","next":{"slide":"heap-ops"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"shared/heaps.md","line":1}},"heap-ops":{"title":"Push: sift up","label":"Push: sift up","scope":"heap-refresher","next":"back","branches":[],"detours":[],"steps":6,"tracks":[{"id":"c1","kind":"component","instance":"heap-ops/c1"}],"positions":[[0],[1],[2],[3],[4],[5]],"offpath":false,"source":{"file":"shared/heaps.md","line":21}},"questions":{"title":"Questions?","label":"Questions?","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":16}},"bellman-ford":{"title":"Negative weights: Bellman-Ford","label":"Negative weights: Bellman-Ford","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"parts/backup.md","line":1}},"dijkstra-proof":{"title":"Why Dijkstra is correct","label":"Why Dijkstra is correct","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"parts/backup.md","line":14}}},"detours":{"heap-refresher":{"origin":"complexity","entry":"heap-what","label":"Refresher: binary heaps","key":"h","slides":["heap-what","heap-ops"]}},"instances":{"bfs/bfs":{"component":"graph-anim","slide":"bfs","data":"lt-data-bfs/bfs"},"dijkstra/code":{"component":"code","slide":"dijkstra","data":"lt-data-dijkstra/code"},"dijkstra/trace":{"component":"graph-anim","slide":"dijkstra","data":"lt-data-dijkstra/trace"},"complexity/c1":{"component":"plot","slide":"complexity","data":null},"heap-what/c1":{"component":"dot","slide":"heap-what","data":null},"heap-ops/c1":{"component":"array-anim","slide":"heap-ops","data":"lt-data-heap-ops/c1"},"bellman-ford/c1":{"component":"dot","slide":"bellman-ford","data":null}},"tours":{"short":["shortest-paths","problem","dijkstra","complexity","questions"],"full":["shortest-paths","problem","bfs","dijkstra","complexity","questions"]},"mainPath":["shortest-paths","problem","bfs","dijkstra","complexity","questions"],"overview":{"nodes":{"shortest-paths":{"x":58.5,"y":63.0,"w":101.0,"h":26.0,"label":"Shortest Paths"},"problem":{"x":184.0,"y":63.0,"w":90.0,"h":26.0,"label":"The problem"},"bfs":{"x":344.0,"y":63.0,"w":170.0,"h":26.0,"label":"Unweighted warm-up: BFS"},"dijkstra":{"x":525.0,"y":63.0,"w":132.0,"h":26.0,"label":"Dijkstra's algorithm"},"complexity":{"x":662.0,"y":63.0,"w":82.0,"h":26.0,"label":"Complexity"},"heap-what":{"x":807.0,"y":21.0,"w":148.0,"h":26.0,"label":"What is a binary heap?"},"heap-ops":{"x":1002.5,"y":21.0,"w":88.0,"h":26.0,"label":"Push: sift up"},"questions":{"x":807.0,"y":63.0,"w":81.0,"h":26.0,"label":"Questions?"},"bellman-ford":{"x":1002.5,"y":70.0,"w":183.0,"h":26.0,"label":"Negative weights: Bellman…"},"dijkstra-proof":{"x":1002.5,"y":127.0,"w":150.0,"h":26.0,"label":"Why Dijkstra is correct"}},"edges":[{"from":"shortest-paths","to":"problem","kind":"next","path":"M109.0,63.0 C116.7,63.0 124.6,63.0 132.3,63.0 L138.7,63.0"},{"from":"problem","to":"bfs","kind":"next","path":"M229.0,63.0 C236.5,63.0 244.5,63.0 252.7,63.0 L259.0,63.0"},{"from":"problem","to":"bellman-ford","kind":"link","path":"M224.2,76.1 C235.3,79.2 247.5,82.2 259.0,84.0 C532.2,126.3 606.1,125.3 881.0,96.0 C902.7,93.7 926.2,89.1 946.7,84.4 L952.6,83.0"},{"from":"bfs","to":"dijkstra","kind":"next","path":"M429.3,63.0 C437.1,63.0 444.9,63.0 452.6,63.0 L458.9,63.0"},{"from":"dijkstra","to":"complexity","kind":"next","path":"M591.1,63.0 C599.0,63.0 607.0,63.0 614.5,63.0 L620.8,63.0"},{"from":"dijkstra","to":"bellman-ford","kind":"link","path":"M575.5,76.1 C590.0,79.3 606.1,82.4 621.0,84.0 C735.9,96.5 765.6,90.7 881.0,84.0 C888.7,83.6 896.7,82.9 904.7,82.2 L910.8,81.7"},{"from":"dijkstra","to":"dijkstra-proof","kind":"link","path":"M558.4,76.1 C576.5,82.9 599.7,90.6 621.0,95.0 C723.1,116.2 843.4,123.4 921.0,125.8 L927.5,126.0"},{"from":"complexity","to":"heap-what","kind":"detour","path":"M703.3,50.8 C713.0,47.9 723.4,44.8 733.0,42.0 C739.9,40.0 747.2,37.8 754.4,35.8 L760.4,34.0"},{"from":"complexity","to":"questions","kind":"next","path":"M703.2,63.0 C720.9,63.0 741.7,63.0 760.0,63.0 L766.1,63.0"},{"from":"heap-what","to":"heap-ops","kind":"next","path":"M881.1,21.0 C904.8,21.0 930.5,21.0 952.0,21.0 L958.3,21.0"}],"width":1102.0,"height":148.0},"hash":"3c1e1ac43c4d72db"}</script>
 <script type="application/json" id="lt-data-bfs/bfs">{"layout":{"width":542.0,"height":161.0,"directed":false,"nodes":{"A":{"x":46.0,"y":81.0,"r":20.0},"B":{"x":136.0,"y":115.0,"r":20.0},"C":{"x":226.0,"y":46.0,"r":20.0},"D":{"x":316.0,"y":115.0,"r":20.0},"E":{"x":406.0,"y":46.0,"r":20.0},"F":{"x":496.0,"y":81.0,"r":20.0}},"edges":{"A--B":{"u":"A","v":"B","path":"M64.81,87.88 C79.97,93.74 101.67,102.12 116.92,108.01"},"A--C":{"u":"A","v":"C","path":"M65.71,77.32 C99.9,70.6 172.07,56.41 206.27,49.68"},"B--C":{"u":"B","v":"C","path":"M152.33,102.98 C168.48,90.32 193.76,70.49 209.85,57.88"},"B--D":{"u":"B","v":"D","path":"M156.05,115.0 C190.22,115.0 261.55,115.0 295.82,115.0"},"C--D":{"u":"C","v":"D","path":"M242.33,58.02 C258.48,70.68 283.76,90.51 299.85,103.12"},"C--E":{"u":"C","v":"E","path":"M246.05,46.0 C280.22,46.0 351.55,46.0 385.82,46.0"},"D--E":{"u":"D","v":"E","path":"M332.33,102.98 C348.48,90.32 373.76,70.49 389.85,57.88"},"D--F":{"u":"D","v":"F","path":"M335.71,111.43 C369.9,104.9 442.07,91.11 476.27,84.58"},"E--F":{"u":"E","v":"F","path":"M424.81,53.08 C440.08,59.16 461.96,67.86 477.22,73.93"}}},"frames":{"format":"full","count":19,"frames":[{"nodes":{"A":{"state":"frontier","label":0}},"caption":"Start at A, layer 0"},{"nodes":{"A":{"state":"active","label":0}},"caption":"Visit A"},{"nodes":{"A":{"state":"active","label":0},"B":{"state":"frontier","label":1}},"caption":"Visit A","edges":{"A--B":{"state":"tree"}}},{"nodes":{"A":{"state":"active","label":0},"B":{"state":"frontier","label":1},"C":{"state":"frontier","label":1}},"caption":"Discover B, C in layer 1","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":1},"C":{"state":"frontier","label":1}},"caption":"Visit A","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"active","label":1},"C":{"state":"frontier","label":1}},"caption":"Visit B","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"active","label":1},"C":{"state":"frontier","label":1},"D":{"state":"frontier","label":2}},"caption":"Discover D in layer 2","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"frontier","label":1},"D":{"state":"frontier","label":2}},"caption":"Visit B","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"active","label":1},"D":{"state":"frontier","label":2}},"caption":"Visit C","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"active","label":1},"D":{"state":"frontier","label":2},"E":{"state":"frontier","label":2}},"caption":"Discover E in layer 2","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"frontier","label":2},"E":{"state":"frontier","label":2}},"caption":"Visit C","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"active","label":2},"E":{"state":"frontier","label":2}},"caption":"Visit D","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"active","label":2},"E":{"state":"frontier","label":2},"F":{"state":"frontier","label":3}},"caption":"Discover F in layer 3","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"visited","label":2},"E":{"state":"frontier","label":2},"F":{"state":"frontier","label":3}},"caption":"Visit D","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"visited","label":2},"E":{"state":"active","label":2},"F":{"state":"frontier","label":3}},"caption":"Visit E","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"visited","label":2},"E":{"state":"visited","label":2},"F":{"state":"frontier","label":3}},"caption":"Visit E","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"visited","label":2},"E":{"state":"visited","label":2},"F":{"state":"active","label":3}},"caption":"Visit F","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"visited","label":2},"E":{"state":"visited","label":2},"F":{"state":"visited","label":3}},"caption":"Visit F","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"visited","label":2},"E":{"state":"visited","label":2},"F":{"state":"visited","label":3}},"caption":"Every vertex is labelled with its number of edges from A","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}}]},"panel":null,"height":360}</script>
 <script type="application/json" id="lt-data-dijkstra/code">{"steps":[[3,4],[6],[10],[11,12],[10],[11,12],[5],[6],[10],[11,12],[10],[11,12],[10],[11,12],[5],[6],[10],[11,12],[5],[7,8],[6],[10],[11,12],[10],[11,12],[5],[7,8],[6],[10],[11,12],[5],[7,8],[6],[5],[7,8],[13]]}</script>
 <script type="application/json" id="lt-data-dijkstra/trace">{"layout":{"width":587.0,"height":167.0,"directed":false,"nodes":{"A":{"x":46.0,"y":97.0,"r":20.0},"B":{"x":145.0,"y":58.0,"r":20.0},"C":{"x":244.0,"y":121.0,"r":20.0},"D":{"x":343.0,"y":46.0,"r":20.0},"E":{"x":442.0,"y":118.0,"r":20.0},"F":{"x":541.0,"y":76.0,"r":20.0}},"edges":{"A--B":{"u":"A","v":"B","path":"M64.79,89.85 C82.18,82.85 108.53,72.26 125.99,65.24","label":"4","lx":95.5,"ly":70.0},"A--C":{"u":"A","v":"C","path":"M65.89,99.83 C81.68,102.15 104.78,105.46 125.0,108.0 C159.76,112.36 200.39,116.67 223.77,119.06","label":"2","lx":145.0,"ly":101.0},"B--C":{"u":"B","v":"C","path":"M162.45,68.69 C180.4,80.34 208.94,98.88 226.79,110.47","label":"1","lx":194.5,"ly":81.0},"B--D":{"u":"B","v":"D","path":"M165.15,56.83 C202.62,54.53 285.24,49.47 322.77,47.18","label":"5","lx":244.0,"ly":44.0},"C--D":{"u":"C","v":"D","path":"M260.58,108.95 C278.79,94.87 308.72,71.73 326.77,57.77","label":"8","lx":293.5,"ly":75.0},"C--E":{"u":"C","v":"E","path":"M264.15,120.71 C301.62,120.13 384.24,118.87 421.77,118.29","label":"10","lx":343.0,"ly":113.0},"D--E":{"u":"D","v":"E","path":"M359.58,57.57 C377.69,71.0 407.37,93.04 425.45,106.46","label":"2","lx":392.5,"ly":73.0},"D--F":{"u":"D","v":"F","path":"M362.79,48.88 C400.16,54.6 483.42,67.34 520.98,73.09","label":"6","lx":442.0,"ly":52.0},"E--F":{"u":"E","v":"F","path":"M460.79,110.3 C478.29,102.72 504.86,91.22 522.32,83.66","label":"2","lx":491.5,"ly":89.0}}},"frames":{"format":"full","count":36,"frames":[{"nodes":{"A":{"state":"frontier","label":0}},"panel":{"dist":{"A":0,"B":"∞","C":"∞","D":"∞","E":"∞","F":"∞"},"queue":["A:0"]},"caption":"dist[A] = 0, push A"},{"nodes":{"A":{"state":"active","label":0}},"panel":{"dist":{"A":0,"B":"∞","C":"∞","D":"∞","E":"∞","F":"∞"},"queue":[]},"caption":"Pop A at distance 0"},{"nodes":{"A":{"state":"active","label":0}},"panel":{"dist":{"A":0,"B":"∞","C":"∞","D":"∞","E":"∞","F":"∞"},"queue":[]},"caption":"Relax A-B: 0 + 4 vs inf","edges":{"A--B":{"state":"active"}}},{"nodes":{"A":{"state":"active","label":0},"B":{"state":"frontier","label":4}},"panel":{"dist":{"A":0,"B":4,"C":"∞","D":"∞","E":"∞","F":"∞"},"queue":["B:4"]},"caption":"Improve dist[B] to 4","edges":{"A--B":{"state":"tree"}}},{"nodes":{"A":{"state":"active","label":0},"B":{"state":"frontier","label":4}},"panel":{"dist":{"A":0,"B":4,"C":"∞","D":"∞","E":"∞","F":"∞"},"queue":["B:4"]},"caption":"Relax A-C: 0 + 2 vs inf","edges":{"A--B":{"state":"tree"},"A--C":{"state":"active"}}},{"nodes":{"A":{"state":"active","label":0},"B":{"state":"frontier","label":4},"C":{"state":"frontier","label":2}},"panel":{"dist":{"A":0,"B":4,"C":2,"D":"∞","E":"∞","F":"∞"},"queue":["C:2","B:4"]},"caption":"Improve dist[C] to 2","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":4},"C":{"state":"frontier","label":2}},"panel":{"dist":{"A":0,"B":4,"C":2,"D":"∞","E":"∞","F":"∞"},"queue":["C:2","B:4"]},"caption":"A is final","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":4},"C":{"state":"active","label":2}},"panel":{"dist":{"A":0,"B":4,"C":2,"D":"∞","E":"∞","F":"∞"},"queue":["B:4"]},"caption":"Pop C at distance 2","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":4},"C":{"state":"active","label":2}},"panel":{"dist":{"A":0,"B":4,"C":2,"D":"∞","E":"∞","F":"∞"},"queue":["B:4"]},"caption":"Relax C-B: 2 + 1 vs 4","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"C--B":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":3},"C":{"state":"active","label":2}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":"∞","E":"∞","F":"∞"},"queue":["B:3","B:4"]},"caption":"Improve dist[B] to 3","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":3},"C":{"state":"active","label":2}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":"∞","E":"∞","F":"∞"},"queue":["B:3","B:4"]},"caption":"Relax C-D: 2 + 8 vs inf","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":3},"C":{"state":"active","label":2},"D":{"state":"frontier","label":10}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":10,"E":"∞","F":"∞"},"queue":["B:3","B:4","D:10"]},"caption":"Improve dist[D] to 10","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":3},"C":{"state":"active","label":2},"D":{"state":"frontier","label":10}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":10,"E":"∞","F":"∞"},"queue":["B:3","B:4","D:10"]},"caption":"Relax C-E: 2 + 10 vs inf","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"tree"},"C--E":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":3},"C":{"state":"active","label":2},"D":{"state":"frontier","label":10},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":10,"E":12,"F":"∞"},"queue":["B:3","B:4","D:10","E:12"]},"caption":"Improve dist[E] to 12","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"tree"},"C--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":3},"C":{"state":"visited","label":2},"D":{"state":"frontier","label":10},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":10,"E":12,"F":"∞"},"queue":["B:3","B:4","D:10","E:12"]},"caption":"C is final","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"tree"},"C--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"active","label":3},"C":{"state":"visited","label":2},"D":{"state":"frontier","label":10},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":10,"E":12,"F":"∞"},"queue":["B:4","D:10","E:12"]},"caption":"Pop B at distance 3","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"tree"},"C--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"active","label":3},"C":{"state":"visited","label":2},"D":{"state":"frontier","label":10},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":10,"E":12,"F":"∞"},"queue":["B:4","D:10","E:12"]},"caption":"Relax B-D: 3 + 5 vs 10","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"tree"},"C--E":{"state":"tree"},"B--D":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"active","label":3},"C":{"state":"visited","label":2},"D":{"state":"frontier","label":8},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":12,"F":"∞"},"queue":["B:4","D:8","D:10","E:12"]},"caption":"Improve dist[D] to 8","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--E":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"frontier","label":8},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":12,"F":"∞"},"queue":["B:4","D:8","D:10","E:12"]},"caption":"B is final","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--E":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"frontier","label":8},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":12,"F":"∞"},"queue":["D:8","D:10","E:12"]},"caption":"Stale entry B:4, skip it","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--E":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"active","label":8},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":12,"F":"∞"},"queue":["D:10","E:12"]},"caption":"Pop D at distance 8","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--E":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"active","label":8},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":12,"F":"∞"},"queue":["D:10","E:12"]},"caption":"Relax D-E: 8 + 2 vs 12","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--E":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"active","label":8},"E":{"state":"frontier","label":10}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":"∞"},"queue":["D:10","E:10","E:12"]},"caption":"Improve dist[E] to 10","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"active","label":8},"E":{"state":"frontier","label":10}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":"∞"},"queue":["D:10","E:10","E:12"]},"caption":"Relax D-F: 8 + 6 vs inf","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"D--F":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"active","label":8},"E":{"state":"frontier","label":10},"F":{"state":"frontier","label":14}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":14},"queue":["D:10","E:10","E:12","F:14"]},"caption":"Improve dist[F] to 14","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"frontier","label":10},"F":{"state":"frontier","label":14}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":14},"queue":["D:10","E:10","E:12","F:14"]},"caption":"D is final","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"frontier","label":10},"F":{"state":"frontier","label":14}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":14},"queue":["E:10","E:12","F:14"]},"caption":"Stale entry D:10, skip it","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"active","label":10},"F":{"state":"frontier","label":14}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":14},"queue":["E:12","F:14"]},"caption":"Pop E at distance 10","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"active","label":10},"F":{"state":"frontier","label":14}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":14},"queue":["E:12","F:14"]},"caption":"Relax E-F: 10 + 2 vs 14","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"D--F":{"state":"tree"},"E--F":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"active","label":10},"F":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":["E:12","F:12","F:14"]},"caption":"Improve dist[F] to 12","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"visited","label":10},"F":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":["E:12","F:12","F:14"]},"caption":"E is final","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"visited","label":10},"F":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":["F:12","F:14"]},"caption":"Stale entry E:12, skip it","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"visited","label":10},"F":{"state":"active","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":["F:14"]},"caption":"Pop F at distance 12","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"visited","label":10},"F":{"state":"visited","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":["F:14"]},"caption":"F is final","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"visited","label":10},"F":{"state":"visited","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":[]},"caption":"Stale entry F:14, skip it","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"visited","label":10},"F":{"state":"visited","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":[]},"caption":"Queue empty: the tree edges form a shortest-path tree","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}}]},"panel":["dist","queue"],"height":330}</script>
@@ -1142,6 +1209,10 @@ const Lattice = (() => {
   const resizeCallbacks = [];
   const dataStore = {}; // instanceId -> data fetched in directory mode
   let presenter = false;
+  let passive = false; // preview (the presenter's "next" pane) and print: no input, history, storage or sync
+  let printing = false;
+  let previewFrame = null;
+  let previewReady = false;
   let channel = null;
   let storageKey = "";
   let hudTimer = null;
@@ -1312,7 +1383,7 @@ const Lattice = (() => {
 
   // ------------------------------------------------------------------ rendering
   function transitionFor(how, target) {
-    if (!how || how.kind === "step" || how.kind === "sync") return null;
+    if (!how || how.kind === "step" || how.kind === "sync" || how.kind === "scrub") return null;
     const back = (name) => (name === "zoom" ? "zoom-out" : name === "slide" ? "slide-back" : name);
     if (how.kind === "return") return "zoom-out";
     if (how.kind === "prev") return back(deck.transitions.next);
@@ -1396,7 +1467,7 @@ const Lattice = (() => {
     const id = nav.cur.slide;
     const sameSlide = prev && prev.slide === id;
     if (!sameSlide) {
-      if (prev && sections[prev.slide]) {
+      if (prev && prev.slide && sections[prev.slide]) {
         sections[prev.slide].hidden = true;
         sections[prev.slide].classList.remove("lt-current");
         for (const instId of instancesBySlide[prev.slide] || []) {
@@ -1419,9 +1490,11 @@ const Lattice = (() => {
         sec.classList.add(`lt-anim-${tr}`);
       }
     }
-    const adjacent = sameSlide && Math.abs(prev.step - nav.cur.step) === 1;
+    // scrubbing, previews and printing never animate (spec 10.1)
+    const adjacent = sameSlide && Math.abs(prev.step - nav.cur.step) === 1 && !passive && !(how && how.kind === "scrub");
     applyStep(id, nav.cur.step, { sameSlide, fromStep: sameSlide ? prev.step : null, animate: adjacent, force: !sameSlide });
     updateHud();
+    if (passive) return;
     updateHash();
     save();
     if (!how || how.kind !== "sync") broadcast();
@@ -1614,7 +1687,58 @@ const Lattice = (() => {
     input.focus();
   }
 
-  // ------------------------------------------------------------------ presenter view
+  // ------------------------------------------------------------------ presenter view (spec 7.5)
+  function buildPresenter() {
+    const panel = $("#lt-presenter-panel");
+    const W = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-w"));
+    const H = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-h"));
+    panel.innerHTML = `
+      <div class="lt-pp-top"><span class="lt-pp-timer" title="Click to reset">00:00</span><span class="lt-pp-where"></span></div>
+      <div class="lt-pp-scrub" hidden><input type="range" min="0" max="1" step="1" value="0" aria-label="Step of the current slide"><span class="lt-pp-scrub-label"></span></div>
+      <h3>Next <span class="lt-pp-next-label"></span></h3>
+      <div class="lt-pp-next"><iframe class="lt-pp-preview" title="Next" tabindex="-1" style="aspect-ratio:${W} / ${H}"></iframe><div class="lt-pp-next-none" hidden></div></div>
+      <h3>Moves</h3><ul class="lt-pp-moves"></ul>
+      <h3>Notes</h3><div class="lt-pp-notes"></div>`;
+    const range = $(".lt-pp-scrub input", panel);
+    range.addEventListener("input", () => {
+      const i = Number(range.value);
+      if (i !== nav.cur.step) go(nav.cur.slide, i, { kind: "scrub", dir: 0 });
+    });
+    range.addEventListener("change", () => range.blur()); // arrow keys go back to the deck
+    previewFrame = $(".lt-pp-preview", panel);
+    window.addEventListener("message", (e) => {
+      if (e.source === previewFrame.contentWindow && e.data && e.data.lattice === "preview-ready") {
+        previewReady = true;
+        updatePreview();
+      }
+    });
+    previewFrame.src = location.pathname + "?preview";
+  }
+
+  // What NEXT would show: the next step of this slide, else the slide NEXT moves to, at the step it lands on.
+  function previewTarget() {
+    const s = slide(nav.cur.slide);
+    if (nav.cur.step < s.steps - 1) return { slide: nav.cur.slide, step: nav.cur.step + 1, label: `step ${nav.cur.step + 2} of ${s.steps}` };
+    const nt = nextTarget();
+    if (!nt || !nt.slide) return { slide: null, label: s.branches.length ? "choose a branch" : "end of path" };
+    if (nt.kind === "back") {
+      const i = topExcursion();
+      return { slide: nt.slide, step: i >= 0 ? nav.H[i].step : steps(nt.slide) - 1, label: `return to ${label(nt.slide)}` };
+    }
+    return { slide: nt.slide, step: 0, label: label(nt.slide) };
+  }
+
+  function updatePreview() {
+    if (!previewFrame) return;
+    const t = previewTarget();
+    $(".lt-pp-next-label").textContent = t.label ? `\u00b7 ${t.label}` : "";
+    const none = $(".lt-pp-next-none");
+    none.hidden = !!t.slide;
+    none.textContent = t.slide ? "" : t.label;
+    previewFrame.style.visibility = t.slide ? "visible" : "hidden";
+    if (previewReady && t.slide) previewFrame.contentWindow.postMessage({ lattice: "preview", slide: t.slide, step: t.step }, "*");
+  }
+
   function updatePresenter() {
     const panel = $("#lt-presenter-panel");
     const s = slide(nav.cur.slide);
@@ -1630,11 +1754,18 @@ const Lattice = (() => {
     });
     const rt = returnTarget();
     if (rt && (topExcursion() >= 0 || detourOf(nav.cur.slide))) moves.push(`<li><kbd>\u2191</kbd> return to ${esc(label(rt))}</li>`);
-    panel.innerHTML = `
-      <div class="lt-pp-top"><span class="lt-pp-timer" title="Click to reset">00:00</span><span>${esc(s.label)} \u00b7 step ${nav.cur.step + 1}/${s.steps}</span></div>
-      <h3>Moves</h3><ul class="lt-pp-moves">${moves.join("")}</ul>
-      <h3>Notes</h3><div class="lt-pp-notes">${s.notes || "<p class=\"lt-muted\">No notes for this slide.</p>"}</div>`;
-    renderMath(panel);
+    $(".lt-pp-where", panel).textContent = `${s.label} \u00b7 step ${nav.cur.step + 1}/${s.steps}`;
+    const scrub = $(".lt-pp-scrub", panel);
+    scrub.hidden = s.steps < 2;
+    const range = $("input", scrub);
+    range.max = String(Math.max(1, s.steps - 1));
+    range.value = String(nav.cur.step);
+    $(".lt-pp-scrub-label", scrub).textContent = `${nav.cur.step + 1} / ${s.steps}`;
+    $(".lt-pp-moves", panel).innerHTML = moves.join("");
+    const notes = $(".lt-pp-notes", panel);
+    notes.innerHTML = s.notes || "<p class=\"lt-muted\">No notes for this slide.</p>";
+    renderMath(notes);
+    updatePreview();
     tickTimer();
   }
   function tickTimer() {
@@ -1655,6 +1786,107 @@ const Lattice = (() => {
     }
   }
 
+  // ------------------------------------------------------------------ print (spec 11.5)
+  // Each page of the plan is rendered, then its slide is copied into a static page. Chromium prints
+  // the copies in one pass, so links between pages become links inside the PDF.
+  const nextFrame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  function renameIds(root, suffix) {
+    const ids = new Map();
+    for (const el of [root, ...$$("[id]", root)]) {
+      if (!el.id) continue;
+      ids.set(el.id, el.id + suffix);
+      el.id += suffix;
+    }
+    const fix = (v) => v.replace(/url\(\s*(['"]?)#([^)'"]+)\1\s*\)/g, (m, q, id) => (ids.has(id) ? `url(#${ids.get(id)})` : m));
+    for (const el of [root, ...$$("*", root)]) {
+      for (const a of Array.from(el.attributes)) {
+        if (!a.value.includes("#")) continue;
+        let v = fix(a.value);
+        if ((a.name === "href" || a.name === "xlink:href") && v.startsWith("#") && ids.has(v.slice(1))) v = `#${ids.get(v.slice(1))}`;
+        if (v !== a.value) el.setAttribute(a.name, v);
+      }
+    }
+  }
+
+  function pageLink(el, page, extra) {
+    const a = document.createElement("a");
+    for (const at of Array.from(el.attributes)) if (!at.name.startsWith("data-") && at.name !== "type") a.setAttribute(at.name, at.value);
+    a.innerHTML = el.innerHTML + (extra || "");
+    if (page) a.href = `#lt-page-${page}`;
+    else a.classList.add("lt-print-nolink");
+    el.replaceWith(a);
+  }
+
+  function snapshot(entry, plan) {
+    const sec = sections[entry.slide];
+    const clone = sec.cloneNode(true);
+    clone.hidden = false;
+    clone.classList.remove(...Array.from(clone.classList).filter((c) => c.startsWith("lt-anim-")));
+    const src = $$("canvas", sec);
+    $$("canvas", clone).forEach((c, i) => {
+      try {
+        const img = document.createElement("img");
+        img.src = src[i].toDataURL("image/png");
+        img.style.cssText = c.style.cssText;
+        img.style.width = `${src[i].clientWidth}px`;
+        img.style.height = `${src[i].clientHeight}px`;
+        c.replaceWith(img);
+      } catch (e) { console.error(e); }
+    });
+    renameIds(clone, `-p${entry.n}`);
+    const ref = (page) => (page ? `<span class="lt-print-ref">p.\u00a0${page}</span>` : "");
+    for (const a of $$("a[data-lt-link]", clone)) {
+      const t = resolveTarget(a.dataset.ltLink);
+      const page = t && plan.pageOf[t];
+      if (page) a.setAttribute("href", `#lt-page-${page}`);
+      else { a.removeAttribute("href"); a.classList.add("lt-print-nolink"); }
+    }
+    for (const b of $$("[data-lt-detour]", clone)) {
+      const d = deck.detours[b.dataset.ltDetour];
+      const page = d && plan.pageOf[d.entry];
+      pageLink(b, page, ref(page));
+    }
+    const s = slide(entry.slide);
+    for (const b of $$("[data-lt-choose]", clone)) {
+      const opt = s.branches.find((o) => o.key === b.dataset.ltChoose);
+      const page = opt && plan.pageOf[opt.target];
+      pageLink(b, page, ref(page));
+    }
+    const page = document.createElement("div");
+    page.className = "lt-print-page";
+    page.id = `lt-page-${entry.n}`;
+    page.appendChild(clone);
+    const sec2 = entry.section != null ? plan.sections[entry.section] : null;
+    let where = esc(plan.title);
+    if (sec2) {
+      where = `Appendix ${esc(sec2.code)} \u00b7 ${esc(sec2.title)}`;
+      if (entry.from) where += ` \u00b7 <a href="#lt-page-${entry.from}">from p.\u00a0${entry.from}</a>`;
+    }
+    const stepInfo = s.steps > 1 ? ` \u00b7 step ${entry.step + 1}/${s.steps}` : "";
+    page.insertAdjacentHTML("beforeend",
+      `<div class="lt-print-foot"><span>${where}</span><span>${esc(s.label)}${stepInfo}<b>${entry.n}</b></span></div>`);
+    return page;
+  }
+
+  async function print(plan) {
+    const holder = document.createElement("div");
+    holder.id = "lt-print-pages";
+    document.body.appendChild(holder);
+    for (const entry of plan.pages) {
+      const prev = Object.assign({}, nav.cur);
+      nav.cur = { slide: entry.slide, step: Math.max(0, Math.min(entry.step, steps(entry.slide) - 1)) };
+      render(prev, { kind: "sync", dir: 0 });
+      await nextFrame();
+      if (prev.slide !== entry.slide && (instancesBySlide[entry.slide] || []).length) await sleep(120); // async renderers (Vega)
+      holder.appendChild(snapshot(entry, plan));
+    }
+    $("#lt-root").hidden = true;
+    document.documentElement.classList.add("lt-printed");
+    return plan.pages.length;
+  }
+
   // ------------------------------------------------------------------ input
   function keyMap() {
     const m = {};
@@ -1664,6 +1896,7 @@ const Lattice = (() => {
 
   function onKey(e) {
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target && e.target.closest && e.target.closest("input, textarea, select")) return;
     if (overlayOpen()) {
       if (e.key === "Escape" || (e.key === "o" && $(".lt-overview"))) { closeOverlay(); e.preventDefault(); }
       return;
@@ -1713,26 +1946,52 @@ const Lattice = (() => {
     }));
   }
 
+  function bootPassive() {
+    // A passive window renders what it is told: the presenter's preview pane, or the PDF export.
+    nav = { cur: { slide: deck.start, step: 0 }, H: [], tour: null };
+    fit();
+    render(null, { kind: "sync", dir: 0 });
+    if (printing) return;
+    window.addEventListener("message", (e) => {
+      const m = e.data;
+      if (e.source !== window.parent || !m || m.lattice !== "preview" || !deck.slides[m.slide]) return;
+      const prev = Object.assign({}, nav.cur);
+      nav.cur = { slide: m.slide, step: Math.max(0, Math.min(m.step || 0, steps(m.slide) - 1)) };
+      render(prev, { kind: "sync", dir: 0 });
+    });
+    if (window.parent !== window) window.parent.postMessage({ lattice: "preview-ready" }, "*");
+  }
+
   async function boot() {
     deck = JSON.parse($("#lt-deck").textContent);
     await loadData();
-    presenter = new URLSearchParams(location.search).has("presenter");
+    const params = new URLSearchParams(location.search);
+    printing = params.has("print");
+    passive = printing || params.has("preview");
+    presenter = !passive && params.has("presenter");
     storageKey = `lattice:${deck.hash}:nav`;
     for (const sec of $$(".lt-slide")) sections[sec.dataset.slide] = sec;
     for (const [id, inst] of Object.entries(deck.instances)) (instancesBySlide[inst.slide] ||= []).push(id);
-    if (presenter) {
-      document.body.classList.add("lt-presenter");
-      $("#lt-presenter-panel").hidden = false;
-      setInterval(tickTimer, 1000);
-    }
     renderMath(document);
-    nav = restore();
     window.addEventListener("resize", fit);
     window.addEventListener("pagehide", () => {
       for (const m of Object.values(mounted)) {
         if (m.ctl.destroy) try { m.ctl.destroy(m.inst); } catch (e) { console.error(e); }
       }
     });
+    if (passive) {
+      document.documentElement.classList.add(printing ? "lt-print" : "lt-preview");
+      bootPassive();
+      document.documentElement.classList.add("lt-ready");
+      return;
+    }
+    if (presenter) {
+      document.body.classList.add("lt-presenter");
+      $("#lt-presenter-panel").hidden = false;
+      buildPresenter();
+      setInterval(tickTimer, 1000);
+    }
+    nav = restore();
     document.addEventListener("keydown", onKey);
     document.addEventListener("click", onClick);
     window.addEventListener("hashchange", () => {
@@ -1751,7 +2010,7 @@ const Lattice = (() => {
     document.documentElement.classList.add("lt-ready");
   }
 
-  return { component, boot, frames, applyDelta, renderPanel, esc, actions: () => actions, state: () => nav };
+  return { component, boot, frames, applyDelta, renderPanel, esc, print, actions: () => actions, state: () => nav };
 })();
 window.Lattice = Lattice;
 

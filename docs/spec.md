@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.2.2 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.3.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -153,6 +153,7 @@ BARE       = 1*( any char except SP, "{", "}", '"', "'" ) ;
 | `offpath` | bool | `false` | Exclude from implicit next chains |
 | `layout` | string | `default` | Adds the class `layout-NAME` to the slide; built-in layouts: `default`, `title` |
 | `transition` | string | per edge kind | Transition used when entering this slide |
+| `pdf` | `first`, `last`, `all` or a list like `0,3,end` | the export's default | Steps printed by the PDF export (section 11.5). Steps are numbered from 0, as in the URL; `end` is the last step. A malformed value, or a step beyond the slide's last, is error LT053 |
 
 Any other key produces warning LT010 and is kept as a `data-*` attribute on the slide element for themes. The built-in themes also style the helper classes `.center` (centered body), `.fullbleed` (no padding) and `.small` (smaller body text).
 
@@ -334,6 +335,7 @@ class Slide:
     offpath: bool
     layout: str
     transition: str | None
+    pdf_steps: Literal["first", "last", "all"] | list[int | Literal["end"]] | None
     body_html: str                # rendered body with component placeholders
     components: list[ComponentBlock]
     reveal_count: int
@@ -573,7 +575,9 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 
 ### 7.5 Presenter view
 
-- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, the available moves (what NEXT does, branch options, detours and the return target, each with its key) and the notes.
+- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, a scrubber, a preview of what comes next, the available moves (what NEXT does, branch options, detours and the return target, each with its key) and the notes.
+- The **scrubber** is a slider over the steps of the current slide, shown when the slide has more than one step. Moving it sets `cur.step` directly: it is not an event of section 7.2 and leaves `H` unchanged, and runtimes receive `animate: false` (section 10.1).
+- The **preview** shows what NEXT would show: the next step of the current slide; at the last step, the slide NEXT moves to (tour successor, `next` slide at step 0, or the return target at the step it restores). At a branch point or at the end of the path it shows a label instead. The preview is a second copy of the document opened with `?preview`: a passive window that ignores keys and clicks, keeps no history or storage, does not join the `BroadcastChannel`, never animates, and renders the position the presenter window sends it with `postMessage`.
 - Audience and presenter windows share state over a `BroadcastChannel` named `lattice:<deck-hash>`. After every event, the window that handled it broadcasts `{cur, H, tour}`; the other window adopts it without re-running the event. Either window may drive.
 
 ### 7.6 Default bindings
@@ -686,6 +690,8 @@ A `ComponentError` raised by `render` becomes error LT022 at the block's locatio
 | `dot` | text | 1 | `engine` |
 | `graph-anim` | yaml | number of frames | `source`, `graph` or `edges` (inline `"u v weight"` lines), `directed`, `engine`, `rankdir`, `panel`, `edge_labels`, `height`; other keys are passed to the trace function |
 | `array-anim` | yaml | number of frames | `source`, `values`, `panel`; other keys are passed to the trace function |
+| `tree-anim` | yaml | number of frames | `source` (returns a `TreeTrace`), `values` (passed as the first argument), `layout` (`auto`, `binary`, `tidy`; `auto` is `binary` when every node has zero or two child slots), `panel`, `height`; other keys are passed to the trace function |
+| `grid-anim` | yaml | number of frames | `source` (returns a `GridTrace`), `values` (passed as the first argument), `cell` (cell size in drawing units, default 48, relative to the text), `panel`, `height`; other keys are passed to the trace function |
 | `math` | text | 1 | display math block |
 
 The exact option schemas are the pydantic `Options` models in `src/lattice/components/`.
@@ -714,7 +720,9 @@ def dijkstra_trace(graph, start):
 - `meta` is kept per frame for followers and is not emitted unless the component includes it in `data`.
 - `GraphTrace` defines the conventional state shape below; node and edge values may be a state string or a mapping, and edges may be given as `(u, v)` tuples.
 - `ArrayTrace(values)` uses `values`, `cells` (persistent per-index states), `marks` (transient per-frame highlights), `pointers` (name to index, `None` removes), `caption` and `panel`.
-- States styled by the built-in themes: nodes and edges `active`, `frontier`, `visited`, `done`, `tree`, `path`, `dim`, `error`; array cells `compare`, `swap`, `pivot`, `sorted`, `done`, `dim`.
+- `TreeTrace(root=None, *, key="key", children=("left", "right"))` traces a tree whose shape changes. `frame(root=...)` takes a snapshot of the author's own node objects and stores it as `tree: {"root": name, "kids": {name: [child name or null, ...]}}` (nodes without children are omitted from `kids`). A frame without `root` keeps the previous shape; a new shape replaces the old one as a whole instead of being merged. `key` is an attribute or mapping key, or a callable, giving the node's name; `children` is a tuple of attributes read as fixed slots (`None` allowed), one attribute holding a list, or a callable. Tuples `(name, child, ...)` and bare scalars (leaves) are nodes too. A name appearing twice in one snapshot (duplicate or cycle) is an error. `nodes`, `edges` (keys `parent->child`, or `(parent, child)` tuples), `panel` and `caption` work as in `GraphTrace`.
+- `GridTrace(values, *, rows=None, cols=None)` traces a 2D grid. State: `values` (list of rows; a string row is one cell per character), `rows` and `cols` (header labels), `cells` (persistent per-cell states), `marks` (transient), `pointers` (name to `[row, col]`, `None` removes), `arrows` (`"r,c->r,c"` to a state, `None` removes), `caption`, `panel`. Cell keys are `(row, col)` tuples or `"r,c"` strings. `frame(put={cell: value})` changes single values; `frame(values=...)` replaces the grid.
+- States styled by the built-in themes: graph and tree nodes and edges `active`, `frontier`, `visited`, `done`, `tree`, `path`, `dim`, `error`; array cells `compare`, `swap`, `pivot`, `sorted`, `done`, `dim`; grid cells `active`, `compare`, `frontier`, `visited`, `done`, `path`, `wall`, `start`, `goal`, `dim`, `error`; grid arrows `active`, `path`, `dim`.
 
 ```json
 {
@@ -752,6 +760,8 @@ Edge keys are `u->v` for directed and `u--v` for undirected graphs; for undirect
 ### 9.4 Layout stability
 
 `ctx.layout` MUST be computed once per instance, on the union of the base graph and every element that appears in any frame. Elements absent from a frame are hidden, never re-laid out.
+
+Trees are the exception, since insertions and rotations move nodes. `tree-anim` computes positions per frame at build time and stores them in the frame as `pos` (node name to `[x, y]`), all in one box sized for the largest frame, each frame centered horizontally in it. The `binary` layout places a node by its in-order rank and its depth, so a rotation keeps every node's x and only changes depths; `tidy` gives leaves consecutive slots and centers a parent over its children. On a single step the runtime moves nodes from their old to their new positions; any other move places them directly.
 
 ---
 
@@ -800,7 +810,7 @@ Requirements:
 ### 10.4 Core-managed features
 
 - Reveal: elements carry `data-lt-reveal="k"`; the core shows fragment `k` when the reveal position is at least `k`, using `visibility: hidden` so layout does not shift.
-- Branch menus, detour badges, wiki links, transitions, overview, go-to and presenter view are implemented by the core.
+- Branch menus, detour badges, wiki links, transitions, overview, go-to, presenter view (with its preview and scrubber) and print mode (section 11.5) are implemented by the core.
 - The core exports helpers for runtimes: `Lattice.frames(store)`, `Lattice.applyDelta`, `Lattice.renderPanel(el, panel, keys)` (the variable panel of the animation components) and `Lattice.esc` (HTML escaping).
 
 ---
@@ -814,7 +824,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.2.2">
+  <meta name="generator" content="lattice 0.3.0">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -919,6 +929,15 @@ interface EdgeJSON {
 
 With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.html`, `assets/` (stylesheet, runtime, shared libraries, `media/` for images) and `data/<instance>.json`. The runtime is a deferred classic script and fetches every data file before the first slide renders, so the folder MUST be served over HTTP (for example `python -m http.server -d OUT`); `file://` works only for single-file output. Math fonts stay embedded in the stylesheet.
 
+### 11.5 PDF export
+
+`lattice pdf DECK [-o OUT] [--tour NAME] [--steps first|last|all] [--no-appendix]` writes a PDF, by default next to the deck. It requires Playwright with Chromium (extra `pdf`).
+
+- **Pages.** The tour (default: the main path; `main` also names it) is printed first, in order. Each slide gives one page per selected step: its `pdf` attribute (section 3.5) if present, else `--steps` (default `last`).
+- **Appendix** (unless `--no-appendix`). Starting from the printed slides, breadth first, and then from each appendix slide in turn: every detour with slides not yet printed becomes a section; every branch option whose target is not yet printed becomes a section holding the target and the slides that follow it along `next`, up to a slide already printed; off-path root slides linked from a printed slide are collected in a final section, "Linked slides". Sections are lettered A, B, ... in that order.
+- **Links.** Wiki links, detour badges and branch options link to the first page of their target when it is printed (badges and options also show its page number) and become plain text otherwise. Each appendix page names its section and links back to the page that leads to it.
+- **Rendering.** The command builds the single-file HTML and opens it in Chromium with `?print` at the design size. In print mode the runtime is passive (as the preview of section 7.5). `Lattice.print(plan)` renders each page of the plan with `animate: false`, then copies the slide into a static page: canvases become images, and ids inside the copy get a per-page suffix, with `url(#...)` and `href="#..."` references updated. Chromium prints the copies in one pass, one page per slide page, so the links above are links inside the PDF.
+
 ---
 
 ## 12. Diagnostics
@@ -974,6 +993,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT050 | error | Plugin or `lattice_plugins.py` failed to load |
 | LT051 | warning | Image referenced by a slide not found |
 | LT052 | warning | Unknown theme (the default theme is used) |
+| LT053 | error | Invalid `pdf` slide attribute, or a `pdf` step beyond the slide's last step |
 
 Diagnostics are printed as `file:line:col: severity LTnnn: message`. `lattice check` exits with status 1 if any error is reported, 0 otherwise (`--strict` also fails on warnings).
 
@@ -1112,7 +1132,7 @@ Main path: `intro`, `dijkstra`, `complexity`, `end`. Edges: 4 `next` (implicit, 
 
 ## 14. Not Yet Specified
 
-Planned features (spatial mode, PDF export, presenter scrubber, more trace types, plugin hooks and others) are tracked in the roadmap of `design-report.md`, section 6. They are specified here when they are implemented.
+Planned features (spatial mode, plugin hooks, custom themes and others) are tracked in the roadmap of `design-report.md`, section 6. They are specified here when they are implemented.
 
 ---
 
@@ -1139,3 +1159,6 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.2.1 | Columns contain their content | 3.8 |
 | 0.2.2 | Presenter view described as implemented (no scrubber) | 7.5 |
 | 0.2.2 | Built-in themes only, LT052; LT045 and LT032 implemented; `destroy` called on page unload | 2.2, 8.7, 11.1, 10.2 |
+| 0.3 | Tree and grid traces, `tree-anim` and `grid-anim`; tree layouts per frame | 8.8, 9.1, 9.4 |
+| 0.3 | Presenter view: preview of the next position and step scrubber | 7.5, 10.4 |
+| 0.3 | PDF export, `pdf` slide attribute, LT053 | 3.5, 11.5, 12 |
