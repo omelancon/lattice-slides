@@ -194,6 +194,13 @@ def test_hidden_functions_and_event_filter():
     assert len(few.frames) == 5 and all(m["event"] in ("merge", "done") for m in few.meta)
 
 
+def test_layout_margins_cover_back_edges():
+    """bbv.js steps 22 px out of a node before joining the lane: the box must leave that room."""
+    from lattice.bbv import layout
+
+    assert layout.MARGIN >= 24 and layout.LANE + 10 >= 0
+
+
 def test_layout_keeps_versions_on_their_rank():
     t = VersioningTrace(program("find.bbv"), limit=2)
     for direction in ("TB", "LR"):

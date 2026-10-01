@@ -18,7 +18,7 @@ GAP_RANK = 44.0  # between ranks
 GAP_LINE = 14.0  # between the lines of a wrapped rank
 FUNCTION_GAP = 64.0  # leaves room for the lane of back edges beside each function
 HEADER = 30.0
-MARGIN = 16.0
+MARGIN = 30.0  # covers the 22 px by which back edges step out of their nodes (bbv.js), plus the arrowhead
 LANE = 18.0  # distance of the back-edge lane from the function's extent
 
 

@@ -208,6 +208,8 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 
 /* basic block versioning: versions of a CFG, in the style of the thesis figures */
 .lt-bbv-anim{container-type:inline-size;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+/* the panel keeps a fixed width so that the drawing does not rescale as the queue grows and shrinks */
+.lt-bbv-anim .lt-ga-panel{flex:0 0 clamp(150px,22%,260px);max-width:none}
 .lt-bbv-header{font-family:var(--lt-font-head);font-size:15px;font-weight:600;fill:var(--lt-muted)}
 .lt-bbv-node rect{fill:var(--lt-bg);stroke:var(--lt-edge);stroke-width:1.6}
 .lt-bbv-node.has-origin rect{fill:color-mix(in srgb,var(--origin) 16%,var(--lt-bg))}
