@@ -65,7 +65,7 @@ A single HTML file embeds styles, scripts, data, images and math fonts, and incl
 
 ### 3.6 Built-in components
 
-Code with highlighting, stepping and diffs; plots with matplotlib, Vega-Lite and Plotly; Graphviz diagrams; math; animated graphs, arrays, trees and grids. The list with options is spec section 8.8, and `examples/` shows each one in use.
+Code with highlighting, stepping and diffs; plots with matplotlib, Vega-Lite and Plotly; Graphviz diagrams; math; animated graphs, arrays, trees and grids; basic block versioning and abstract interpretation run on small programs (3.10 and 3.11). The list with options is spec section 8.8, and `examples/` shows each one in use.
 
 ### 3.7 Trees move, graphs do not (spec sections 9.1 and 9.4)
 
@@ -149,7 +149,7 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 | Math | KaTeX, vendored, rendered in the browser | Fast and dependable offline; build-time rendering would require Node.js |
 | Runtime | Vanilla JavaScript, no build step | Small, readable, no framework lock-in; runs as a module or a classic script |
 | Dev server | Standard library HTTP server, polling watcher, server-sent events | No extra dependencies; fast enough for decks |
-| Browser tests and screenshots | Playwright with Chromium (extra `dev`) | Tests the real navigation and layout |
+| Browser tests and screenshots | Playwright with Chromium (extra `dev`); Firefox optionally, for layout checks | Tests the real navigation and layout; the two engines resolve flex sizes differently |
 | PDF export | Chromium through Playwright (extra `pdf`) | Prints what the runtime renders, with vector text and internal links; no PDF library needed |
 
 ---
@@ -162,9 +162,9 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.3 (done).** Tree traces (insertions, rotations) and grid traces (maze search, dynamic programming tables); PDF export following a tour, with detours, branch options and linked slides as an appendix and animations exported as selected frames; presenter view with a preview of what comes next and a step scrubber.
 
-**v0.5 (done).** Abstract interpretation: integer intervals in abstract values with threshold widening and comparison narrowing, parameter annotations and comparison tests in `.bbv` programs, `abstract-interp-anim` with per-frame contexts, dead edges and the widening chain in the panel.
-
 **v0.4 (done).** Basic block versioning: a build-time model of SBBV and ΛV on programs written in a small CFG language, `bbv-anim` with one frame per event (block or instruction granularity), automatic captions, the block bands layout, `bbv-cfg` as a follower, `code` following the program or the bundled pseudo-code of the algorithms.
+
+**v0.5 (done).** Abstract interpretation: integer intervals in abstract values with threshold widening and comparison narrowing, parameter annotations and comparison tests in `.bbv` programs, `abstract-interp-anim` with per-frame contexts, dead edges and the widening chain in the panel.
 
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
@@ -192,5 +192,5 @@ Decisions taken while writing the specification, and since.
 | 9 | Import from other tools | Not supported. |
 | 10 | Tree layout | Positions per frame, computed at build time in one shared box; in-order layout for binary trees. Graphs keep one layout for all frames. |
 | 11 | PDF contents | The tour (default: main path), then an appendix of detours, branch options not taken and linked off-path slides. Steps per slide: `last` by default, a `pdf` attribute otherwise, numbered from 0 as in the URL. |
-| 13 | Abstract interpretation | Component `abstract-interp-anim` on the `bbv-cfg` drawing. Intervals for integers only, inside the type values; they decide `fx` versus `fx | bg`. Threshold widening at every join (thesis thresholds, `sign`, `none`). Direct comparison tests only (no tracking of boolean temporaries). Entry contexts from parameter annotations. Entry context in the block, exit context in the tooltip. Widening chain as a panel list. |
 | 12 | Versioning animations | Built-in components, not a plugin. Programs in a text CFG language (or Python objects). The thesis type lattice with `#f` as its own type. Thesis figure style with origin colours. Block bands layout, top to bottom by default, functions side by side, positions per frame. Companions through followers. Version limits compared with branches or detours, not a live control. One frame per event by default. |
+| 13 | Abstract interpretation | Component `abstract-interp-anim` on the `bbv-cfg` drawing. Intervals for integers only, inside the type values; they decide `fx` versus `fx | bg`. Threshold widening at every join (thesis thresholds, `sign`, `none`). Direct comparison tests only (no tracking of boolean temporaries). Entry contexts from parameter annotations. Entry context in the block, exit context in the tooltip. Widening chain as a panel list. |

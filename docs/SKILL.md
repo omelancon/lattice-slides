@@ -1,6 +1,6 @@
 ---
 name: lattice-development
-description: Onboarding and working rules for the Lattice codebase, a Python library that compiles Markdown into non-linear HTML slide decks for computer science talks (slide graph with detours, branches and links; animated graph, array, tree and grid traces; code stepping; plots; presenter view; PDF export). Use this skill before any work in the Lattice repository, even small edits, including changing the parser, graph resolution, components, the JavaScript runtime, themes, examples, tests or documentation, adding a component or diagnostic, fixing a rendering bug, preparing a release, or answering questions about how Lattice works internally.
+description: Onboarding and working rules for the Lattice codebase, a Python library that compiles Markdown into non-linear HTML slide decks for computer science talks (slide graph with detours, branches and links; animated graph, array, tree and grid traces; basic block versioning and abstract interpretation animations; code stepping; plots; presenter view; PDF export). Use this skill before any work in the Lattice repository, even small edits, including changing the parser, graph resolution, components, the JavaScript runtime, themes, examples, tests or documentation, adding a component or diagnostic, fixing a rendering bug, preparing a release, or answering questions about how Lattice works internally.
 ---
 
 # Working on Lattice
@@ -23,6 +23,7 @@ This file is for contributors. It explains where things live, how to verify chan
 ```bash
 pip install -e ".[dev]"          # core + pytest, matplotlib, playwright
 playwright install chromium      # browser tests, screenshots and PDF export
+playwright install firefox       # optional: layout checks of the versioning drawings (see Pitfalls)
 dot -V                           # Graphviz CLI; needed for dot diagrams, .dot graphs and the overview map
 pytest                           # the full suite, including browser tests; must pass before and after your change
 python scripts/build_examples.py # rebuilds examples/*/talk.html
@@ -110,7 +111,7 @@ Run `pytest` after every change; it takes about twenty seconds. The suites:
 | `test_output.py` | plot backends, diff-steps, images, directory output, overview map, library inclusion |
 | `test_pdf.py` | `pdf` steps and LT053, the page plan (tour, appendix, back links), a real export in Chromium |
 | `test_cli.py` | CLI commands and building every example |
-| `test_runtime.py` | the navigation state machine, the presenter preview and scrubber, tree, grid and versioning runtimes, in Chromium |
+| `test_runtime.py` | the navigation state machine, the presenter preview and scrubber, the tree, grid, versioning and abstract interpretation runtimes, in Chromium |
 | `test_layout.py` | no content spills out of a column, on every example slide |
 
 Tests prove structure, not appearance. After any visual change (CSS, runtime rendering, a component's HTML, an example), rebuild the examples and look at screenshots of the affected slides:
