@@ -211,7 +211,9 @@ class Specializer:
         self.emit("start", versions=[r.id for r in self.roots])
 
     def queue_generic_entry(self, fn: Function) -> Version:
-        ctx = Context({p: ANY for p in fn.params})
+        ctx = Context({p: fn.param_types.get(p, ANY) for p in fn.params})
+        if not self.intervals:
+            ctx = Context({p: t.without_range() for p, t in ctx.types().items()})
         v = self.get_or_create(fn.entry, ctx)
         v.is_entry = True
         v.generic = True
@@ -288,8 +290,51 @@ class Specializer:
         pass
 
     # ------------------------------------------------------------ specialization (algorithms 1.4 to 1.6)
+    intervals = False  # SBBV and ΛV track types only; the abstract interpreter tracks intervals too
+
     def type_of(self, ctx: Context, a: Arg) -> Type:
-        return a.type if isinstance(a, Const) else ctx.get(a.name)
+        t = a.type if isinstance(a, Const) else ctx.get(a.name)
+        return t if self.intervals else t.without_range()
+
+    def branch_contexts(self, ctx: Context, instr: If) -> tuple[Context | None, Context | None, str]:
+        """The contexts of the two outcomes of a test (``None`` when an outcome is impossible), and the
+        text naming the test for captions. Type tests and comparisons narrow through the primitive's
+        rule; a bare variable is tested for truthiness."""
+        prims = self.program.prims
+        args = instr.args or [instr.arg]
+        if instr.prim is not None:
+            p = prims[instr.prim]
+            if p.args is not None:  # the test executes: its arguments must be acceptable
+                for a, req in zip(args, p.args):
+                    if isinstance(a, Var):
+                        ctx = ctx.narrow(a.name, req)
+            if ctx.is_bottom():
+                return None, None, instr.prim
+            types = [self.type_of(ctx, a) for a in args]
+            if p.narrow is not None:
+                yes, no = p.narrow(types)
+            else:
+                yes, no = list(types), list(types)
+            outs = []
+            for narrowed in (yes, no):
+                if narrowed is None:
+                    outs.append(None)
+                    continue
+                c = ctx
+                for a, t in zip(args, narrowed):
+                    if isinstance(a, Var):
+                        c = c.narrow(a.name, t if self.intervals else t.without_range())
+                outs.append(None if c.is_bottom() else c)
+            what = f"{instr.prim}({', '.join(str(a) for a in args)})"
+            return outs[0], outs[1], what
+        a = instr.arg
+        hold = Type.of("#f").complement()
+        if isinstance(a, Var):
+            yes, no = ctx.narrow(a.name, hold), ctx.narrow(a.name, Type.of("#f"))
+            return (None if yes.is_bottom() else yes), (None if no.is_bottom() else no), str(a)
+        can_true = not a.type.intersection(hold).is_bottom()
+        can_false = not a.type.intersection(Type.of("#f")).is_bottom()
+        return (ctx if can_true else None), (ctx if can_false else None), str(a)
 
     def specialize(self, v: Version) -> None:
         ctx = v.context
@@ -324,21 +369,9 @@ class Specializer:
                 body.append(Line(instr.text, instr.line))
                 kind, note = "assign", f"{instr.target}: {ctx.get(instr.target)}"
             elif isinstance(instr, If):
-                if instr.prim is not None:
-                    hold = prims[instr.prim].test
-                else:
-                    hold = Type.of("#f").complement()
-                a = instr.arg
-                if isinstance(a, Var):
-                    ctx_true = ctx.narrow(a.name, hold)
-                    ctx_false = ctx.narrow(a.name, hold.complement())
-                    can_true, can_false = not ctx_true.is_bottom(), not ctx_false.is_bottom()
-                else:
-                    ctx_true = ctx_false = ctx
-                    can_true = not a.type.intersection(hold).is_bottom()
-                    can_false = not a.type.intersection(hold.complement()).is_bottom()
+                ctx_true, ctx_false, what = self.branch_contexts(ctx, instr)
+                can_true, can_false = ctx_true is not None, ctx_false is not None
                 then_b, else_b = fn.block(instr.then), fn.block(instr.otherwise)
-                what = f"{instr.prim}({instr.arg})" if instr.prim else str(instr.arg)
                 if not can_true and not can_false:
                     body.append(Line(instr.text, instr.line, removed=True))
                     body.append(Line("fail", instr.line))

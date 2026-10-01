@@ -1,0 +1,22 @@
+abstractInterpretation(entry, context):
+    for block in blocks: block.context ← ⊥
+    entry.context ← context
+    worklist.enqueue(entry)
+    while block ← worklist.dequeue():
+        context ← block.context
+        for instr in block.body:
+            context ← interpret(instr, context)
+        for (successor, outContext) in outgoing(block, context):
+            if outContext = ⊥: continue
+            joined ← widen(successor.context, successor.context ∪ outContext)
+            if joined ≠ successor.context:
+                successor.context ← joined
+                worklist.enqueue(successor)
+
+interpret(instr, context):
+    match instr.kind:
+        case "assign": context[instr.target] ← evaluate(instr.primitive, context)
+        case "if":     narrow context for each outcome of instr.condition
+        case "goto":   rebind the parameters of instr.target
+        case "call":   context[#res] ← ⊤
+        case "return", "fail": no successor

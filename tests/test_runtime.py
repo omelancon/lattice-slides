@@ -202,6 +202,15 @@ def test_bbv_runtime_steps_both_ways(tmp_path):
             page.wait_for_timeout(200)
             assert page.evaluate("Lattice.state().cur")["slide"] == "find-sbbv"
             assert page.evaluate(visible % ".lt-c-bbv-anim") == 14
+            # abstract interpretation: the context lines inside a block change with the frame
+            page.evaluate("location.hash = '#/sum-to-n-ai/0'")
+            page.wait_for_timeout(200)
+            ctx = "Array.from(document.querySelectorAll('#s-sum-to-n-ai .lt-bbv-node')[1].querySelectorAll('.lt-bbv-ctx')).map(t => t.textContent).join(' ')"
+            first = page.evaluate(ctx)
+            page.evaluate("location.hash = '#/sum-to-n-ai/999'")
+            page.wait_for_timeout(200)
+            last = page.evaluate(ctx)
+            assert first != last and "[0, ∞)" in last
             browser.close()
     except Exception as e:
         if "Executable doesn't exist" in str(e):

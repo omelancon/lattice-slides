@@ -2,12 +2,35 @@
 title: Basic Block Versioning
 author: Compilers, ahead-of-time optimization of dynamic languages
 tours:
-  short: [basic-block-versioning, find-cfg, find-sbbv, power4-lv, fact-lv, thanks]
+  short: [basic-block-versioning, sum-to-n-ai, fact-ai, find-cfg, find-sbbv, power4-lv, fact-lv, thanks]
 ---
 
 # Basic Block Versioning {layout=title}
 
 Specializing control-flow graphs ahead of time, one version at a time.
+
+# Abstract interpretation: union, widening, narrowing {#sum-to-n-ai}
+
+```abstract-interp-anim {#ai program="programs/sum-to-n.bbv" height=420}
+show: [label, context, code]
+panel: [worklist, history]
+history: [B.i]
+```
+
+::: notes
+Thesis figures 1 and 2. One context per block; at the loop entry B the context of `i` grows by union, and widening jumps to the next threshold (sign, 8, 32, 64 bits): the chain in the panel is the red path of figure 2.
+:::
+
+# Narrowing at a conditional: `fact` {#fact-ai}
+
+```abstract-interp-anim {#fai program="programs/fact-loop.bbv" height=400}
+show: [label, context, code]
+panel: [worklist]
+```
+
+::: notes
+Thesis figure 4. `(> i 0)` narrows `i` to `[1, ∞)` in the loop body, so `(* acc i)` multiplies positive integers and the result is positive. The argument is assumed to be an integer (`n: fx | bg`).
+:::
 
 # A control-flow graph with redundant checks {#find-cfg}
 

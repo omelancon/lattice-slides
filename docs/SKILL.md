@@ -46,9 +46,10 @@ src/lattice/
   emit.py         deck JSON, single-file HTML, directory output, image embedding
   graphs.py       graph loading, Graphviz layouts, overview map layout, tree layouts per frame
   anim.py         Trace, GraphTrace, ArrayTrace, TreeTrace, GridTrace, deltas, frame stores
-  bbv/            basic block versioning: types.py (lattice, contexts), prims.py, ir.py (programs, .bbv
-                  syntax, liveness), sbbv.py, lv.py, heuristics.py, trace.py (events to frames),
-                  layout.py (block bands), pseudocode/ (the thesis algorithms, for code following)
+  bbv/            basic block versioning and abstract interpretation: types.py (lattice, contexts),
+                  intervals.py (widening), prims.py, ir.py (programs, .bbv syntax, liveness), sbbv.py,
+                  lv.py, absint.py, heuristics.py, trace.py (events to frames), layout.py (block bands),
+                  pseudocode/ (the thesis algorithms, for code following)
   pdf.py          PDF export: pdf step selection, the page plan (tour and appendix), driving Chromium
   model.py        dataclasses and pydantic front matter
   diagnostics.py  Diagnostic, BuildError
@@ -105,7 +106,7 @@ Run `pytest` after every change; it takes about twenty seconds. The suites:
 | `test_parsing.py` | attributes, ids, includes, links, reveal, containers |
 | `test_graph.py` | next resolution, detours, branches, keys, tours |
 | `test_steps.py` | tracks, timelines, followers, deltas, frame stores, tree and grid traces, tree layouts |
-| `test_bbv.py` | the type lattice, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), frames, layout, the two components |
+| `test_bbv.py` | the type lattice and intervals, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), abstract interpretation against figures 1, 2 and 4, frames, layout, the components |
 | `test_output.py` | plot backends, diff-steps, images, directory output, overview map, library inclusion |
 | `test_pdf.py` | `pdf` steps and LT053, the page plan (tour, appendix, back links), a real export in Chromium |
 | `test_cli.py` | CLI commands and building every example |
@@ -132,6 +133,8 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 - **Step numbers differ by audience.** The URL hash and the `pdf` attribute count steps from 0; the HUD and the presenter view show them from 1.
 - **Element ids in component HTML** are duplicated in the PDF (one copy per page). Print mode renames ids and `url(#...)` or `href="#..."` references inside each copy; a component that refers to its ids another way (for example from CSS) breaks in print.
 - **Versioning programs.** `tests/test_bbv.py` pins properties of the thesis figures (which versions exist, which tests disappear, how many return points), not exact drawings: the thesis took liberties with types and heuristics to keep its figures short, so the algorithm's real output differs in details. When changing `sbbv.py` or `lv.py`, rerun the example and look at the captions; a wrong cascade shows up as return points that flicker between frames.
+- **Intervals are only for the abstract interpreter.** `Specializer.type_of` strips them (`intervals = False`), so SBBV and ΛV contexts never carry one; a change to `prims.py` result rules must keep working without intervals.
+- **The drawing of `bbv.js` must never rescale between frames.** Its SVG keeps its aspect ratio, so anything that changes the canvas size (a panel growing with the queue, a caption wrapping to a second line) rescales the whole drawing. The panel has a fixed width, `.lt-ga-main` does not shrink, and the caption shrinks its text to fit the space left (`fitCaption`). Check both Chromium and Firefox after touching that layout; Firefox resolves these flex sizes differently.
 - **Container nesting again.** A detour holding slides that use `::::` columns needs `:::::` fences (see `examples/07-basic-block-versioning`).
 - **Writing style.** The project owner avoids em dashes in prose; use colons, commas or parentheses.
 

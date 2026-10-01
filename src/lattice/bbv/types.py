@@ -6,8 +6,12 @@ variables holding the same value.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+from math import inf
 from typing import Iterable
+
+from .intervals import Interval
 
 PRIMITIVE_TYPES = ["fx", "bg", "fl", "#t", "#f", "nil", "pair", "str", "proc", "other"]
 _BIT = {name: 1 << i for i, name in enumerate(PRIMITIVE_TYPES)}
@@ -23,13 +27,35 @@ _ALIASES = {
 }
 
 
+_INT_BITS = (1 << PRIMITIVE_TYPES.index("fx")) | (1 << PRIMITIVE_TYPES.index("bg"))
+_FX_BIT = 1 << PRIMITIVE_TYPES.index("fx")
+_BG_BIT = 1 << PRIMITIVE_TYPES.index("bg")
+_INTERVAL = re.compile(r"^(.*?)\s*(\{\s*(-?\d+)\s*\}|[\[(]\s*(-?\d+|-?∞|-?inf)\s*,\s*(-?\d+|-?∞|\+?inf)\s*[\])])\s*$")
+
+
+def _bound(text: str):
+    text = text.strip()
+    if text in ("∞", "+inf", "inf"):
+        return inf
+    if text in ("-∞", "-inf"):
+        return -inf
+    return int(text)
+
+
 @dataclass(frozen=True)
 class Type:
     """A set of primitive types. ``procs`` names the functions a procedure value may be;
-    ``None`` means any procedure (when the ``proc`` bit is set)."""
+    ``None`` means any procedure (when the ``proc`` bit is set). ``range`` is the interval of the
+    value when it is an integer (``fx`` or ``bg``); ``None`` means unknown, that is any integer."""
 
     bits: int
     procs: frozenset[str] | None = None
+    range: Interval | None = None
+
+    def __post_init__(self):
+        # canonical form: no interval without integer bits, no interval when it is the full line
+        if self.range is not None and (not self.bits & _INT_BITS or self.range.is_full()):
+            object.__setattr__(self, "range", None)
 
     # -- constructors
     @staticmethod
@@ -55,9 +81,19 @@ class Type:
         return Type(_BIT["proc"], frozenset([name]))
 
     @staticmethod
+    def integer(lo, hi) -> "Type":
+        """An integer in ``[lo, hi]`` (``fx`` or ``bg`` until refined)."""
+        return Type(_INT_BITS, None, Interval(lo, hi))
+
+    @staticmethod
     def parse(text: str) -> "Type":
-        """``"fx | fl"``, ``"!fx"``, ``"any"``, ``"⊥"``, ``"proc(square)"``."""
+        """``"fx | fl"``, ``"!fx"``, ``"any"``, ``"⊥"``, ``"proc(square)"``, ``"fx [0, 100]"``, ``"fx | bg {0}"``."""
         text = text.strip()
+        m = _INTERVAL.match(text)
+        if m:
+            base = Type.parse(m.group(1)) if m.group(1).strip() else Type.of("fx", "bg")
+            rng = Interval.of(int(m.group(3))) if m.group(3) is not None else Interval(_bound(m.group(4)), _bound(m.group(5)))
+            return Type(base.bits, base.procs, rng)
         if text in ("any", "⊤", "top"):
             return Type.any()
         if text in ("⊥", "bottom", "nil-type"):
@@ -105,7 +141,25 @@ class Type:
             a = self.procs if self.bits & _BIT["proc"] else frozenset()
             b = other.procs if other.bits & _BIT["proc"] else frozenset()
             procs = None if a is None or b is None else a | b
-        return Type(bits, procs)
+        return Type(bits, procs, self._range_union(other))
+
+    def _range_union(self, other: "Type") -> Interval | None:
+        if not self.bits & _INT_BITS:
+            return other.range
+        if not other.bits & _INT_BITS:
+            return self.range
+        if self.range is None or other.range is None:
+            return None
+        return self.range.union(other.range)
+
+    def widen(self, new: "Type", thresholds) -> "Type":
+        """Union with widening: the bits are joined, the interval widened against ``self``."""
+        joined = self.union(new)
+        if self.bits & _INT_BITS and new.bits & _INT_BITS and self.range is not None and new.range is not None:
+            rng = self.range.widen(new.range, thresholds)
+            bits = joined.bits | (_INT_BITS if rng != joined.range else 0)  # extrapolation may leave fixnums
+            return Type(bits, joined.procs, rng)
+        return joined
 
     def intersection(self, other: "Type") -> "Type":
         bits = self.bits & other.bits
@@ -120,12 +174,46 @@ class Type:
                 if not procs:
                     bits &= ~_BIT["proc"]
                     procs = None
-        return Type(bits, procs)
+        rng = None
+        if bits & _INT_BITS:
+            if self.range is None:
+                rng = other.range
+            elif other.range is None:
+                rng = self.range
+            else:
+                rng = self.range.intersection(other.range)
+                if rng is None:
+                    bits &= ~_INT_BITS  # no integer satisfies both: the integer part is gone
+        return Type(bits, procs, rng)
 
     def complement(self) -> "Type":
-        # The complement of a known set of functions is not representable; it is widened to any
-        # procedure, which is sound.
+        # The complement of a known set of functions, or of an interval, is not representable; it is
+        # widened to any procedure or any integer, which is sound.
         return Type(ALL_BITS & ~self.bits if self.procs is None else ALL_BITS & ~(self.bits & ~_BIT["proc"]))
+
+    def with_range(self, rng: Interval | None) -> "Type":
+        return Type(self.bits, self.procs, rng)
+
+    def without_range(self) -> "Type":
+        return Type(self.bits, self.procs, None)
+
+    def refined(self, fixnum_bits: int = 62) -> "Type":
+        """Let the interval decide between ``fx`` and ``bg`` (and a ``fx``-only type bound its interval)."""
+        if not self.bits & _INT_BITS:
+            return self
+        lo, hi = -(1 << (fixnum_bits - 1)), (1 << (fixnum_bits - 1)) - 1
+        fixnums = Interval(lo, hi)
+        bits, rng = self.bits, self.range
+        if rng is not None:
+            if fixnums.contains(rng):
+                bits &= ~_BG_BIT
+            elif rng.intersection(fixnums) is None:
+                bits &= ~_FX_BIT
+        if bits & _FX_BIT and not bits & _BG_BIT and rng is not None:
+            rng = fixnums.intersection(rng)
+            if rng is None:
+                bits &= ~_FX_BIT
+        return Type(bits, self.procs, rng if bits & _INT_BITS else None)
 
     def count(self) -> int:
         return bin(self.bits).count("1")
@@ -147,10 +235,15 @@ class Type:
         if self.procs is not None:
             present = [f"proc({','.join(sorted(self.procs))})" if n == "proc" else n for n in present]
         elif len(missing) <= 2 and len(present) > len(missing):
-            return "!" + (missing[0] if len(missing) == 1 else "(" + " | ".join(missing) + ")")
+            text = "!" + (missing[0] if len(missing) == 1 else "(" + " | ".join(missing) + ")")
+            return text + (f" {self.range}" if self.range is not None else "")
         if present == ["#t", "#f"]:
-            return "bool"
-        return " | ".join(present)
+            text = "bool"
+        else:
+            text = " | ".join(present)
+        if self.range is not None and len(missing) > 2:
+            text += f" {self.range}"
+        return text
 
     def __repr__(self) -> str:
         return f"Type({self})"
@@ -200,7 +293,8 @@ class Context:
     # -- identity
     def key(self):
         if self._key is None:
-            self._key = tuple((v, self._types[v].bits, self._types[v].procs, self._rep[v]) for v in sorted(self._types))
+            self._key = tuple((v, self._types[v].bits, self._types[v].procs, self._types[v].range, self._rep[v])
+                              for v in sorted(self._types))
         return self._key
 
     def __eq__(self, other) -> bool:
@@ -264,6 +358,13 @@ class Context:
                 c._types[w] = t
         return c
 
+    def map(self, f) -> "Context":
+        """Apply ``f`` to every type (classes are kept)."""
+        c = self._copy()
+        for v in c._types:
+            c._types[v] = f(c._types[v])
+        return c
+
     def restrict(self, names: Iterable[str]) -> "Context":
         """Keep only ``names`` (in that order); classes are kept among the survivors."""
         keep = [n for n in names]
@@ -302,11 +403,15 @@ class Context:
         c._key = None
         return c
 
-    def union(self, other: "Context") -> "Context":
-        """Union with widening (the lattice is finite, so plain union); classes must agree in both."""
+    def union(self, other: "Context", thresholds=None, widen: bool = False) -> "Context":
+        """Union of two contexts; with ``widen``, intervals that grew are widened against ``self``
+        (thesis 1.1.1). Classes are kept where both agree."""
         names = list(self._types) + [v for v in other._types if v not in self._types]
         c = Context.__new__(Context)
-        c._types = {n: self.get(n).union(other.get(n)) for n in names}
+        if widen:
+            c._types = {n: self.get(n).widen(other.get(n), thresholds) for n in names}
+        else:
+            c._types = {n: self.get(n).union(other.get(n)) for n in names}
         c._rep = {}
         first: dict[tuple, str] = {}
         for n in names:

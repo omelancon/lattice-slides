@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.4.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.5.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -89,6 +89,10 @@ Versions of one block are drawn on that block's row, in creation order, with pos
 
 Companions are followers: `bbv-cfg` highlights the origin block being specialized, and a `code` block follows either the program or the bundled pseudo-code of the algorithm through a `meta=` key, so a single mechanism pairs the animation with what the audience reads.
 
+### 3.11 Abstract interpretation is the same drawing, annotated (spec section 9.6)
+
+The analysis that SBBV extends works on a fixed graph, so its animation keeps the source CFG still and changes the annotation inside the blocks: contexts gain intervals, grow by union with widening and shrink at conditionals. Reusing the `bbv-cfg` drawing and the `bbv.js` runtime (with per-frame context lines) keeps the three techniques visually comparable on consecutive slides, which is the point of showing them together. Intervals live inside the type values rather than beside them, so one context class serves all three algorithms; the versioning algorithms simply drop intervals, as the thesis's implementations do. Widening uses thresholds because that is what reproduces the thesis's own chain (decision 13), and the chain is shown in the panel rather than as a drawn lattice.
+
 ---
 
 ## 4. Use Cases
@@ -121,7 +125,11 @@ A lecture on balanced trees animates each insertion and rotation from the actual
 
 A lecture on ahead-of-time optimization of dynamic languages shows Static Basic Block Versioning specializing `find` while the source CFG highlights the block at hand, then a branch lets the lecturer pick the version limit the audience asks about, and Lambda Versioning shows entry points and return points growing across two functions. (`examples/07-basic-block-versioning`)
 
-### 4.8 Handouts
+### 4.8 Abstract interpretation lecture
+
+Before versioning, a lecture shows the classical analysis on `sum-to-n`: the panel lists the successive values of the loop counter, union after union until widening jumps to the next threshold, and `fact` shows a comparison narrowing the loop body's context. The same program files then serve the SBBV and ΛV slides. (`examples/07-basic-block-versioning`)
+
+### 4.9 Handouts
 
 After the lecture, the teacher exports the main path to PDF with the detours as an appendix and posts it. Students who missed a detour find it at the end, one click away from the slide that leads to it.
 
@@ -154,6 +162,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.3 (done).** Tree traces (insertions, rotations) and grid traces (maze search, dynamic programming tables); PDF export following a tour, with detours, branch options and linked slides as an appendix and animations exported as selected frames; presenter view with a preview of what comes next and a step scrubber.
 
+**v0.5 (done).** Abstract interpretation: integer intervals in abstract values with threshold widening and comparison narrowing, parameter annotations and comparison tests in `.bbv` programs, `abstract-interp-anim` with per-frame contexts, dead edges and the widening chain in the panel.
+
 **v0.4 (done).** Basic block versioning: a build-time model of SBBV and ΛV on programs written in a small CFG language, `bbv-anim` with one frame per event (block or instruction granularity), automatic captions, the block bands layout, `bbv-cfg` as a follower, `code` following the program or the bundled pseudo-code of the algorithms.
 
 **Later.**
@@ -182,4 +192,5 @@ Decisions taken while writing the specification, and since.
 | 9 | Import from other tools | Not supported. |
 | 10 | Tree layout | Positions per frame, computed at build time in one shared box; in-order layout for binary trees. Graphs keep one layout for all frames. |
 | 11 | PDF contents | The tour (default: main path), then an appendix of detours, branch options not taken and linked off-path slides. Steps per slide: `last` by default, a `pdf` attribute otherwise, numbered from 0 as in the URL. |
+| 13 | Abstract interpretation | Component `abstract-interp-anim` on the `bbv-cfg` drawing. Intervals for integers only, inside the type values; they decide `fx` versus `fx | bg`. Threshold widening at every join (thesis thresholds, `sign`, `none`). Direct comparison tests only (no tracking of boolean temporaries). Entry contexts from parameter annotations. Entry context in the block, exit context in the tooltip. Widening chain as a panel list. |
 | 12 | Versioning animations | Built-in components, not a plugin. Programs in a text CFG language (or Python objects). The thesis type lattice with `#f` as its own type. Thesis figure style with origin colours. Block bands layout, top to bottom by default, functions side by side, positions per frame. Companions through followers. Version limits compared with branches or detours, not a live control. One frame per event by default. |

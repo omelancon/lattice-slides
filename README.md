@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.4.0. This README covers usage. The documentation in `docs/` covers the rest:
+This is version 0.5.0. This README covers usage. The documentation in `docs/` covers the rest:
 
 - [`docs/spec.md`](docs/spec.md) defines the syntax, navigation, components and output exactly.
 - [`docs/design-report.md`](docs/design-report.md) explains the design and holds the roadmap.
@@ -102,6 +102,7 @@ code language.
 | ` ```grid-anim {source="grids.py:lcs_trace"} ` | Animated grid from a `GridTrace`: mazes, dynamic programming tables with headers and arrows |
 | ` ```bbv-anim {program="find.bbv" algorithm=sbbv limit=2} ` | Basic block versioning step by step: the specialized CFG of a small program grows, merges and settles (`algorithm=lv` for Lambda Versioning with entry and return points) |
 | ` ```bbv-cfg {program="find.bbv" follow=trace} ` | The source CFG of that program; following an animation, it highlights the block being specialized |
+| ` ```abstract-interp-anim {program="sum-to-n.bbv"} ` + `history: [B.i]` | Abstract interpretation over the fixed CFG: contexts with types and intervals grow by union with widening and are narrowed at conditionals, until a fixed point; the panel can show the widening chain of a variable |
 | ` ```plot {data="bench.csv" x=n y=ms group=algo logy=true} ` | Chart from a CSV with matplotlib (static SVG), or `backend=vega` / `backend=plotly` for interactive charts; also `source="file.py:fn"` or a raw `spec:` |
 | ` ```diff-steps {lang=python context=3} ` + `versions: [...]` | Step through versions of a file; each step marks added and removed lines |
 | ` ```dot ` | Graphviz diagram, themed |
@@ -137,7 +138,10 @@ One frame per step of the algorithm (versions queued, specialized, merged, made 
 Lambda Versioning also entry points, exit sites and return points), with automatic captions, a
 panel and node contexts in the notation of the thesis figures; see `examples/07-basic-block-versioning`.
 A `code` block can follow the animation through the program (`follow=trace`) or through the
-bundled pseudo-code of the algorithm (`file="lattice:bbv/pseudocode/sbbv.txt" meta=algo`).
+bundled pseudo-code of the algorithm (`file="lattice:bbv/pseudocode/sbbv.txt" meta=algo`). The same
+programs serve `abstract-interp-anim`, the classical analysis that SBBV extends: one context per
+block, integer intervals widened at joins (`{0}`, `[0, 1]`, `[0, 2]`, `[0, 127]`, ...) and narrowed by
+comparisons.
 Every option of every component is listed in spec section 8.8; the trace classes and the states
 the themes style are in spec section 9.1, and the program syntax in spec section 9.5.
 
@@ -199,15 +203,16 @@ Each folder in [`examples/`](examples) holds a deck and its built `talk.html`:
 6. `06-trees-and-grids`: AVL insertions with rotations traced from the lab's own code (followed by the
    code), a rotation in a detour, breadth-first search in a maze and a longest common subsequence
    table with backpointer arrows; `pdf=` picks the frames printed.
-7. `07-basic-block-versioning`: SBBV on `find` with the source CFG following along, one block at a
-   time with the algorithm's pseudo-code following, a branch on the version limit, and Lambda
-   Versioning on `power4`, on an operator written as a hyperfunction and on `fact`.
+7. `07-basic-block-versioning`: abstract interpretation of `sum-to-n` (with the widening chain) and
+   of `fact`, SBBV on `find` with the source CFG following along, one block at a time with the
+   algorithm's pseudo-code following, a branch on the version limit, and Lambda Versioning on
+   `power4`, on an operator written as a hyperfunction and on `fact`.
 
 Rebuild them all with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.4.0 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.5.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

@@ -1,0 +1,8 @@
+; Thesis figures 1 and 2: sum the integers up to n.
+function sum-to-n(n: fx | bg)
+A:  goto B(i=0, acc=0)
+B(i, acc):  if <=(i, n) goto C else goto D
+C:  i2 = +(i, 1)
+    acc2 = +(acc, i)
+    goto B(i=i2, acc=acc2)
+D:  return acc

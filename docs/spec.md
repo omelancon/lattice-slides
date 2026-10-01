@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.4.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.5.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -694,6 +694,7 @@ A `ComponentError` raised by `render` becomes error LT022 at the block's locatio
 | `grid-anim` | yaml | number of frames | `source` (returns a `GridTrace`), `values` (passed as the first argument), `cell` (cell size in drawing units, default 48, relative to the text), `panel`, `height`; other keys are passed to the trace function |
 | `bbv-anim` | yaml | number of frames | `program` (a `.bbv` file, or `file.py:function` returning a `Program` or its text) or `source` (the program text), `algorithm` (`sbbv` or `lv`), `limit` (default 2), `limits` (per function, `none` for no limit), `heuristic` (`similarity`, `arithmetic`, `random`), `entry` (the function traversed first; default the first one), `functions` (drawn, in that order; hidden functions are analysed but not drawn), `events` (kinds kept as frames), `granularity` (`block`, or `instruction` for one frame per specialized instruction), `until` (stop after that many frames), `show` (node contents among `label`, `context`, `code`), `colors` (`origin` or `none`), `direction` (`TB` or `LR`), `wrap` (versions per line of a rank before it wraps, default 4), `call_edges`, `panel` (keys among `queue`, `versions`, `checks`, `merges`, `limit`), `caption` (`auto` or `none`), `prims` (extra primitives), `height`, `max_steps`; other keys are passed to the program function (section 9.5) |
 | `bbv-cfg` | yaml | 1, or leader's count when following | `program` or `source`, `functions`, `show` (default `label` and `code`), `colors`, `direction`, `prims`, `height`; as a follower of a `bbv-anim`, highlights the block named by `meta[i]["block"]` |
+| `abstract-interp-anim` | yaml | number of frames | `program` or `source`, `entry` (the function analysed; default the first), `thresholds` (`thesis`, `sign`, `none` or a list of integers), `narrowing` (default `true`), `fixnum_bits` (default 62), `events` (among `start`, `dequeue`, `instruction`, `propagate`, `done`), `granularity` (`block` or `instruction`), `until`, `history` (`BLOCK.VAR` entries whose chain of entry values the panel shows), `panel` (keys among `worklist`, `iterations`, `history`), `show`, `colors`, `direction`, `wrap`, `caption`, `prims`, `height`, `max_steps` (section 9.6) |
 | `math` | text | 1 | display math block |
 
 The exact option schemas are the pydantic `Options` models in `src/lattice/components/`.
@@ -775,6 +776,9 @@ Trees are the exception, since insertions and rotations move nodes. `tree-anim` 
 ```ebnf
 program     = { function } ;
 function    = "function" SP NAME "(" [ params ] ")" { SP option } NL { block } ;
+params      = param { "," param } ;
+param       = NAME [ ":" type ] ;                 (* an annotation gives the entry context *)
+type        = TYPE [ interval ] ;                 (* "fx | bg", "fx [0, 100]", "num (-∞, 5]" *)
 option      = "hidden" | "limit=" ( INT | "none" ) ;
 block       = LABEL [ "(" [ params ] ")" ] ":" [ SP instr ] NL { SP instr NL } ;
 instr       = VAR "=" PRIM "(" [ args ] ")" | VAR "=" arg
@@ -782,16 +786,17 @@ instr       = VAR "=" PRIM "(" [ args ] ")" | VAR "=" arg
             | "goto" SP LABEL [ "(" [ binds | args ] ")" ]
             | "call" SP callee "(" [ args ] ")" SP "->" SP LABEL [ "(" [ params ] ")" ]
             | "return" SP ( arg | PRIM "(" [ args ] ")" ) | "fail" ;
-test        = PRIM "(" arg ")" | VAR ;          (* a type test, or the truthiness of a variable *)
+test        = PRIM "(" [ args ] ")" | VAR ;      (* a predicate (type test, comparison), or the truthiness of a variable *)
 binds       = VAR "=" arg { "," VAR "=" arg } ;  (* rebinding of the target's parameters by name *)
 arg         = VAR | INT | FLOAT | STRING | "#t" | "#f" | "nil" ;
 ```
 
-- The first block of a function is its entry. Every block ends with `if`, `goto`, `call`, `return` or `fail`. Labels are local to their function.
+- The first block of a function is its entry. Every block ends with `if`, `goto`, `call`, `return` or `fail`. Labels are local to their function. A parameter annotation (`n: fx | bg`, `m: fx [0, 100]`) is the parameter's type in the generic entry context (default `any`); the versioning algorithms keep its types and drop its interval.
+- A test is a primitive returning a boolean: a type test narrows its argument on each branch; a comparison (`<`, `<=`, `=`, `>`, `>=` and the `fx` variants) narrows the intervals of two integer arguments; other predicates (`eq?`, `not`) narrow nothing. A bare variable is tested for truthiness (`#f` or not).
 - A block's **parameters** are the variables live at its entry plus the function's parameters (always tracked, as ΛV contexts do), or the explicit list when one is written (which MUST cover the variables used; the function's parameters and `#res` are added). A block reached by a `call` is a **return block**: it also receives `#res`, the returned value. `goto A(x=y)` rebinds the parameter `x` of `A` to `y`; positional arguments are allowed only when `A` declares its parameters; a function parameter cannot be rebound.
 - `call f(args) -> K` continues at the return block `K`; `-> K(vars)` names the variables passed to it (by default the ones live at `K`). `f` is a function of the program, or a variable holding a procedure. Under SBBV every call is opaque (`#res` is `any`); under ΛV a call to a known function requests a specialized entry point and receives one return point per exit contract of that entry (thesis chapter 3).
 - Primitives come from a table (`lattice.bbv.prims`): type tests (`fixnum?`, `flonum?`, `bignum?`, `number?`, `pair?`, `null?`, `procedure?`, `boolean?`, `string?`, `integer?`), fixnum operations (`fx+`, `fx-`, `fx*`, the overflow-checking `fx+?`, `fx-?`, `fx*?` returning `fx | #f`, comparisons), flonum operations (`fl+`, `fl-`, `fl*`, `fl/`, comparisons), generic arithmetic (`+`, `-`, `*`, `/`, `##+` and so on: arguments are narrowed to numbers, two fixnums may overflow to a bignum), `car`, `cdr`, `##car`, `##cdr`, `cons`, `eq?`, `eqv?`, `equal?`, `not`, `display`, `read`. A `prims` option adds or overrides entries: `{name: {args: [fx, fx], result: "fx | #f"}}` or `{name: {test: pair}}`. A primitive whose argument requirements cannot be met in a context makes the block fail at that point.
-- Types are sets of `fx`, `bg`, `fl`, `#t`, `#f`, `nil`, `pair`, `str`, `proc`, `other`, written `fx | fl`, `!fx`, `bool`, `num`, `any`, `⊥`; a procedure value may carry the function it is known to be (`proc(square)`). Contexts map variables to types and keep equivalence classes of variables holding the same value, printed `a/b: fx`. Type tests narrow both branches; assignments break equivalences; `x = y` creates one.
+- Types are sets of `fx`, `bg`, `fl`, `#t`, `#f`, `nil`, `pair`, `str`, `proc`, `other`, written `fx | fl`, `!fx`, `bool`, `num`, `any`, `⊥`; a procedure value may carry the function it is known to be (`proc(square)`); an integer may carry an interval (`fx [0, 100]`, `fx | bg [1, ∞)`, `{0}` for a singleton), which only the abstract interpreter tracks (section 9.6). Contexts map variables to types and keep equivalence classes of variables holding the same value, printed `a/b: fx`. Type tests narrow both branches; assignments break equivalences; `x = y` creates one.
 - A program may also be built in Python (`lattice.bbv.ir.Program`, `Function`, `Block` and the instruction classes) and returned by the function named in `program`, which then receives the block's extra options as keyword arguments; it may also return the program text.
 
 **Algorithms.** `algorithm: sbbv` implements thesis algorithms 1.1 to 1.7: breadth-first traversal of versions, `mergeSome` when a block has more reachable versions than its limit (pairs are merged until the limit holds, the pair chosen by the heuristic), reachability recomputed after every change, versions skipped while unreachable and requeued when reconnected. `algorithm: lv` implements algorithms 2.1 to 2.10 on top: specialized entry points at call sites, exit sites, return points computed as `callContext ∩ exitSite.contextAfter`, cascading additions before removals, generic entries of the other functions queued when the queue first empties, return point indices allocated at the end (one index per distinct exit contract of a function, reachable exits first). Jump cascades are not removed. Version labels are the block name followed by the creation rank of the version among the block's versions (`A1`, `A2`; `J2.1` when the block name ends with a digit).
@@ -810,7 +815,19 @@ arg         = VAR | INT | FLOAT | STRING | "#t" | "#f" | "nil" ;
 
 `state` is `queued` or `done` (`shown`, in instruction frames, is the number of code lines specialized so far); `mark` is `active` (the version being processed), `new`, `back` (reachable again), `merge` (a merge candidate), `merged` (the result) or `gone` (unreachable since this frame, drawn once more at its old place). Edge kinds are `goto`, `true`, `false`, `return` (dashed, labelled with the return point indices) and `call` (drawn only with `call_edges`). Static text lives in `data.tables`: per version its label, block, context lines, specialized code (with removed tests marked) and exit context; per function its blocks. `meta[i]` holds `event`, `block` (the origin block, for `bbv-cfg`), `function`, `lines` and `line` (the program lines of that block, or of the instruction), and `algo` (the lines of the bundled pseudo-code listing `lattice:bbv/pseudocode/sbbv.txt` or `lv.txt` executed by the event, for a `code` block with `meta=algo`).
 
-**Layout** (block bands). The source CFG of each function is laid out once with Graphviz when available (ranks and left-to-right order; without Graphviz, longest paths and declaration order). Per frame, the live versions of a rank are packed along it, sorted by their block's order and creation id, in lines of at most `wrap` versions, and centred in the function's column (`TB`) or band (`LR`); functions sit side by side in the order of `functions`. Node sizes come from the text shown, so a version never resizes; the drawing box is the union over all frames. Back edges travel along a lane beside the function. On a single step the runtime glides nodes between their two known positions; any other move places them directly.
+**Layout** (block bands). The source CFG of each function is laid out once with Graphviz when available (ranks and left-to-right order; without Graphviz, longest paths and declaration order). Per frame, the live versions of a rank are packed along it, sorted by their block's order and creation id, in lines of at most `wrap` versions, and centred in the function's column (`TB`) or band (`LR`); functions sit side by side in the order of `functions`. Node sizes come from the text shown, so a version never resizes; the drawing box is the union over all frames. Back edges travel along a lane beside the function. On a single step the runtime glides nodes between their two known positions; any other move places them directly. The drawing keeps its size across frames: the panel has a fixed width, and the caption fits in the space left below the drawing, shrinking its text when a long caption would not fit.
+
+### 9.6 Abstract interpretation
+
+`abstract-interp-anim` runs the classical analysis of thesis chapter 1.1 on one function of a program written as in section 9.5: the CFG is fixed, every block has one entry context, and a FIFO worklist re-interprets a block whenever its entry context grows, until a fixed point. The package `lattice.bbv` holds the interval lattice (`intervals`), the interpreter (`absint`) and its frames (`AbstractTrace` in `trace`).
+
+**Abstract values.** A type as in section 9.5 plus, for integers, an interval `[lo, hi]` with integer or infinite bounds (`{0}`, `[0, 127]`, `[1, ∞)`, `(-∞, ∞)`; large bounds print as `2^31-1`). Integer constants carry singleton intervals; flonums carry none. The interval and the type inform each other: an integer whose interval fits the fixnum range (`fixnum_bits`, default 62) is `fx`, beyond it `fx | bg`; a `fixnum?` test clips a known interval to that range.
+
+**Transfer functions.** Assignments apply the primitive's result rule, which includes interval arithmetic for `+`, `-`, `*`, `quotient`, `abs`, `min`, `max` and the `fx` variants (`fx+?` and friends return `fx | #f` with the interval of the sum); `goto` rebinds parameters; a call is opaque (`#res: any`); `return` ends the block. At an `if`, each outcome narrows the context: type tests through the type lattice, comparisons through the intervals (`>(i, 0)` holding gives `i ∈ [1, ∞)`, failing gives `i ∈ (-∞, 0]`). With `narrowing: false` outcomes are still found impossible or possible but nothing is learned from them.
+
+**Join.** The context sent along an edge is joined into the successor's entry context by union with widening: types are joined; an interval bound that grew moves to the next threshold at or beyond it. The `thesis` thresholds, `0, 1, 2, 127, 128, 2^31-1, 2^31, 2^63-1, 2^63, ∞` and their negatives, reproduce figure 2 step for step; `sign` keeps `-1, 0, 1`; `none` is plain union (the run then stops at `max_steps` if it does not converge, with warning LT046). A successor whose context changed is queued once. An edge whose outgoing context is `⊥` is dead; a block never reached stays `⊥`.
+
+**Frames.** One frame per event: `start`, `dequeue`, `instruction` (with `granularity: instruction`), `propagate` (one per outgoing edge, with result `first`, `union`, `widened`, `unchanged` or `dead`) and `done`. Nodes are the blocks (`state` `done` or `dead`; `mark` `active`, `new`, `changed`, `widened`), each carrying `lines` (its entry context for that frame; an integer with no known interval shows `(-∞, ∞)` as in the figures) and `after` (its exit context, shown in the tooltip); the propagated edge is `new` (changed), `active` (unchanged) or `gone` (dead). Node sizes are computed over all frames. The panel offers `worklist`, `iterations` and, for each `history` entry `BLOCK.VAR`, the chain of entry values of that variable prefixed with `∪` (union) or `∇` (widening), the red path of figure 2. `meta[i]` holds `event`, `block`, `function`, `lines`, `line` and `algo` (lines of `lattice:bbv/pseudocode/absint.txt`). The drawing is the block bands layout of `bbv-cfg`.
 
 ---
 
@@ -873,7 +890,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.4.0">
+  <meta name="generator" content="lattice 0.5.0">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -1213,3 +1230,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.3 | PDF export, `pdf` slide attribute, LT053 | 3.5, 11.5, 12 |
 | 0.4 | Basic block versioning: `bbv-anim`, `bbv-cfg`, the `.bbv` program syntax, SBBV and ΛV frames, block bands layout | 8.8, 9.1, 9.5 |
 | 0.4 | `code`: `meta=` picks the leader's meta key; `file="lattice:..."` reads a bundled file | 8.8 |
+| 0.5 | Abstract interpretation: `abstract-interp-anim`, intervals in types, parameter annotations and comparison tests in `.bbv` programs | 8.8, 9.5, 9.6 |

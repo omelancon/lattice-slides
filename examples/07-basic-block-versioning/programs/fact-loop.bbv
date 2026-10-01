@@ -1,0 +1,8 @@
+; Thesis figure 4: the factorial as a loop, with an integer argument.
+function fact(n: fx | bg)
+A:  goto B(i=n, acc=1)
+B(i, acc):  if >(i, 0) goto C else goto D
+C:  i2 = -(i, 1)
+    acc2 = *(acc, i)
+    goto B(i=i2, acc=acc2)
+D:  return acc

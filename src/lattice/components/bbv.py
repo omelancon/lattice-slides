@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict
 from ..anim import frame_store
 from ..bbv.ir import Program, ProgramError, parse
 from ..bbv.layout import layout_frames
-from ..bbv.trace import EVENTS, VersioningTrace
+from ..bbv.trace import ABSINT_EVENTS, EVENTS, AbstractTrace, VersioningTrace
 from .base import Component, ComponentError, RenderResult, register
 
 SHOW = ["label", "context", "code"]
@@ -47,8 +47,23 @@ class BbvCfgOptions(BbvCommonOptions):
     pass
 
 
+class AbstractInterpOptions(BbvCommonOptions):
+    entry: str | None = None  # the function analysed
+    thresholds: str | list[int] = "thesis"
+    narrowing: bool = True
+    fixnum_bits: int = 62
+    events: list[str] | None = None
+    granularity: Literal["block", "instruction"] = "block"
+    until: int | None = None
+    panel: list[str] | None = None
+    history: list[str] | None = None
+    caption: Literal["auto", "none"] = "auto"
+    max_steps: int = 2000
+
+
 _KNOWN = {"program", "source", "functions", "show", "colors", "direction", "height", "prims", "algorithm", "limit", "limits",
-          "heuristic", "entry", "events", "granularity", "until", "call_edges", "panel", "caption", "max_steps", "wrap"}
+          "heuristic", "entry", "events", "granularity", "until", "call_edges", "panel", "caption", "max_steps", "wrap",
+          "thresholds", "narrowing", "fixnum_bits", "history"}
 
 
 def load_program(opts: BbvCommonOptions, ctx) -> Program:
@@ -191,3 +206,42 @@ class BbvCfg(Component):
                 "frames": frame_store(frames), "show": show, "colors": _colors({"program": program_table}, ctx, opts.colors),
                 "callEdges": False, "panel": None, "height": opts.height, "highlight": highlight, "static": True}
         return RenderResult('<div class="lt-bbv-anim lt-bbv-cfg"></div>', data=data, positions=count)
+
+
+@register("abstract-interp-anim")
+class AbstractInterpAnim(Component):
+    """Abstract interpretation over the fixed CFG of one function (thesis 1.1)."""
+
+    Options = AbstractInterpOptions
+    body = "yaml"
+    runtime = "bbv.js"
+
+    def render(self, block, opts: AbstractInterpOptions, ctx) -> RenderResult:
+        prog = load_program(opts, ctx)
+        show = _show(opts, SHOW)
+        if opts.events is not None:
+            bad = [e for e in opts.events if e not in ABSINT_EVENTS]
+            if bad:
+                raise ComponentError(f"events: unknown kind(s) {bad}; use {ABSINT_EVENTS}")
+        if opts.functions and len(opts.functions) > 1:
+            raise ComponentError("abstract-interp-anim analyses one function: give it as 'entry'")
+        try:
+            trace = AbstractTrace(prog, function=opts.entry or (opts.functions[0] if opts.functions else None),
+                                  thresholds=opts.thresholds, narrowing=opts.narrowing, fixnum_bits=opts.fixnum_bits,
+                                  events=opts.events, granularity=opts.granularity, history=opts.history,
+                                  caption=opts.caption, until=opts.until, max_steps=opts.max_steps)
+        except (ProgramError, ValueError) as e:
+            raise ComponentError(str(e)) from None
+        if trace.ai.truncated:
+            ctx.warn(f"abstract-interp-anim: no fixed point after {opts.max_steps} steps (use thresholds for widening)")
+        box, positions = layout_frames(trace.tables, trace.frames, show, _layout_fn(ctx), opts.direction, opts.wrap)
+        frames = [{**f, "pos": p} for f, p in zip(trace.frames, positions)]
+        cfg = ctx.frames_config
+        panel = None
+        if opts.panel is not None:
+            panel = [k for k in opts.panel if k != "history"] + (opts.history or [] if "history" in opts.panel else [])
+        data = {"box": box, "tables": trace.tables, "frames": frame_store(frames, cfg.max_full_bytes, cfg.keyframe_interval),
+                "show": show, "colors": _colors(trace.tables, ctx, opts.colors), "callEdges": False,
+                "panel": panel, "height": opts.height, "algorithm": "absint", "static": True}
+        return RenderResult('<div class="lt-bbv-anim lt-bbv-absint"></div>', data=data, positions=len(frames),
+                            meta=trace.meta)

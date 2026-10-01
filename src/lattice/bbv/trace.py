@@ -6,7 +6,7 @@ them, an automatic caption and a panel. Static text (contexts, code) lives once 
 from __future__ import annotations
 
 from ..anim import Trace
-from .ir import RESULT, Program
+from .ir import RESULT, If, Program
 from .lv import LambdaVersioning
 from .sbbv import Specializer, Version
 
@@ -391,3 +391,196 @@ class VersioningTrace(Trace):
                                "edges": edges, "line": b.line})
             out["functions"].append({"name": name, "params": fn.params, "blocks": blocks})
         return out
+
+
+# ====================================================================== abstract interpretation
+
+ABSINT_ALGO = {"start": [2, 3, 4], "dequeue": [5, 6], "done": [5],
+               "instruction": {"assign": [18], "if": [19], "goto": [20], "call": [21], "return": [22], "fail": [22]},
+               "propagate": {"dead": [9, 10], "unchanged": [11, 12], "first": [11, 12, 13, 14],
+                             "union": [11, 12, 13, 14], "widened": [11, 12, 13, 14]}}
+ABSINT_EVENTS = ["start", "dequeue", "instruction", "propagate", "done"]
+
+
+def context_lines(ctx) -> list[str]:
+    """Context lines for display: an integer with no known interval shows ``(-∞, ∞)``, as in the figures."""
+    from .absint import value_text
+
+    out = []
+    for line in ctx.lines():
+        name, _, _text = line.partition(": ")
+        out.append(f"{name}: {value_text(ctx.get(name.split('/')[0]))}")
+    return out
+
+
+class AbstractTrace(Trace):
+    """Frames of an abstract interpretation run (thesis 1.1): the CFG stays, its annotations change."""
+
+    def __init__(self, program: Program, *, function: str | None = None, thresholds="thesis", narrowing: bool = True,
+                 fixnum_bits: int = 62, events: list[str] | None = None, granularity: str = "block",
+                 history: list[str] | None = None, caption: str = "auto", until: int | None = None,
+                 max_steps: int = 2000):
+        from .absint import AbstractInterpreter
+
+        super().__init__({})
+        self.program = program
+        self.ai = AbstractInterpreter(program, function, thresholds=thresholds, narrowing=narrowing,
+                                      fixnum_bits=fixnum_bits, max_steps=max_steps, emit=self._on_event)
+        self.fn = self.ai.function
+        self.visible = [self.fn.name]
+        self.ids = {b.name: str(i + 1) for i, b in enumerate(self.fn.blocks.values())}
+        if events is not None:
+            self.events = set(events)
+        else:
+            self.events = set(ABSINT_EVENTS) if granularity == "instruction" else set(ABSINT_EVENTS) - {"instruction"}
+        self.tracked = list(history or [])
+        for key in self.tracked:
+            block, _, var = key.partition(".")
+            if block not in self.fn.blocks:
+                raise ValueError(f"history: unknown block {block!r}")
+        self.caption_mode = caption
+        self.until = until
+        self.stopped = False
+        self.max_lines: dict[str, list[str]] = {}
+        self.ai.run()
+        if not self.frames:
+            self._push("done", {})
+        self.finalize()
+
+    # ------------------------------------------------------------ events
+    def _on_event(self, kind: str, **info) -> None:
+        if self.stopped or (kind not in self.events and kind != "done"):
+            return
+        self._push(kind, info)
+        if self.until is not None and len(self.frames) >= self.until:
+            self.stopped = True
+
+    def _push(self, kind: str, info: dict) -> None:
+        ai = self.ai
+        nodes: dict[str, dict] = {}
+        for name, block in self.fn.blocks.items():
+            vid = self.ids[name]
+            ctx = ai.contexts[name]
+            if kind == "instruction" and info.get("block") == name:
+                lines = context_lines(info["context"])
+            else:
+                lines = context_lines(ctx) if ctx is not None else ["⊥"]
+            after = context_lines(ai.after[name]) if ai.after[name] is not None else []
+            n = {"state": "done" if ctx is not None else "dead", "lines": lines, "after": after}
+            if block is self.fn.entry:
+                n["entry"] = True
+            nodes[vid] = n
+            best = self.max_lines.setdefault(vid, [])
+            for i, text in enumerate(lines):
+                if i >= len(best):
+                    best.append(text)
+                elif len(text) > len(best[i]):
+                    best[i] = text
+        edges: dict[str, dict] = {}
+        for name, block in self.fn.blocks.items():
+            last = block.instrs[-1]
+            for t in block.successors():
+                ek = "goto"
+                if isinstance(last, If):
+                    ek = "true" if t == last.then else "false"
+                elif last.__class__.__name__ == "Call":
+                    ek = "return"
+                key = f"{self.ids[name]}->{self.ids[t]}:{ek}"
+                e = {"kind": ek}
+                if (name, t) in ai.dead:
+                    e["state"] = "gone"
+                edges[key] = e
+        # marks
+        if kind == "start":
+            nodes[self.ids[info["block"]]]["mark"] = "new"
+        elif kind in ("dequeue", "instruction"):
+            nodes[self.ids[info["block"]]]["mark"] = "active"
+        elif kind == "propagate":
+            nodes[self.ids[info["src"]]]["mark"] = "active"
+            dst = self.ids[info["dst"]]
+            res = info["result"]
+            key = f"{self.ids[info['src']]}->{dst}:{info['edge']}"
+            if res == "dead":
+                edges[key]["state"] = "gone"
+            else:
+                edges[key]["state"] = "new" if res != "unchanged" else "active"
+            if res == "first":
+                nodes[dst]["mark"] = "new"
+            elif res == "union":
+                nodes[dst]["mark"] = "changed"
+            elif res == "widened":
+                nodes[dst]["mark"] = "widened"
+        frame = {"nodes": nodes, "edges": edges, "panel": self._panel(),
+                 "caption": self._caption(kind, info) if self.caption_mode == "auto" else ""}
+        self.frames.append(frame)
+        self.meta.append(self._meta(kind, info))
+
+    def _panel(self) -> dict:
+        ai = self.ai
+        panel = {"worklist": list(ai.worklist), "iterations": ai.steps}
+        for key in self.tracked:
+            chain = []
+            for mark, text in ai.history.get(key, []):
+                chain.append(f"{mark} {text}".strip())
+            panel[key] = chain
+        return panel
+
+    def _caption(self, kind: str, info: dict) -> str:
+        ai = self.ai
+        if kind == "start":
+            return f"Start at {info['block']} with {', '.join(context_lines(ai.contexts[info['block']]))}."
+        if kind == "dequeue":
+            return f"Interpret {info['block']}: {', '.join(context_lines(ai.contexts[info['block']]))}."
+        if kind == "instruction":
+            return f"{info['block']}, {info['text']}: {info['note']}."
+        if kind == "propagate":
+            src, dst, res = info["src"], info["dst"], info["result"]
+            if res == "dead":
+                return f"{src} → {dst} is dead: {info['what']} cannot hold here."
+            if res == "first":
+                return f"{dst} is reached: {', '.join(context_lines(ai.contexts[dst]))}; {dst} is queued."
+            if res == "unchanged":
+                return f"{dst} already covers what {src} sends: nothing changes."
+            parts = []
+            for v, old, out, joined, widened in info["changes"][:3]:
+                parts.append(f"{v}: {old} ∪ {out} {'widened to' if widened else '='} {joined}")
+            more = len(info["changes"]) - 3
+            if more > 0:
+                parts.append(f"and {more} other{'s' if more > 1 else ''}")
+            tail = f"; {dst} is requeued." if info.get("queued") else "."
+            return f"{dst}: " + "; ".join(parts) + tail
+        if kind == "done":
+            text = f"Fixed point after {ai.steps} iteration{'s' if ai.steps != 1 else ''}."
+            if ai.truncated:
+                text = "Stopped after the maximum number of steps without converging. " + text
+            return text
+        return ""
+
+    def _meta(self, kind: str, info: dict) -> dict:
+        meta: dict = {"event": kind, "function": self.fn.name}
+        name = info.get("block") or info.get("dst")
+        if name:
+            b = self.fn.blocks[name]
+            meta["block"] = b.key
+            lines = [i.line for i in b.instrs]
+            meta["lines"] = list(range(min(lines), max(lines) + 1)) if lines else []
+            meta["line"] = b.line
+        if kind == "instruction":
+            meta["lines"], meta["line"] = [info["line"]], info["line"]
+            meta["algo"] = ABSINT_ALGO["instruction"].get(info["what"], [])
+        elif kind == "propagate":
+            meta["algo"] = ABSINT_ALGO["propagate"].get(info["result"], [])
+        else:
+            meta["algo"] = ABSINT_ALGO.get(kind, [])
+        return meta
+
+    # ------------------------------------------------------------ tables
+    def finalize(self) -> None:
+        self.tables = {"program": VersioningTrace._program_table(self), "versions": {}}
+        for name, b in self.fn.blocks.items():
+            vid = self.ids[name]
+            self.tables["versions"][vid] = {
+                "label": b.name, "block": b.key, "function": self.fn.name, "name": b.name,
+                "context": self.max_lines.get(vid, []),  # the longest line of each slot, for sizing
+                "code": [{"text": i.text, "line": i.line} for i in b.instrs], "after": [],
+            }

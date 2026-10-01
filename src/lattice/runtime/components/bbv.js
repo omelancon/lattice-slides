@@ -29,8 +29,14 @@
     g.appendChild(label);
     let y = PAD_Y + LABEL_H + 12;
     const codeEls = [];
+    const ctxEls = [];
     if (inst.show.includes("context")) {
-      for (const line of v.context) { g.appendChild(svg("text", { class: "lt-bbv-ctx", x: PAD_X, y }, `;; ${line}`)); y += LINE_H; }
+      for (const line of v.context) {
+        const t = svg("text", { class: "lt-bbv-ctx", x: PAD_X, y }, `;; ${line}`);
+        g.appendChild(t);
+        ctxEls.push(t);
+        y += LINE_H;
+      }
     }
     let ellipsis = null;
     if (inst.show.includes("code")) {
@@ -45,9 +51,10 @@
     }
     const tip = [v.context.length ? `;; ${v.context.join("\n;; ")}` : "", ...v.code.map((c) => c.text)];
     if (v.after && v.after.length) tip.push("", `after: ${v.after.join(", ")}`);
-    g.appendChild(svg("title", {}, tip.filter((s, i) => s !== "" || i > 0).join("\n")));
+    const title = svg("title", {}, tip.filter((s, i) => s !== "" || i > 0).join("\n"));
+    g.appendChild(title);
     inst.gNodes.appendChild(g);
-    return (inst.nodes[vid] = { g, star, codeEls, ellipsis, w, h });
+    return (inst.nodes[vid] = { g, star, codeEls, ctxEls, ellipsis, title, w, h, v });
   }
 
   function edge(inst, key) {
@@ -121,6 +128,19 @@
     }
   }
 
+  // The caption lives in whatever space the drawing leaves: a long caption shrinks its text to fit
+  // instead of pushing the drawing up (which rescaled it, since the canvas keeps its aspect ratio).
+  function fitCaption(el) {
+    el.style.fontSize = "";
+    if (!el.clientHeight) return;  // hidden slide: fitted again by the observer when it shows
+    const base = parseFloat(getComputedStyle(el).fontSize);
+    let size = base;
+    while (el.scrollHeight > el.clientHeight + 1 && size > base * 0.5) {
+      size -= 1;
+      el.style.fontSize = `${size}px`;
+    }
+  }
+
   function mount(el, data, api) {
     const root = el.querySelector(".lt-bbv-anim");
     root.innerHTML = `<div class="lt-ga-main"><div class="lt-ga-canvas"></div><div class="lt-ga-panel" hidden></div></div><div class="lt-ga-caption"></div>`;
@@ -146,9 +166,11 @@
     const gNodes = svg("g", { class: "lt-nodes" });
     s.append(gHead, gEdges, gNodes);
     canvas.appendChild(s);
+    const caption = root.querySelector(".lt-ga-caption");
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(() => fitCaption(caption)).observe(caption);
     return { id, root, box, T: data.tables, show: data.show, colors: data.colors || {}, callEdges: !!data.callEdges,
       store: api.frames(data.frames), gEdges, gNodes, nodes: {}, edges: {}, at: {}, raf: 0, keys: data.panel || [],
-      panel: root.querySelector(".lt-ga-panel"), caption: root.querySelector(".lt-ga-caption"), highlight: data.highlight };
+      panel: root.querySelector(".lt-ga-panel"), caption, highlight: data.highlight };
   }
 
   function show(inst, position, info) {
@@ -163,6 +185,12 @@
       const mark = hl != null ? (vid === hl ? "active" : "none") : (st.mark || "none");
       n.g.setAttribute("class", `lt-bbv-node st-${st.state || "done"} mk-${mark}${n.g.classList.contains("has-origin") ? " has-origin" : ""}`);
       n.star.textContent = st.entry ? " ∗" : "";
+      if (st.lines) {  // the context changes with the frame (abstract interpretation)
+        n.ctxEls.forEach((t, i) => { t.textContent = i < st.lines.length ? `;; ${st.lines[i]}` : ""; });
+        const tip = [`;; ${st.lines.join("\n;; ")}`, ...n.v.code.map((c) => c.text)];
+        if (st.after && st.after.length) tip.push("", `after: ${st.after.join(", ")}`);
+        n.title.textContent = tip.join("\n");
+      }
       const queued = st.state === "queued";
       const shown = st.shown != null ? st.shown : n.codeEls.length;
       if (n.ellipsis) n.ellipsis.style.display = (queued || shown === 0) && n.codeEls.length ? "" : "none";
@@ -202,6 +230,7 @@
     }
     Lattice.renderPanel(inst.panel, f.panel, inst.keys);
     inst.caption.textContent = f.caption || "";
+    fitCaption(inst.caption);
   }
 
   function leave(inst) {
@@ -211,4 +240,5 @@
 
   Lattice.component("bbv-anim", { mount, show, leave });
   Lattice.component("bbv-cfg", { mount, show, leave });
+  Lattice.component("abstract-interp-anim", { mount, show, leave });
 })();

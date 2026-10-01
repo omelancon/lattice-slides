@@ -46,6 +46,51 @@ def test_context_narrowing_and_classes():
     assert c != d and c == Context({"a": Type.of("fx"), "b": Type.of("fx")}).equate("a", "b")
 
 
+def test_intervals_widen_like_figure_2():
+    from lattice.bbv.intervals import THESIS_THRESHOLDS, Interval
+
+    chain = [Interval.of(0)]
+    while True:
+        prev = chain[-1]
+        nxt = prev.widen(Interval(prev.lo + 1, prev.hi + 1), THESIS_THRESHOLDS)  # i ∪ (i + 1)
+        if nxt == prev:
+            break
+        chain.append(nxt)
+    assert [str(i) for i in chain] == ["{0}", "[0, 1]", "[0, 2]", "[0, 127]", "[0, 128]", "[0, 2^31-1]", "[0, 2^31]",
+                                       "[0, 2^63-1]", "[0, 2^63]", "[0, ∞)"]
+    assert Interval(1, 3).widen(Interval(1, 3), THESIS_THRESHOLDS) == Interval(1, 3)
+    assert Interval(0, 5).widen(Interval(-1, 5), None) == Interval(-1, 5)
+
+
+def test_interval_arithmetic_and_narrowing():
+    from math import inf
+
+    from lattice.bbv.intervals import Interval
+
+    assert Interval(1, inf) * Interval(1, inf) == Interval(1, inf)
+    assert Interval(1, inf) - Interval(1, 1) == Interval(0, inf)
+    assert Interval(-2, 3) * Interval(-1, 4) == Interval(-8, 12)
+    assert Interval(-inf, inf).lt(Interval(0, 0)) == (Interval(-inf, -1), Interval(0, 0))
+    assert Interval(0, 0).lt(Interval(-inf, 0)) is None  # 0 < x never holds when x <= 0
+    assert Interval(5, 5).ne(Interval(5, 5)) is None
+    assert Type.parse("fx [0, 100]").refined() == Type.integer(0, 100).refined()
+    assert str(Type.integer(2**70, 2**70 + 1).refined()) == "bg [2^70, 2^70+1]"
+    assert Type.integer(0, 5).intersection(Type.integer(6, 9)).is_bottom()
+    assert str(Type.of("fx").union(Type.integer(0, 5).refined())) == "fx"  # unknown fixnum: the interval is lost
+
+
+def test_comparison_narrowing_rules():
+    from lattice.bbv.prims import DEFAULT_PRIMS
+
+    gt = DEFAULT_PRIMS[">"].narrow
+    yes, no = gt([Type.of("fx", "bg"), Type.integer(0, 0)])
+    assert str(yes[0]) == "fx | bg [1, ∞)" and str(no[0]) == "fx | bg (-∞, 0]"
+    yes, no = gt([Type.integer(5, 9).refined(), Type.integer(10, 10)])
+    assert yes is None and str(no[0]) == "fx [5, 9]"
+    yes, no = DEFAULT_PRIMS["<="].narrow([Type.of("fx", "fl"), Type.of("fx")])  # a flonum may be involved
+    assert yes == no == [Type.of("fx", "fl"), Type.of("fx")]
+
+
 # ------------------------------------------------------------ text syntax
 
 def test_parse_gives_blocks_their_live_variables():
@@ -67,6 +112,11 @@ def test_parse_errors_point_at_the_line():
         parse("function f(x)\nA:  return y\n")
     p = parse("function f(x)\nA:  goto B(i=x)\nB(i):  return i\n")
     assert p.functions["f"].blocks["B"].params == ["x", "i"]
+    p = parse("function g(n: fx | bg, m: fx [0, 100])\nA:  if >(n, m) goto B else goto C\nB:  return n\nC:  return m\n")
+    assert str(p.functions["g"].param_types["m"]) == "fx [0, 100]"
+    assert [str(a) for a in p.functions["g"].blocks["A"].instrs[0].args] == ["n", "m"]
+    with pytest.raises(ProgramError, match="not a predicate"):
+        parse("function f(x)\nA:  if car(x) goto B else goto B\nB:  return x\n")
 
 
 # ------------------------------------------------------------ SBBV (thesis figure 6)
@@ -97,6 +147,17 @@ def test_sbbv_limit_one_merges_the_loop_entry():
     assert [v.label for v in loop_versions(spec, "A")] == ["A1"]
     j2 = loop_versions(spec, "J2")[0]
     assert spec.by_id[j2.edges[0].dst].label == "A1"  # the loop goes back to the generic entry
+
+
+def test_sbbv_ignores_intervals_but_honours_annotations():
+    prog = parse("function f(n: fx | bg)\nA:  k = 3\n    if >(n, k) goto B else goto C\nB:  return n\nC:  return k\n")
+    spec = Specializer(prog, limit=2)
+    spec.run()
+    entry = next(v for v in spec.final_versions() if v.is_entry)
+    assert str(entry.context) == "n: fx | bg"
+    b = next(v for v in spec.final_versions() if v.block.name == "B")
+    c = next(v for v in spec.final_versions() if v.block.name == "C")
+    assert b.context.get("n").range is None and c.context.get("k") == Type.of("fx")
 
 
 def test_sbbv_is_deterministic():
@@ -268,3 +329,65 @@ def test_component_reports_program_errors(deck):
     assert any(d.code == "LT022" and "unknown block" in d.message for d in diags.items)
     root = deck({"talk.md": '# A\n```bbv-anim {program="missing.bbv"}\n```\n'})
     assert any(d.code == "LT045" for d in check_deck(root, use_cache=False).items)
+
+
+# ------------------------------------------------------------ abstract interpretation (thesis 1.1)
+
+def test_absint_sum_to_n_matches_figures_1_and_2():
+    from lattice.bbv.absint import AbstractInterpreter
+
+    ai = AbstractInterpreter(program("sum-to-n.bbv"))
+    ai.run()
+    b = ai.contexts["B"]
+    assert str(b.get("i")) == "fx | bg [0, ∞)" and str(b.get("acc")) == "fx | bg [0, ∞)"
+    assert str(ai.after["D"].get("#res")) == "fx | bg [0, ∞)"  # a non-negative integer, as the thesis says
+    chain = [(k, t) for k, t in ai.history["B.i"]]
+    assert [t for _, t in chain] == ["{0}", "[0, 1]", "[0, 2]", "[0, 127]", "[0, 128]", "[0, 2^31-1]", "[0, 2^31]",
+                                     "[0, 2^63-1]", "[0, 2^63]", "[0, ∞)"]
+    assert [k for k, _ in chain] == ["", "∪", "∪", "∇", "∪", "∇", "∪", "∇", "∪", "∇"]  # figure 2's solid and dashed edges
+    assert not ai.truncated and ai.steps < 60
+
+
+def test_absint_fact_matches_figure_4():
+    from lattice.bbv.absint import AbstractInterpreter
+
+    ai = AbstractInterpreter(program("fact-loop.bbv"))
+    ai.run()
+    b, c, d = ai.contexts["B"], ai.contexts["C"], ai.contexts["D"]
+    assert b.get("i").range is None and str(b.get("acc")) == "fx | bg [1, ∞)"
+    assert str(c.get("i")) == "fx | bg [1, ∞)" and str(c.get("acc")) == "fx | bg [1, ∞)"
+    assert str(d.get("acc")) == "fx | bg [1, ∞)" and str(ai.after["D"].get("#res")) == "fx | bg [1, ∞)"
+    assert ai.steps == 7
+    # without narrowing the loop body learns nothing about i
+    ai2 = AbstractInterpreter(program("fact-loop.bbv"), narrowing=False)
+    ai2.run()
+    assert ai2.contexts["C"].get("i").range is None
+
+
+def test_absint_dead_branches_and_types_only():
+    from lattice.bbv.absint import AbstractInterpreter
+
+    ai = AbstractInterpreter(parse("function f(x: fx [1, 9])\nA:  if >(x, 0) goto B else goto C\nB:  return x\nC:  return 0\n"))
+    ai.run()
+    assert ai.contexts["C"] is None and ("A", "C") in ai.dead and str(ai.contexts["B"].get("x")) == "fx [1, 9]"
+    # on find, abstract interpretation keeps p: any at the loop entry: the procedure? test stays
+    ai = AbstractInterpreter(program("find.bbv"))
+    ai.run()
+    assert str(ai.contexts["A"].get("p")) == "any" and str(ai.contexts["D"].get("p")) == "proc"
+
+
+def test_abstract_trace_frames():
+    from lattice.bbv.trace import AbstractTrace
+
+    t = AbstractTrace(program("sum-to-n.bbv"), history=["B.i"])
+    kinds = [m["event"] for m in t.meta]
+    assert kinds[0] == "start" and kinds[-1] == "done" and "propagate" in kinds and "instruction" not in kinds
+    widened = next(f for f in t.frames if "widened to" in f["caption"])
+    assert any(n.get("mark") == "widened" for n in widened["nodes"].values())
+    assert t.frames[-1]["panel"]["B.i"][3] == "∇ [0, 127]"
+    assert all("lines" in n for f in t.frames for n in f["nodes"].values())
+    assert t.frames[0]["nodes"]["2"]["state"] == "dead" and t.frames[-1]["nodes"]["2"]["state"] == "done"
+    assert t.tables["versions"]["2"]["context"]  # sizing lines
+    fine = AbstractTrace(program("fact-loop.bbv"), granularity="instruction", until=6)
+    assert len(fine.frames) == 6 and "instruction" in [m["event"] for m in fine.meta]
+    assert all(m.get("algo") for m in fine.meta)

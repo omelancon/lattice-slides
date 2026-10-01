@@ -65,7 +65,7 @@ def parse_arg(text: str) -> Arg:
     if text in ("nil", "'()", "()"):
         return Const("'()", Type.of("nil"))
     if re.fullmatch(r"-?\d+", text):
-        return Const(text, Type.of("fx"))
+        return Const(text, Type.integer(int(text), int(text)).refined())
     if re.fullmatch(r"-?\d+\.\d*|-?\d*\.\d+|-?\d+e-?\d+", text):
         return Const(text, Type.of("fl"))
     if len(text) >= 2 and text[0] == '"' and text[-1] == '"':
@@ -78,9 +78,9 @@ def parse_arg(text: str) -> Arg:
 def _split_args(text: str) -> list[str]:
     out, depth, cur = [], 0, ""
     for ch in text:
-        if ch == "(":
+        if ch in "([{":
             depth += 1
-        elif ch == ")":
+        elif ch in ")]}":
             depth -= 1
         if ch == "," and depth == 0:
             out.append(cur)
@@ -136,13 +136,14 @@ class Move(Instr):
 
 @dataclass
 class If(Instr):
-    prim: str | None = None  # a type test, or None for a truthiness test of ``arg``
-    arg: Arg = None
+    prim: str | None = None  # a predicate (type test or comparison), or None for a truthiness test of ``arg``
+    arg: Arg = None  # the tested variable, or the first argument of the predicate
     then: str = ""
     otherwise: str = ""
+    args: list[Arg] = field(default_factory=list)  # all arguments of the predicate
 
     def uses(self):
-        return [self.arg.name] if isinstance(self.arg, Var) else []
+        return [a.name for a in (self.args or [self.arg]) if isinstance(a, Var)]
 
     def terminates(self):
         return True
@@ -234,6 +235,7 @@ class Function:
     name: str
     params: list[str]
     blocks: dict[str, Block] = field(default_factory=dict)
+    param_types: dict[str, Type] = field(default_factory=dict)  # annotations ``name: TYPE`` (default any)
     limit: int | None | str = None  # None: the program's limit; "none": unlimited
     hidden: bool = False
     line: int = 0
@@ -277,7 +279,7 @@ class Program:
 
 # ------------------------------------------------------------------ text syntax
 
-_FUNCTION = re.compile(r"^function\s+([^\s(]+)\s*\(([^)]*)\)\s*(.*)$")
+_FUNCTION = re.compile(r"^function\s+([^\s(]+)\s*\((.*)\)\s*((?:\s*(?:hidden|limit=\S+))*)$")
 _LABEL = re.compile(r"^([A-Za-z_$][\w$.'-]*)(\(([^)]*)\))?:\s*(.*)$")
 _ASSIGN = re.compile(r"^([^\s=]+)\s*=\s*(.+)$")
 _PRIMCALL = re.compile(r"^([^\s(]+)\((.*)\)$")
@@ -297,10 +299,11 @@ def parse(text: str) -> Program:
             continue
         m = _FUNCTION.match(line.strip())
         if m:
-            name, params, rest = m.group(1), [p.strip() for p in m.group(2).split(",") if p.strip()], m.group(3)
+            name, rest = m.group(1), m.group(3)
+            params, types = _parse_params(m.group(2), no)
             if name in prog.functions:
                 raise ProgramError(f"function {name!r} defined twice", no)
-            fn = Function(name, params, line=no)
+            fn = Function(name, params, line=no, param_types=types)
             for opt in rest.split():
                 if opt == "hidden":
                     fn.hidden = True
@@ -342,6 +345,23 @@ def parse(text: str) -> Program:
     return prog.finalize()
 
 
+def _parse_params(text: str, no: int) -> tuple[list[str], dict[str, Type]]:
+    """``n: fx | bg, m: fx [0, 100], p`` -> names and their annotated types."""
+    params, types = [], {}
+    for part in _split_args(text) if text.strip() else []:
+        name, _, ann = part.partition(":")
+        name = name.strip()
+        if not re.fullmatch(r"[^\s(),=]+", name):
+            raise ProgramError(f"bad parameter {part!r}", no)
+        params.append(name)
+        if ann.strip():
+            try:
+                types[name] = Type.parse(ann.strip())
+            except ValueError as e:
+                raise ProgramError(f"parameter {name!r}: {e}", no) from None
+    return params, types
+
+
 def _parse_instr(text: str, no: int) -> Instr:
     try:
         if text == "fail":
@@ -357,11 +377,12 @@ def _parse_instr(text: str, no: int) -> Instr:
             test, then, otherwise = m.group(1).strip(), m.group(2), m.group(3)
             pm = _PRIMCALL.match(test)
             if pm:
-                args = _split_args(pm.group(2))
-                if len(args) != 1:
-                    raise ProgramError("a type test takes one argument", no)
-                return If(text, no, prim=pm.group(1), arg=parse_arg(args[0]), then=then, otherwise=otherwise)
-            return If(text, no, prim=None, arg=parse_arg(test), then=then, otherwise=otherwise)
+                args = [parse_arg(a) for a in _split_args(pm.group(2))]
+                if not args:
+                    raise ProgramError("a test needs at least one argument", no)
+                return If(text, no, prim=pm.group(1), arg=args[0], then=then, otherwise=otherwise, args=args)
+            a = parse_arg(test)
+            return If(text, no, prim=None, arg=a, then=then, otherwise=otherwise, args=[a])
         m = _GOTO.match(text)
         if m:
             g = Goto(text, no, target=m.group(1))
@@ -435,8 +456,10 @@ def _resolve(prog: Program, fn: Function) -> None:
         for i in b.instrs:
             if isinstance(i, If) and i.prim is not None:
                 p = prog.prims.get(i.prim)
-                if p is None or p.test is None:
-                    raise ProgramError(f"{i.prim!r} is not a type test", i.line)
+                if p is None or (p.test is None and p.narrow is None and p.result != Type.of("bool")):
+                    raise ProgramError(f"{i.prim!r} is not a predicate", i.line)
+                if p.args is not None and len(i.args) != len(p.args):
+                    raise ProgramError(f"{i.prim!r} takes {len(p.args)} argument(s)", i.line)
 
 
 def _liveness(prog: Program, fn: Function) -> None:
