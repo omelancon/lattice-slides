@@ -59,9 +59,25 @@ def binary_search(xs, target):
 ::: column {width=2fr}
 Any language Pygments knows works: the fence info string is the language.
 
+{#emphasis}
 Use `highlight=` for static emphasis, or `code-steps` to walk through a file.
+
+An `arrow` block points at any element of the slide, from a direction, from another element,
+or at the next element on each step.
 :::
 ::::
+
+```arrow {#arrows from=emphasis color=detour curve=0.2}
+steps:
+  - to: .lt-line[data-line="3"]
+    label: the loop
+  - to: .lt-line[data-line="4"]
+    label: the midpoint
+  - to: .lt-line[data-line="9"]
+    from: ""
+    angle: 315
+    label: the answer
+```
 
 # Nothing here is linear {#the-graph}
 
@@ -72,7 +88,7 @@ A deck is a graph. Right follows the main path, but you can also:
 - follow a link such as [[proof|the correctness proof]], then press Up to return
 - press `o` for the overview or `g` to search for any slide
 
-::: detour {#invariant-detour label="Why binary search terminates" key=w}
+::: detour {#invariant-detour label="Why binary search terminates" key=w at=1}
 # The loop invariant
 
 At every iteration, the answer lies in `[lo, hi]`, and `hi - lo` strictly decreases.
@@ -88,7 +104,8 @@ The next press of Right returns to the slide you came from.
 :::
 
 ::: notes
-If someone asks why this works, press `w` for the invariant detour.
+The detour is also a step of this slide (`at=1`): the Right after the first bullet enters it,
+and the Right after returning reveals the second bullet. Press `w` to enter it at any time.
 :::
 
 # Diagrams from Graphviz {#diagram}

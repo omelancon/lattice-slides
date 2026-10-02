@@ -229,3 +229,70 @@ def test_tree_and_grid_components(deck):
 def test_tree_anim_needs_a_tree_trace(deck):
     root = deck({"talk.md": "# A\n```tree-anim {source=\"algos.py:table\"}\nvalues: [[1]]\n```\n", "algos.py": TREES})
     assert "LT022" in codes(check_deck(root, use_cache=False))
+
+
+DETOUR_STEPS = """
+# A
+{.reveal}
+- x
+- y
+- z
+
+::: detour {#d1 at=1 blocking=true}
+# Inside one
+:::
+
+# B
+{.reveal}
+- x
+- y
+
+```timeline
+reveal 1
+detour d2
+reveal 2
+detour d2 blocking
+```
+
+::: detour {#d2}
+# Inside two
+:::
+"""
+
+
+def test_detour_steps(deck):
+    """Spec 6.4: `at=N` and `detour ID` insert a step that repeats the previous positions and enters the detour."""
+    root = deck({"talk.md": DETOUR_STEPS})
+    d = build_deck(root, use_cache=False)
+    a, b = d.slides["a"], d.slides["b"]
+    assert a.positions == [[0], [1], [1], [2], [3]] and a.step_detours == {2: {"id": "d1", "blocking": True}}
+    assert b.positions == [[0], [1], [1], [2], [2]]
+    assert b.step_detours == {2: {"id": "d2", "blocking": False}, 4: {"id": "d2", "blocking": True}}
+    from lattice.emit import deck_json
+    from lattice.pdf import select_steps
+
+    assert deck_json(d)["slides"]["a"]["stepDetours"] == {"2": {"id": "d1", "blocking": True}}
+    assert select_steps("all", a.steps, set(a.step_detours)) == [0, 1, 3, 4]
+    assert select_steps("last", a.steps, set(a.step_detours)) == [4]
+
+
+def test_detour_step_errors(deck):
+    root = deck({"talk.md": """
+        # A
+        {.reveal}
+        - x
+        ::: detour {#d1 at=7}
+        # Inside
+        :::
+    """})
+    assert "LT054" in codes(check_deck(root, use_cache=False))
+    root.write_text("# A\n```timeline\ndetour nope\n```\n::: detour {#d1}\n# Inside\n:::\n")
+    assert "LT054" in codes(check_deck(root, use_cache=False))
+    root.write_text("# A\n{.reveal}\n- x\n```timeline\nreveal 1\n```\n::: detour {#d1 at=0}\n# Inside\n:::\n")
+    assert "LT054" in codes(check_deck(root, use_cache=False))
+    root.write_text("# A\n```timeline\ndetour d1, reveal 1\n```\n::: detour {#d1}\n# Inside\n:::\n")
+    assert "LT054" in codes(check_deck(root, use_cache=False))
+    root.write_text("# A\n::: detour {#d1 at=x}\n# Inside\n:::\n")
+    assert "LT009" in codes(check_deck(root, use_cache=False))
+    root.write_text("# A\n::: detour {#d1 blocking=maybe}\n# Inside\n:::\n")
+    assert "LT009" in codes(check_deck(root, use_cache=False))

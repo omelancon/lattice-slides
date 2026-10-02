@@ -10,6 +10,8 @@ _ASSIGN_RE = re.compile(
     r"\s*(?P<track>[A-Za-z0-9][A-Za-z0-9_-]*)\s+"
     r"(?:(?P<a>\d+)\s*\.\.\s*(?P<b>\d+|end)|(?P<sign>[+-])(?P<rel>\d+)|(?P<abs>\d+)|(?P<end>end))\s*\Z"
 )
+# A detour step (spec 6.4): `detour ID` alone on its line. `detour` is therefore not usable as a track name.
+_DETOUR_RE = re.compile(r"\s*detour\s+(?P<id>[A-Za-z0-9][A-Za-z0-9_-]*)(?P<blocking>\s+blocking)?\s*\Z")
 
 
 def parse_timeline(body: str, first_line: int, file, diags: Diagnostics) -> list[TimelineLine]:
@@ -18,6 +20,13 @@ def parse_timeline(body: str, first_line: int, file, diags: Diagnostics) -> list
         loc = SourceLoc(file, first_line + i, 1)
         text = raw.split("#", 1)[0].strip()
         if not text:
+            continue
+        dm = _DETOUR_RE.match(text)
+        if dm:
+            lines.append(TimelineLine([], loc, detour=dm.group("id"), blocking=bool(dm.group("blocking"))))
+            continue
+        if re.match(r"\s*detour\s", text):
+            diags.error("LT054", "a detour step is written `detour ID` or `detour ID blocking`, alone on its line", loc)
             continue
         assigns: list[TimelineAssign] = []
         ok = True
@@ -71,9 +80,18 @@ def compile_steps(slide: Slide, diags: Diagnostics) -> None:
         else:
             lines = []
 
+    detour_ids = {d.id for d in slide.detours}
+    step_detours: dict[int, dict] = {}
     pos = {t: 0 for t in indep_ids}
     table = [dict(pos)]
     for line in lines:
+        if line.detour is not None:
+            if line.detour not in detour_ids:
+                diags.error("LT054", f"detour {line.detour!r} is not a detour of this slide", line.loc)
+                continue
+            table.append(dict(table[-1]))  # the detour step shows the same positions as the step before it
+            step_detours[len(table) - 1] = {"id": line.detour, "blocking": line.blocking}
+            continue
         bad = False
         for a in line.assigns:
             if a.track not in indep_ids:
@@ -102,6 +120,25 @@ def compile_steps(slide: Slide, diags: Diagnostics) -> None:
     for t in independent:
         if all(row[t.id] == 0 for row in table):
             diags.warn("LT026", f"track {t.id!r} is never advanced", slide.timeline_loc or slide.loc)
+
+    # `at=N` detours (spec 6.4): a detour step inserted after step N of the table built so far.
+    placed = sorted((d for d in slide.detours if d.at is not None), key=lambda d: (d.at, d.index_in_origin))
+    if placed and slide.timeline is not None:
+        for d in placed:
+            diags.error("LT054", "at= cannot be combined with a timeline; write `detour ID` in the timeline instead",
+                        d.loc)
+    elif placed:
+        last_step = len(table) - 1
+        inserted = 0
+        for d in placed:
+            if not 0 <= d.at <= last_step:
+                diags.error("LT054", f"at={d.at} is out of range: the slide has steps 0..{last_step}", d.loc)
+                continue
+            k = d.at + 1 + inserted
+            table.insert(k, dict(table[k - 1]))
+            step_detours[k] = {"id": d.id, "blocking": d.blocking}
+            inserted += 1
+    slide.step_detours = step_detours
 
     def value(row, t: Track) -> int:
         seen = set()

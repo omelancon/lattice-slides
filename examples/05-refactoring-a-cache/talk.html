@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.5.0">
+<meta name="generator" content="lattice 0.6.0">
 <title>Refactoring a cache</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -100,6 +100,13 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-column .lt-code pre{font-size:16.5px}
 .lt-ln{display:inline-block;width:2.6em;margin-left:-.4em;color:var(--lt-muted);opacity:.6;user-select:none}
 .lt-c-plot,.lt-c-dot{flex:1 1 0;min-height:120px}
+/* arrow: an overlay over the whole slide (the runtime moves it out of the body) */
+.lt-c-arrow{position:absolute;inset:0;display:block;pointer-events:none;z-index:4}
+.lt-c-arrow:not(.lt-arrow-overlay){display:none}
+.lt-arrow-box,.lt-arrow-box svg{display:block;width:100%;height:100%;overflow:visible}
+.lt-arrow-line{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.lt-arrow-text{font-family:var(--lt-font-head);font-size:22px;font-weight:600;paint-order:stroke;stroke:var(--lt-bg);
+  stroke-width:6px;stroke-linejoin:round}
 .lt-plot,.lt-dot{height:100%;display:flex;justify-content:center;color:var(--lt-ink)}
 .lt-dot svg text{fill:currentColor}
 .lt-plot svg,.lt-dot svg{height:100%;width:auto;max-width:100%;display:block}
@@ -267,6 +274,8 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-steps{display:inline-flex;gap:5px}
 .lt-steps i{width:7px;height:7px;border-radius:50%;background:var(--lt-rule)}
 .lt-steps i.on{background:var(--lt-accent)}
+.lt-steps i.dt{border-radius:1px;transform:rotate(45deg) scale(.9)}
+.lt-steps i.dt.on{background:var(--lt-detour-ink)}
 #lt-flash{position:absolute;left:50%;bottom:66px;transform:translate(-50%,8px);background:var(--lt-ink);color:var(--lt-bg);
   padding:8px 18px;border-radius:8px;font-size:18px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
 #lt-flash.on{opacity:1;transform:translate(-50%,0)}
@@ -323,6 +332,12 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-pp-timer{font-family:var(--lt-font-code);font-size:30px;font-weight:600;cursor:pointer}
 .lt-pp-moves{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
 .lt-pp-moves kbd{margin-right:10px;color:var(--lt-accent)}
+/* the Keybindings section: every global action, smaller than the moves */
+.lt-pp-keys-title{font-size:12px;color:var(--lt-muted);margin:16px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.lt-pp-keys{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:3px 18px;font-size:13px;color:var(--lt-muted)}
+.lt-pp-keys li{display:flex;gap:8px;align-items:baseline;min-width:0}
+.lt-pp-kbd{flex:none;display:inline-flex;gap:3px;align-items:baseline}
+.lt-pp-keys kbd{font-size:11px;padding:1px 5px;color:var(--lt-accent)}
 .lt-pp-notes{font-size:19px;line-height:1.5}
 .lt-pp-notes a{color:var(--lt-accent)}
 .lt-pp-scrub{display:flex;align-items:center;gap:14px;margin-top:18px}
@@ -495,7 +510,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.5.0","meta":{"title":"Refactoring a cache","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"refactoring-a-cache","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"slides":{"refactoring-a-cache":{"title":"Refactoring a cache","label":"Refactoring a cache","scope":"root","next":{"slide":"idea"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"idea":{"title":"What an LRU cache keeps","label":"What an LRU cache keeps","scope":"root","next":{"slide":"diff"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>The image is embedded in the HTML at build time, like everything else.<\/p>\n"},"diff":{"title":"From a list to an OrderedDict, then to statistics","label":"From a list to an OrderedDict, then to statistics","scope":"root","next":{"slide":"bench"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"diff/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":20},"notes":"<p>Step 1 is the original. Step 2 removes <code>order.remove(key)<\/code>, which is linear in the cache size.<\/p>\n"},"bench":{"title":"Was it worth it?","label":"Was it worth it?","scope":"root","next":{"slide":"hits"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":33}},"hits":{"title":"Hit rate by capacity","label":"Hit rate by capacity","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":42}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":51}}},"detours":{},"instances":{"diff/c1":{"component":"diff-steps","slide":"diff","data":"lt-data-diff/c1"},"bench/c1":{"component":"plot","slide":"bench","data":"lt-data-bench/c1"},"hits/c1":{"component":"plot","slide":"hits","data":"lt-data-hits/c1"}},"tours":{},"mainPath":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"overview":{"nodes":{"refactoring-a-cache":{"x":73.0,"y":21.0,"w":130.0,"h":26.0,"label":"Refactoring a cache"},"idea":{"x":251.0,"y":21.0,"w":166.0,"h":26.0,"label":"What an LRU cache keeps"},"diff":{"x":451.5,"y":21.0,"w":175.0,"h":26.0,"label":"From a list to an Ordered…"},"bench":{"x":623.5,"y":21.0,"w":109.0,"h":26.0,"label":"Was it worth it?"},"hits":{"x":773.0,"y":21.0,"w":130.0,"h":26.0,"label":"Hit rate by capacity"},"thanks":{"x":897.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"refactoring-a-cache","to":"idea","kind":"next","path":"M138.0,21.0 C145.8,21.0 153.8,21.0 161.8,21.0 L168.0,21.0"},{"from":"idea","to":"diff","kind":"next","path":"M334.2,21.0 C342.0,21.0 349.9,21.0 357.9,21.0 L363.9,21.0"},{"from":"diff","to":"bench","kind":"next","path":"M539.5,21.0 C547.3,21.0 555.0,21.0 562.5,21.0 L568.7,21.0"},{"from":"bench","to":"hits","kind":"next","path":"M678.2,21.0 C685.9,21.0 693.8,21.0 701.8,21.0 L707.8,21.0"},{"from":"hits","to":"thanks","kind":"next","path":"M838.1,21.0 C846.3,21.0 854.3,21.0 861.8,21.0 L867.8,21.0"}],"width":935.0,"height":42.0},"hash":"a7dc06209eaf0336"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.6.0","meta":{"title":"Refactoring a cache","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"refactoring-a-cache","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"slides":{"refactoring-a-cache":{"title":"Refactoring a cache","label":"Refactoring a cache","scope":"root","next":{"slide":"idea"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"idea":{"title":"What an LRU cache keeps","label":"What an LRU cache keeps","scope":"root","next":{"slide":"diff"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>The image is embedded in the HTML at build time, like everything else.<\/p>\n"},"diff":{"title":"From a list to an OrderedDict, then to statistics","label":"From a list to an OrderedDict, then to statistics","scope":"root","next":{"slide":"bench"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"diff/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":20},"notes":"<p>Step 1 is the original. Step 2 removes <code>order.remove(key)<\/code>, which is linear in the cache size.<\/p>\n"},"bench":{"title":"Was it worth it?","label":"Was it worth it?","scope":"root","next":{"slide":"hits"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":33}},"hits":{"title":"Hit rate by capacity","label":"Hit rate by capacity","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":42}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":51}}},"detours":{},"instances":{"diff/c1":{"component":"diff-steps","slide":"diff","data":"lt-data-diff/c1"},"bench/c1":{"component":"plot","slide":"bench","data":"lt-data-bench/c1"},"hits/c1":{"component":"plot","slide":"hits","data":"lt-data-hits/c1"}},"tours":{},"mainPath":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"overview":{"nodes":{"refactoring-a-cache":{"x":73.0,"y":21.0,"w":130.0,"h":26.0,"label":"Refactoring a cache"},"idea":{"x":251.0,"y":21.0,"w":166.0,"h":26.0,"label":"What an LRU cache keeps"},"diff":{"x":451.5,"y":21.0,"w":175.0,"h":26.0,"label":"From a list to an Ordered…"},"bench":{"x":623.5,"y":21.0,"w":109.0,"h":26.0,"label":"Was it worth it?"},"hits":{"x":773.0,"y":21.0,"w":130.0,"h":26.0,"label":"Hit rate by capacity"},"thanks":{"x":897.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"refactoring-a-cache","to":"idea","kind":"next","path":"M138.0,21.0 C145.8,21.0 153.8,21.0 161.8,21.0 L168.0,21.0"},{"from":"idea","to":"diff","kind":"next","path":"M334.2,21.0 C342.0,21.0 349.9,21.0 357.9,21.0 L363.9,21.0"},{"from":"diff","to":"bench","kind":"next","path":"M539.5,21.0 C547.3,21.0 555.0,21.0 562.5,21.0 L568.7,21.0"},{"from":"bench","to":"hits","kind":"next","path":"M678.2,21.0 C685.9,21.0 693.8,21.0 701.8,21.0 L707.8,21.0"},{"from":"hits","to":"thanks","kind":"next","path":"M838.1,21.0 C846.3,21.0 854.3,21.0 861.8,21.0 L867.8,21.0"}],"width":935.0,"height":42.0},"hash":"d0bb58d319e049d7"}</script>
 <script type="application/json" id="lt-data-diff/c1">{"count":3}</script>
 <script type="application/json" id="lt-data-bench/c1">{"backend":"vega","spec":{"mark":{"type":"line","point":true},"encoding":{"x":{"field":"capacity","type":"quantitative","title":"capacity (log scale)","scale":{"type":"log"}},"y":{"field":"us_per_op","type":"quantitative","title":"microseconds per operation"},"color":{"field":"version","type":"nominal","title":null},"tooltip":[{"field":"capacity"},{"field":"us_per_op"},{"field":"version"}]},"data":{"values":[{"capacity":16,"version":"list (v1)","us_per_op":0.246,"hit_rate":0.946},{"capacity":16,"version":"OrderedDict (v2)","us_per_op":0.151,"hit_rate":0.946},{"capacity":64,"version":"list (v1)","us_per_op":0.554,"hit_rate":0.987},{"capacity":64,"version":"OrderedDict (v2)","us_per_op":0.16,"hit_rate":0.987},{"capacity":256,"version":"list (v1)","us_per_op":0.855,"hit_rate":0.992},{"capacity":256,"version":"OrderedDict (v2)","us_per_op":0.138,"hit_rate":0.992},{"capacity":1024,"version":"list (v1)","us_per_op":0.864,"hit_rate":0.992},{"capacity":1024,"version":"OrderedDict (v2)","us_per_op":0.146,"hit_rate":0.992}]},"width":864,"height":326,"config":{"background":"transparent","font":"Avenir Next, Segoe UI, Helvetica Neue, Arial, DejaVu Sans","axis":{"labelColor":"#5d6778","titleColor":"#1d2433","gridColor":"#e3e7ee","domainColor":"#5d6778","tickColor":"#5d6778","labelFontSize":16,"titleFontSize":17,"titleFontWeight":500,"titlePadding":10},"legend":{"labelColor":"#1d2433","titleColor":"#5d6778","labelFontSize":16,"symbolSize":120},"title":{"color":"#1d2433","fontSize":18},"range":{"category":["#0b6e7f","#c8741a","#6a4fb3","#2f8f4e","#b23a48","#5d6778"]},"view":{"stroke":null},"line":{"strokeWidth":2.5},"point":{"size":60}},"$schema":"https://vega.github.io/schema/vega-lite/v5.json"}}</script>
 <script type="application/json" id="lt-data-hits/c1">{"backend":"plotly","spec":{"data":[{"type":"bar","name":"list (v1)","x":[16,64,256,1024],"y":[0.946,0.987,0.992,0.992]},{"type":"bar","name":"OrderedDict (v2)","x":[16,64,256,1024],"y":[0.946,0.987,0.992,0.992]}],"layout":{"width":864,"height":365,"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","font":{"family":"Avenir Next, Segoe UI, Helvetica Neue, Arial, DejaVu Sans","color":"#1d2433","size":15},"colorway":["#0b6e7f","#c8741a","#6a4fb3","#2f8f4e","#b23a48","#5d6778"],"xaxis":{"gridcolor":"#e3e7ee","zerolinecolor":"#e3e7ee","linecolor":"#5d6778","tickfont":{"color":"#5d6778"},"title":{"text":"capacity"},"type":"category"},"yaxis":{"gridcolor":"#e3e7ee","zerolinecolor":"#e3e7ee","linecolor":"#5d6778","tickfont":{"color":"#5d6778"},"title":{"text":"hit rate"}},"margin":{"l":70,"r":20,"t":16,"b":60},"legend":{"bgcolor":"rgba(0,0,0,0)"},"showlegend":true}}}</script>
@@ -608,11 +623,65 @@ const Lattice = (() => {
     const d = detourOf(nav.cur.slide);
     return d ? d.origin : null;
   }
+  // Structural predecessor of a slide, for PREV when history is empty (spec 7.2): the tour predecessor,
+  // else the previous slide on the main path, else a slide whose `next` is this one (same scope first),
+  // else the slide whose branch leads here, else the origin of the detour this slide starts.
+  function predecessor(id) {
+    if (nav.tour && deck.tours[nav.tour]) {
+      const list = deck.tours[nav.tour];
+      const i = list.indexOf(id);
+      if (i > 0) return list[i - 1];
+    }
+    const mp = deck.mainPath.indexOf(id);
+    if (mp > 0) return deck.mainPath[mp - 1];
+    const s = slide(id);
+    const before = deck.order.filter((x) => slide(x).next && slide(x).next.slide === id);
+    const same = before.find((x) => slide(x).scope === s.scope);
+    if (same || before.length) return same || before[0];
+    const chooser = deck.order.find((x) => slide(x).branches.some((b) => b.target === id));
+    if (chooser) return chooser;
+    const d = detourOf(id);
+    if (d && d.entry === id) return d.origin;
+    return null;
+  }
+  // A step whose arrival through NEXT enters a detour (spec 6.4): { id, blocking }, or null.
+  const stepDetour = (id, step) => (slide(id).stepDetours || {})[step] || null;
+
+  // Multi-step moves within a slide play the intermediate steps in rapid succession, so that
+  // animations are seen rather than skipped (spec 7.2, SKIP). A new move cancels a running one.
+  // Detour steps on the way are not entered; a blocking one stops the playback in front of it.
+  let playTimer = null;
+  function playSteps(target) {
+    clearTimeout(playTimer);
+    const total = Math.abs(target - nav.cur.step);
+    if (!total) return;
+    const interval = Math.max(30, Math.min(90, 1000 / total));
+    const tick = () => {
+      const cur = nav.cur.step;
+      if (cur === target) return;
+      const dir = Math.sign(target - cur);
+      const d = dir > 0 ? stepDetour(nav.cur.slide, cur + 1) : null;
+      if (d && d.blocking) return flash("Cannot step detour");
+      go(nav.cur.slide, cur + dir, { kind: "step", dir });
+      if (nav.cur.step !== target) playTimer = setTimeout(tick, interval);
+    };
+    tick();
+  }
+  function stopPlaying() {
+    clearTimeout(playTimer);
+    playTimer = null;
+  }
 
   const actions = {
     next() {
       const cur = nav.cur;
-      if (cur.step < steps(cur.slide) - 1) return go(cur.slide, cur.step + 1, { kind: "step", dir: 1 });
+      if (cur.step < steps(cur.slide) - 1) {
+        const k = cur.step + 1;
+        go(cur.slide, k, { kind: "step", dir: 1 });
+        const d = stepDetour(cur.slide, k); // a detour step: arriving on it enters the detour (spec 6.4)
+        if (d) actions.enter(d.id);
+        return;
+      }
       const t = tourSuccessor();
       if (t) { push("forward"); return go(t, 0, { kind: "next", dir: 1 }); }
       const n = slide(cur.slide).next;
@@ -622,12 +691,29 @@ const Lattice = (() => {
     },
     prev() {
       const cur = nav.cur;
-      if (cur.step > 0) return go(cur.slide, cur.step - 1, { kind: "step", dir: -1 });
+      if (cur.step > 0) {
+        let k = cur.step - 1;
+        while (k > 0 && stepDetour(cur.slide, k)) k--; // detour steps show nothing new going backward
+        return go(cur.slide, k, { kind: "step", dir: -1 });
+      }
       if (nav.H.length) {
         const e = nav.H.pop();
         return go(e.slide, e.step, { kind: e.kind === "excursion" ? "return" : "prev", dir: -1 });
       }
-      flash("Start of history");
+      const p = predecessor(cur.slide); // no history: walk the structure backward, without recording it
+      if (p) return go(p, steps(p) - 1, { kind: "prev", dir: -1 });
+      flash("No previous slide");
+    },
+    "skip-forward"() { playSteps(Math.min(nav.cur.step + 10, steps(nav.cur.slide) - 1)); },
+    "skip-back"() { playSteps(Math.max(nav.cur.step - 10, 0)); },
+    "last-step"() { playSteps(steps(nav.cur.slide) - 1); },
+    "skip-detour"() {
+      // Step over the detour step(s) that follow, without entering them (spec 7.2, SKIP-DETOUR).
+      const cur = nav.cur;
+      let k = cur.step;
+      while (k + 1 < steps(cur.slide) && stepDetour(cur.slide, k + 1)) k++;
+      if (k === cur.step) return flash("No detour step next");
+      go(cur.slide, Math.min(k + 1, steps(cur.slide) - 1), { kind: "step", dir: 1 });
     },
     choose(key) {
       const s = slide(nav.cur.slide);
@@ -821,7 +907,8 @@ const Lattice = (() => {
     const bits = [];
     if (s.steps > 14) bits.push(`<span class="lt-where">step ${nav.cur.step + 1}/${s.steps}</span>`);
     else if (s.steps > 1) {
-      bits.push(`<span class="lt-steps">${Array.from({ length: s.steps }, (_, i) => `<i class="${i <= nav.cur.step ? "on" : ""}"></i>`).join("")}</span>`);
+      const dot = (i) => `<i class="${[i <= nav.cur.step ? "on" : "", stepDetour(nav.cur.slide, i) ? "dt" : ""].join(" ").trim()}"></i>`;
+      bits.push(`<span class="lt-steps">${Array.from({ length: s.steps }, (_, i) => dot(i)).join("")}</span>`);
     }
     if (s.detours.length) bits.push(`<span class="lt-hint"><kbd>\u2193</kbd>${esc(deck.detours[s.detours[0]].label)}</span>`);
     if (topExcursion() >= 0 || d) bits.push(`<span class="lt-hint"><kbd>\u2191</kbd>${esc(label(returnTarget()))}</span>`);
@@ -1005,6 +1092,7 @@ const Lattice = (() => {
       <h3>Next <span class="lt-pp-next-label"></span></h3>
       <div class="lt-pp-next"><iframe class="lt-pp-preview" title="Next" tabindex="-1" style="aspect-ratio:${W} / ${H}"></iframe><div class="lt-pp-next-none" hidden></div></div>
       <h3>Moves</h3><ul class="lt-pp-moves"></ul>
+      <h4 class="lt-pp-keys-title">Keybindings</h4><ul class="lt-pp-keys">${keybindingsList()}</ul>
       <h3>Notes</h3><div class="lt-pp-notes"></div>`;
     const range = $(".lt-pp-scrub input", panel);
     range.addEventListener("input", () => {
@@ -1022,10 +1110,33 @@ const Lattice = (() => {
     previewFrame.src = location.pathname + "?preview";
   }
 
+  // The Keybindings section of the presenter panel: every global action with its keys (spec 7.5).
+  const ACTION_LABELS = {
+    next: "next step or slide", prev: "previous step, or undo the last move",
+    "skip-forward": "10 steps forward", "skip-back": "10 steps back", "last-step": "last step of the slide",
+    "skip-detour": "step over the next detour step",
+    "enter-detour": "enter the first detour", return: "return from a detour or jump",
+    overview: "overview", goto: "go to a slide", presenter: "presenter view", tour: "cycle through tours",
+    home: "start of the deck, clearing history",
+  };
+  const KEY_NAMES = { " ": "Space", ArrowRight: "→", ArrowLeft: "←", ArrowUp: "↑", ArrowDown: "↓" };
+  const keyName = (k) => k.split("+").map((part) => KEY_NAMES[part] || part).join("+");
+  function keybindingsList() {
+    const rows = Object.entries(deck.keys).map(([action, keys]) =>
+      `<li><span class="lt-pp-kbd">${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("")}</span>` +
+      `<span>${esc(ACTION_LABELS[action] || action)}</span></li>`);
+    rows.push(`<li><span class="lt-pp-kbd"><kbd>1</kbd>…<kbd>9</kbd></span><span>choose a branch option or a detour (slide keys)</span></li>`);
+    return rows.join("");
+  }
+
   // What NEXT would show: the next step of this slide, else the slide NEXT moves to, at the step it lands on.
   function previewTarget() {
     const s = slide(nav.cur.slide);
-    if (nav.cur.step < s.steps - 1) return { slide: nav.cur.slide, step: nav.cur.step + 1, label: `step ${nav.cur.step + 2} of ${s.steps}` };
+    if (nav.cur.step < s.steps - 1) {
+      const d = stepDetour(nav.cur.slide, nav.cur.step + 1);
+      if (d) return { slide: deck.detours[d.id].entry, step: 0, label: `detour: ${deck.detours[d.id].label}` };
+      return { slide: nav.cur.slide, step: nav.cur.step + 1, label: `step ${nav.cur.step + 2} of ${s.steps}` };
+    }
     const nt = nextTarget();
     if (!nt || !nt.slide) return { slide: null, label: s.branches.length ? "choose a branch" : "end of path" };
     if (nt.kind === "back") {
@@ -1051,7 +1162,13 @@ const Lattice = (() => {
     const s = slide(nav.cur.slide);
     const nt = nextTarget();
     const moves = [];
-    if (nav.cur.step < s.steps - 1) moves.push(`<li><kbd>\u2192</kbd> step ${nav.cur.step + 2} of ${s.steps}</li>`);
+    const sd = nav.cur.step < s.steps - 1 ? stepDetour(nav.cur.slide, nav.cur.step + 1) : null;
+    if (sd) {
+      moves.push(`<li><kbd>\u2192</kbd> detour: ${esc(deck.detours[sd.id].label)}${sd.blocking ? " (blocking)" : ""}</li>`);
+      const sk = (deck.keys["skip-detour"] || [])[0];
+      if (sk) moves.push(`<li><kbd>${esc(keyName(sk))}</kbd> skip the detour step</li>`);
+    }
+    else if (nav.cur.step < s.steps - 1) moves.push(`<li><kbd>\u2192</kbd> step ${nav.cur.step + 2} of ${s.steps}</li>`);
     else if (nt && nt.slide) moves.push(`<li><kbd>\u2192</kbd> ${nt.kind === "back" ? "return to " : ""}${esc(label(nt.slide))}</li>`);
     else moves.push(`<li><kbd>\u2192</kbd> end of path</li>`);
     for (const b of s.branches) moves.push(`<li><kbd>${esc(b.key)}</kbd> ${esc(b.label || label(b.target))}</li>`);
@@ -1210,9 +1327,12 @@ const Lattice = (() => {
     }
     const s = slide(nav.cur.slide);
     const slideKey = s.branches.some((b) => b.key === e.key) || s.detours.some((d) => deck.detours[d].key === e.key);
-    if (slideKey) { actions.choose(e.key); e.preventDefault(); return; }
-    const action = keyMap()[e.key];
-    if (action && actions[action]) { actions[action](); e.preventDefault(); }
+    if (slideKey) { stopPlaying(); actions.choose(e.key); e.preventDefault(); return; }
+    // Bindings may name a shifted key as "Shift+ArrowRight"; a plain key still matches with Shift held
+    // (letters already arrive shifted, as "A" for Shift+a).
+    const map = keyMap();
+    const action = (e.shiftKey && map[`Shift+${e.key}`]) || map[e.key];
+    if (action && actions[action]) { stopPlaying(); actions[action](); e.preventDefault(); }
   }
 
   function onClick(e) {

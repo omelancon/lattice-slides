@@ -14,7 +14,7 @@ This file is for contributors. It explains where things live, how to verify chan
 | Document | Owns | Read it when |
 |---|---|---|
 | `README.md` | User-facing usage: install, CLI, syntax cheat sheet, keys, examples list, release status | You need to know what users see, or you changed anything user-visible |
-| `docs/spec.md` | The normative definition: grammar (section 3), Deck model (4), graph resolution (5), steps and timelines (6), navigation state machine (7), Python component contract (8), frames (9), JS runtime contract (10), output format (11), diagnostics (12), changes since draft 1 (15) | Before changing behavior. The spec wins over every other document |
+| `docs/spec.md` | The normative definition: grammar (section 3), Deck model (4), graph resolution (5), steps, timelines and detour steps (6), navigation state machine (7), Python component contract (8, the `arrow` component in 8.9), frames (9), JS runtime contract (10), output format (11), diagnostics (12), changes since draft 1 (15) | Before changing behavior. The spec wins over every other document |
 | `docs/design-report.md` | Why: goals and non-goals, design rationale (section 3), technology choices (5), the roadmap (6) and the decisions table (7) | You are about to make a design choice, or want to know what is planned |
 | `docs/SKILL.md` (this file) | How to work on the code: structure, setup, verification, pitfalls, release and documentation upkeep | Always, first |
 
@@ -42,7 +42,7 @@ src/lattice/
   attrs.py, ids.py  attribute blocks and slug ids
   body.py         BodyBuilder: blocks, reveal, containers, branch menus, notes, timelines, component placeholders
   graph.py        next resolution, edges, keys, main path, reachability, tours
-  timeline.py     timeline parsing and step compilation
+  timeline.py     timeline parsing, step compilation, detour steps
   render.py       component rendering, cache, tracks
   emit.py         deck JSON, single-file HTML, directory output, image embedding
   graphs.py       graph loading, Graphviz layouts, overview map layout, tree layouts per frame
@@ -56,12 +56,13 @@ src/lattice/
   diagnostics.py  Diagnostic, BuildError
   themes.py       theme table: CSS file, Pygments style, palette for components
   server.py       dev server: polling watcher and server-sent events for reload
-  components/     base.py (contract, registry, RenderContext), code.py, visual.py, animations.py, bbv.py
+  components/     base.py (contract, registry, RenderContext), code.py, visual.py (plot, dot, math, arrow),
+                  animations.py, bbv.py
   runtime/
-    lattice.js    navigation state machine, overlays, presenter view (preview, scrubber), print mode,
-                  component host
+    lattice.js    navigation state machine (with the structural predecessor, skip playback and detour
+                  steps), overlays, presenter view (preview, scrubber, keybindings), print mode, component host
     lattice.css   layout and component styles; themes/*.css hold custom properties only
-    components/   one runtime per animated or interactive component
+    components/   one runtime per animated or interactive component (arrow.js measures element boxes)
     vendor/       KaTeX, Vega, Vega-Lite, Plotly (with licenses), embedded only when used
 tests/            pytest suites (see Verification)
 examples/         seven decks with their built talk.html; they double as integration tests
@@ -76,15 +77,15 @@ The build pipeline, in order: `Loader.load` (files, includes, slides, detours, i
 
 Each of these was decided deliberately; the reasoning is in the report (sections 3 and 7) or the spec. Breaking one usually breaks several features at once.
 
-- **Build time does the work, the browser replays.** Components produce data; runtimes render it. Do not add computation to the runtime that could run in Python.
-- **Positions are absolute.** `show(inst, position, info)` must render any position in any order (spec 10.2). Backward navigation, the presenter scrubber and preview, PDF export, reloads and timelines all depend on it. This is also why frame stores hold full states (spec 9.3). Motion between positions (tree nodes gliding) is an effect of `info.animate` only, never state.
+- **Build time does the work, the browser replays.** Components produce data; runtimes render it. Do not add computation to the runtime that could run in Python. The one exception is `arrow.js`, which measures element boxes because they exist only in the browser; even its default direction is a fixed angle, not a computed one (report, decision 14).
+- **Positions are absolute.** `show(inst, position, info)` must render any position in any order (spec 10.2). Backward navigation, the presenter scrubber and preview, PDF export, reloads and timelines all depend on it. This is also why a detour step (spec 6.4) is entered only when NEXT arrives on it: reaching the same position any other way has no side effect. This is also why frame stores hold full states (spec 9.3). Motion between positions (tree nodes gliding) is an effect of `info.animate` only, never state.
 - **Passive windows stay passive.** The preview pane and print mode (`?preview`, `?print`) must not read keys, save to `sessionStorage`, update the hash or broadcast; otherwise they would steer the presenter's deck.
-- **Navigation is the history model** (spec 7.2): Left undoes the last move, Up returns from the latest excursion. Any change to `actions` in `lattice.js` must keep `tests/test_runtime.py`, which encodes the worked trace of spec 7.3, green.
+- **Navigation is the history model** (spec 7.2): Left undoes the last move, Up returns from the latest excursion. With an empty history Left walks the structure backward without recording anything, and skip moves never touch history either. Any change to `actions` in `lattice.js` must keep `tests/test_runtime.py`, which encodes the worked trace of spec 7.3, green.
 - **Ids are global** across files, detours are nested only, and `#` is the only slide boundary (report section 7, decisions 1 to 3).
 - **Registered components take precedence over Pygments lexers** (spec 3.13). Never register a component under a common language name; that is why the diff component is `diff-steps`.
 - **Output is self-contained.** Images, fonts, data and libraries are embedded in single-file mode. Heavy libraries are embedded only when an instance requires them (`RenderResult.requires`).
 - **Columns contain their content.** Nothing may paint outside its column; `tests/test_layout.py` checks every example slide.
-- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT053. New code, new row in spec section 12.
+- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT054. New code, new row in spec section 12.
 
 ## Common tasks
 
@@ -106,12 +107,12 @@ Run `pytest` after every change; it takes about twenty seconds. The suites:
 |---|---|
 | `test_parsing.py` | attributes, ids, includes, links, reveal, containers |
 | `test_graph.py` | next resolution, detours, branches, keys, tours |
-| `test_steps.py` | tracks, timelines, followers, deltas, frame stores, tree and grid traces, tree layouts |
+| `test_steps.py` | tracks, timelines, detour steps, followers, deltas, frame stores, tree and grid traces, tree layouts |
 | `test_bbv.py` | the type lattice and intervals, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), abstract interpretation against figures 1, 2 and 4, frames, layout, the components |
-| `test_output.py` | plot backends, diff-steps, images, directory output, overview map, library inclusion |
+| `test_output.py` | plot backends, diff-steps, the arrow component, images, directory output, overview map, library inclusion |
 | `test_pdf.py` | `pdf` steps and LT053, the page plan (tour, appendix, back links), a real export in Chromium |
 | `test_cli.py` | CLI commands and building every example |
-| `test_runtime.py` | the navigation state machine, the presenter preview and scrubber, the tree, grid, versioning and abstract interpretation runtimes, in Chromium |
+| `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys, detour steps), the presenter preview, scrubber and keybindings, the arrow geometry, the tree, grid, versioning and abstract interpretation runtimes, in Chromium |
 | `test_layout.py` | no content spills out of a column, on every example slide |
 
 Tests prove structure, not appearance. After any visual change (CSS, runtime rendering, a component's HTML, an example), rebuild the examples and look at screenshots of the affected slides:
@@ -137,6 +138,7 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 - **Intervals are only for the abstract interpreter.** `Specializer.type_of` strips them (`intervals = False`), so SBBV and ΛV contexts never carry one; a change to `prims.py` result rules must keep working without intervals.
 - **The drawing of `bbv.js` must never rescale between frames.** Its SVG keeps its aspect ratio, so anything that changes the canvas size (a panel growing with the queue, a caption wrapping to a second line) rescales the whole drawing. The panel has a fixed width, `.lt-ga-main` does not shrink, and the caption shrinks its text to fit the space left (`fitCaption`). Check both Chromium and Firefox after touching that layout; Firefox resolves these flex sizes differently.
 - **Container nesting again.** A detour holding slides that use `::::` columns needs `:::::` fences (see `examples/07-basic-block-versioning`).
+- **Arrow targets are measured, not styled.** `arrow.js` reads `getBoundingClientRect` of the target's contents and draws in slide units; a change to `.lt-slide` positioning or to how the viewport is scaled (`fit`) must keep `test_arrow_runtime_points_at_its_targets` green. The classes of its SVG are `lt-arrow-box`, `lt-arrow-line` and `lt-arrow-text`: `.lt-arrow` already belongs to the graph animation's arrowheads.
 - **Writing style.** The project owner avoids em dashes in prose; use colons, commas or parentheses.
 
 ## Release

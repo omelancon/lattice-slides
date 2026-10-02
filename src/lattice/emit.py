@@ -110,6 +110,8 @@ def deck_json(deck: Deck, *, data_urls: bool = False) -> dict:
         }
         if s.transition:
             entry["transition"] = s.transition
+        if s.step_detours:
+            entry["stepDetours"] = {str(k): v for k, v in sorted(s.step_detours.items())}
         if s.notes_html:
             entry["notes"] = s.notes_html
         slides[s.id] = entry

@@ -9,7 +9,7 @@ import json
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .base import Component, ComponentError, RenderResult, register
 
@@ -328,3 +328,76 @@ class MathBlock(Component):
     def render(self, block, opts, ctx) -> RenderResult:
         tex = html.escape(block.body.strip())
         return RenderResult(f'<div class="lt-math lt-math-block" data-display="1">{tex}</div>')
+
+
+# ---------------------------------------------------------------- arrow
+class ArrowStep(BaseModel):
+    """One target of an `arrow` with `steps:`; unset fields fall back to the block's options."""
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    to: str
+    from_: str | None = Field(None, alias="from")
+    angle: float | None = None
+    length: float | None = None
+    label: str | None = None
+
+
+class ArrowOptions(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    to: str | None = None          # element id, or a CSS selector, resolved inside the slide
+    from_: str | None = Field(None, alias="from")   # another element: the arrow runs between the two
+    angle: float | None = None     # degrees, from the target toward the tail, counterclockwise; 0 is right
+    length: float = 120            # slide pixels, from the target's edge to the tail (ignored with `from`)
+    label: str | None = None       # text at the tail
+    color: str | None = None       # a CSS color, or a theme token: accent, detour, muted, ink
+    width: float = 4               # stroke width
+    curve: float = 0               # bend, as a fraction of the arrow's length; 0 is straight
+    steps: list[ArrowStep | str] | None = None   # several targets, one per position
+
+
+ARROW_DEFAULT_ANGLE = 315.0
+_ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
+_THEME_COLORS = {"accent", "detour", "muted", "ink"}
+
+
+@register("arrow")
+class Arrow(Component):
+    """An arrow drawn over the slide, pointing at an element (spec 8.9). Geometry is measured in the browser."""
+    Options = ArrowOptions
+    body = "yaml"
+    runtime = "arrow.js"
+
+    def render(self, block, opts: ArrowOptions, ctx) -> RenderResult:
+        if opts.to is None and not opts.steps:
+            raise ComponentError("arrow needs `to` (an element id or selector) or a `steps:` list")
+        if opts.to is not None and opts.steps:
+            raise ComponentError("arrow: give either `to` or `steps`, not both")
+        entries = opts.steps or [ArrowStep(to=opts.to)]
+        steps = []
+        for e in entries:
+            if isinstance(e, str):
+                e = ArrowStep(to=e)
+            steps.append({
+                "to": e.to,
+                "from": (e.from_ or None) if e.from_ is not None else opts.from_,  # "" drops the block's `from`
+                "angle": e.angle if e.angle is not None else opts.angle,
+                "length": e.length if e.length is not None else opts.length,
+                "label": e.label if e.label is not None else opts.label,
+            })
+        for s in steps:
+            if s["from"] is None and s["angle"] is None:
+                s["angle"] = ARROW_DEFAULT_ANGLE
+        color = opts.color
+        if color in _THEME_COLORS:
+            color = f"var(--lt-{color})"
+        data = {"steps": steps, "color": color, "width": opts.width, "curve": opts.curve}
+        return RenderResult('<div class="lt-arrow-box" aria-hidden="true"></div>', data=data, positions=len(steps))
+
+
+def arrow_targets(data: dict) -> list[str]:
+    """Bare element ids an arrow refers to (for the build-time check of render.py)."""
+    out = []
+    for s in data.get("steps", []):
+        for ref in (s.get("to"), s.get("from")):
+            if ref and _ID_RE.match(ref):
+                out.append(ref)
+    return out

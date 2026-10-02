@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.5.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.6.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -28,6 +28,7 @@
 | **Track** | Something on a slide that changes with steps: the reveal track or a component instance. |
 | **Position** | The state index of a track. Position 0 is the state shown on arrival at step 0. |
 | **Cue** | One slide step: an assignment of positions to tracks. |
+| **Detour step** | A step that enters a detour when NEXT arrives on it (section 6.4). |
 | **Follower** | A component instance whose position is always equal to another track's position. |
 | **Frame store** | The serialized frames of an animation (section 9). |
 
@@ -182,7 +183,7 @@ wiki_link = "[[" IDENT [ "|" label ] "]]" ;
 
 | Name | Purpose | Attributes |
 |---|---|---|
-| `detour` | Nested slides (3.9) | `#id`, `label`, `key`, `badge` |
+| `detour` | Nested slides (3.9) | `#id`, `label`, `key`, `badge`, `at`, `blocking` |
 | `branch` | Choice point (3.10) | `layout` (`menu` or `cards`) |
 | `notes` | Speaker notes (3.14) | none |
 | `columns` | Horizontal layout; direct children are `column` containers | `gap` |
@@ -209,6 +210,7 @@ Content never paints outside its column: a table wider than its column scrolls h
 - A detour container MUST appear at the top level of a slide body (LT034 inside another container). That slide is its **origin**.
 - Its body MUST contain at least one slide (directly or through includes) (LT016).
 - `label` defaults to the plain-text title of the entry slide. `badge` (bool, default `true`) controls whether a badge is rendered at the container's position in the origin slide. Without a badge the detour is still reachable by key, Down, links and the overview.
+- `at` (a step number, from 0) makes the detour a **detour step** of its origin, entered after that step (section 6.4). It MUST NOT be used on a slide that has a timeline, which declares detour steps itself (LT054). `blocking` (bool, default `false`) makes that detour step blocking: a multi-step move stops in front of it (section 7.2, SKIP).
 - Detours MAY nest. A nested detour's origin is the detour slide that contains it.
 - The container is removed from the origin's content; only the badge remains.
 
@@ -277,8 +279,9 @@ At most one `timeline` block per slide (LT029). Its body is not YAML; it has its
 
 ```ebnf
 timeline  = { line } ;
-line      = { SP } ( cue | ) [ comment ] NL ;
+line      = { SP } ( cue | detour_cue | ) [ comment ] NL ;
 cue       = assign { { SP } "," { SP } assign } ;
+detour_cue = "detour" SP { SP } IDENT [ SP { SP } "blocking" ] ;   (* a detour step, section 6.4; "detour" is not a track name *)
 assign    = TRACK SP { SP } position ;
 position  = INT
           | ( "+" | "-" ) INT
@@ -295,11 +298,12 @@ Example:
 reveal 1            # first bullet
 trace 1..4          # four cues, one frame each
 code 2, trace 5     # both change on the same step
+detour heap-refresher   # a detour step: entered on the way, section 6.4
 trace end
 ```
 ````
 
-Semantics are defined in section 6.3.
+Semantics are defined in sections 6.3 and 6.4.
 
 ---
 
@@ -349,6 +353,7 @@ class Slide:
     # filled after rendering (section 6)
     tracks: list[Track]
     positions: list[list[int]]    # positions[step][track_index]
+    step_detours: dict[int, dict] # detour steps: step -> {"id": detour id, "blocking": bool} (6.4)
 
 class Detour:
     id: str
@@ -356,6 +361,8 @@ class Detour:
     label: str
     key: str | None
     badge: bool
+    at: int | None                # detour step after this step of the origin (6.4)
+    blocking: bool                # a blocking detour step (6.4)
     slides: list[str]             # in document order; slides[0] is the entry
     loc: SourceLoc
 
@@ -373,7 +380,7 @@ ComponentBlock(name: str, id: str | None, attrs: Attrs, body: str, loc: SourceLo
                follow: str | None)
 
 class TimelineSpec:
-    lines: list[TimelineLine]     # parsed cues with source locations
+    lines: list[TimelineLine]     # parsed cues with source locations; a line is a cue or a detour step (6.4)
 
 class Track:
     id: str                       # "reveal" or component id
@@ -502,6 +509,16 @@ for t in I:
 
 The number of steps is `len(table)`. Follower columns are then added by copying their leader's column. The final table is stored in `Slide.positions` with columns in track order.
 
+### 6.4 Detour steps
+
+A **detour step** is a step of a slide that, when reached with NEXT, enters one of the slide's detours. It lets an animation pause for a refresher and resume where it left off: RETURN (or the end of the detour) lands on the detour step, and the next NEXT performs the step that follows.
+
+- A detour step is declared either by a timeline line `detour ID` (section 3.15), which appends one row to the table at that point, or by the attribute `at=N` on the detour container (section 3.9), which inserts one row after step `N` of the table compiled from the tracks (several `at` detours are inserted in increasing order of `N`, then document order; `N` counts the steps before any insertion). `ID` MUST be a detour of this slide and `N` MUST be an existing step, and `at` MUST NOT be combined with a timeline (all LT054).
+- A detour step is **blocking** when its timeline line ends with `blocking` or its detour has `blocking=true`: a multi-step move (SKIP, section 7.2) stops in front of it instead of rolling over it. Only SKIP-DETOUR, an explicit key, steps over a blocking detour step without entering it.
+- The row of a detour step is a copy of the row before it: nothing changes on the slide. It does not produce LT030.
+- `Slide.step_detours` maps each such step to its detour id and whether it is blocking; the deck JSON carries it as `stepDetours` (section 11.2).
+- Runtime consequences are in section 7.2 (NEXT, PREV), 7.5 (preview and moves) and 11.5 (the PDF export skips detour steps when printing `all`). Reaching a detour step by any means other than NEXT (PREV, the scrubber, the URL hash, a sync) does not enter the detour: steps are positions, not events.
+
 ---
 
 ## 7. Navigation Semantics
@@ -520,17 +537,23 @@ Initial state: `cur = (start, 0)`, `H = []`, `tour = none` (subject to 7.4).
 
 `push(k)` means: append `(cur.slide, cur.step, k)` to `H`. `go(x, i)` means: set `cur = (x, i)` and render.
 
+`pred(x)`, the **structural predecessor** of a slide, is the first of: the slide before `x` in the active tour; the slide before `x` on the main path; a slide whose `next` is `x` (one in the same scope first, then document order); a slide with a branch option targeting `x`; the origin of the detour whose entry is `x`; else none. `detourstep(x, i)` is the detour of the detour step `i` of `x` (section 6.4), or none; it may be blocking.
+
 ### 7.2 Events
 
 | Event | Guard | Effect |
 |---|---|---|
-| **NEXT** | `cur.step < S(cur.slide) - 1` | `cur.step += 1` |
+| **NEXT** | `cur.step < S(cur.slide) - 1` | `cur.step += 1`; then, if `detourstep(cur.slide, cur.step)` is a detour `d`, **ENTER(d)** |
 | | else, `tour` set, `cur.slide` in tour with a successor `u` | `push(forward)`, `go(u, 0)` |
 | | else, `next(cur.slide)` is a slide `t` | `push(forward)`, `go(t, 0)` |
 | | else, `next(cur.slide)` is `back` | **RETURN** |
 | | else | no-op (end-of-path indicator) |
-| **PREV** | `cur.step > 0` | `cur.step -= 1` |
+| **PREV** | `cur.step > 0` | `cur.step -= 1`, repeated while `cur.step > 0` and it is a detour step |
 | | else, `H` not empty | `e = pop(H)`, `go(e.slide, e.step)` |
+| | else, `pred(cur.slide)` is a slide `p` | `go(p, S(p) - 1)` without any push, so PREV keeps walking backward |
+| | else | no-op |
+| **SKIP(n)** (`skip-forward`: `n = 10`, `skip-back`: `n = -10`, `last-step`: to `S(cur.slide) - 1`) | | `cur.step` moves by `n`, clamped to `0..S(cur.slide) - 1`, never leaving the slide and never touching `H`. The intermediate steps are played in rapid succession (single-step moves, so runtimes animate), and a new event cancels the playback. Detour steps passed on the way are not entered; a forward playback stops in front of a blocking detour step ("Cannot step detour") |
+| **SKIP-DETOUR** | `detourstep(cur.slide, cur.step + 1)` is a detour step | `cur.step` moves past it and any detour steps directly following it (clamped to `S(cur.slide) - 1`), without entering them and without touching `H` |
 | | else | no-op |
 | **CHOOSE(k)** | `k` is a branch option key of `cur.slide`, target `t` | `push(forward)`, `go(t, 0)` |
 | | `k` is a detour key of `cur.slide` | **ENTER(d)** |
@@ -549,7 +572,8 @@ Consequences, stated for clarity:
 - Branch choices are forward moves: PREV after a choice returns to the branch slide.
 - RETURN discards the excursion from history: PREV afterwards continues from what preceded the origin.
 - Every forward move leaves a slide at its last step, so PREV into it restores that last step. Excursions store the step they were started from and restore it.
-- The structural fallback only applies when history does not know the origin (after a reload with a deep link, or inside a tour).
+- The structural fallback only applies when history does not know the origin (after a reload with a deep link, or inside a tour). Likewise PREV falls back to `pred` only when `H` is empty (a deck opened on a deep link, or after HOME); since nothing is pushed, Right afterwards pushes a forward entry as usual and Left then pops it.
+- A detour step entered through NEXT records the excursion at that step, so RETURN lands on it and the next NEXT performs the following step. PREV never lands on a detour step.
 
 ### 7.3 Worked trace
 
@@ -575,9 +599,9 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 
 ### 7.5 Presenter view
 
-- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, a scrubber, a preview of what comes next, the available moves (what NEXT does, branch options, detours and the return target, each with its key) and the notes.
+- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, a scrubber, a preview of what comes next, the available moves (what NEXT does, branch options, detours and the return target, each with its key), a **Keybindings** section listing every global action of section 7.6 with its keys (as bound by the deck, in smaller type than the moves, plus the digit keys of branch options and detours) and the notes.
 - The **scrubber** is a slider over the steps of the current slide, shown when the slide has more than one step. Moving it sets `cur.step` directly: it is not an event of section 7.2 and leaves `H` unchanged, and runtimes receive `animate: false` (section 10.1).
-- The **preview** shows what NEXT would show: the next step of the current slide; at the last step, the slide NEXT moves to (tour successor, `next` slide at step 0, or the return target at the step it restores). At a branch point or at the end of the path it shows a label instead. The preview is a second copy of the document opened with `?preview`: a passive window that ignores keys and clicks, keeps no history or storage, does not join the `BroadcastChannel`, never animates, and renders the position the presenter window sends it with `postMessage`.
+- The **preview** shows what NEXT would show: the next step of the current slide (the entry slide of the detour when that step is a detour step, which the moves list names as "detour: label", marked "(blocking)" when it is, followed by the `skip-detour` key); at the last step, the slide NEXT moves to (tour successor, `next` slide at step 0, or the return target at the step it restores). At a branch point or at the end of the path it shows a label instead. The preview is a second copy of the document opened with `?preview`: a passive window that ignores keys and clicks, keeps no history or storage, does not join the `BroadcastChannel`, never animates, and renders the position the presenter window sends it with `postMessage`.
 - Audience and presenter windows share state over a `BroadcastChannel` named `lattice:<deck-hash>`. After every event, the window that handled it broadcasts `{cur, H, tour}`; the other window adopts it without re-running the event. Either window may drive.
 
 ### 7.6 Default bindings
@@ -586,6 +610,10 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 |---|---|
 | `next` | `ArrowRight`, `Space`, `PageDown` |
 | `prev` | `ArrowLeft`, `PageUp` |
+| `skip-forward` | `Shift+ArrowRight` |
+| `skip-back` | `Shift+ArrowLeft` |
+| `last-step` | `End` |
+| `skip-detour` | `Shift+ArrowDown` |
 | `enter-detour` | `ArrowDown` |
 | `return` | `ArrowUp`, `Backspace` |
 | `choose` | digits `1`..`9` and custom keys from the slide |
@@ -595,7 +623,7 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 | `tour` | `t` |
 | `home` | `Home` |
 
-Bindings are overridable in front matter under `keys`. Slide-level keys (branch options and detours) never override global bindings: a collision is an error (LT018).
+Bindings are overridable in front matter under `keys`. A key is a `KeyboardEvent.key` value, optionally prefixed with `Shift+`; with Shift held, the `Shift+` binding is tried first, then the plain key (letters already arrive shifted, so `A` binds Shift+a). Slide-level keys (branch options and detours) never override global bindings: a collision is an error (LT018).
 
 ---
 
@@ -696,8 +724,19 @@ A `ComponentError` raised by `render` becomes error LT022 at the block's locatio
 | `bbv-cfg` | yaml | 1, or leader's count when following | `program` or `source`, `functions`, `show` (default `label` and `code`), `colors`, `direction`, `prims`, `height`; as a follower of a `bbv-anim`, highlights the block named by `meta[i]["block"]` |
 | `abstract-interp-anim` | yaml | number of frames | `program` or `source`, `entry` (the function analysed; default the first), `thresholds` (`thesis`, `sign`, `none` or a list of integers), `narrowing` (default `true`), `fixnum_bits` (default 62), `events` (among `start`, `dequeue`, `instruction`, `propagate`, `done`), `granularity` (`block` or `instruction`), `until`, `history` (`BLOCK.VAR` entries whose chain of entry values the panel shows), `panel` (keys among `worklist`, `iterations`, `history`), `show`, `colors`, `direction`, `wrap`, `caption`, `prims`, `height`, `max_steps` (section 9.6) |
 | `math` | text | 1 | display math block |
+| `arrow` | yaml | 1, or `len(steps)` | `to` (an element id, or a CSS selector, resolved inside the slide), `from` (another element), `angle` (degrees), `length` (default 120), `label`, `color` (a CSS color or a theme token: `accent`, `detour`, `muted`, `ink`), `width` (default 4), `curve` (bend as a fraction of the length, default 0); body `steps:` a list of targets (a string, or a mapping with the same `to`, `from`, `angle`, `length`, `label` keys, defaulting to the block's options; `from: ""` drops the block's `from`), one position each (section 8.9) |
 
 The exact option schemas are the pydantic `Options` models in `src/lattice/components/`.
+
+### 8.9 The `arrow` component
+
+An `arrow` draws an arrow over the current slide, pointing at one of its elements. It is the one component whose geometry is computed in the browser, because element boxes exist only there; the build still decides everything else (targets, directions, steps).
+
+- **Targets.** `to` and `from` name an element of the slide: a bare identifier is an element id (an `{#id}` attribute line, a component `#id`, or any id in the rendered body), anything else is a CSS selector such as `.lt-line[data-line="4"]` or `.lt-title`, resolved inside the slide section. A bare id that no element of the slide carries is warning LT046 at build time; a target not found at runtime hides the arrow (console warning). The box of a target is the extent of its contents when it has some (so a heading or a code line is pointed at its text, not at its full row), else the element's box.
+- **Direction.** With `from`, the arrow runs from the edge of the `from` box to the edge of the `to` box, along the line between their centers, shortened by a small gap at both ends. Otherwise the arrow comes from `angle`: degrees measured from the target toward the tail, counterclockwise with 0 pointing right (90 means the arrow comes from above, 315 from the lower right); its head sits at the target's edge along that direction and its tail `length` slide pixels further, shortened when it would leave the slide. The default is `angle: 315`, a fixed direction chosen over any direction computed at runtime (report, decision 14).
+- **Appearance.** A quadratic curve bent sideways by `curve` times its length (0 is straight; negative bends the other way), an arrowhead at `to`, the `label` at the tail (or beside the middle with `from`), kept inside the slide. `color` defaults to the theme accent.
+- **Steps.** With `steps:` the block has one position per entry and is a track (section 6.1): position `i` points at entry `i`. On a single-step move the arrow glides from its previous geometry (`info.animate`, section 10.1); any other move places it directly.
+- **Placement.** The runtime moves the block's wrapper out of the body to the slide section as an overlay covering the whole slide, above the content and ignoring pointer events, so the block's position in the Markdown does not matter and it takes no space. A `{.reveal}` attribute line before the block hides it until its fragment is shown, as for any block. The arrow is re-measured when the slide is entered, on every step, when the window is resized and when the slide body changes size. The presenter preview and the PDF export draw it like any component.
 
 ---
 
@@ -890,7 +929,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.5.0">
+  <meta name="generator" content="lattice 0.6.0">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -962,6 +1001,7 @@ interface SlideJSON {
   tracks: { id: string; kind: "reveal" | "component";
             instance?: string; follow?: string }[];
   positions: number[][];                   // [step][trackIndex]
+  stepDetours?: Record<string, { id: string; blocking: boolean }>;  // detour steps (section 6.4)
   offpath: boolean;
   transition?: string;
   notes?: string;                          // HTML
@@ -999,7 +1039,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 
 `lattice pdf DECK [-o OUT] [--tour NAME] [--steps first|last|all] [--no-appendix]` writes a PDF, by default next to the deck. It requires Playwright with Chromium (extra `pdf`).
 
-- **Pages.** The tour (default: the main path; `main` also names it) is printed first, in order. Each slide gives one page per selected step: its `pdf` attribute (section 3.5) if present, else `--steps` (default `last`).
+- **Pages.** The tour (default: the main path; `main` also names it) is printed first, in order. Each slide gives one page per selected step: its `pdf` attribute (section 3.5) if present, else `--steps` (default `last`). `all` leaves out detour steps (section 6.4), which repeat the page before them.
 - **Appendix** (unless `--no-appendix`). Starting from the printed slides, breadth first, and then from each appendix slide in turn: every detour with slides not yet printed becomes a section; every branch option whose target is not yet printed becomes a section holding the target and the slides that follow it along `next`, up to a slide already printed; off-path root slides linked from a printed slide are collected in a final section, "Linked slides". Sections are lettered A, B, ... in that order.
 - **Links.** Wiki links, detour badges and branch options link to the first page of their target when it is printed (badges and options also show its page number) and become plain text otherwise. Each appendix page names its section and links back to the page that leads to it.
 - **Rendering.** The command builds the single-file HTML and opens it in Chromium with `?print` at the design size. In print mode the runtime is passive (as the preview of section 7.5). `Lattice.print(plan)` renders each page of the plan with `animate: false`, then copies the slide into a static page: canvases become images, and ids inside the copy get a per-page suffix, with `url(#...)` and `href="#..."` references updated. Chromium prints the copies in one pass, one page per slide page, so the links above are links inside the PDF.
@@ -1060,6 +1100,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT051 | warning | Image referenced by a slide not found |
 | LT052 | warning | Unknown theme (the default theme is used) |
 | LT053 | error | Invalid `pdf` slide attribute, or a `pdf` step beyond the slide's last step |
+| LT054 | error | Invalid detour step: unknown detour in a timeline, `at` out of range or combined with a timeline, or a malformed `detour` line |
 
 Diagnostics are printed as `file:line:col: severity LTnnn: message`. `lattice check` exits with status 1 if any error is reported, 0 otherwise (`--strict` also fails on warnings).
 
@@ -1231,3 +1272,8 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.4 | Basic block versioning: `bbv-anim`, `bbv-cfg`, the `.bbv` program syntax, SBBV and ΛV frames, block bands layout | 8.8, 9.1, 9.5 |
 | 0.4 | `code`: `meta=` picks the leader's meta key; `file="lattice:..."` reads a bundled file | 8.8 |
 | 0.5 | Abstract interpretation: `abstract-interp-anim`, intervals in types, parameter annotations and comparison tests in `.bbv` programs | 8.8, 9.5, 9.6 |
+| 0.6 | PREV with an empty history goes to the structural predecessor | 7.1, 7.2 |
+| 0.6 | SKIP and SKIP-DETOUR events and the `skip-forward`, `skip-back`, `last-step` and `skip-detour` bindings; `Shift+KEY` notation | 7.2, 7.6 |
+| 0.6 | Keybindings section of the presenter view | 7.5 |
+| 0.6 | Detour steps (`detour ID [blocking]` timeline lines, `at=` and `blocking=` on detours), LT054, `stepDetours` | 3.9, 3.15, 6.4, 7.2, 11.2, 11.5, 12 |
+| 0.6 | The `arrow` component | 8.8, 8.9 |

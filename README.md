@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.5.0. This README covers usage. The documentation in `docs/` covers the rest:
+This is version 0.6.0. This README covers usage. The documentation in `docs/` covers the rest:
 
 - [`docs/spec.md`](docs/spec.md) defines the syntax, navigation, components and output exactly.
 - [`docs/design-report.md`](docs/design-report.md) explains the design and holds the roadmap.
@@ -76,9 +76,10 @@ The last slide of a detour returns to where you came from.
 | `# Title {#id .class next=id offpath=true layout=title}` | Slide boundary and attributes (`next` also accepts `back` and `none`) |
 | `# Title {pdf="0,3,end"}` | Steps printed by `lattice pdf` for this slide (`first`, `last`, `all` or a list; numbered from 0) |
 | `::include{file="x.md"}` | Splice the slides of another file here (also inside a detour) |
-| `::: detour {#id label=... key=k}` | Nested slides entered with Down or `k`, returning automatically |
+| `::: detour {#id label=... key=k at=2 blocking=true}` | Nested slides entered with Down or `k`, returning automatically; `at=2` makes it a step of the slide, entered after step 2, and `blocking` keeps skip keys from rolling over it (spec section 6.4) |
 | `::: branch` with a list of `[[target\|label]]` | A choice point, keys 1 to 9 by default |
 | `::: notes` | Speaker notes, shown in presenter view |
+| ` ```timeline ` with a line `detour id` (or `detour id blocking`) | A step that enters that detour, between the slide's other steps (spec section 6.4) |
 | `::: columns` / `::: column {width=2fr}` | Layout (the outer fence needs more colons: `::::`) |
 | `::: callout {kind=info\|tip\|warn}` | Highlighted box |
 | `{.reveal}` on the line before a block | Fragment (list items reveal one by one) |
@@ -107,6 +108,7 @@ code language.
 | ` ```diff-steps {lang=python context=3} ` + `versions: [...]` | Step through versions of a file; each step marks added and removed lines |
 | ` ```dot ` | Graphviz diagram, themed |
 | ` ```timeline ` | Orders the steps of several stepping elements on one slide |
+| ` ```arrow {to=proof label="here" angle=315} ` | An arrow drawn over the slide, pointing at an element (an id or a CSS selector), from a direction or from another element (`from=`); with `steps:` it moves from one element to the next |
 
 Animations are computed at build time. A trace function receives the graph (or values) and
 keyword options from the block, and records frames as deltas:
@@ -150,12 +152,15 @@ the themes style are in spec section 9.1, and the program syntax in spec section
 | Key | Action |
 |---|---|
 | Right, Space | Next step, then next slide |
-| Left | Undo the last move (history) |
+| Left | Undo the last move (history), or the previous slide when there is no history |
+| Shift+Right, Shift+Left | Ten steps forward or back on the slide, played quickly |
+| End | Last step of the slide |
+| Shift+Down | Step over the next detour step without entering it |
 | Down | Enter the slide's first detour |
 | Up, Backspace | Return to where the current detour or jump started |
 | 1 to 9, custom keys | Choose a branch option or detour |
 | `o` / `g` | Overview (a map of the slide graph plus an outline) / go to a slide by name |
-| `p` | Open the synchronized presenter view (notes, moves, timer, a preview of what comes next and a step scrubber) |
+| `p` | Open the synchronized presenter view (notes, moves, all keybindings, timer, a preview of what comes next and a step scrubber) |
 | `t` | Cycle through tours |
 | Home | Back to the start, clearing history |
 
@@ -191,7 +196,8 @@ An animated component returns `positions > 1` plus `data`, and names a JavaScrip
 
 Each folder in [`examples/`](examples) holds a deck and its built `talk.html`:
 
-1. `01-getting-started`: slides, fragments, code, math, a detour, links, an off-path slide, Graphviz.
+1. `01-getting-started`: slides, fragments, code, math, an arrow that walks through the code, a detour
+   that is also a step of its slide, links, an off-path slide, Graphviz.
 2. `02-shortest-paths`: a multi-file lecture with BFS and Dijkstra animations, code following the
    animation, a timeline, a benchmark plot and a reusable detour included from `shared/`.
 3. `03-sorting-workshop`: a dark-theme workshop where the audience picks an algorithm (branches that
@@ -212,7 +218,7 @@ Rebuild them all with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.5.0 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.6.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

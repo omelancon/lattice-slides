@@ -30,6 +30,10 @@ DEFAULT_TRANSITIONS = {"next": "slide", "branch": "slide", "detour": "zoom", "li
 DEFAULT_KEYS: dict[str, list[str]] = {
     "next": ["ArrowRight", " ", "PageDown"],
     "prev": ["ArrowLeft", "PageUp"],
+    "skip-forward": ["Shift+ArrowRight"],
+    "skip-back": ["Shift+ArrowLeft"],
+    "last-step": ["End"],
+    "skip-detour": ["Shift+ArrowDown"],
     "enter-detour": ["ArrowDown"],
     "return": ["ArrowUp", "Backspace"],
     "overview": ["o"],
@@ -101,6 +105,8 @@ class TimelineAssign:
 class TimelineLine:
     assigns: list[TimelineAssign]
     loc: SourceLoc
+    detour: str | None = None  # a detour step (spec 6.4): the line is `detour ID [blocking]` and has no assigns
+    blocking: bool = False
 
 
 @dataclass
@@ -124,6 +130,8 @@ class Detour:
     label: str = ""
     key: str | None = None
     badge: bool = True
+    at: int | None = None  # `at=N`: entered as a detour step after step N of the origin (spec 6.4)
+    blocking: bool = False  # a blocking detour step cannot be rolled over by a multi-step move
 
 
 @dataclass
@@ -160,6 +168,7 @@ class Slide:
     next: str | None = None  # slide id, "back" or None
     tracks: list[Track] = field(default_factory=list)
     positions: list[list[int]] = field(default_factory=lambda: [[]])
+    step_detours: dict[int, dict] = field(default_factory=dict)  # step -> {"id", "blocking"} (spec 6.4)
 
     @property
     def scope_id(self) -> str:

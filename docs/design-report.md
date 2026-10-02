@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.5.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.6.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -93,6 +93,14 @@ Companions are followers: `bbv-cfg` highlights the origin block being specialize
 
 The analysis that SBBV extends works on a fixed graph, so its animation keeps the source CFG still and changes the annotation inside the blocks: contexts gain intervals, grow by union with widening and shrink at conditionals. Reusing the `bbv-cfg` drawing and the `bbv.js` runtime (with per-frame context lines) keeps the three techniques visually comparable on consecutive slides, which is the point of showing them together. Intervals live inside the type values rather than beside them, so one context class serves all three algorithms; the versioning algorithms simply drop intervals, as the thesis's implementations do. Widening uses thresholds because that is what reproduces the thesis's own chain (decision 13), and the chain is shown in the panel rather than as a drawn lattice.
 
+### 3.12 Pointing at things, and pausing an animation (spec sections 6.4, 7.2 and 8.9)
+
+Left undoes the last move, but a deck opened on a deep link has no history to undo. Rather than stopping, PREV then falls back to the structural predecessor (tour, main path, `next` edges, branches, detour origin) without recording anything, so the presenter can keep walking backward and the history model stays untouched (decision 15). Skipping ten steps or jumping to the last step of a slide are step moves, so they never touch history; the intermediate steps are played quickly instead of jumped over, because an animation that disappears is harder to follow than one that runs fast.
+
+A detour step lets an animation pause for a refresher and resume where it left off. It is a row of the step table that repeats the previous row and names a detour: entering happens only when NEXT arrives on it, since steps are positions and must be reachable by the scrubber, the hash and a reload without side effects. Backward moves skip such rows, which would otherwise cost a dead key press. Skip moves roll over detour steps by default, since their purpose is to get somewhere fast; a `blocking` detour step stops them, for material that must not be bypassed, and an explicit key (`skip-detour`) remains the one way past it without entering, so a presenter is never trapped.
+
+The `arrow` component is the one place where the runtime measures: element boxes exist only in the browser, so an arrow pointing at an element has to be laid out there. Everything else about it is decided at build time, including its default direction, a fixed angle of 315 degrees (decision 14): a direction computed from the layout at runtime would make the drawing depend on the window and on timing, and would be the first step down a path the project avoids.
+
 ---
 
 ## 4. Use Cases
@@ -166,6 +174,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.5 (done).** Abstract interpretation: integer intervals in abstract values with threshold widening and comparison narrowing, parameter annotations and comparison tests in `.bbv` programs, `abstract-interp-anim` with per-frame contexts, dead edges and the widening chain in the panel.
 
+**v0.6 (done).** Navigation: Left walks the structure backward when the history is empty, skip keys that play ten steps quickly or jump to the last step, a Keybindings section in the presenter view; detour steps, so an animation can pause for a refresher; the `arrow` component.
+
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
 - Plugin hooks beyond components (new syntax, generated slides, custom checks).
@@ -194,3 +204,5 @@ Decisions taken while writing the specification, and since.
 | 11 | PDF contents | The tour (default: main path), then an appendix of detours, branch options not taken and linked off-path slides. Steps per slide: `last` by default, a `pdf` attribute otherwise, numbered from 0 as in the URL. |
 | 12 | Versioning animations | Built-in components, not a plugin. Programs in a text CFG language (or Python objects). The thesis type lattice with `#f` as its own type. Thesis figure style with origin colours. Block bands layout, top to bottom by default, functions side by side, positions per frame. Companions through followers. Version limits compared with branches or detours, not a live control. One frame per event by default. |
 | 13 | Abstract interpretation | Component `abstract-interp-anim` on the `bbv-cfg` drawing. Intervals for integers only, inside the type values; they decide `fx` versus `fx | bg`. Threshold widening at every join (thesis thresholds, `sign`, `none`). Direct comparison tests only (no tracking of boolean temporaries). Entry contexts from parameter annotations. Entry context in the block, exit context in the tooltip. Widening chain as a panel list. |
+| 14 | Arrow component | Built in, named `arrow` (registered names win over the obscure Pygments `arrow` lexer). Targets by element id or CSS selector, resolved in the browser, which also measures the geometry: the only runtime layout in Lattice. Default direction: a fixed angle of 315 degrees (the arrow comes from the lower right), never a direction computed from the layout. Steps make it a track. |
+| 15 | Backward navigation without history | PREV falls back to the structural predecessor (tour, main path, `next`, branch, detour origin) and records nothing. Skip moves are step moves, clamped to the slide, played quickly. Detour steps are entered only by NEXT and skipped by PREV; a `blocking` detour step stops a skip playback, and `skip-detour` (Shift+Down) is the explicit way over a detour step. |

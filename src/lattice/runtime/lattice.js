@@ -106,11 +106,65 @@ const Lattice = (() => {
     const d = detourOf(nav.cur.slide);
     return d ? d.origin : null;
   }
+  // Structural predecessor of a slide, for PREV when history is empty (spec 7.2): the tour predecessor,
+  // else the previous slide on the main path, else a slide whose `next` is this one (same scope first),
+  // else the slide whose branch leads here, else the origin of the detour this slide starts.
+  function predecessor(id) {
+    if (nav.tour && deck.tours[nav.tour]) {
+      const list = deck.tours[nav.tour];
+      const i = list.indexOf(id);
+      if (i > 0) return list[i - 1];
+    }
+    const mp = deck.mainPath.indexOf(id);
+    if (mp > 0) return deck.mainPath[mp - 1];
+    const s = slide(id);
+    const before = deck.order.filter((x) => slide(x).next && slide(x).next.slide === id);
+    const same = before.find((x) => slide(x).scope === s.scope);
+    if (same || before.length) return same || before[0];
+    const chooser = deck.order.find((x) => slide(x).branches.some((b) => b.target === id));
+    if (chooser) return chooser;
+    const d = detourOf(id);
+    if (d && d.entry === id) return d.origin;
+    return null;
+  }
+  // A step whose arrival through NEXT enters a detour (spec 6.4): { id, blocking }, or null.
+  const stepDetour = (id, step) => (slide(id).stepDetours || {})[step] || null;
+
+  // Multi-step moves within a slide play the intermediate steps in rapid succession, so that
+  // animations are seen rather than skipped (spec 7.2, SKIP). A new move cancels a running one.
+  // Detour steps on the way are not entered; a blocking one stops the playback in front of it.
+  let playTimer = null;
+  function playSteps(target) {
+    clearTimeout(playTimer);
+    const total = Math.abs(target - nav.cur.step);
+    if (!total) return;
+    const interval = Math.max(30, Math.min(90, 1000 / total));
+    const tick = () => {
+      const cur = nav.cur.step;
+      if (cur === target) return;
+      const dir = Math.sign(target - cur);
+      const d = dir > 0 ? stepDetour(nav.cur.slide, cur + 1) : null;
+      if (d && d.blocking) return flash("Cannot step detour");
+      go(nav.cur.slide, cur + dir, { kind: "step", dir });
+      if (nav.cur.step !== target) playTimer = setTimeout(tick, interval);
+    };
+    tick();
+  }
+  function stopPlaying() {
+    clearTimeout(playTimer);
+    playTimer = null;
+  }
 
   const actions = {
     next() {
       const cur = nav.cur;
-      if (cur.step < steps(cur.slide) - 1) return go(cur.slide, cur.step + 1, { kind: "step", dir: 1 });
+      if (cur.step < steps(cur.slide) - 1) {
+        const k = cur.step + 1;
+        go(cur.slide, k, { kind: "step", dir: 1 });
+        const d = stepDetour(cur.slide, k); // a detour step: arriving on it enters the detour (spec 6.4)
+        if (d) actions.enter(d.id);
+        return;
+      }
       const t = tourSuccessor();
       if (t) { push("forward"); return go(t, 0, { kind: "next", dir: 1 }); }
       const n = slide(cur.slide).next;
@@ -120,12 +174,29 @@ const Lattice = (() => {
     },
     prev() {
       const cur = nav.cur;
-      if (cur.step > 0) return go(cur.slide, cur.step - 1, { kind: "step", dir: -1 });
+      if (cur.step > 0) {
+        let k = cur.step - 1;
+        while (k > 0 && stepDetour(cur.slide, k)) k--; // detour steps show nothing new going backward
+        return go(cur.slide, k, { kind: "step", dir: -1 });
+      }
       if (nav.H.length) {
         const e = nav.H.pop();
         return go(e.slide, e.step, { kind: e.kind === "excursion" ? "return" : "prev", dir: -1 });
       }
-      flash("Start of history");
+      const p = predecessor(cur.slide); // no history: walk the structure backward, without recording it
+      if (p) return go(p, steps(p) - 1, { kind: "prev", dir: -1 });
+      flash("No previous slide");
+    },
+    "skip-forward"() { playSteps(Math.min(nav.cur.step + 10, steps(nav.cur.slide) - 1)); },
+    "skip-back"() { playSteps(Math.max(nav.cur.step - 10, 0)); },
+    "last-step"() { playSteps(steps(nav.cur.slide) - 1); },
+    "skip-detour"() {
+      // Step over the detour step(s) that follow, without entering them (spec 7.2, SKIP-DETOUR).
+      const cur = nav.cur;
+      let k = cur.step;
+      while (k + 1 < steps(cur.slide) && stepDetour(cur.slide, k + 1)) k++;
+      if (k === cur.step) return flash("No detour step next");
+      go(cur.slide, Math.min(k + 1, steps(cur.slide) - 1), { kind: "step", dir: 1 });
     },
     choose(key) {
       const s = slide(nav.cur.slide);
@@ -319,7 +390,8 @@ const Lattice = (() => {
     const bits = [];
     if (s.steps > 14) bits.push(`<span class="lt-where">step ${nav.cur.step + 1}/${s.steps}</span>`);
     else if (s.steps > 1) {
-      bits.push(`<span class="lt-steps">${Array.from({ length: s.steps }, (_, i) => `<i class="${i <= nav.cur.step ? "on" : ""}"></i>`).join("")}</span>`);
+      const dot = (i) => `<i class="${[i <= nav.cur.step ? "on" : "", stepDetour(nav.cur.slide, i) ? "dt" : ""].join(" ").trim()}"></i>`;
+      bits.push(`<span class="lt-steps">${Array.from({ length: s.steps }, (_, i) => dot(i)).join("")}</span>`);
     }
     if (s.detours.length) bits.push(`<span class="lt-hint"><kbd>\u2193</kbd>${esc(deck.detours[s.detours[0]].label)}</span>`);
     if (topExcursion() >= 0 || d) bits.push(`<span class="lt-hint"><kbd>\u2191</kbd>${esc(label(returnTarget()))}</span>`);
@@ -503,6 +575,7 @@ const Lattice = (() => {
       <h3>Next <span class="lt-pp-next-label"></span></h3>
       <div class="lt-pp-next"><iframe class="lt-pp-preview" title="Next" tabindex="-1" style="aspect-ratio:${W} / ${H}"></iframe><div class="lt-pp-next-none" hidden></div></div>
       <h3>Moves</h3><ul class="lt-pp-moves"></ul>
+      <h4 class="lt-pp-keys-title">Keybindings</h4><ul class="lt-pp-keys">${keybindingsList()}</ul>
       <h3>Notes</h3><div class="lt-pp-notes"></div>`;
     const range = $(".lt-pp-scrub input", panel);
     range.addEventListener("input", () => {
@@ -520,10 +593,33 @@ const Lattice = (() => {
     previewFrame.src = location.pathname + "?preview";
   }
 
+  // The Keybindings section of the presenter panel: every global action with its keys (spec 7.5).
+  const ACTION_LABELS = {
+    next: "next step or slide", prev: "previous step, or undo the last move",
+    "skip-forward": "10 steps forward", "skip-back": "10 steps back", "last-step": "last step of the slide",
+    "skip-detour": "step over the next detour step",
+    "enter-detour": "enter the first detour", return: "return from a detour or jump",
+    overview: "overview", goto: "go to a slide", presenter: "presenter view", tour: "cycle through tours",
+    home: "start of the deck, clearing history",
+  };
+  const KEY_NAMES = { " ": "Space", ArrowRight: "→", ArrowLeft: "←", ArrowUp: "↑", ArrowDown: "↓" };
+  const keyName = (k) => k.split("+").map((part) => KEY_NAMES[part] || part).join("+");
+  function keybindingsList() {
+    const rows = Object.entries(deck.keys).map(([action, keys]) =>
+      `<li><span class="lt-pp-kbd">${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("")}</span>` +
+      `<span>${esc(ACTION_LABELS[action] || action)}</span></li>`);
+    rows.push(`<li><span class="lt-pp-kbd"><kbd>1</kbd>…<kbd>9</kbd></span><span>choose a branch option or a detour (slide keys)</span></li>`);
+    return rows.join("");
+  }
+
   // What NEXT would show: the next step of this slide, else the slide NEXT moves to, at the step it lands on.
   function previewTarget() {
     const s = slide(nav.cur.slide);
-    if (nav.cur.step < s.steps - 1) return { slide: nav.cur.slide, step: nav.cur.step + 1, label: `step ${nav.cur.step + 2} of ${s.steps}` };
+    if (nav.cur.step < s.steps - 1) {
+      const d = stepDetour(nav.cur.slide, nav.cur.step + 1);
+      if (d) return { slide: deck.detours[d.id].entry, step: 0, label: `detour: ${deck.detours[d.id].label}` };
+      return { slide: nav.cur.slide, step: nav.cur.step + 1, label: `step ${nav.cur.step + 2} of ${s.steps}` };
+    }
     const nt = nextTarget();
     if (!nt || !nt.slide) return { slide: null, label: s.branches.length ? "choose a branch" : "end of path" };
     if (nt.kind === "back") {
@@ -549,7 +645,13 @@ const Lattice = (() => {
     const s = slide(nav.cur.slide);
     const nt = nextTarget();
     const moves = [];
-    if (nav.cur.step < s.steps - 1) moves.push(`<li><kbd>\u2192</kbd> step ${nav.cur.step + 2} of ${s.steps}</li>`);
+    const sd = nav.cur.step < s.steps - 1 ? stepDetour(nav.cur.slide, nav.cur.step + 1) : null;
+    if (sd) {
+      moves.push(`<li><kbd>\u2192</kbd> detour: ${esc(deck.detours[sd.id].label)}${sd.blocking ? " (blocking)" : ""}</li>`);
+      const sk = (deck.keys["skip-detour"] || [])[0];
+      if (sk) moves.push(`<li><kbd>${esc(keyName(sk))}</kbd> skip the detour step</li>`);
+    }
+    else if (nav.cur.step < s.steps - 1) moves.push(`<li><kbd>\u2192</kbd> step ${nav.cur.step + 2} of ${s.steps}</li>`);
     else if (nt && nt.slide) moves.push(`<li><kbd>\u2192</kbd> ${nt.kind === "back" ? "return to " : ""}${esc(label(nt.slide))}</li>`);
     else moves.push(`<li><kbd>\u2192</kbd> end of path</li>`);
     for (const b of s.branches) moves.push(`<li><kbd>${esc(b.key)}</kbd> ${esc(b.label || label(b.target))}</li>`);
@@ -708,9 +810,12 @@ const Lattice = (() => {
     }
     const s = slide(nav.cur.slide);
     const slideKey = s.branches.some((b) => b.key === e.key) || s.detours.some((d) => deck.detours[d].key === e.key);
-    if (slideKey) { actions.choose(e.key); e.preventDefault(); return; }
-    const action = keyMap()[e.key];
-    if (action && actions[action]) { actions[action](); e.preventDefault(); }
+    if (slideKey) { stopPlaying(); actions.choose(e.key); e.preventDefault(); return; }
+    // Bindings may name a shifted key as "Shift+ArrowRight"; a plain key still matches with Shift held
+    // (letters already arrive shifted, as "A" for Shift+a).
+    const map = keyMap();
+    const action = (e.shiftKey && map[`Shift+${e.key}`]) || map[e.key];
+    if (action && actions[action]) { stopPlaying(); actions[action](); e.preventDefault(); }
   }
 
   function onClick(e) {

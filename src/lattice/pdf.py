@@ -29,14 +29,17 @@ def parse_steps(value: str) -> str | list[int | str]:
     return [x if x == "end" else int(x) for x in text.split(",")]
 
 
-def select_steps(spec: str | list, count: int) -> list[int]:
-    """The steps (0-based) printed for a slide with ``count`` steps. Out-of-range indexes are dropped."""
+def select_steps(spec: str | list, count: int, skip: set[int] | frozenset[int] = frozenset()) -> list[int]:
+    """The steps (0-based) printed for a slide with ``count`` steps. Out-of-range indexes are dropped.
+
+    ``skip`` holds the slide's detour steps (spec 6.4), which show nothing new: ``all`` leaves them out.
+    """
     if spec == "first":
         return [0]
     if spec == "last":
         return [count - 1]
     if spec == "all":
-        return list(range(count))
+        return [i for i in range(count) if i not in skip]
     picked = {count - 1 if x == "end" else x for x in spec}
     return sorted(i for i in picked if 0 <= i < count)
 
@@ -74,7 +77,8 @@ def pdf_plan(deck: Deck, *, tour: str | None = None, steps: str = "last", append
 
     def add(slide_id: str, section: int | None) -> None:
         s = deck.slides[slide_id]
-        for step in select_steps(s.pdf_steps if s.pdf_steps is not None else default, s.steps):
+        for step in select_steps(s.pdf_steps if s.pdf_steps is not None else default, s.steps,
+                                 set(s.step_detours)):
             pages.append({"slide": slide_id, "step": step, "n": len(pages) + 1, "section": section})
             page_of.setdefault(slide_id, len(pages))
 

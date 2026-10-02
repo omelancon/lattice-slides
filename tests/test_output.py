@@ -131,3 +131,50 @@ def test_unknown_theme_warns(deck):
     d = build_deck(root, use_cache=False)
     assert "LT052" in {x.code for x in d.diagnostics.items}
     assert "--lt-bg:#f7f8fa" in emit_html(d)  # falls back to the default theme
+
+
+ARROW_DECK = """
+# A
+
+{#why}
+A paragraph to point at.
+
+```arrow {to=why label="here"}
+```
+
+```arrow {#walk from=why curve=0.2}
+steps:
+  - .lt-title
+  - to: why
+    from: ""
+    angle: 90
+```
+
+```arrow {to=nowhere}
+```
+"""
+
+
+def test_arrow_component(deck):
+    """Spec 8.9: targets, the 315 degree default, steps as positions, and LT046 for an unknown id."""
+    root = deck({"talk.md": ARROW_DECK})
+    d = build_deck(root, use_cache=False)
+    s = d.slides["a"]
+    assert [w.code for w in d.diagnostics.items] == ["LT046"] and "nowhere" in d.diagnostics.items[0].message
+    one = d.instances["a/c1"]["data"]
+    assert one["steps"] == [{"to": "why", "from": None, "angle": 315.0, "length": 120.0, "label": "here"}]
+    walk = d.instances["a/walk"]["data"]
+    assert [t["to"] for t in walk["steps"]] == [".lt-title", "why"]
+    assert walk["steps"][0]["from"] == "why" and walk["steps"][0]["angle"] is None
+    assert walk["steps"][1]["from"] is None and walk["steps"][1]["angle"] == 90.0
+    assert walk["curve"] == 0.2
+    assert s.steps == 2 and [t.id for t in s.tracks] == ["walk"]
+    html = emit_html(d)
+    assert 'data-component="arrow"' in html and 'Lattice.component("arrow"' in html
+
+
+def test_arrow_needs_a_target(deck):
+    from lattice.build import check_deck
+
+    root = deck({"talk.md": "# A\n```arrow\n```\n"})
+    assert "LT022" in {x.code for x in check_deck(root, use_cache=False).items}

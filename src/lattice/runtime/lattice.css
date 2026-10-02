@@ -92,6 +92,13 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-column .lt-code pre{font-size:16.5px}
 .lt-ln{display:inline-block;width:2.6em;margin-left:-.4em;color:var(--lt-muted);opacity:.6;user-select:none}
 .lt-c-plot,.lt-c-dot{flex:1 1 0;min-height:120px}
+/* arrow: an overlay over the whole slide (the runtime moves it out of the body) */
+.lt-c-arrow{position:absolute;inset:0;display:block;pointer-events:none;z-index:4}
+.lt-c-arrow:not(.lt-arrow-overlay){display:none}
+.lt-arrow-box,.lt-arrow-box svg{display:block;width:100%;height:100%;overflow:visible}
+.lt-arrow-line{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.lt-arrow-text{font-family:var(--lt-font-head);font-size:22px;font-weight:600;paint-order:stroke;stroke:var(--lt-bg);
+  stroke-width:6px;stroke-linejoin:round}
 .lt-plot,.lt-dot{height:100%;display:flex;justify-content:center;color:var(--lt-ink)}
 .lt-dot svg text{fill:currentColor}
 .lt-plot svg,.lt-dot svg{height:100%;width:auto;max-width:100%;display:block}
@@ -259,6 +266,8 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-steps{display:inline-flex;gap:5px}
 .lt-steps i{width:7px;height:7px;border-radius:50%;background:var(--lt-rule)}
 .lt-steps i.on{background:var(--lt-accent)}
+.lt-steps i.dt{border-radius:1px;transform:rotate(45deg) scale(.9)}
+.lt-steps i.dt.on{background:var(--lt-detour-ink)}
 #lt-flash{position:absolute;left:50%;bottom:66px;transform:translate(-50%,8px);background:var(--lt-ink);color:var(--lt-bg);
   padding:8px 18px;border-radius:8px;font-size:18px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
 #lt-flash.on{opacity:1;transform:translate(-50%,0)}
@@ -315,6 +324,12 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-pp-timer{font-family:var(--lt-font-code);font-size:30px;font-weight:600;cursor:pointer}
 .lt-pp-moves{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
 .lt-pp-moves kbd{margin-right:10px;color:var(--lt-accent)}
+/* the Keybindings section: every global action, smaller than the moves */
+.lt-pp-keys-title{font-size:12px;color:var(--lt-muted);margin:16px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.lt-pp-keys{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:3px 18px;font-size:13px;color:var(--lt-muted)}
+.lt-pp-keys li{display:flex;gap:8px;align-items:baseline;min-width:0}
+.lt-pp-kbd{flex:none;display:inline-flex;gap:3px;align-items:baseline}
+.lt-pp-keys kbd{font-size:11px;padding:1px 5px;color:var(--lt-accent)}
 .lt-pp-notes{font-size:19px;line-height:1.5}
 .lt-pp-notes a{color:var(--lt-accent)}
 .lt-pp-scrub{display:flex;align-items:center;gap:14px;margin-top:18px}

@@ -173,6 +173,15 @@ class Loader:
             d.badge = to_bool(attrs.get("badge", "true"))
         except AttrError as e:
             self.d.error("LT009", str(e), loc)
+        try:
+            d.blocking = to_bool(attrs.get("blocking", "false"))
+        except AttrError as e:
+            self.d.error("LT009", str(e), loc)
+        if "at" in attrs.kv:
+            if attrs.kv["at"].isdigit():
+                d.at = int(attrs.kv["at"])
+            else:
+                self.d.error("LT009", f"detour attribute at={attrs.kv['at']!r} must be a step number", loc)
         return d
 
     # ------------------------------------------------------------------ ids

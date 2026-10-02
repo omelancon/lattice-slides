@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 import traceback
 from pathlib import Path
 
@@ -196,6 +197,7 @@ def render_slide_components(deck: Deck, slide: Slide, cache: Cache, palette: dic
             deck.requires.update(REGISTRY[b.name].requires)
             deck.requires.update(r.requires)
     slide.body_html = body
+    _check_arrow_targets(slide, blocks, results, diags)
 
     # tracks (6.1): reveal first, then components in document order
     rendered = [b for b in blocks if b.index in results]
@@ -221,6 +223,21 @@ def render_slide_components(deck: Deck, slide: Slide, cache: Cache, palette: dic
                 diags.error("LT033", f"component {blk.name!r} needs an #id to be used in a timeline", blk.loc)
     slide.tracks = tracks
     compile_steps(slide, diags)
+
+
+def _check_arrow_targets(slide: Slide, blocks, results, diags: Diagnostics) -> None:
+    """LT046 when an `arrow` names an element id that no element of the slide carries (spec 8.9)."""
+    from .components.visual import arrow_targets
+
+    arrows = [b for b in blocks if b.name == "arrow" and b.index in results]
+    if not arrows:
+        return
+    ids = set(re.findall(r'\sid="([^"]+)"', slide.body_html + slide.title_html))
+    ids |= {b.id for b in blocks if b.id}
+    for b in arrows:
+        for ref in arrow_targets(results[b.index].data or {}):
+            if ref not in ids:
+                diags.warn("LT046", f"arrow: no element with id {ref!r} on this slide", b.loc)
 
 
 def _valid_result(result, block, diags) -> bool:
