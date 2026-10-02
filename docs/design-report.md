@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.6.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.7.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -101,6 +101,10 @@ A detour step lets an animation pause for a refresher and resume where it left o
 
 The `arrow` component is the one place where the runtime measures: element boxes exist only in the browser, so an arrow pointing at an element has to be laid out there. Everything else about it is decided at build time, including its default direction, a fixed angle of 315 degrees (decision 14): a direction computed from the layout at runtime would make the drawing depend on the window and on timing, and would be the first step down a path the project avoids.
 
+### 3.13 One vocabulary for what the algorithms say (spec section 9.5)
+
+A versioning or abstract interpretation frame has three places that talk: the context lines inside the nodes, the caption under the drawing and the panel beside it. Plain text made them all look alike, and a caption such as "B: i: fx [0, 127] ∪ fx [1, 128] = fx [0, 128]" asked the audience to parse it. The three now share one vocabulary (decision 16): the operation of the frame comes first as a badge whose colour says what kind of event it is (specialization, removal or merge, growth, completion), versions are chips filled with the origin colour of their block so that a caption points at the node it names, variables, types and intervals each have a colour, and removed tests are struck through in the caption as in the node. The build still decides every word: `trace.py` writes the caption with a small inline markup and the runtime only turns spans into styled text, which keeps captions strings for the frame stores, the presenter view and the PDF. Inside the nodes the `;;` comment notation of the thesis stays, with the types aligned in a column, because telling a context from code at a glance is what the notation is for.
+
 ---
 
 ## 4. Use Cases
@@ -176,6 +180,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.6 (done).** Navigation: Left walks the structure backward when the history is empty, skip keys that play ten steps quickly or jump to the last step, a Keybindings section in the presenter view; detour steps, so an animation can pause for a refresher; the `arrow` component.
 
+**v0.7 (done).** Rich text in the versioning and abstract interpretation animations: operation badges, version chips in origin colours, coloured types, intervals, keywords and removed tests in captions, nodes and panel; drawings keep their height in narrow columns; origin colours survive a version being hidden and shown again.
+
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
 - Plugin hooks beyond components (new syntax, generated slides, custom checks).
@@ -206,3 +212,4 @@ Decisions taken while writing the specification, and since.
 | 13 | Abstract interpretation | Component `abstract-interp-anim` on the `bbv-cfg` drawing. Intervals for integers only, inside the type values; they decide `fx` versus `fx | bg`. Threshold widening at every join (thesis thresholds, `sign`, `none`). Direct comparison tests only (no tracking of boolean temporaries). Entry contexts from parameter annotations. Entry context in the block, exit context in the tooltip. Widening chain as a panel list. |
 | 14 | Arrow component | Built in, named `arrow` (registered names win over the obscure Pygments `arrow` lexer). Targets by element id or CSS selector, resolved in the browser, which also measures the geometry: the only runtime layout in Lattice. Default direction: a fixed angle of 315 degrees (the arrow comes from the lower right), never a direction computed from the layout. Steps make it a track. |
 | 15 | Backward navigation without history | PREV falls back to the structural predecessor (tour, main path, `next`, branch, detour origin) and records nothing. Skip moves are step moves, clamped to the slide, played quickly. Detour steps are entered only by NEXT and skipped by PREV; a `blocking` detour step stops a skip playback, and `skip-detour` (Shift+Down) is the explicit way over a detour step. |
+| 16 | Rich text of the versioning animations | One vocabulary for captions, node contexts and the panel: badge for the operation (colour by category), chips in origin colours for versions, a colour each for variables, types and intervals, keywords coloured, removed tests struck through. The build writes captions with an inline backtick markup (`lattice.bbv.rich`); the runtime styles it. The `;;` notation stays in the nodes, with the types aligned. |

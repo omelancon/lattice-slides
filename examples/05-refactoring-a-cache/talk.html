@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.6.0">
+<meta name="generator" content="lattice 0.7.0">
 <title>Refactoring a cache</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -130,11 +130,15 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-ga-canvas{flex:1;min-width:0;height:430px;display:flex}
 .lt-ga-svg{width:100%;height:100%;margin:0 auto}
 @container (max-width: 760px){
+  /* the panel moves under the drawing; the canvas keeps its height (a flex item along the column
+     would otherwise take the natural height of its SVG and ignore `height`) */
   .lt-ga-main{flex-direction:column;align-items:stretch;gap:12px}
-  .lt-ga-panel{max-width:none;flex-direction:row;flex-wrap:wrap;gap:12px 28px}
+  .lt-ga-canvas{flex:none}
+  .lt-ga-panel{max-width:none;flex:none;flex-direction:row;flex-wrap:wrap;gap:12px 28px}
 }
 .lt-ga-caption{font-size:22px;color:var(--lt-muted);min-height:1.5em;font-style:italic}
 .lt-ga-panel{flex:none;display:flex;flex-direction:column;gap:14px;font-size:19px;max-width:40%}
+.lt-ga-panel[hidden]{display:none}
 .lt-pv-name{font-family:var(--lt-font-code);font-size:15px;color:var(--lt-muted);margin-bottom:4px}
 .lt-pv-map{border-collapse:collapse;font-family:var(--lt-font-code);font-size:18px}
 .lt-pv-map th{font-weight:600;color:var(--lt-muted);padding:2px 10px;border-bottom:1px solid var(--lt-rule)}
@@ -226,6 +230,7 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 /* the panel keeps a fixed width and the drawing its height, so that the drawing does not rescale as the
    queue grows and shrinks or as the caption wraps; the caption fits in the space left (bbv.js shrinks its text) */
 .lt-bbv-anim .lt-ga-panel{flex:0 0 clamp(150px,22%,260px);max-width:none}
+@container (max-width: 760px){ .lt-bbv-anim .lt-ga-panel{flex:none} }
 .lt-c-bbv-anim,.lt-c-bbv-cfg,.lt-c-abstract-interp-anim{flex:1 1 auto}
 .lt-bbv-anim .lt-ga-main{flex:none}
 .lt-bbv-anim .lt-ga-caption{flex:1 1 auto;min-height:33px;overflow:hidden}
@@ -246,10 +251,41 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-bbv-node.lt-gone{opacity:0;pointer-events:none}
 .lt-bbv-label{font-family:var(--lt-font-head);font-weight:650;font-size:15px;fill:var(--lt-ink)}
 .lt-bbv-star{fill:var(--lt-accent);font-weight:700}
-.lt-bbv-ctx{font-family:var(--lt-font-code);font-size:12px;font-style:italic;fill:var(--lt-muted)}
+.lt-bbv-ctx{font-family:var(--lt-font-code);font-size:12px;font-style:italic;fill:var(--lt-muted);white-space:pre}
 .lt-bbv-code{font-family:var(--lt-font-code);font-size:12.5px;fill:var(--lt-ink);white-space:pre}
-.lt-bbv-removed{text-decoration:line-through;fill:var(--lt-muted)}
+.lt-bbv-removed{text-decoration:line-through;text-decoration-color:var(--lt-warn);fill:var(--lt-muted)}
+.lt-bbv-removed .lt-rc-kw,.lt-bbv-removed .lt-rc-idx{fill:var(--lt-muted);font-weight:400}
 .lt-bbv-ellipsis{fill:var(--lt-muted)}
+/* rich text (spec 9.5): the same vocabulary inside the nodes (tspans), in the caption and in the panel */
+.lt-bbv-ctx .lt-rc-var{fill:var(--lt-ink);font-style:normal}
+.lt-bbv-ctx .lt-rc-ty{fill:var(--lt-type);font-style:normal}
+.lt-bbv-ctx .lt-rc-range,.lt-bbv-code .lt-rc-idx{fill:var(--lt-range);font-style:normal}
+.lt-bbv-code .lt-rc-kw{fill:var(--lt-accent);font-weight:600}
+.lt-rc-op,.lt-rc-tag{display:inline-block;font-family:var(--lt-font-head);font-style:normal;font-weight:700;font-size:.6em;
+  letter-spacing:.07em;text-transform:uppercase;line-height:1.5;padding:0 .55em;border-radius:5px;vertical-align:.18em;
+  margin-right:.2em;color:var(--lt-on-strong);background:var(--lt-muted)}
+.lt-rc-op.tone-active{background:var(--lt-active)}
+.lt-rc-op.tone-accent{background:var(--lt-accent)}
+.lt-rc-op.tone-warn{background:var(--lt-warn)}
+.lt-rc-op.tone-good{background:var(--lt-good)}
+.lt-rc-tag{color:var(--lt-muted);background:transparent;box-shadow:inset 0 0 0 1.5px currentColor;margin-right:.15em}
+.lt-rc-v{display:inline-block;font-family:var(--lt-font-head);font-style:normal;font-weight:650;font-size:.8em;line-height:1.35;
+  padding:0 .45em;border-radius:6px;color:var(--lt-ink);
+  background:color-mix(in srgb,var(--origin,var(--lt-edge)) 26%,var(--lt-bg));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--origin,var(--lt-edge)) 55%,var(--lt-bg))}
+.lt-rc-var,.lt-rc-ty,.lt-rc-code,.lt-rc-rm{font-family:var(--lt-font-code);font-style:normal;font-size:.88em}
+.lt-rc-var,.lt-rc-code{color:var(--lt-ink)}
+.lt-rc-ty{color:var(--lt-type)}
+.lt-rc-range,.lt-rc-code .lt-rc-idx{color:var(--lt-range)}
+.lt-rc-code .lt-rc-kw{color:var(--lt-accent);font-weight:600}
+.lt-rc-rm{color:var(--lt-muted);text-decoration:line-through;text-decoration-color:var(--lt-warn);text-decoration-thickness:2px}
+.lt-rc-rm .lt-rc-kw{color:var(--lt-muted);font-weight:400}
+.lt-rc-sep{color:var(--lt-edge)}
+.lt-rc-list span{display:inline-flex;align-items:center;gap:.3em}
+.lt-rc-list .lt-rc-v{font-size:.95em}
+.lt-rc-step{font-weight:700}
+.lt-rc-step.tone-warn{color:var(--lt-warn)}
+.lt-rc-step.tone-accent{color:var(--lt-accent)}
 .lt-bbv-edge path{fill:none;stroke:var(--lt-edge);stroke-width:1.8}
 .lt-bbv-edge.k-return path{stroke-dasharray:6 4}
 .lt-bbv-edge.k-call path{stroke-dasharray:2 4;opacity:.7}
@@ -394,6 +430,7 @@ a.lt-detour-badge,a.lt-branch-opt{text-decoration:none}
   --lt-add-bg:#e3f3e7;--lt-del-bg:#fbe6e8;
   --lt-hl:#c8741a;--lt-hl-bg:#fbeedd;
   --lt-detour:#8b7bc4;--lt-detour-ink:#5b4a9c;--lt-detour-soft:#efeaf9;
+  --lt-type:#2f8f4e;--lt-range:#3b6fb6;
   --lt-scrim:rgba(29,36,51,.45);
   --lt-font-head:"Avenir Next","Segoe UI Variable Display","Segoe UI","Helvetica Neue",system-ui,sans-serif;
   --lt-font-body:"Avenir Next","Segoe UI","Helvetica Neue",system-ui,sans-serif;
@@ -510,7 +547,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.6.0","meta":{"title":"Refactoring a cache","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"refactoring-a-cache","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"slides":{"refactoring-a-cache":{"title":"Refactoring a cache","label":"Refactoring a cache","scope":"root","next":{"slide":"idea"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"idea":{"title":"What an LRU cache keeps","label":"What an LRU cache keeps","scope":"root","next":{"slide":"diff"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>The image is embedded in the HTML at build time, like everything else.<\/p>\n"},"diff":{"title":"From a list to an OrderedDict, then to statistics","label":"From a list to an OrderedDict, then to statistics","scope":"root","next":{"slide":"bench"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"diff/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":20},"notes":"<p>Step 1 is the original. Step 2 removes <code>order.remove(key)<\/code>, which is linear in the cache size.<\/p>\n"},"bench":{"title":"Was it worth it?","label":"Was it worth it?","scope":"root","next":{"slide":"hits"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":33}},"hits":{"title":"Hit rate by capacity","label":"Hit rate by capacity","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":42}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":51}}},"detours":{},"instances":{"diff/c1":{"component":"diff-steps","slide":"diff","data":"lt-data-diff/c1"},"bench/c1":{"component":"plot","slide":"bench","data":"lt-data-bench/c1"},"hits/c1":{"component":"plot","slide":"hits","data":"lt-data-hits/c1"}},"tours":{},"mainPath":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"overview":{"nodes":{"refactoring-a-cache":{"x":73.0,"y":21.0,"w":130.0,"h":26.0,"label":"Refactoring a cache"},"idea":{"x":251.0,"y":21.0,"w":166.0,"h":26.0,"label":"What an LRU cache keeps"},"diff":{"x":451.5,"y":21.0,"w":175.0,"h":26.0,"label":"From a list to an Ordered…"},"bench":{"x":623.5,"y":21.0,"w":109.0,"h":26.0,"label":"Was it worth it?"},"hits":{"x":773.0,"y":21.0,"w":130.0,"h":26.0,"label":"Hit rate by capacity"},"thanks":{"x":897.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"refactoring-a-cache","to":"idea","kind":"next","path":"M138.0,21.0 C145.8,21.0 153.8,21.0 161.8,21.0 L168.0,21.0"},{"from":"idea","to":"diff","kind":"next","path":"M334.2,21.0 C342.0,21.0 349.9,21.0 357.9,21.0 L363.9,21.0"},{"from":"diff","to":"bench","kind":"next","path":"M539.5,21.0 C547.3,21.0 555.0,21.0 562.5,21.0 L568.7,21.0"},{"from":"bench","to":"hits","kind":"next","path":"M678.2,21.0 C685.9,21.0 693.8,21.0 701.8,21.0 L707.8,21.0"},{"from":"hits","to":"thanks","kind":"next","path":"M838.1,21.0 C846.3,21.0 854.3,21.0 861.8,21.0 L867.8,21.0"}],"width":935.0,"height":42.0},"hash":"d0bb58d319e049d7"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.7.0","meta":{"title":"Refactoring a cache","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"refactoring-a-cache","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"slides":{"refactoring-a-cache":{"title":"Refactoring a cache","label":"Refactoring a cache","scope":"root","next":{"slide":"idea"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"idea":{"title":"What an LRU cache keeps","label":"What an LRU cache keeps","scope":"root","next":{"slide":"diff"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>The image is embedded in the HTML at build time, like everything else.<\/p>\n"},"diff":{"title":"From a list to an OrderedDict, then to statistics","label":"From a list to an OrderedDict, then to statistics","scope":"root","next":{"slide":"bench"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"diff/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":20},"notes":"<p>Step 1 is the original. Step 2 removes <code>order.remove(key)<\/code>, which is linear in the cache size.<\/p>\n"},"bench":{"title":"Was it worth it?","label":"Was it worth it?","scope":"root","next":{"slide":"hits"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":33}},"hits":{"title":"Hit rate by capacity","label":"Hit rate by capacity","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":42}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":51}}},"detours":{},"instances":{"diff/c1":{"component":"diff-steps","slide":"diff","data":"lt-data-diff/c1"},"bench/c1":{"component":"plot","slide":"bench","data":"lt-data-bench/c1"},"hits/c1":{"component":"plot","slide":"hits","data":"lt-data-hits/c1"}},"tours":{},"mainPath":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"overview":{"nodes":{"refactoring-a-cache":{"x":73.0,"y":21.0,"w":130.0,"h":26.0,"label":"Refactoring a cache"},"idea":{"x":251.0,"y":21.0,"w":166.0,"h":26.0,"label":"What an LRU cache keeps"},"diff":{"x":451.5,"y":21.0,"w":175.0,"h":26.0,"label":"From a list to an Ordered…"},"bench":{"x":623.5,"y":21.0,"w":109.0,"h":26.0,"label":"Was it worth it?"},"hits":{"x":773.0,"y":21.0,"w":130.0,"h":26.0,"label":"Hit rate by capacity"},"thanks":{"x":897.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"refactoring-a-cache","to":"idea","kind":"next","path":"M138.0,21.0 C145.8,21.0 153.8,21.0 161.8,21.0 L168.0,21.0"},{"from":"idea","to":"diff","kind":"next","path":"M334.2,21.0 C342.0,21.0 349.9,21.0 357.9,21.0 L363.9,21.0"},{"from":"diff","to":"bench","kind":"next","path":"M539.5,21.0 C547.3,21.0 555.0,21.0 562.5,21.0 L568.7,21.0"},{"from":"bench","to":"hits","kind":"next","path":"M678.2,21.0 C685.9,21.0 693.8,21.0 701.8,21.0 L707.8,21.0"},{"from":"hits","to":"thanks","kind":"next","path":"M838.1,21.0 C846.3,21.0 854.3,21.0 861.8,21.0 L867.8,21.0"}],"width":935.0,"height":42.0},"hash":"4cd34a506438986c"}</script>
 <script type="application/json" id="lt-data-diff/c1">{"count":3}</script>
 <script type="application/json" id="lt-data-bench/c1">{"backend":"vega","spec":{"mark":{"type":"line","point":true},"encoding":{"x":{"field":"capacity","type":"quantitative","title":"capacity (log scale)","scale":{"type":"log"}},"y":{"field":"us_per_op","type":"quantitative","title":"microseconds per operation"},"color":{"field":"version","type":"nominal","title":null},"tooltip":[{"field":"capacity"},{"field":"us_per_op"},{"field":"version"}]},"data":{"values":[{"capacity":16,"version":"list (v1)","us_per_op":0.246,"hit_rate":0.946},{"capacity":16,"version":"OrderedDict (v2)","us_per_op":0.151,"hit_rate":0.946},{"capacity":64,"version":"list (v1)","us_per_op":0.554,"hit_rate":0.987},{"capacity":64,"version":"OrderedDict (v2)","us_per_op":0.16,"hit_rate":0.987},{"capacity":256,"version":"list (v1)","us_per_op":0.855,"hit_rate":0.992},{"capacity":256,"version":"OrderedDict (v2)","us_per_op":0.138,"hit_rate":0.992},{"capacity":1024,"version":"list (v1)","us_per_op":0.864,"hit_rate":0.992},{"capacity":1024,"version":"OrderedDict (v2)","us_per_op":0.146,"hit_rate":0.992}]},"width":864,"height":326,"config":{"background":"transparent","font":"Avenir Next, Segoe UI, Helvetica Neue, Arial, DejaVu Sans","axis":{"labelColor":"#5d6778","titleColor":"#1d2433","gridColor":"#e3e7ee","domainColor":"#5d6778","tickColor":"#5d6778","labelFontSize":16,"titleFontSize":17,"titleFontWeight":500,"titlePadding":10},"legend":{"labelColor":"#1d2433","titleColor":"#5d6778","labelFontSize":16,"symbolSize":120},"title":{"color":"#1d2433","fontSize":18},"range":{"category":["#0b6e7f","#c8741a","#6a4fb3","#2f8f4e","#b23a48","#5d6778"]},"view":{"stroke":null},"line":{"strokeWidth":2.5},"point":{"size":60}},"$schema":"https://vega.github.io/schema/vega-lite/v5.json"}}</script>
 <script type="application/json" id="lt-data-hits/c1">{"backend":"plotly","spec":{"data":[{"type":"bar","name":"list (v1)","x":[16,64,256,1024],"y":[0.946,0.987,0.992,0.992]},{"type":"bar","name":"OrderedDict (v2)","x":[16,64,256,1024],"y":[0.946,0.987,0.992,0.992]}],"layout":{"width":864,"height":365,"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","font":{"family":"Avenir Next, Segoe UI, Helvetica Neue, Arial, DejaVu Sans","color":"#1d2433","size":15},"colorway":["#0b6e7f","#c8741a","#6a4fb3","#2f8f4e","#b23a48","#5d6778"],"xaxis":{"gridcolor":"#e3e7ee","zerolinecolor":"#e3e7ee","linecolor":"#5d6778","tickfont":{"color":"#5d6778"},"title":{"text":"capacity"},"type":"category"},"yaxis":{"gridcolor":"#e3e7ee","zerolinecolor":"#e3e7ee","linecolor":"#5d6778","tickfont":{"color":"#5d6778"},"title":{"text":"hit rate"}},"margin":{"l":70,"r":20,"t":16,"b":60},"legend":{"bgcolor":"rgba(0,0,0,0)"},"showlegend":true}}}</script>

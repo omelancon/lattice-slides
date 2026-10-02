@@ -22,15 +22,29 @@ MARGIN = 30.0  # covers the 22 px by which back edges step out of their nodes (b
 LANE = 18.0  # distance of the back-edge lane from the function's extent
 
 
+def context_width(lines: list[str]) -> int:
+    """Characters of the widest drawn context line: ``;; `` then the names padded to the longest one
+    (so that the types line up, as bbv.js draws them), then the longest type."""
+    names, types = [], []
+    for line in lines:
+        name, sep, text = line.partition(": ")
+        names.append(len(name) if sep else len(line) - 1)
+        types.append(len(text) if sep else 0)
+    return 3 + max(names, default=0) + 2 + max(types, default=0) if lines else 0
+
+
 def node_size(version: dict, show: list[str]) -> tuple[float, float]:
-    lines = []
+    widths = [len(version["label"]) + 2]
+    count = 0
     if "context" in show:
-        lines += version["context"]
+        widths.append(context_width(version["context"]))
+        count += len(version["context"])
     if "code" in show:
-        lines += [c["text"] for c in version["code"]] or ["…"]
-    width = max([len(version["label"]) + 2] + [len(t) + (3 if i < len(version["context"]) and "context" in show else 0)
-                                              for i, t in enumerate(lines)]) * CHAR_W + 2 * PAD_X
-    height = LABEL_H + len(lines) * LINE_H + 2 * PAD_Y
+        code = [c["text"] for c in version["code"]] or ["…"]
+        widths += [len(t) for t in code]
+        count += len(code)
+    width = max(widths) * CHAR_W + 2 * PAD_X
+    height = LABEL_H + count * LINE_H + 2 * PAD_Y
     return round(width, 1), round(height, 1)
 
 

@@ -8,6 +8,7 @@ from lattice.build import build_deck, check_deck
 from lattice.bbv.ir import ProgramError, parse
 from lattice.bbv.layout import layout_frames
 from lattice.bbv.lv import LambdaVersioning
+from lattice.bbv.rich import plain
 from lattice.bbv.sbbv import Specializer
 from lattice.bbv.trace import VersioningTrace
 from lattice.bbv.types import Context, Type
@@ -235,7 +236,9 @@ def test_trace_frames_have_captions_marks_and_meta():
     assert kinds[0] == "start" and kinds[-1] == "done" and "specialize" in kinds
     assert t.frames[0]["nodes"]["1"]["mark"] == "new"
     spec_frame = next(f for f, m in zip(t.frames, t.meta) if m["event"] == "specialize")
-    assert "Specialize A1" in spec_frame["caption"] and spec_frame["nodes"]["1"]["mark"] == "active"
+    assert spec_frame["caption"].startswith("`op:specialize` `v:A1|find/A`") and spec_frame["nodes"]["1"]["mark"] == "active"
+    assert plain(spec_frame["caption"]).startswith("specialize A1 · queue ")
+    assert plain(next(f["caption"] for f, m in zip(t.frames, t.meta) if m["event"] == "dequeue")) == "dequeue A1 p: any · lst: any"
     assert spec_frame["panel"]["queue"] and "checks" in spec_frame["panel"]
     assert all(m.get("block", "find/A").startswith("find/") for m in t.meta)
     t1 = VersioningTrace(program("find.bbv"), limit=1)
@@ -382,7 +385,8 @@ def test_abstract_trace_frames():
     t = AbstractTrace(program("sum-to-n.bbv"), history=["B.i"])
     kinds = [m["event"] for m in t.meta]
     assert kinds[0] == "start" and kinds[-1] == "done" and "propagate" in kinds and "instruction" not in kinds
-    widened = next(f for f in t.frames if "widened to" in f["caption"])
+    widened = next(f for f in t.frames if f["caption"].startswith("`op:widen`"))
+    assert "`var:i`: `ty:fx [0, 2]` ∪ `ty:fx [1, 3]` ∇ `ty:fx [0, 127]`" in widened["caption"]
     assert any(n.get("mark") == "widened" for n in widened["nodes"].values())
     assert t.frames[-1]["panel"]["B.i"][3] == "∇ [0, 127]"
     assert all("lines" in n for f in t.frames for n in f["nodes"].values())
@@ -391,3 +395,20 @@ def test_abstract_trace_frames():
     fine = AbstractTrace(program("fact-loop.bbv"), granularity="instruction", until=6)
     assert len(fine.frames) == 6 and "instruction" in [m["event"] for m in fine.meta]
     assert all(m.get("algo") for m in fine.meta)
+
+
+def test_rich_markup_round_trips():
+    from lattice.bbv import rich
+
+    text = rich.join([f"{rich.op('merge')} {rich.ver('A2', 'find/A')} → {rich.ver('A1', 'find/A')}",
+                      rich.context(["p: any", "lst: fx | bg [0, 127]"]), rich.tag("queued"), ""])
+    assert text == ("`op:merge` `v:A2|find/A` → `v:A1|find/A` · `var:p`: `ty:any` · `var:lst`: `ty:fx | bg [0, 127]`"
+                    " · `tag:queued`")
+    assert rich.plain(text) == "merge A2 → A1 · p: any · lst: fx | bg [0, 127] · queued"
+    assert rich.parse("x `rm:pair?(lst)` never holds") == [("", "x "), ("rm", "pair?(lst)"), ("", " never holds")]
+    assert rich.plain("") == "" and rich.parse("") == []
+    # instruction notes of the three algorithms carry the markup; the specialized code does not
+    t = VersioningTrace(program("find.bbv"), limit=2, granularity="instruction")
+    removed = next(f for f, m in zip(t.frames, t.meta) if m["event"] == "instruction" and "`rm:" in f["caption"])
+    assert plain(removed["caption"]).startswith("test removed ")
+    assert all("`" not in c["text"] for v in t.tables["versions"].values() for c in v["code"])

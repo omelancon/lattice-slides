@@ -5,6 +5,7 @@ for call sites (forward) and specialized return points for the exit sites reacha
 from __future__ import annotations
 
 from .ir import RESULT, Call, Const, Function, Var
+from .rich import SEP, binding, context, join, ver
 from .sbbv import CallInfo, Line, Specializer, Version
 from .types import ANY, Context, Type
 
@@ -54,7 +55,7 @@ class LambdaVersioning(Specializer):
         if callee is None:
             rp = self.get_or_create(ret, ctx.set(RESULT, ANY))
             self.add_edge(v, rp, "return")
-            self.call_note = f"the callee is unknown: generic call, return point {rp.label} receives {RESULT}: any"
+            self.call_note = f"the callee is unknown, generic call{SEP}return point {ver(rp.label, rp.block.key)} receives {binding(RESULT, 'any')}"
             return [Line(instr.text, instr.line)], ctx
         binds = dict(zip(callee.params, instr.args))
         mapping = {p: (a.type if isinstance(a, Const) else a.name) for p, a in binds.items()}
@@ -71,9 +72,9 @@ class LambdaVersioning(Specializer):
         line.callee = v.id  # resolved through the call site once labels are final
         self.reconcile_call_site(v)
         n = len([e for e in v.edges if e.kind == "return"])
-        self.call_note = (f"{'creates' if created else 'uses'} entry point {entry.label} ({entry.context}) of {callee.name}"
-                          + (f"; {n} return point{'s' if n > 1 else ''} for its known exit sites" if n else
-                             "; no exit site is known yet"))
+        self.call_note = join([f"{'creates' if created else 'uses'} entry point {ver(entry.label, entry.block.key)} of {callee.name}",
+                               context(entry.context),
+                               f"{n} return point{'s' if n > 1 else ''} for its known exit sites" if n else "no exit site is known yet"])
         return [line], ctx
 
     # ------------------------------------------------------------ return points (algorithms 2.8, 2.9)

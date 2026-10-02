@@ -379,6 +379,16 @@ def test_bbv_runtime_steps_both_ways(tmp_path):
             page.wait_for_timeout(200)
             assert page.evaluate("Lattice.state().cur")["slide"] == "find-sbbv"
             assert page.evaluate(visible % ".lt-c-bbv-anim") == 14
+            # origin colours survive a version being hidden and shown again (back to step 0, then forward)
+            uncoloured = ("Array.from(document.querySelectorAll('#s-find-sbbv .lt-c-bbv-anim .lt-bbv-node:not(.lt-gone)'))"
+                          ".filter(g => !g.classList.contains('has-origin')).length")
+            assert page.evaluate(uncoloured) == 0
+            page.evaluate("location.hash = '#/find-sbbv/0'")
+            page.wait_for_timeout(100)
+            for _ in range(12):
+                page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(100)
+            assert page.evaluate(visible % ".lt-c-bbv-anim") > 1 and page.evaluate(uncoloured) == 0
             # abstract interpretation: the context lines inside a block change with the frame
             page.evaluate("location.hash = '#/sum-to-n-ai/0'")
             page.wait_for_timeout(200)

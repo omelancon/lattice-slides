@@ -8,11 +8,15 @@ from __future__ import annotations
 from ..anim import Trace
 from .ir import RESULT, If, Program
 from .lv import LambdaVersioning
+from .rich import SEP, binding, code, context, join, op, tag, ty, var, ver
 from .sbbv import Specializer, Version
 
 EVENTS = ["start", "dequeue", "must-merge", "merge", "specialize", "instruction", "entry", "exit", "return-points",
           "generic-entries", "done"]
 BLOCK_EVENTS = [e for e in EVENTS if e != "instruction"]
+# The operation badge of an instruction frame, by the kind of instruction specialized
+INSTRUCTION_OPS = {"assign": "assign", "if": "test kept", "if-true": "test removed", "if-false": "test removed",
+                   "goto": "goto", "call": "call", "return": "exit", "fail": "fail"}
 
 # Lines of the bundled pseudo-code listings (``lattice:bbv/pseudocode/sbbv.txt`` and ``lv.txt``) executed
 # at each event, so that a ``code`` block showing the listing can follow the animation.
@@ -229,89 +233,86 @@ class VersioningTrace(Trace):
     def _v(self, vid: int) -> Version:
         return self.spec.by_id[vid]
 
-    def _name(self, vid: int, ctx: bool = True) -> str:
+    def _chip(self, vid: int) -> str:
         v = self._v(vid)
-        return f"{v.label} ({v.context})" if ctx else v.label
+        return ver(v.label, v.block.key)
 
-    @staticmethod
-    def _join(names: list[str]) -> str:
-        if not names:
-            return ""
-        if len(names) == 1:
-            return names[0]
-        return ", ".join(names[:-1]) + " and " + names[-1]
+    def _chips(self, ids) -> str:
+        return " ".join(self._chip(i) for i in ids)
+
+    def _named(self, vid: int) -> str:
+        """The version's chip followed by its context."""
+        v = self._v(vid)
+        return f"{self._chip(vid)} {context(v.context)}" if v.context.lines() else self._chip(vid)
 
     def _caption(self, kind: str, info: dict, gone: list[str]) -> str:
+        """One line per frame: the operation first (a badge), then the versions concerned (chips),
+        then the details (contexts, tests, queue effects) separated by dots. Spec 9.5."""
         v = self._v
-        text = ""
+        parts: list[str] = []
         if kind == "start":
             ids = info.get("versions", [])
-            text = f"Queue the generic entr{'y' if len(ids) == 1 else 'ies'} {self._join([self._name(i) for i in ids])}."
+            parts = [f"{op('queue')} {tag('generic entry' if len(ids) == 1 else 'generic entries')}"] + [self._named(i) for i in ids]
         elif kind == "dequeue":
-            text = f"Dequeue {self._name(info['version'])}."
+            parts = [f"{op('dequeue')} {self._named(info['version'])}"]
         elif kind == "must-merge":
             b = self.program.block(info["block"])
             lim = info["limit"]
-            text = (f"Block {b.name} has {len(info['versions'])} reachable versions "
-                    f"({self._join([v(i).label for i in info['versions']])}); the limit is "
-                    f"{'none' if lim == float('inf') else int(lim)}.")
+            parts = [f"{op('limit')} {ver(b.name, b.key)} has {len(info['versions'])} reachable versions "
+                     f"{self._chips(info['versions'])}", f"limit {'none' if lim == float('inf') else int(lim)}"]
         elif kind == "merge":
             into = info["into"]
             olds = [i for i in info["merged"] if i != into]
-            if len(olds) == len(info["merged"]):
-                text = f"Merge {self._join([v(i).label for i in olds])} into the new version {self._name(into)}."
-            else:
-                text = f"Merge {self._join([v(i).label for i in olds])} into {self._name(into)}, whose context is their union."
+            parts = [f"{op('merge')} {self._chips(olds)} → {self._chip(into)}"]
+            parts.append("new version, the union of their contexts" if len(olds) == len(info["merged"]) else "its context is their union")
+            parts.append(context(v(into).context))
             if info.get("queued"):
-                text += f" {v(into).label} is queued."
+                parts.append(tag("queued"))
         elif kind == "specialize":
             vid = info["version"]
-            text = f"Specialize {v(vid).label}"
-            parts = []
+            parts = [f"{op('specialize')} {self._chip(vid)}"]
             if info.get("removed"):
-                parts.append(f"{info['removed']} test{'s' if info['removed'] > 1 else ''} removed")
-            q = [v(i).label for i in info.get("queued", []) if self._visible(i)]
+                parts.append(f"{info['removed']} test{'s' if info['removed'] > 1 else ''} {tag('removed')}")
+            q = [i for i in info.get("queued", []) if self._visible(i)]
             if q:
-                parts.append(f"queue {self._join(q)}")
-            reused = [v(i).label for i in info.get("targets", []) if i not in info.get("queued", []) and self._visible(i)]
+                parts.append(f"{tag('queue')} {self._chips(q)}")
+            reused = [i for i in info.get("targets", []) if i not in info.get("queued", []) and self._visible(i)]
             if reused:
-                parts.append(f"jump to existing {self._join(reused)}")
-            text += ": " + "; ".join(parts) + "." if parts else "."
+                parts.append(f"{tag('jump to')} {self._chips(reused)}")
         elif kind == "instruction":
-            text = f"{v(info['version']).label}, {info['text']}: {info['note']}."
+            what = info["what"]
+            parts = [f"{op(INSTRUCTION_OPS.get(what, 'instruction'))} {self._chip(info['version'])}"]
+            if what not in ("if-true", "if-false"):  # those notes quote the test themselves, struck through
+                parts.append(code(info["text"]))
+            parts.append(info["note"])
         elif kind == "entry":
-            cs, e = v(info["call_site"]), v(info["entry"])
-            what = "creates" if info.get("created") else "uses"
-            text = f"{cs.label} calls {e.function}: it {what} entry point {self._name(info['entry'])}."
+            cs, e = info["call_site"], v(info["entry"])
+            parts = [f"{op('entry')} {self._chip(cs)} calls {e.function}",
+                     f"{'creates' if info.get('created') else 'uses'} entry point {self._named(info['entry'])}"]
         elif kind == "exit":
             x = v(info["version"])
-            text = f"{x.label} is an exit site: {RESULT}: {x.context_after.get(RESULT)}."
+            parts = [f"{op('exit')} {self._chip(info['version'])}", binding(RESULT, x.context_after.get(RESULT))]
         elif kind == "return-points":
-            cs = v(info["call_site"])
-            e = v(info["entry"])
-            added = [f"{self._name(rp)} for exit {v(x).label}" for rp, x in info.get("added", [])]
-            removed = [v(rp).label for rp, _ in info.get("removed", [])]
-            parts = []
-            if added:
-                parts.append(f"return point{'s' if len(added) > 1 else ''} {self._join(added)} added")
-            if removed:
-                parts.append(f"return point{'s' if len(removed) > 1 else ''} {self._join(removed)} removed")
-            text = f"Call site {cs.label} of entry {e.label}: " + "; ".join(parts) + "."
+            parts = [f"{op('return points')} call site {self._chip(info['call_site'])} of entry {self._chip(info['entry'])}"]
+            for rp, x in info.get("added", []):
+                parts.append(f"{tag('added')} {self._named(rp)} for exit {self._chip(x)}")
+            removed_ = [rp for rp, _ in info.get("removed", [])]
+            if removed_:
+                parts.append(f"{tag('removed')} {self._chips(removed_)}")
         elif kind == "generic-entries":
-            created = [self._name(i) for i in info.get("created", []) if self._visible(i)]
-            text = f"Queue the generic entr{'y' if len(created) == 1 else 'ies'} {self._join(created)}."
+            created = [i for i in info.get("created", []) if self._visible(i)]
+            parts = [f"{op('queue')} {tag('generic entry' if len(created) == 1 else 'generic entries')}"] + [self._named(i) for i in created]
         elif kind == "done":
             spec = self.spec
             n = sum(1 for x in spec.final_versions() if self._visible(x.id))
             where = " in the functions drawn" if len(self.visible) < len(self.program.functions) else ""
-            text = (f"Done: {n} versions, {spec.merges} merge{'s' if spec.merges != 1 else ''}, "
-                    f"{self._tests(self.prev_nodes)} type tests left{where}.")
+            parts = [f"{op('done')} {n} version{'s' if n != 1 else ''}", f"{spec.merges} merge{'s' if spec.merges != 1 else ''}",
+                     f"{self._tests(self.prev_nodes)} type test{'s' if self._tests(self.prev_nodes) != 1 else ''} left{where}"]
             if spec.truncated:
-                text = "Stopped after the maximum number of steps. " + text
-        gone_labels = [v(int(i)).label for i in gone]
-        if gone_labels and kind in ("merge", "specialize", "return-points"):
-            text += f" Unreachable: {self._join(gone_labels)}."
-        return text
+                parts.insert(0, f"{tag('stopped')} after the maximum number of steps")
+        if gone and kind in ("merge", "specialize", "return-points"):
+            parts.append(f"{tag('unreachable')} {self._chips(int(i) for i in gone)}")
+        return join(parts)
 
     def _meta(self, kind: str, info: dict) -> dict:
         meta: dict = {"event": kind}
@@ -400,6 +401,7 @@ ABSINT_ALGO = {"start": [2, 3, 4], "dequeue": [5, 6], "done": [5],
                "propagate": {"dead": [9, 10], "unchanged": [11, 12], "first": [11, 12, 13, 14],
                              "union": [11, 12, 13, 14], "widened": [11, 12, 13, 14]}}
 ABSINT_EVENTS = ["start", "dequeue", "instruction", "propagate", "done"]
+ABSINT_OPS = {"assign": "assign", "if": "test", "goto": "goto", "call": "call", "return": "exit", "fail": "fail"}
 
 
 def context_lines(ctx) -> list[str]:
@@ -441,7 +443,7 @@ class AbstractTrace(Trace):
         self.caption_mode = caption
         self.until = until
         self.stopped = False
-        self.max_lines: dict[str, list[str]] = {}
+        self.max_lines: dict[str, list[list[str]]] = {}
         self.ai.run()
         if not self.frames:
             self._push("done", {})
@@ -470,12 +472,16 @@ class AbstractTrace(Trace):
             if block is self.fn.entry:
                 n["entry"] = True
             nodes[vid] = n
-            best = self.max_lines.setdefault(vid, [])
+            best = self.max_lines.setdefault(vid, [])  # per slot, the longest name and the longest type seen
             for i, text in enumerate(lines):
+                name, _, typ = text.partition(": ")
                 if i >= len(best):
-                    best.append(text)
-                elif len(text) > len(best[i]):
-                    best[i] = text
+                    best.append([name, typ])
+                else:
+                    if len(name) > len(best[i][0]):
+                        best[i][0] = name
+                    if len(typ) > len(best[i][1]):
+                        best[i][1] = typ
         edges: dict[str, dict] = {}
         for name, block in self.fn.blocks.items():
             last = block.instrs[-1]
@@ -525,35 +531,41 @@ class AbstractTrace(Trace):
             panel[key] = chain
         return panel
 
+    def _chip(self, name: str) -> str:
+        return ver(name, self.fn.blocks[name].key)
+
     def _caption(self, kind: str, info: dict) -> str:
+        """Same shape as the versioning captions: operation badge, block chips, then details."""
         ai = self.ai
         if kind == "start":
-            return f"Start at {info['block']} with {', '.join(context_lines(ai.contexts[info['block']]))}."
+            return join([f"{op('start')} {self._chip(info['block'])}", context(context_lines(ai.contexts[info["block"]]))])
         if kind == "dequeue":
-            return f"Interpret {info['block']}: {', '.join(context_lines(ai.contexts[info['block']]))}."
+            return join([f"{op('interpret')} {self._chip(info['block'])}", context(context_lines(ai.contexts[info["block"]]))])
         if kind == "instruction":
-            return f"{info['block']}, {info['text']}: {info['note']}."
+            return join([f"{op(ABSINT_OPS.get(info['what'], 'instruction'))} {self._chip(info['block'])}", code(info["text"]),
+                         info["note"]])
         if kind == "propagate":
             src, dst, res = info["src"], info["dst"], info["result"]
             if res == "dead":
-                return f"{src} → {dst} is dead: {info['what']} cannot hold here."
+                return join([f"{op('dead edge')} {self._chip(src)} → {self._chip(dst)}", f"{code(info['what'])} cannot hold here"])
             if res == "first":
-                return f"{dst} is reached: {', '.join(context_lines(ai.contexts[dst]))}; {dst} is queued."
+                return join([f"{op('reached')} {self._chip(dst)}", context(context_lines(ai.contexts[dst])), tag("queued")])
             if res == "unchanged":
-                return f"{dst} already covers what {src} sends: nothing changes."
-            parts = []
+                return join([f"{op('unchanged')} {self._chip(dst)}", f"already covers what {self._chip(src)} sends"])
+            parts = [f"{op('widen' if res == 'widened' else 'union')} {self._chip(dst)}"]
             for v, old, out, joined, widened in info["changes"][:3]:
-                parts.append(f"{v}: {old} ∪ {out} {'widened to' if widened else '='} {joined}")
+                parts.append(f"{var(v)}: {ty(old)} ∪ {ty(out)} {'∇' if widened else '='} {ty(joined)}")
             more = len(info["changes"]) - 3
             if more > 0:
                 parts.append(f"and {more} other{'s' if more > 1 else ''}")
-            tail = f"; {dst} is requeued." if info.get("queued") else "."
-            return f"{dst}: " + "; ".join(parts) + tail
+            if info.get("queued"):
+                parts.append(tag("requeued"))
+            return join(parts)
         if kind == "done":
-            text = f"Fixed point after {ai.steps} iteration{'s' if ai.steps != 1 else ''}."
+            parts = [f"{op('fixed point')} after {ai.steps} iteration{'s' if ai.steps != 1 else ''}"]
             if ai.truncated:
-                text = "Stopped after the maximum number of steps without converging. " + text
-            return text
+                parts.insert(0, f"{tag('stopped')} after the maximum number of steps without converging")
+            return join(parts)
         return ""
 
     def _meta(self, kind: str, info: dict) -> dict:
@@ -581,6 +593,6 @@ class AbstractTrace(Trace):
             vid = self.ids[name]
             self.tables["versions"][vid] = {
                 "label": b.name, "block": b.key, "function": self.fn.name, "name": b.name,
-                "context": self.max_lines.get(vid, []),  # the longest line of each slot, for sizing
+                "context": [f"{n}: {t}" if t else n for n, t in self.max_lines.get(vid, [])],  # widest per slot, for sizing
                 "code": [{"text": i.text, "line": i.line} for i in b.instrs], "after": [],
             }

@@ -15,13 +15,85 @@
     return e;
   }
 
+  // ---- rich text (spec 9.5): captions carry `kind:text` spans; context and code lines are split by
+  // their own grammar. The same classes style HTML spans (caption, panel) and SVG tspans (nodes).
+  const SPAN = /`(op|tag|v|var|ty|code|rm):([^`]*)`/g;
+  const KEYWORDS = /(\b(?:if|goto|else|return|call|fail)\b|->|\[[^\]]*\])/;
+  const TONES = { specialize: "active", "test kept": "active", test: "active", "test removed": "warn", merge: "warn",
+    widen: "warn", "dead edge": "warn", fail: "warn", limit: "warn", done: "good", "fixed point": "good", exit: "good",
+    reached: "accent", union: "accent", entry: "accent", "return points": "accent" };
+  const esc = (t) => Lattice.esc(t);
+
+  function plain(text) {
+    return (text || "").replace(SPAN, (m, kind, body) => kind === "v" ? body.split("|")[0] : body);
+  }
+
+  // "fx | bg [0, 127]" -> [["ty", "fx | bg "], ["range", "[0, 127]"]]
+  function typeParts(text) {
+    const m = /^(.*?)([\[({][-−0-9∞^, ]*[\])}])$/.exec(text);
+    if (!m) return [["ty", text]];
+    return m[1] ? [["ty", m[1]], ["range", m[2]]] : [["range", m[2]]];
+  }
+
+  // "if pair?(lst) goto B else goto L" -> keywords and [i] indices marked
+  function codeParts(text) {
+    return text.split(KEYWORDS).filter((t) => t !== "").map((t) => [KEYWORDS.test(t) ? (t[0] === "[" ? "idx" : "kw") : "", t]);
+  }
+
+  function chip(inst, body) {
+    const [label, block] = body.split("|");
+    const color = inst.colors[block] || inst.colors[inst.byLabel[label]];
+    return `<span class="lt-rc-v"${color ? ` style="--origin:${esc(color)}"` : ""}>${esc(label)}</span>`;
+  }
+
+  function richHTML(inst, text) {
+    let html = "";
+    let pos = 0;
+    const part = (kind, body) => {
+      if (kind === "op") return `<span class="lt-rc-op tone-${TONES[body] || "muted"}">${esc(body)}</span>`;
+      if (kind === "tag") return `<span class="lt-rc-tag">${esc(body)}</span>`;
+      if (kind === "v") return chip(inst, body);
+      if (kind === "ty") return `<span class="lt-rc-ty">${typeParts(body).map(([c, t]) => c === "range" ? `<span class="lt-rc-range">${esc(t)}</span>` : esc(t)).join("")}</span>`;
+      if (kind === "code" || kind === "rm") return `<span class="lt-rc-${kind}">${codeParts(body).map(([c, t]) => c ? `<span class="lt-rc-${c}">${esc(t)}</span>` : esc(t)).join("")}</span>`;
+      return `<span class="lt-rc-${kind}">${esc(body)}</span>`;
+    };
+    for (const m of (text || "").matchAll(SPAN)) {
+      if (m.index > pos) html += esc(text.slice(pos, m.index)).replaceAll(" · ", '<span class="lt-rc-sep"> · </span>');
+      html += part(m[1], m[2]);
+      pos = m.index + m[0].length;
+    }
+    if (pos < (text || "").length) html += esc(text.slice(pos)).replaceAll(" · ", '<span class="lt-rc-sep"> · </span>');
+    return html;
+  }
+
+  function tspans(textEl, parts) {
+    textEl.textContent = "";
+    for (const [cls, t] of parts) {
+      const ts = svg("tspan", cls ? { class: `lt-rc-${cls}` } : {}, t);
+      textEl.appendChild(ts);
+    }
+  }
+
+  // A context line ";; name: type", the name padded so that the types of a node line up
+  function setContextLine(textEl, line, pad) {
+    const i = line.indexOf(": ");
+    if (i < 0) { tspans(textEl, [["", `;; ${line}`]]); return; }
+    const name = line.slice(0, i), type = line.slice(i + 2);
+    tspans(textEl, [["", ";; "], ["var", name + ":" + " ".repeat(Math.max(1, pad - name.length + 1))], ...typeParts(type)]);
+  }
+
+  function setContextLines(n, lines) {
+    const pad = Math.max(0, ...lines.map((l) => { const i = l.indexOf(": "); return i < 0 ? 0 : i; }));
+    n.ctxEls.forEach((t, i) => { if (i < lines.length) setContextLine(t, lines[i], pad); else t.textContent = ""; });
+  }
+
   function node(inst, vid) {
     if (inst.nodes[vid]) return inst.nodes[vid];
     const v = inst.T.versions[vid];
     const [w, h] = inst.box.sizes[vid];
     const g = svg("g", { class: "lt-bbv-node" });
     const color = inst.colors[v.block];
-    if (color) { g.style.setProperty("--origin", color); g.classList.add("has-origin"); }
+    if (color) g.style.setProperty("--origin", color);
     g.appendChild(svg("rect", { width: w, height: h, rx: 8 }));
     const label = svg("text", { class: "lt-bbv-label", x: PAD_X, y: PAD_Y + 15 }, v.label);
     const star = svg("tspan", { class: "lt-bbv-star" }, "");
@@ -32,7 +104,7 @@
     const ctxEls = [];
     if (inst.show.includes("context")) {
       for (const line of v.context) {
-        const t = svg("text", { class: "lt-bbv-ctx", x: PAD_X, y }, `;; ${line}`);
+        const t = svg("text", { class: "lt-bbv-ctx", x: PAD_X, y, "xml:space": "preserve" });
         g.appendChild(t);
         ctxEls.push(t);
         y += LINE_H;
@@ -43,7 +115,8 @@
       ellipsis = svg("text", { class: "lt-bbv-code lt-bbv-ellipsis", x: PAD_X, y }, "…");
       g.appendChild(ellipsis);
       for (const c of v.code) {
-        const t = svg("text", { class: `lt-bbv-code${c.removed ? " lt-bbv-removed" : ""}`, x: PAD_X, y }, c.text);
+        const t = svg("text", { class: `lt-bbv-code${c.removed ? " lt-bbv-removed" : ""}`, x: PAD_X, y, "xml:space": "preserve" });
+        tspans(t, codeParts(c.text));
         g.appendChild(t);
         codeEls.push(t);
         y += LINE_H;
@@ -54,7 +127,11 @@
     const title = svg("title", {}, tip.filter((s, i) => s !== "" || i > 0).join("\n"));
     g.appendChild(title);
     inst.gNodes.appendChild(g);
-    return (inst.nodes[vid] = { g, star, codeEls, ctxEls, ellipsis, title, w, h, v });
+    // `origin` is remembered here: the class attribute is rewritten at every frame, including when
+    // the node is hidden, so the colour must not depend on the classes the element currently has
+    const n = (inst.nodes[vid] = { g, star, codeEls, ctxEls, ellipsis, title, w, h, v, origin: color ? " has-origin" : "" });
+    setContextLines(n, v.context);
+    return n;
   }
 
   function edge(inst, key) {
@@ -168,7 +245,9 @@
     canvas.appendChild(s);
     const caption = root.querySelector(".lt-ga-caption");
     if (typeof ResizeObserver !== "undefined") new ResizeObserver(() => fitCaption(caption)).observe(caption);
-    return { id, root, box, T: data.tables, show: data.show, colors: data.colors || {}, callEdges: !!data.callEdges,
+    const byLabel = {};
+    for (const v of Object.values(data.tables.versions)) if (!(v.label in byLabel)) byLabel[v.label] = v.block;
+    return { id, root, box, T: data.tables, show: data.show, colors: data.colors || {}, byLabel, callEdges: !!data.callEdges,
       store: api.frames(data.frames), gEdges, gNodes, nodes: {}, edges: {}, at: {}, raf: 0, keys: data.panel || [],
       panel: root.querySelector(".lt-ga-panel"), caption, highlight: data.highlight };
   }
@@ -183,10 +262,10 @@
     for (const [vid, st] of Object.entries(nodes)) {
       const n = node(inst, vid);
       const mark = hl != null ? (vid === hl ? "active" : "none") : (st.mark || "none");
-      n.g.setAttribute("class", `lt-bbv-node st-${st.state || "done"} mk-${mark}${n.g.classList.contains("has-origin") ? " has-origin" : ""}`);
+      n.g.setAttribute("class", `lt-bbv-node st-${st.state || "done"} mk-${mark}${n.origin}`);
       n.star.textContent = st.entry ? " ∗" : "";
       if (st.lines) {  // the context changes with the frame (abstract interpretation)
-        n.ctxEls.forEach((t, i) => { t.textContent = i < st.lines.length ? `;; ${st.lines[i]}` : ""; });
+        setContextLines(n, st.lines);
         const tip = [`;; ${st.lines.join("\n;; ")}`, ...n.v.code.map((c) => c.text)];
         if (st.after && st.after.length) tip.push("", `after: ${st.after.join(", ")}`);
         n.title.textContent = tip.join("\n");
@@ -196,7 +275,7 @@
       if (n.ellipsis) n.ellipsis.style.display = (queued || shown === 0) && n.codeEls.length ? "" : "none";
       n.codeEls.forEach((t, i) => { t.style.display = queued || i >= shown ? "none" : ""; });
     }
-    for (const [vid, n] of Object.entries(inst.nodes)) if (!(vid in nodes)) n.g.setAttribute("class", "lt-bbv-node lt-gone");
+    for (const [vid, n] of Object.entries(inst.nodes)) if (!(vid in nodes)) n.g.setAttribute("class", `lt-bbv-node lt-gone${n.origin}`);
     const live = new Set();
     for (const [key, st] of Object.entries(f.edges || {})) {
       const e = edge(inst, key);
@@ -228,9 +307,33 @@
       place(inst, start);
       inst.raf = requestAnimationFrame(tick);
     }
-    Lattice.renderPanel(inst.panel, f.panel, inst.keys);
-    inst.caption.textContent = f.caption || "";
+    renderPanel(inst, f.panel);
+    inst.caption.innerHTML = richHTML(inst, f.caption || "");
     fitCaption(inst.caption);
+  }
+
+  // The panel of Lattice.renderPanel, with version labels as chips and the ∪ / ∇ steps of a
+  // widening chain marked (abstract interpretation, spec 9.6)
+  function renderPanel(inst, panel) {
+    const el = inst.panel;
+    const keys = inst.keys;
+    const entries = Object.entries(panel || {}).filter(([k]) => keys.includes(k));
+    entries.sort((a, b) => keys.indexOf(a[0]) - keys.indexOf(b[0]));
+    el.hidden = entries.length === 0;
+    const item = (x) => {
+      const s = String(x);
+      if (s in inst.byLabel) return chip(inst, `${s}|${inst.byLabel[s]}`);
+      const m = /^([∪∇]) (.*)$/.exec(s);
+      if (m) return `<span class="lt-rc-step ${m[1] === "∇" ? "tone-warn" : "tone-accent"}">${m[1]}</span> ${richHTML(inst, "`ty:" + m[2] + "`")}`;
+      return esc(s);
+    };
+    el.innerHTML = entries.map(([k, v]) => {
+      let body;
+      if (Array.isArray(v)) body = `<div class="lt-pv-list lt-rc-list">${v.map((x) => `<span>${item(x)}</span>`).join("") || '<span class="lt-muted">empty</span>'}</div>`;
+      else if (v && typeof v === "object") body = `<table class="lt-pv-map"><tr>${Object.keys(v).map((x) => `<th>${esc(x)}</th>`).join("")}</tr><tr>${Object.values(v).map((x) => `<td>${esc(x)}</td>`).join("")}</tr></table>`;
+      else body = `<div class="lt-pv-scalar">${esc(v)}</div>`;
+      return `<div class="lt-pv"><div class="lt-pv-name">${esc(k)}</div>${body}</div>`;
+    }).join("");
   }
 
   function leave(inst) {

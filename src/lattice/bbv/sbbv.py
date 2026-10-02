@@ -13,6 +13,7 @@ from typing import Callable
 
 from .heuristics import HEURISTICS
 from .ir import RESULT, Arg, Assign, Block, Call, Const, Fail, Function, Goto, If, Move, Program, Return, Var
+from .rich import SEP, binding, code, context, join, struck, ver
 from .types import ANY, Context, Type
 
 
@@ -357,17 +358,17 @@ class Specializer:
                 if ctx.is_bottom():
                     body.append(Line(instr.text, instr.line))
                     body.append(Line("fail", instr.line))
-                    kind, note, halted = "fail", f"{instr.prim} cannot accept these types: the block fails here", True
+                    kind, note, halted = "fail", f"{code(instr.prim)} cannot accept these types: the block fails here", True
                 else:
                     ctx = ctx.set(instr.target, p.result_type([self.type_of(ctx, a) for a in instr.args]))
                     body.append(Line(instr.text, instr.line))
-                    kind, note = "assign", f"{instr.target}: {ctx.get(instr.target)}"
+                    kind, note = "assign", binding(instr.target, ctx.get(instr.target))
             elif isinstance(instr, Move):
                 ctx = ctx.set(instr.target, self.type_of(ctx, instr.source))
                 if isinstance(instr.source, Var) and instr.source.name != instr.target:
                     ctx = ctx.equate(instr.target, instr.source.name)
                 body.append(Line(instr.text, instr.line))
-                kind, note = "assign", f"{instr.target}: {ctx.get(instr.target)}"
+                kind, note = "assign", binding(instr.target, ctx.get(instr.target))
             elif isinstance(instr, If):
                 ctx_true, ctx_false, what = self.branch_contexts(ctx, instr)
                 can_true, can_false = ctx_true is not None, ctx_false is not None
@@ -375,28 +376,29 @@ class Specializer:
                 if not can_true and not can_false:
                     body.append(Line(instr.text, instr.line, removed=True))
                     body.append(Line("fail", instr.line))
-                    kind, note = "fail", "neither outcome is possible: the block fails here"
+                    kind, note = "fail", f"{struck(what)}{SEP}neither outcome is possible: the block fails here"
                 elif not can_true:
                     removed += 1
                     body.append(Line(instr.text, instr.line, removed=True))
                     body.append(Line(f"goto {instr.otherwise}", instr.line))
                     t = self.get_or_create(else_b, ctx_false)
                     self.add_edge(v, t, "goto")
-                    kind, note = "if-false", f"{what} never holds here: the test goes, goto {t.label}"
+                    kind, note = "if-false", f"{struck(what)} never holds here{SEP}{code('goto')} {ver(t.label, t.block.key)}"
                 elif not can_false:
                     removed += 1
                     body.append(Line(instr.text, instr.line, removed=True))
                     body.append(Line(f"goto {instr.then}", instr.line))
                     t = self.get_or_create(then_b, ctx_true)
                     self.add_edge(v, t, "goto")
-                    kind, note = "if-true", f"{what} always holds here: the test goes, goto {t.label}"
+                    kind, note = "if-true", f"{struck(what)} always holds here{SEP}{code('goto')} {ver(t.label, t.block.key)}"
                 else:
                     body.append(Line(instr.text, instr.line))
                     t1 = self.get_or_create(then_b, ctx_true)
                     t2 = self.get_or_create(else_b, ctx_false)
                     self.add_edge(v, t1, "true")
                     self.add_edge(v, t2, "false")
-                    kind, note = "if", f"both outcomes are possible: the test stays; {t1.label} ({t1.context}) and {t2.label} ({t2.context})"
+                    kind, note = "if", join(["both outcomes are possible, the test stays", f"{ver(t1.label, t1.block.key)} {context(t1.context)}",
+                                               f"{ver(t2.label, t2.block.key)} {context(t2.context)}"])
                 halted = True
             elif isinstance(instr, Goto):
                 target = fn.block(instr.target)
@@ -407,7 +409,7 @@ class Specializer:
                 body.append(Line(instr.text, instr.line))
                 t = self.get_or_create(target, tctx)
                 self.add_edge(v, t, "goto")
-                kind, note, halted = "goto", f"request {t.label} ({t.context})", True
+                kind, note, halted = "goto", f"request {ver(t.label, t.block.key)} {context(t.context)}", True
             elif isinstance(instr, Call):
                 lines, ctx = self.specialize_call(v, ctx, instr)
                 body.extend(lines)
@@ -431,7 +433,7 @@ class Specializer:
                         ctx = ctx.equate(RESULT, instr.value.name)
                 v.is_exit = True
                 body.append(Line(instr.text, instr.line, exit=v.id))
-                kind, note, halted = "return", f"exit site with {RESULT}: {ctx.get(RESULT)}", True
+                kind, note, halted = "return", binding(RESULT, ctx.get(RESULT)), True
             elif isinstance(instr, Fail):
                 body.append(Line(instr.text, instr.line))
                 kind, note, halted = "fail", "the block fails here", True
@@ -457,7 +459,7 @@ class Specializer:
             ctx = ctx.narrow(instr.callee, Type.of("proc"))
         rp = self.get_or_create(ret, ctx.set(RESULT, ANY))
         self.add_edge(v, rp, "return")
-        self.call_note = f"the call is opaque: return point {rp.label} receives {RESULT}: any"
+        self.call_note = f"the call is opaque{SEP}return point {ver(rp.label, rp.block.key)} receives {binding(RESULT, 'any')}"
         return [Line(instr.text, instr.line)], ctx
 
     def after_specialize(self, v: Version) -> None:

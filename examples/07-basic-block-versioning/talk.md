@@ -122,7 +122,7 @@ panel: [versions, checks]
 
 # Lambda versioning: specialized return points {#power4-lv}
 
-```bbv-anim {#lv program="programs/power4.bbv" algorithm=lv limit=3 entry=power4 wrap=3 height=520}
+```bbv-anim {#lv program="programs/power4.bbv" algorithm=lv limit=3 entry=power4 wrap=3 height=470}
 functions: [power4, square]
 show: [label, context]
 panel: [queue]
@@ -134,7 +134,7 @@ Thesis figure 14. `power4` calls `square` twice. The first call site gets one re
 
 # Operators as hyperfunctions {#square-ops}
 
-```bbv-anim {#ops program="programs/square-ops.bbv" algorithm=lv limit=3 entry=square height=500}
+```bbv-anim {#ops program="programs/square-ops.bbv" algorithm=lv limit=3 entry=square height=470}
 functions: [square, "*"]
 show: [label, context]
 ```

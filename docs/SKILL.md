@@ -49,8 +49,8 @@ src/lattice/
   anim.py         Trace, GraphTrace, ArrayTrace, TreeTrace, GridTrace, deltas, frame stores
   bbv/            basic block versioning and abstract interpretation: types.py (lattice, contexts),
                   intervals.py (widening), prims.py, ir.py (programs, .bbv syntax, liveness), sbbv.py,
-                  lv.py, absint.py, heuristics.py, trace.py (events to frames), layout.py (block bands),
-                  pseudocode/ (the thesis algorithms, for code following)
+                  lv.py, absint.py, heuristics.py, trace.py (events to frames and captions), rich.py (the caption
+                  markup), layout.py (block bands), pseudocode/ (the thesis algorithms, for code following)
   pdf.py          PDF export: pdf step selection, the page plan (tour and appendix), driving Chromium
   model.py        dataclasses and pydantic front matter
   diagnostics.py  Diagnostic, BuildError
@@ -84,7 +84,7 @@ Each of these was decided deliberately; the reasoning is in the report (sections
 - **Ids are global** across files, detours are nested only, and `#` is the only slide boundary (report section 7, decisions 1 to 3).
 - **Registered components take precedence over Pygments lexers** (spec 3.13). Never register a component under a common language name; that is why the diff component is `diff-steps`.
 - **Output is self-contained.** Images, fonts, data and libraries are embedded in single-file mode. Heavy libraries are embedded only when an instance requires them (`RenderResult.requires`).
-- **Columns contain their content.** Nothing may paint outside its column; `tests/test_layout.py` checks every example slide.
+- **Columns contain their content.** Nothing may paint outside its column or below the slide body; `tests/test_layout.py` checks every example slide at its first and last step. A component option such as `height` must be honoured in every layout mode (the animation panels switch to a column under 760 px of container width).
 - **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT054. New code, new row in spec section 12.
 
 ## Common tasks
@@ -113,7 +113,7 @@ Run `pytest` after every change; it takes about twenty seconds. The suites:
 | `test_pdf.py` | `pdf` steps and LT053, the page plan (tour, appendix, back links), a real export in Chromium |
 | `test_cli.py` | CLI commands and building every example |
 | `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys, detour steps), the presenter preview, scrubber and keybindings, the arrow geometry, the tree, grid, versioning and abstract interpretation runtimes, in Chromium |
-| `test_layout.py` | no content spills out of a column, on every example slide |
+| `test_layout.py` | no content spills out of a column or below the slide body, at the first and last step of every example slide |
 
 Tests prove structure, not appearance. After any visual change (CSS, runtime rendering, a component's HTML, an example), rebuild the examples and look at screenshots of the affected slides:
 
@@ -138,6 +138,8 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 - **Intervals are only for the abstract interpreter.** `Specializer.type_of` strips them (`intervals = False`), so SBBV and ΛV contexts never carry one; a change to `prims.py` result rules must keep working without intervals.
 - **The drawing of `bbv.js` must never rescale between frames.** Its SVG keeps its aspect ratio, so anything that changes the canvas size (a panel growing with the queue, a caption wrapping to a second line) rescales the whole drawing. The panel has a fixed width, `.lt-ga-main` does not shrink, and the caption shrinks its text to fit the space left (`fitCaption`). Check both Chromium and Firefox after touching that layout; Firefox resolves these flex sizes differently.
 - **Container nesting again.** A detour holding slides that use `::::` columns needs `:::::` fences (see `examples/07-basic-block-versioning`).
+- **Node elements are reused across frames.** `bbv.js` rewrites the class attribute of a node at every frame, including when it hides it; anything the node must keep (its origin colour) lives in the node record, never in the current classes. A colour that survives forward playback and vanishes after stepping back is this bug.
+- **Captions are marked up, not HTML.** The versioning and abstract interpretation captions carry the backtick spans of `bbv/rich.py` (spec 9.5); tests compare them through `rich.plain` or on the markup itself, and a note written in `sbbv.py`, `lv.py` or `absint.py` uses the helpers rather than f-strings of raw names and types.
 - **Arrow targets are measured, not styled.** `arrow.js` reads `getBoundingClientRect` of the target's contents and draws in slide units; a change to `.lt-slide` positioning or to how the viewport is scaled (`fit`) must keep `test_arrow_runtime_points_at_its_targets` green. The classes of its SVG are `lt-arrow-box`, `lt-arrow-line` and `lt-arrow-text`: `.lt-arrow` already belongs to the graph animation's arrowheads.
 - **Writing style.** The project owner avoids em dashes in prose; use colons, commas or parentheses.
 

@@ -9,6 +9,7 @@ from typing import Callable
 
 from .intervals import Bound, thresholds_named
 from .ir import RESULT, Assign, Block, Call, Const, Fail, Function, Goto, If, Move, Program, Return, Var
+from .rich import SEP, binding, code, context, join, ty, ver
 from .sbbv import Specializer
 from .types import ANY, Context, Type
 
@@ -104,20 +105,20 @@ class AbstractInterpreter:
                         if isinstance(a, Var):
                             ctx = ctx.narrow(a.name, req)
                 if ctx.is_bottom():
-                    note = f"{instr.prim} cannot accept these types: the block fails here"
+                    note = f"{code(instr.prim)} cannot accept these types: the block fails here"
                     self.emit("instruction", block=block.name, text=instr.text, what="fail", note=note, line=instr.line,
                               context=ctx)
                     self.after[block.name] = ctx
                     return []
                 t = p.result_type([self.helper.type_of(ctx, a) for a in instr.args]).refined(self.fixnum_bits)
                 ctx = ctx.set(instr.target, t)
-                note = f"{instr.target}: {t}"
+                note = binding(instr.target, t)
                 kind = "assign"
             elif isinstance(instr, Move):
                 ctx = ctx.set(instr.target, self.helper.type_of(ctx, instr.source))
                 if isinstance(instr.source, Var) and instr.source.name != instr.target:
                     ctx = ctx.equate(instr.target, instr.source.name)
-                note, kind = f"{instr.target}: {ctx.get(instr.target)}", "assign"
+                note, kind = binding(instr.target, ctx.get(instr.target)), "assign"
             elif isinstance(instr, If):
                 yes, no, what = self.helper.branch_contexts(ctx, instr)
                 if not self.narrowing:  # outcomes stay possible or not, but nothing is learned
@@ -130,24 +131,24 @@ class AbstractInterpreter:
                 outs.append((else_b, no.restrict(else_b.params) if no is not None else None, "false", what))
                 parts = []
                 if yes is None:
-                    parts.append(f"{what} never holds")
+                    parts.append(f"{code(what)} never holds")
                 elif no is None:
-                    parts.append(f"{what} always holds")
+                    parts.append(f"{code(what)} always holds")
                 else:
                     parts.append("both outcomes are possible")
-                note, kind = "; ".join(parts), "if"
+                note, kind = join(parts), "if"
             elif isinstance(instr, Goto):
                 target = fn.block(instr.target)
                 mapping = {k: (a.type if isinstance(a, Const) else a.name) for k, a in instr.binds.items()}
                 tctx = ctx.rename(mapping, target.params)
                 outs.append((target, tctx, "goto", ""))
-                note, kind = f"{target.name} receives {tctx}", "goto"
+                note, kind = f"{ver(target.name, target.key)} receives {context(tctx)}", "goto"
             elif isinstance(instr, Call):
                 ret = fn.block(instr.ret)
                 if instr.callee not in self.program.functions:
                     ctx = ctx.narrow(instr.callee, Type.of("proc"))
                 outs.append((ret, ctx.set(RESULT, ANY).restrict(ret.params), "return", ""))
-                note, kind = f"the call is opaque: {RESULT}: any at {ret.name}", "call"
+                note, kind = f"the call is opaque{SEP}{binding(RESULT, 'any')} at {ver(ret.name, ret.key)}", "call"
             elif isinstance(instr, Return):
                 if instr.prim is not None:
                     p = prims[instr.prim]
@@ -158,7 +159,7 @@ class AbstractInterpreter:
                 else:
                     t = self.helper.type_of(ctx, instr.value)
                 ctx = ctx.set(RESULT, t)
-                note, kind = f"returns {t}", "return"
+                note, kind = f"returns {ty(t)}", "return"
             elif isinstance(instr, Fail):
                 note, kind = "the block fails here", "fail"
             self.emit("instruction", block=block.name, text=instr.text, what=kind, note=note, line=instr.line, context=ctx)

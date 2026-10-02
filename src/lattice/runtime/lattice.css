@@ -122,11 +122,15 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-ga-canvas{flex:1;min-width:0;height:430px;display:flex}
 .lt-ga-svg{width:100%;height:100%;margin:0 auto}
 @container (max-width: 760px){
+  /* the panel moves under the drawing; the canvas keeps its height (a flex item along the column
+     would otherwise take the natural height of its SVG and ignore `height`) */
   .lt-ga-main{flex-direction:column;align-items:stretch;gap:12px}
-  .lt-ga-panel{max-width:none;flex-direction:row;flex-wrap:wrap;gap:12px 28px}
+  .lt-ga-canvas{flex:none}
+  .lt-ga-panel{max-width:none;flex:none;flex-direction:row;flex-wrap:wrap;gap:12px 28px}
 }
 .lt-ga-caption{font-size:22px;color:var(--lt-muted);min-height:1.5em;font-style:italic}
 .lt-ga-panel{flex:none;display:flex;flex-direction:column;gap:14px;font-size:19px;max-width:40%}
+.lt-ga-panel[hidden]{display:none}
 .lt-pv-name{font-family:var(--lt-font-code);font-size:15px;color:var(--lt-muted);margin-bottom:4px}
 .lt-pv-map{border-collapse:collapse;font-family:var(--lt-font-code);font-size:18px}
 .lt-pv-map th{font-weight:600;color:var(--lt-muted);padding:2px 10px;border-bottom:1px solid var(--lt-rule)}
@@ -218,6 +222,7 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 /* the panel keeps a fixed width and the drawing its height, so that the drawing does not rescale as the
    queue grows and shrinks or as the caption wraps; the caption fits in the space left (bbv.js shrinks its text) */
 .lt-bbv-anim .lt-ga-panel{flex:0 0 clamp(150px,22%,260px);max-width:none}
+@container (max-width: 760px){ .lt-bbv-anim .lt-ga-panel{flex:none} }
 .lt-c-bbv-anim,.lt-c-bbv-cfg,.lt-c-abstract-interp-anim{flex:1 1 auto}
 .lt-bbv-anim .lt-ga-main{flex:none}
 .lt-bbv-anim .lt-ga-caption{flex:1 1 auto;min-height:33px;overflow:hidden}
@@ -238,10 +243,41 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-bbv-node.lt-gone{opacity:0;pointer-events:none}
 .lt-bbv-label{font-family:var(--lt-font-head);font-weight:650;font-size:15px;fill:var(--lt-ink)}
 .lt-bbv-star{fill:var(--lt-accent);font-weight:700}
-.lt-bbv-ctx{font-family:var(--lt-font-code);font-size:12px;font-style:italic;fill:var(--lt-muted)}
+.lt-bbv-ctx{font-family:var(--lt-font-code);font-size:12px;font-style:italic;fill:var(--lt-muted);white-space:pre}
 .lt-bbv-code{font-family:var(--lt-font-code);font-size:12.5px;fill:var(--lt-ink);white-space:pre}
-.lt-bbv-removed{text-decoration:line-through;fill:var(--lt-muted)}
+.lt-bbv-removed{text-decoration:line-through;text-decoration-color:var(--lt-warn);fill:var(--lt-muted)}
+.lt-bbv-removed .lt-rc-kw,.lt-bbv-removed .lt-rc-idx{fill:var(--lt-muted);font-weight:400}
 .lt-bbv-ellipsis{fill:var(--lt-muted)}
+/* rich text (spec 9.5): the same vocabulary inside the nodes (tspans), in the caption and in the panel */
+.lt-bbv-ctx .lt-rc-var{fill:var(--lt-ink);font-style:normal}
+.lt-bbv-ctx .lt-rc-ty{fill:var(--lt-type);font-style:normal}
+.lt-bbv-ctx .lt-rc-range,.lt-bbv-code .lt-rc-idx{fill:var(--lt-range);font-style:normal}
+.lt-bbv-code .lt-rc-kw{fill:var(--lt-accent);font-weight:600}
+.lt-rc-op,.lt-rc-tag{display:inline-block;font-family:var(--lt-font-head);font-style:normal;font-weight:700;font-size:.6em;
+  letter-spacing:.07em;text-transform:uppercase;line-height:1.5;padding:0 .55em;border-radius:5px;vertical-align:.18em;
+  margin-right:.2em;color:var(--lt-on-strong);background:var(--lt-muted)}
+.lt-rc-op.tone-active{background:var(--lt-active)}
+.lt-rc-op.tone-accent{background:var(--lt-accent)}
+.lt-rc-op.tone-warn{background:var(--lt-warn)}
+.lt-rc-op.tone-good{background:var(--lt-good)}
+.lt-rc-tag{color:var(--lt-muted);background:transparent;box-shadow:inset 0 0 0 1.5px currentColor;margin-right:.15em}
+.lt-rc-v{display:inline-block;font-family:var(--lt-font-head);font-style:normal;font-weight:650;font-size:.8em;line-height:1.35;
+  padding:0 .45em;border-radius:6px;color:var(--lt-ink);
+  background:color-mix(in srgb,var(--origin,var(--lt-edge)) 26%,var(--lt-bg));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--origin,var(--lt-edge)) 55%,var(--lt-bg))}
+.lt-rc-var,.lt-rc-ty,.lt-rc-code,.lt-rc-rm{font-family:var(--lt-font-code);font-style:normal;font-size:.88em}
+.lt-rc-var,.lt-rc-code{color:var(--lt-ink)}
+.lt-rc-ty{color:var(--lt-type)}
+.lt-rc-range,.lt-rc-code .lt-rc-idx{color:var(--lt-range)}
+.lt-rc-code .lt-rc-kw{color:var(--lt-accent);font-weight:600}
+.lt-rc-rm{color:var(--lt-muted);text-decoration:line-through;text-decoration-color:var(--lt-warn);text-decoration-thickness:2px}
+.lt-rc-rm .lt-rc-kw{color:var(--lt-muted);font-weight:400}
+.lt-rc-sep{color:var(--lt-edge)}
+.lt-rc-list span{display:inline-flex;align-items:center;gap:.3em}
+.lt-rc-list .lt-rc-v{font-size:.95em}
+.lt-rc-step{font-weight:700}
+.lt-rc-step.tone-warn{color:var(--lt-warn)}
+.lt-rc-step.tone-accent{color:var(--lt-accent)}
 .lt-bbv-edge path{fill:none;stroke:var(--lt-edge);stroke-width:1.8}
 .lt-bbv-edge.k-return path{stroke-dasharray:6 4}
 .lt-bbv-edge.k-call path{stroke-dasharray:2 4;opacity:.7}
