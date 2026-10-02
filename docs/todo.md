@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-02, after the 0.7.2 implementation (`implementation-report-2026-10-02.md`). The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; everything done in those phases stays recorded there.
+Updated 2026-10-02, after the 0.8.0 implementation (`implementation-report-2026-10-02.md`, section 9). The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; everything done in those phases stays recorded there.
 
 ## Waiting on Olivier
 
@@ -13,8 +13,13 @@ Updated 2026-10-02, after the 0.7.2 implementation (`implementation-report-2026-
 - [ ] 0.5: review of the two abstract interpretation slides (contexts show every live variable, including `n`; see the archived report addendum).
 
 - [ ] 0.7.2: read the user manual (`user_manual/manual.html`) once as a user would; wording and chapter order are open to change, and every slide was sized at 1280x720 in Chromium.
+- [ ] 0.8.0: try the slide "Badges that wait for their turn" of the manual. A hidden badge keeps its place, like a fragment, so with two `badge=next` detours the second badge appears one row below where the first one was; say if you would rather have waiting badges take no space (then the slide's layout would shift as they come and go).
 
 ## Later, if wanted
+
+Authoring and parsing:
+- [ ] A `:::` line quoted inside a fenced block closes an enclosing `:::` container (SKILL.md, Pitfalls); the container rule of `markdown.py` could skip fenced blocks when it looks for its closing marker.
+- [ ] A `{.reveal}` line before a `::: detour` container is still ignored without a word (the badge is not a fragment). Either make the badge a fragment of the reveal track (a step-table change) or warn; `badge=step` covers the case that motivated it.
 
 Navigation and presenter view:
 - [ ] Arrow labels: a `label_at` option (tail, middle, head). A label beside the middle of a `from` arrow can overlap text when the two boxes are close; `curve` moves it for now.
@@ -32,5 +37,5 @@ Basic block versioning and abstract interpretation (from `archive/todo.md`, plus
 
 ## Notes for whoever picks this up
 
-- `check_docs.py` enforces version agreement across README, spec, report, `__init__.py` and `pyproject.toml`; the highest diagnostic code is LT054.
+- `check_docs.py` enforces version agreement across README, spec, report, `__init__.py` and `pyproject.toml`; the highest diagnostic code is LT055.
 - Release step 4 of SKILL.md (removing `.lattice-cache/`, `__pycache__/`, `*.egg-info/`, `.pytest_cache/`) is for Olivier's working tree.

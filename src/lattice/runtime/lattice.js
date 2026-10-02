@@ -323,6 +323,13 @@ const Lattice = (() => {
         el.classList.toggle("lt-hidden", Number(el.dataset.ltReveal) > shown);
       }
     }
+    // badge=step|next (spec 3.9): shown from, or only at, the step before the detour's detour step
+    for (const el of $$("[data-lt-badge]", sections[id])) {
+      const at = Object.entries(s.stepDetours || {})
+        .filter(([, d]) => d.id === el.dataset.ltDetour).map(([k]) => Number(k));
+      const shown = el.dataset.ltBadge === "next" ? at.includes(step + 1) : at.some((k) => step >= k - 1);
+      el.classList.toggle("lt-hidden", !shown);
+    }
     const prevRow = info.fromStep != null ? s.positions[info.fromStep] || [] : null;
     for (const instId of instancesBySlide[id] || []) {
       const m = mounted[instId];
@@ -393,7 +400,11 @@ const Lattice = (() => {
       const dot = (i) => `<i class="${[i <= nav.cur.step ? "on" : "", stepDetour(nav.cur.slide, i) ? "dt" : ""].join(" ").trim()}"></i>`;
       bits.push(`<span class="lt-steps">${Array.from({ length: s.steps }, (_, i) => dot(i)).join("")}</span>`);
     }
-    if (s.detours.length) bits.push(`<span class="lt-hint"><kbd>\u2193</kbd>${esc(deck.detours[s.detours[0]].label)}</span>`);
+    // the Down hint names the first detour, unless its badge is waiting for its step (spec 3.9)
+    const firstBadge = s.detours.length ? sections[nav.cur.slide].querySelector(`[data-lt-badge][data-lt-detour="${CSS.escape(s.detours[0])}"]`) : null;
+    if (s.detours.length && !(firstBadge && firstBadge.classList.contains("lt-hidden"))) {
+      bits.push(`<span class="lt-hint"><kbd>\u2193</kbd>${esc(deck.detours[s.detours[0]].label)}</span>`);
+    }
     if (topExcursion() >= 0 || d) bits.push(`<span class="lt-hint"><kbd>\u2191</kbd>${esc(label(returnTarget()))}</span>`);
     const mp = deck.mainPath.indexOf(nav.cur.slide);
     if (nav.tour) bits.push(`<span class="lt-where">tour ${esc(nav.tour)}</span>`);

@@ -236,6 +236,101 @@ def test_detour_step_enters_and_returns(tmp_path):
     assert not errors
 
 
+BADGE_DECK = """
+# Questions
+{.reveal}
+```python
+def fib(n):
+    return n if n < 2 else fib(n - 1) + fib(n - 2)
+```
+
+{.reveal}
+Last remark.
+
+::: detour {#q1 at=1 badge=next key=a}
+# Why is it slow?
+:::
+
+::: detour {#q2 at=1 badge=step key=b}
+# Memoize it
+:::
+
+::: detour {#q3 key=c}
+# Always offered
+:::
+"""
+
+
+def test_badges_wait_for_their_detour_step(tmp_path):
+    """Spec 3.9: `badge=next` shows only at the step before its detour step, `badge=step` from that step on."""
+    src = tmp_path / "talk.md"
+    src.write_text(BADGE_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(out.as_uri())
+
+            def press(*keys):
+                for k in keys:
+                    page.keyboard.press(k)
+                return page.evaluate("Lattice.state().cur")
+
+            def shown():
+                """The badges visible on the slide, and the current step."""
+                return page.evaluate("""() => [Lattice.state().cur.step,
+                    [...document.querySelectorAll('#s-questions .lt-detour-badge')]
+                      .filter((b) => !b.classList.contains('lt-hidden')).map((b) => b.dataset.ltDetour)]""")
+
+            # steps: 0, 1 (the code), 2 (detour step q1), 3 (detour step q2), 4 (the remark)
+            assert shown() == [0, ["q3"]]
+            assert "Why is it slow?" not in page.inner_text("#lt-progress")  # nor does the Down hint name it
+            press("ArrowRight")
+            assert shown() == [1, ["q1", "q3"]]  # q1 is what Right does next
+            assert "Why is it slow?" in page.inner_text("#lt-progress")
+            assert press("ArrowRight") == {"slide": "why-is-it-slow", "step": 0}
+            assert press("ArrowRight") == {"slide": "questions", "step": 2}
+            assert shown() == [2, ["q2", "q3"]]  # q1 is done, q2 is next and stays from now on
+            assert press("ArrowRight") == {"slide": "memoize-it", "step": 0}
+            assert press("ArrowRight") == {"slide": "questions", "step": 3}
+            assert shown() == [3, ["q2", "q3"]]
+            press("ArrowRight")
+            assert shown() == [4, ["q2", "q3"]]
+            # backward: Left skips both detour steps, and the badges follow the step
+            press("ArrowLeft")
+            assert shown() == [1, ["q1", "q3"]]
+            press("ArrowLeft")
+            assert shown() == [0, ["q3"]]
+            # any way of reaching a step shows the same badges (steps are positions)
+            page.goto(out.as_uri() + "#/questions/2")
+            page.wait_for_timeout(100)
+            assert shown() == [2, ["q2", "q3"]]
+            # a hidden badge cannot be clicked, but its key still enters the detour
+            assert page.is_hidden("#s-questions [data-lt-detour=q1]")
+            assert press("a") == {"slide": "why-is-it-slow", "step": 0}
+            # the presenter preview renders the next position through the same path: q1 shows there
+            page.goto(out.as_uri() + "?presenter#/questions/0")
+            frame = None
+            for _ in range(40):
+                frame = next((f for f in page.frames if f.url.endswith("?preview")), None)
+                if frame is not None and frame.evaluate("window.Lattice && Lattice.state() ? Lattice.state().cur.step : -1") == 1:
+                    break
+                page.wait_for_timeout(50)
+            assert frame.evaluate("Lattice.state().cur") == {"slide": "questions", "step": 1}
+            assert frame.is_visible("#s-questions [data-lt-detour=q1]")
+            assert page.is_hidden("#s-questions [data-lt-detour=q1]")
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
 PRESENTER_DECK = """
 # Intro
 

@@ -296,3 +296,65 @@ def test_detour_step_errors(deck):
     assert "LT009" in codes(check_deck(root, use_cache=False))
     root.write_text("# A\n::: detour {#d1 blocking=maybe}\n# Inside\n:::\n")
     assert "LT009" in codes(check_deck(root, use_cache=False))
+
+
+BADGE_STEPS = """
+# A
+{.reveal}
+```python
+x = 1
+```
+
+::: detour {#d1 at=1 badge=next key=a}
+# Inside one
+:::
+
+::: detour {#d2 at=1 badge=step key=b}
+# Inside two
+:::
+
+::: detour {#d3 key=c}
+# Inside three
+:::
+
+# B
+{.reveal}
+- x
+
+```timeline
+reveal 1
+detour d4
+```
+
+::: detour {#d4 badge=next}
+# Inside four
+:::
+"""
+
+
+def test_badge_step_modes(deck):
+    """Spec 3.9: `badge=step|next` is display only; the step table is the one `at=` gives."""
+    root = deck({"talk.md": BADGE_STEPS})
+    d = build_deck(root, use_cache=False)
+    a = d.slides["a"]
+    assert [x.badge_mode for x in a.detours] == ["next", "step", None]
+    assert all(x.badge for x in a.detours)
+    assert a.positions == [[0], [1], [1], [1]]
+    assert a.step_detours == {2: {"id": "d1", "blocking": False}, 3: {"id": "d2", "blocking": False}}
+    assert 'data-lt-detour="d1" data-lt-badge="next"' in a.body_html
+    assert 'data-lt-detour="d2" data-lt-badge="step"' in a.body_html
+    assert 'data-lt-detour="d3">' in a.body_html  # a plain badge carries no mode
+    assert 'data-lt-badge="next"' in d.slides["b"].body_html  # a timeline detour step works too
+
+
+def test_badge_step_errors(deck):
+    root = deck({"talk.md": "# A\n::: detour {#d1 badge=next}\n# Inside\n:::\n"})
+    assert "LT055" in codes(check_deck(root, use_cache=False))  # no detour step to tie the badge to
+    root.write_text("# A\n{.reveal}\n- x\n```timeline\nreveal 1\n```\n::: detour {#d1 badge=step}\n# Inside\n:::\n")
+    assert "LT055" in codes(check_deck(root, use_cache=False))  # a timeline that does not name it
+    root.write_text("# A\n{.reveal}\n- x\n::: detour {#d1 at=5 badge=step}\n# Inside\n:::\n")
+    assert codes(check_deck(root, use_cache=False)) & {"LT054", "LT055"} == {"LT054"}  # one mistake, one error
+    root.write_text("# A\n::: detour {#d1 badge=later}\n# Inside\n:::\n")
+    assert "LT009" in codes(check_deck(root, use_cache=False))
+    root.write_text("# A\n{.reveal}\n- x\n::: detour {#d1 at=0 badge=Next}\n# Inside\n:::\n")
+    assert not check_deck(root, use_cache=False).errors  # values are case-insensitive, like booleans

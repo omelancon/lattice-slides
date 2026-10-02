@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.7.2 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.8.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -209,7 +209,8 @@ Content never paints outside its column: a table wider than its column scrolls h
 
 - A detour container MUST appear at the top level of a slide body (LT034 inside another container). That slide is its **origin**.
 - Its body MUST contain at least one slide (directly or through includes) (LT016).
-- `label` defaults to the plain-text title of the entry slide. `badge` (bool, default `true`) controls whether a badge is rendered at the container's position in the origin slide. Without a badge the detour is still reachable by key, Down, links and the overview.
+- `label` defaults to the plain-text title of the entry slide. `badge` controls the badge rendered at the container's position in the origin slide: `true` (the default) shows it at every step, `false` renders none. Without a badge the detour is still reachable by key, Down, links and the overview.
+- `badge=step` and `badge=next` tie the badge to the detour's detour step (section 6.4), for a detour that should not be announced before its turn. Let `k` be the step of its first detour step: with `step` the badge is hidden at the steps before `k - 1` and shown from step `k - 1` on; with `next` it is shown only at the step right before each of its detour steps, when NEXT would enter it. A hidden badge keeps its place (as a reveal fragment, section 10.4) and cannot be clicked; the key, Down, links and the overview still enter the detour. The footer hint for Down, which names the slide's first detour, is left out while that detour's badge is hidden. This is display only: the step table, `at` numbering and navigation are unchanged. Both values are an error (LT055) on a detour that is not a detour step of its origin.
 - `at` (a step number, from 0) makes the detour a **detour step** of its origin, entered after that step (section 6.4). It MUST NOT be used on a slide that has a timeline, which declares detour steps itself (LT054). `blocking` (bool, default `false`) makes that detour step blocking: a multi-step move stops in front of it (section 7.2, SKIP).
 - Detours MAY nest. A nested detour's origin is the detour slide that contains it.
 - The container is removed from the origin's content; only the badge remains.
@@ -362,7 +363,8 @@ class Detour:
     origin: str
     label: str
     key: str | None
-    badge: bool
+    badge: bool                   # false: no badge
+    badge_mode: str | None        # "step" or "next": shown according to the detour step (3.9)
     at: int | None                # detour step after this step of the origin (6.4)
     blocking: bool                # a blocking detour step (6.4)
     slides: list[str]             # in document order; slides[0] is the entry
@@ -519,6 +521,7 @@ A **detour step** is a step of a slide that, when reached with NEXT, enters one 
 - A detour step is **blocking** when its timeline line ends with `blocking` or its detour has `blocking=true`: a multi-step move (SKIP, section 7.2) stops in front of it instead of rolling over it. Only SKIP-DETOUR, an explicit key, steps over a blocking detour step without entering it.
 - The row of a detour step is a copy of the row before it: nothing changes on the slide. It does not produce LT030.
 - `Slide.step_detours` maps each such step to its detour id and whether it is blocking; the deck JSON carries it as `stepDetours` (section 11.2).
+- The badge of a detour with `badge=step` or `badge=next` (section 3.9) is shown according to these steps; the runtime reads them from `stepDetours`. Like everything else on the slide, the badge depends only on the current step, however it was reached.
 - Runtime consequences are in section 7.2 (NEXT, PREV), 7.5 (preview and moves) and 11.5 (the PDF export skips detour steps when printing `all`). Reaching a detour step by any means other than NEXT (PREV, the scrubber, the URL hash, a sync) does not enter the detour: steps are positions, not events.
 
 ---
@@ -919,6 +922,7 @@ Requirements:
 ### 10.4 Core-managed features
 
 - Reveal: elements carry `data-lt-reveal="k"`; the core shows fragment `k` when the reveal position is at least `k`, using `visibility: hidden` so layout does not shift.
+- Badges that wait for their step (section 3.9): the badge carries `data-lt-badge="step"` or `data-lt-badge="next"`; at every step the core looks up the detour steps of its `data-lt-detour` in the slide's `stepDetours` and hides the badge the same way as a fragment. The presenter preview and print mode render positions through the same path, so they follow.
 - Branch menus, detour badges, wiki links, transitions, overview, go-to, presenter view (with its preview and scrubber) and print mode (section 11.5) are implemented by the core.
 - The core exports helpers for runtimes: `Lattice.frames(store)`, `Lattice.applyDelta`, `Lattice.renderPanel(el, panel, keys)` (the variable panel of the animation components) and `Lattice.esc` (HTML escaping).
 
@@ -933,7 +937,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.7.2">
+  <meta name="generator" content="lattice 0.8.0">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -1045,7 +1049,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 
 - **Pages.** The tour (default: the main path; `main` also names it) is printed first, in order. Each slide gives one page per selected step: its `pdf` attribute (section 3.5) if present, else `--steps` (default `last`). `all` leaves out detour steps (section 6.4), which repeat the page before them.
 - **Appendix** (unless `--no-appendix`). Starting from the printed slides, breadth first, and then from each appendix slide in turn: every detour with slides not yet printed becomes a section; every branch option whose target is not yet printed becomes a section holding the target and the slides that follow it along `next`, up to a slide already printed; off-path root slides linked from a printed slide are collected in a final section, "Linked slides". Sections are lettered A, B, ... in that order.
-- **Links.** Wiki links, detour badges and branch options link to the first page of their target when it is printed (badges and options also show its page number) and become plain text otherwise. Each appendix page names its section and links back to the page that leads to it.
+- **Links.** Wiki links, detour badges and branch options link to the first page of their target when it is printed (badges and options also show its page number) and become plain text otherwise. A badge with `badge=step` or `badge=next` is printed as it is at the printed step (section 3.9). A `next` badge is therefore never on a slide's last step (the default), and with `all`, which leaves out detour steps, a badge shown only at detour steps appears on no page; its detour is still printed in the appendix. Each appendix page names its section and links back to the page that leads to it.
 - **Rendering.** The command builds the single-file HTML and opens it in Chromium with `?print` at the design size. In print mode the runtime is passive (as the preview of section 7.5). `Lattice.print(plan)` renders each page of the plan with `animate: false`, then copies the slide into a static page: canvases become images, and ids inside the copy get a per-page suffix, with `url(#...)` and `href="#..."` references updated. Chromium prints the copies in one pass, one page per slide page, so the links above are links inside the PDF.
 
 ---
@@ -1105,6 +1109,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT052 | warning | Unknown theme (the default theme is used) |
 | LT053 | error | Invalid `pdf` slide attribute, or a `pdf` step beyond the slide's last step |
 | LT054 | error | Invalid detour step: unknown detour in a timeline, `at` out of range or combined with a timeline, or a malformed `detour` line |
+| LT055 | error | `badge=step` or `badge=next` on a detour that is not a detour step of its origin |
 
 Diagnostics are printed as `file:line:col: severity LTnnn: message`. `lattice check` exits with status 1 if any error is reported, 0 otherwise (`--strict` also fails on warnings).
 
@@ -1285,3 +1290,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.7 | The drawing keeps its `height` and a hidden panel takes no space when an animation sits in a narrow column | 9.5 |
 | 0.7.1 | Scheme highlighting: binding sites are variables, named-let names are procedures | 3.13 |
 | 0.7.2 | User manual (`user_manual/manual.md`, a deck built and tested with the examples); no rule changes | 2.1 |
+| 0.8 | `badge=step` and `badge=next` on detours: a badge shown according to its detour step; LT055 | 3.9, 4, 6.4, 10.4, 11.5, 12 |

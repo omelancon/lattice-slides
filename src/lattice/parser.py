@@ -169,10 +169,14 @@ class Loader:
         if not d.slides:
             self.d.error("LT016", "detour contains no slides", loc)
         d.key = attrs.get("key")
-        try:
-            d.badge = to_bool(attrs.get("badge", "true"))
-        except AttrError as e:
-            self.d.error("LT009", str(e), loc)
+        badge = attrs.get("badge", "true")
+        if badge.strip().lower() in ("step", "next"):
+            d.badge_mode = badge.strip().lower()
+        else:
+            try:
+                d.badge = to_bool(badge)
+            except AttrError:
+                self.d.error("LT009", f"detour attribute badge={badge!r} must be true, false, step or next", loc)
         try:
             d.blocking = to_bool(attrs.get("blocking", "false"))
         except AttrError as e:

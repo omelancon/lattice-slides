@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.7.2
+author: Lattice 0.8.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -311,7 +311,7 @@ Every slide has at most one `next` edge. Without a `next=` attribute it is, in t
 {.reveal}
 - A detour holds slides of its own, written inside the slide that offers it (its **origin**)
 - Enter it with Down, its `key`, its badge or a link; its last slide returns to the origin by itself
-- `label` defaults to the entry slide's title; `badge=false` hides the badge
+- `label` defaults to the entry slide's title; `badge=false` hides the badge, `badge=next` waits for its detour step
 - Detours nest, may contain includes, and their slides belong to the detour's scope
 ::::
 :::::
@@ -428,6 +428,58 @@ reveal +1         # relative move
 - Without a timeline, `at=2` on a detour inserts a detour step after step 2
 :::
 ::::
+
+# Badges that wait for their turn {#badge-steps .dense}
+
+::::: columns
+:::: column {width=1fr}
+````markdown
+{.reveal}
+```python
+def fib(n): ...
+```
+
+::: detour {#slow at=1 badge=next key=s}
+# Why is it slow?
+:::
+
+::: detour {#memo at=1 badge=step key=m}
+# Memoize it
+:::
+````
+::::
+:::: column {width=1fr}
+{.reveal}
+```python
+def fib(n):
+    return n if n < 2 else fib(n - 1) + fib(n - 2)
+```
+
+Right shows the code; the next two steps enter `slow`, then `memo`. A badge with `badge=next` appears only when Right is about to enter its detour, one with `badge=step` stays from then on. Both need a detour step (else LT055); a hidden badge's key still works.
+::::
+:::::
+
+::: detour {#slow at=1 badge=next key=s}
+# Why is it slow? {#why-slow}
+
+Each call makes two more, so `fib(n)` makes about $1.6^n$ calls: `fib(30)` alone makes 2.7 million.
+
+Press Right to return to the slide: the badge of `slow` is gone, the one of `memo` has appeared.
+:::
+
+::: detour {#memo at=1 badge=step key=m}
+# Memoize it {#memoize-it}
+
+```python
+from functools import cache
+
+@cache
+def fib(n):
+    return n if n < 2 else fib(n - 1) + fib(n - 2)
+```
+
+Each value is computed once: about $2n$ calls instead of $1.6^n$. Press Right to return; the badge of `memo` stays, since it uses `badge=step`.
+:::
 
 # Components {#pick-a-component}
 
@@ -1138,6 +1190,7 @@ Lattice.component("stack-anim", {
 | LT029, LT030, LT031 | error, warning, error | Two timelines; a cue changes nothing; two ranges on one line |
 | LT033, LT036 | error | Component track needs an `#id`; option given both as attribute and in the body |
 | LT049, LT053, LT054 | error | Timeline syntax; invalid `pdf` attribute; invalid detour step |
+| LT055 | error | `badge=step` or `badge=next` on a detour that is not a detour step |
 
 # Plugins and output {#diagnostics-output .dense}
 
@@ -1164,7 +1217,7 @@ Lattice.component("stack-anim", {
 | `::include{file="x.md" offpath=true}` | Slides from another file |
 | `[[id]]`, `[[id\|label]]` | A link (an excursion) |
 | `{.reveal}` before a block | Fragments |
-| `::: detour {label=... key=k at=2}` | Nested slides that return |
+| `::: detour {key=k at=2 badge=next}` | Nested slides that return |
 | `::: branch {layout=cards}` + links | A choice |
 | `::: notes` | Speaker notes |
 | `:::: columns` / `::: column {width=2fr}` | Columns |

@@ -307,5 +307,7 @@ class BodyBuilder:
         if not d.badge:
             return ""
         key = f"<kbd>{html.escape(d.key)}</kbd>" if d.key else ""
-        return (f'<button class="lt-detour-badge" type="button" data-lt-detour="{html.escape(d.id)}">'
+        # badge=step|next: the runtime shows it according to the step of the detour (spec 3.9, 10.4)
+        mode = f' data-lt-badge="{d.badge_mode}"' if d.badge_mode else ""
+        return (f'<button class="lt-detour-badge" type="button" data-lt-detour="{html.escape(d.id)}"{mode}>'
                 f'{key}<span>{html.escape(d.label)}</span></button>')

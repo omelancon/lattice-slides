@@ -41,9 +41,10 @@ src/lattice/
   markdown.py     markdown-it setup: containers, ::include, [[links]], $math$
   parser.py       Loader: files, includes, h1 segmentation, detours, ids, slide attributes
   attrs.py, ids.py  attribute blocks and slug ids
-  body.py         BodyBuilder: blocks, reveal, containers, branch menus, notes, timelines, component placeholders
+  body.py         BodyBuilder: blocks, reveal, containers, detour badges, branch menus, notes, timelines,
+                  component placeholders
   graph.py        next resolution, edges, keys, main path, reachability, tours
-  timeline.py     timeline parsing, step compilation, detour steps
+  timeline.py     timeline parsing, step compilation, detour steps (and LT055 for badges tied to them)
   render.py       component rendering, cache, tracks
   emit.py         deck JSON, single-file HTML, directory output, image embedding
   graphs.py       graph loading, Graphviz layouts, overview map layout, tree layouts per frame
@@ -61,7 +62,8 @@ src/lattice/
                   filter), visual.py (plot, dot, math, arrow), animations.py, bbv.py
   runtime/
     lattice.js    navigation state machine (with the structural predecessor, skip playback and detour
-                  steps), overlays, presenter view (preview, scrubber, keybindings), print mode, component host
+                  steps), reveal and badge visibility per step, overlays, presenter view (preview,
+                  scrubber, keybindings), print mode, component host
     lattice.css   layout and component styles; themes/*.css hold custom properties only
     components/   one runtime per animated or interactive component (arrow.js measures element boxes)
     vendor/       KaTeX, Vega, Vega-Lite, Plotly (with licenses), embedded only when used
@@ -70,7 +72,7 @@ examples/         seven decks with their built talk.html; they double as integra
 user_manual/      the user manual deck (manual.md, manual.html) with its demo sources and plugin
 scripts/          build_examples.py, snapshot.py (drive a deck in Chromium, take screenshots),
                   check_docs.py (mechanical documentation checks)
-docs/             this file, the spec and the design report
+docs/             this file, the spec, the design report, the todo list and the implementation reports
 ```
 
 The build pipeline, in order: `Loader.load` (files, includes, slides, detours, ids) then `BodyBuilder.build` per slide, then `resolve_graph`, then `render_components` (which also compiles steps), then `check_steps` (LT053), then wiki-link title substitution, then `emit_html` or `emit_dir`. `lattice pdf` then opens the single-file output in Chromium with `?print` and prints the pages of `pdf_plan`. Errors stop the build between phases (`diags.raise_if_errors()`), so structural errors never trigger component execution.
@@ -87,7 +89,7 @@ Each of these was decided deliberately; the reasoning is in the report (sections
 - **Registered components take precedence over Pygments lexers** (spec 3.13). Never register a component under a common language name; that is why the diff component is `diff-steps`.
 - **Output is self-contained.** Images, fonts, data and libraries are embedded in single-file mode. Heavy libraries are embedded only when an instance requires them (`RenderResult.requires`).
 - **Columns contain their content.** Nothing may paint outside its column or below the slide body; `tests/test_layout.py` checks every example slide at its first and last step. A component option such as `height` must be honoured in every layout mode (the animation panels switch to a column under 760 px of container width).
-- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT054. New code, new row in spec section 12.
+- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT055. New code, new row in spec section 12.
 
 ## Common tasks
 
@@ -109,12 +111,12 @@ Run `pytest` after every change; it takes about twenty seconds. The suites:
 |---|---|
 | `test_parsing.py` | attributes, ids, includes, links, reveal, containers |
 | `test_graph.py` | next resolution, detours, branches, keys, tours |
-| `test_steps.py` | tracks, timelines, detour steps, followers, deltas, frame stores, tree and grid traces, tree layouts |
+| `test_steps.py` | tracks, timelines, detour steps and the badge modes of their detours, followers, deltas, frame stores, tree and grid traces, tree layouts |
 | `test_bbv.py` | the type lattice and intervals, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), abstract interpretation against figures 1, 2 and 4, frames, layout, the components |
 | `test_output.py` | plot backends, diff-steps, the arrow component, images, directory output, overview map, library inclusion |
 | `test_pdf.py` | `pdf` steps and LT053, the page plan (tour, appendix, back links), a real export in Chromium |
 | `test_cli.py` | CLI commands, building every example, the user manual building without warnings and using every component |
-| `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys, detour steps), the presenter preview, scrubber and keybindings, the arrow geometry, the tree, grid, versioning and abstract interpretation runtimes, in Chromium |
+| `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys, detour steps, badges that wait for their detour step), the presenter preview, scrubber and keybindings, the arrow geometry, the tree, grid, versioning and abstract interpretation runtimes, in Chromium |
 | `test_layout.py` | no content spills out of a column or below the slide body, at the first and last step of every slide of the examples and the manual |
 
 Tests prove structure, not appearance. After any visual change (CSS, runtime rendering, a component's HTML, an example), rebuild the examples and look at screenshots of the affected slides:
@@ -140,6 +142,7 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 - **Intervals are only for the abstract interpreter.** `Specializer.type_of` strips them (`intervals = False`), so SBBV and ΛV contexts never carry one; a change to `prims.py` result rules must keep working without intervals.
 - **The drawing of `bbv.js` must never rescale between frames.** Its SVG keeps its aspect ratio, so anything that changes the canvas size (a panel growing with the queue, a caption wrapping to a second line) rescales the whole drawing. The panel has a fixed width, `.lt-ga-main` does not shrink, and the caption shrinks its text to fit the space left (`fitCaption`). Check both Chromium and Firefox after touching that layout; Firefox resolves these flex sizes differently.
 - **Container nesting again.** A detour holding slides that use `::::` columns needs `:::::` fences (see `examples/07-basic-block-versioning`).
+- **Quoted containers close real ones.** A `:::` line inside a fenced code block still closes an enclosing container of three colons: the container rule does not see the fence. A slide that shows container syntax inside a column needs `::::` columns and `:::::` around them (the manual's "Detours" and "Badges that wait for their turn" slides). The symptom is a later container reported out of place (LT034) or a column whose fragments vanish.
 - **Node elements are reused across frames.** `bbv.js` rewrites the class attribute of a node at every frame, including when it hides it; anything the node must keep (its origin colour) lives in the node record, never in the current classes. A colour that survives forward playback and vanishes after stepping back is this bug.
 - **Captions are marked up, not HTML.** The versioning and abstract interpretation captions carry the backtick spans of `bbv/rich.py` (spec 9.5); tests compare them through `rich.plain` or on the markup itself, and a note written in `sbbv.py`, `lv.py` or `absint.py` uses the helpers rather than f-strings of raw names and types.
 - **Arrow targets are measured, not styled.** `arrow.js` reads `getBoundingClientRect` of the target's contents and draws in slide units; a change to `.lt-slide` positioning or to how the viewport is scaled (`fit`) must keep `test_arrow_runtime_points_at_its_targets` green. The classes of its SVG are `lt-arrow-box`, `lt-arrow-line` and `lt-arrow-text`: `.lt-arrow` already belongs to the graph animation's arrowheads.

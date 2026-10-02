@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.7.2. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.8.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -93,11 +93,13 @@ Companions are followers: `bbv-cfg` highlights the origin block being specialize
 
 The analysis that SBBV extends works on a fixed graph, so its animation keeps the source CFG still and changes the annotation inside the blocks: contexts gain intervals, grow by union with widening and shrink at conditionals. Reusing the `bbv-cfg` drawing and the `bbv.js` runtime (with per-frame context lines) keeps the three techniques visually comparable on consecutive slides, which is the point of showing them together. Intervals live inside the type values rather than beside them, so one context class serves all three algorithms; the versioning algorithms simply drop intervals, as the thesis's implementations do. Widening uses thresholds because that is what reproduces the thesis's own chain (decision 13), and the chain is shown in the panel rather than as a drawn lattice.
 
-### 3.12 Pointing at things, and pausing an animation (spec sections 6.4, 7.2 and 8.9)
+### 3.12 Pointing at things, and pausing an animation (spec sections 3.9, 6.4, 7.2 and 8.9)
 
 Left undoes the last move, but a deck opened on a deep link has no history to undo. Rather than stopping, PREV then falls back to the structural predecessor (tour, main path, `next` edges, branches, detour origin) without recording anything, so the presenter can keep walking backward and the history model stays untouched (decision 15). Skipping ten steps or jumping to the last step of a slide are step moves, so they never touch history; the intermediate steps are played quickly instead of jumped over, because an animation that disappears is harder to follow than one that runs fast.
 
 A detour step lets an animation pause for a refresher and resume where it left off. It is a row of the step table that repeats the previous row and names a detour: entering happens only when NEXT arrives on it, since steps are positions and must be reachable by the scrubber, the hash and a reload without side effects. Backward moves skip such rows, which would otherwise cost a dead key press. Skip moves roll over detour steps by default, since their purpose is to get somewhere fast; a `blocking` detour step stops them, for material that must not be bypassed, and an explicit key (`skip-detour`) remains the one way past it without entering, so a presenter is never trapped.
+
+A badge announces its detour from the first step, which gives the game away when the detour is a question the presenter means to ask later: a slide that reveals some code and then pauses on two questions would show both at once. `badge=step` and `badge=next` show the badge from the step before its detour step on, or only at the step before each of its detour steps, so the badge appears when Right is about to enter it. This is display only, like a reveal fragment: no new step, no change to `at` numbering or to navigation, and the runtime decides from the step alone, so the scrubber, a reload, the preview and the PDF agree. The runtime finds the step in `stepDetours`, which the deck already carries, rather than a step index stamped into the badge at build time, because badges are rendered before steps are compiled; a lookup in a table the build produced is not the computation the runtime is kept from. Both values are an error on a detour that is not a step, rather than a silent `true`, since the author asked for something that cannot happen (decision 17).
 
 The `arrow` component is the one place where the runtime measures: element boxes exist only in the browser, so an arrow pointing at an element has to be laid out there. Everything else about it is decided at build time, including its default direction, a fixed angle of 315 degrees (decision 14): a direction computed from the layout at runtime would make the drawing depend on the window and on timing, and would be the first step down a path the project avoids.
 
@@ -184,6 +186,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.7.1 and v0.7.2 (done).** Scheme highlighting of binding sites; the user manual, a deck of its own in `user_manual/` that shows every feature live and is built and checked with the examples.
 
+**v0.8 (done).** Badges that wait for their detour step (`badge=step`, `badge=next`), so a slide does not announce its questions before their turn.
+
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
 - Plugin hooks beyond components (new syntax, generated slides, custom checks).
@@ -215,3 +219,4 @@ Decisions taken while writing the specification, and since.
 | 14 | Arrow component | Built in, named `arrow` (registered names win over the obscure Pygments `arrow` lexer). Targets by element id or CSS selector, resolved in the browser, which also measures the geometry: the only runtime layout in Lattice. Default direction: a fixed angle of 315 degrees (the arrow comes from the lower right), never a direction computed from the layout. Steps make it a track. |
 | 15 | Backward navigation without history | PREV falls back to the structural predecessor (tour, main path, `next`, branch, detour origin) and records nothing. Skip moves are step moves, clamped to the slide, played quickly. Detour steps are entered only by NEXT and skipped by PREV; a `blocking` detour step stops a skip playback, and `skip-detour` (Shift+Down) is the explicit way over a detour step. |
 | 16 | Rich text of the versioning animations | One vocabulary for captions, node contexts and the panel: badge for the operation (colour by category), chips in origin colours for versions, a colour each for variables, types and intervals, keywords coloured, removed tests struck through. The build writes captions with an inline backtick markup (`lattice.bbv.rich`); the runtime styles it. The `;;` notation stays in the nodes, with the types aligned. |
+| 17 | Badges of detour steps | `badge=step` (from the step before the detour step on) and `badge=next` (only at the step before each of its detour steps) beside `true` and `false`. Display only, like a reveal fragment; the runtime reads the step from `stepDetours`. The footer's Down hint follows the first detour's badge. An error (LT055) on a detour that is not a detour step. |
