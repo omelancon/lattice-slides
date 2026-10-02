@@ -56,8 +56,8 @@ src/lattice/
   diagnostics.py  Diagnostic, BuildError
   themes.py       theme table: CSS file, Pygments style, palette for components
   server.py       dev server: polling watcher and server-sent events for reload
-  components/     base.py (contract, registry, RenderContext), code.py, visual.py (plot, dot, math, arrow),
-                  animations.py, bbv.py
+  components/     base.py (contract, registry, RenderContext), code.py, scheme.py (the Scheme highlighting
+                  filter), visual.py (plot, dot, math, arrow), animations.py, bbv.py
   runtime/
     lattice.js    navigation state machine (with the structural predecessor, skip playback and detour
                   steps), overlays, presenter view (preview, scrubber, keybindings), print mode, component host

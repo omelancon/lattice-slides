@@ -32,3 +32,7 @@ Spec 8.8 (`show` default), 9.5 (rich text, narrow columns), 9.6 (operations), 15
 ## 6. Left open
 
 See `todo.md`: a look at the result on Olivier's screen and in the dark theme; the `height` of `one-block-steps`; a `code` panel key if a slide ever needs the specialized code of the current version without drawing code in every node.
+
+## 7. Addendum, 0.7.1: Scheme highlighting
+
+Pygments' Scheme lexer types every symbol that follows `(` as `Name.Function`, so in `(let loop ((i 0) (sum 0)) ...)` the bound variables took the call colour and `loop` took the variable colour at its binding and the call colour at its calls. `components/scheme.py` adds a Pygments filter (a stack of open lists with a role each) that retypes binding sites as `Name.Variable` (bindings of `let`, `let*`, `letrec`, `letrec*`, `do`, `fluid-let`, formals of `let-values` and `let*-values`, parameters of `lambda`, `define-values` and `case-lambda` clauses) and the name of a named `let` as `Name.Function`; `(define (f ...))` already had the call colour and keeps it, per Olivier's choice. `lexer_for(lang)` in that module is now the one place that builds a lexer for `code`, `code-steps` and `diff-steps`. Scheme only; Racket and Common Lisp are untouched. Spec 3.13 and 15; `test_scheme_binding_sites_are_variables`.

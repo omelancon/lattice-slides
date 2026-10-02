@@ -178,3 +178,22 @@ def test_arrow_needs_a_target(deck):
 
     root = deck({"talk.md": "# A\n```arrow\n```\n"})
     assert "LT022" in {x.code for x in check_deck(root, use_cache=False).items}
+
+
+def test_scheme_binding_sites_are_variables():
+    """Pygments paints every symbol after "(" as a call; the Scheme filter restores the binding sites (spec 3.13)."""
+    from pygments.token import Name
+
+    from lattice.components.scheme import lexer_for
+
+    src = ("(define (sum-to-n n) (let loop ((i 0) (sum 0)) (if (>= i n) sum (loop (+ i 1) (+ sum i)))))\n"
+           "(lambda (x . rest) (let-values (((a b) (g x))) (do ((k 0 (+ k 1))) ((= k 3)) (case-lambda ((z) z)))))")
+    types = {}
+    for ttype, value in lexer_for("scheme").get_tokens(src):
+        if value.strip() and value not in "()":
+            types.setdefault(value, set()).add(ttype)
+    assert types["i"] == {Name.Variable} and types["sum"] == {Name.Variable} and types["n"] == {Name.Variable}
+    assert types["loop"] == {Name.Function} and types["sum-to-n"] == {Name.Function}
+    assert types["x"] == types["rest"] == types["a"] == types["b"] == types["k"] == types["z"] == {Name.Variable}
+    assert types["g"] == {Name.Function} and types["+"] == {Name.Builtin}
+    assert lexer_for("no-such-language").name == "Text only" and lexer_for("python").name == "Python"

@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.7.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.7.1 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -266,6 +266,8 @@ The info string is `NAME [attr_block]`. `NAME` is resolved in this order:
 4. Otherwise: plain preformatted text, with warning LT020. An empty info string gives plain text without a warning.
 
 Because registered names win over lexers, components MUST NOT be registered under common language names; this is why the diff component is `diff-steps` and ` ```diff ` still highlights unified diffs.
+
+Highlighting is Pygments' for every language, with one correction for `scheme`: the symbols that a binding form introduces are variables, not calls. The head of each binding of `let`, `let*`, `letrec`, `letrec*`, `do` and `fluid-let`, the formals of `let-values` and `let*-values`, and the parameters of `lambda`, `define-values` and `case-lambda` clauses are `Name.Variable`; the name of a named `let` is `Name.Function`, like the head of `(define (f ...))` and like its calls (`lattice.components.scheme`).
 
 Reserved attributes, handled by the core and not passed to component options: `#id`, classes, `follow`.
 
@@ -931,7 +933,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.7.0">
+  <meta name="generator" content="lattice 0.7.1">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -1281,3 +1283,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.6 | The `arrow` component | 8.8, 8.9 |
 | 0.7 | Rich text in the versioning and abstract interpretation captions, nodes and panel; `--lt-type` and `--lt-range` theme tokens | 9.5, 9.6 |
 | 0.7 | The drawing keeps its `height` and a hidden panel takes no space when an animation sits in a narrow column | 9.5 |
+| 0.7.1 | Scheme highlighting: binding sites are variables, named-let names are procedures | 3.13 |

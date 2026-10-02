@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-02, after the 0.7.0 implementation (`implementation-report-2026-10-02.md`). The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; everything done in those phases stays recorded there.
+Updated 2026-10-02, after the 0.7.1 implementation (`implementation-report-2026-10-02.md`). The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; everything done in those phases stays recorded there.
 
 ## Waiting on Olivier
 

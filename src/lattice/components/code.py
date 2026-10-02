@@ -9,9 +9,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
-from pygments.lexers import get_lexer_by_name
-from pygments.util import ClassNotFound
 
+from .scheme import lexer_for
 from .base import Component, ComponentError, RenderResult, register
 
 
@@ -111,11 +110,7 @@ def load_source(opts: CodeOptions, body: str, ctx) -> tuple[str, int]:
 
 def render_code_html(code: str, lang: str, first_line: int, number_from: int, linenos: bool,
                      static_hl: set[int], title: str | None) -> str:
-    try:
-        lexer = get_lexer_by_name(lang)
-    except ClassNotFound:
-        lexer = get_lexer_by_name("text")
-    body = highlight(code, lexer, HtmlFormatter(nowrap=True)).rstrip("\n")
+    body = highlight(code, lexer_for(lang), HtmlFormatter(nowrap=True)).rstrip("\n")
     rows = []
     for i, line in enumerate(body.split("\n")):
         n = number_from + i
@@ -181,11 +176,7 @@ class DiffOptions(BaseModel):
 
 
 def _highlight_lines(code: str, lang: str) -> list[str]:
-    try:
-        lexer = get_lexer_by_name(lang)
-    except ClassNotFound:
-        lexer = get_lexer_by_name("text")
-    body = highlight(code, lexer, HtmlFormatter(nowrap=True)).rstrip("\n")
+    body = highlight(code, lexer_for(lang), HtmlFormatter(nowrap=True)).rstrip("\n")
     return body.split("\n") if code else []
 
 
