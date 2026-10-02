@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-02, after the 0.7.1 implementation (`implementation-report-2026-10-02.md`). The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; everything done in those phases stays recorded there.
+Updated 2026-10-02, after the 0.7.2 implementation (`implementation-report-2026-10-02.md`). The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; everything done in those phases stays recorded there.
 
 ## Waiting on Olivier
 
@@ -11,6 +11,8 @@ Updated 2026-10-02, after the 0.7.1 implementation (`implementation-report-2026-
 - [ ] 0.7: a look at the rich captions, the aligned contexts and the chips of example 07 on your screen (checked in Chromium and Firefox at 1280x720; fonts fall back on the build machine), and at the dark theme, whose `--lt-type` and `--lt-range` tokens were chosen without a monitor.
 - [ ] 0.7: `one-block-steps` keeps `height=460`: now that a narrow column honours the height, the drawing sits in the middle of its canvas with room above and below; lower the height if you prefer the caption closer to the drawing.
 - [ ] 0.5: review of the two abstract interpretation slides (contexts show every live variable, including `n`; see the archived report addendum).
+
+- [ ] 0.7.2: read the user manual (`user_manual/manual.html`) once as a user would; wording and chapter order are open to change, and every slide was sized at 1280x720 in Chromium.
 
 ## Later, if wanted
 

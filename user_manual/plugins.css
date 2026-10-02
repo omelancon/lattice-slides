@@ -1,0 +1,20 @@
+/* Styles of the manual's plugins; theme custom properties keep them readable in both themes. */
+.checklist h3{font-family:var(--lt-font-head);font-size:26px;margin:0 0 8px;color:var(--lt-muted)}
+.checklist ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.checklist li::before{content:"\25A1  ";color:var(--lt-muted)}
+.checklist li.done{color:var(--lt-muted);text-decoration:line-through}
+.checklist li.done::before{content:"\2611  ";color:var(--lt-good)}
+.cs-frames{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-height:240px;justify-content:flex-end}
+.cs-frames li{display:flex;justify-content:space-between;gap:20px;padding:8px 16px;border-radius:8px;
+  background:var(--lt-panel);font-size:20px;border-left:6px solid var(--lt-rule)}
+.cs-frames li.top{border-left-color:var(--lt-active)}
+.cs-frames li.ret{border-left-color:var(--lt-good)}
+.cs-frames li span{color:var(--lt-muted);font-size:17px}
+.cs-caption{font-style:italic;color:var(--lt-muted);font-size:22px;margin:12px 0 0}
+/* A slide class of this manual: `.dense` packs reference tables. Unknown slide classes are kept
+   on the slide element, so a deck's own CSS (shipped with a plugin) can style them. */
+.lt-slide.dense .lt-body{font-size:21px;gap:12px}
+.lt-slide.dense .lt-body table{font-size:17.5px}
+.lt-slide.dense .lt-body th,.lt-slide.dense .lt-body td{padding:4px 12px}
+.lt-slide.dense .lt-code pre{font-size:15px}
+.lt-slide.dense .lt-body li{margin:.1em 0}

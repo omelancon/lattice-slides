@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.7.1 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.7.2 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -933,7 +933,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.7.1">
+  <meta name="generator" content="lattice 0.7.2">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -1284,3 +1284,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.7 | Rich text in the versioning and abstract interpretation captions, nodes and panel; `--lt-type` and `--lt-range` theme tokens | 9.5, 9.6 |
 | 0.7 | The drawing keeps its `height` and a hidden panel takes no space when an animation sits in a narrow column | 9.5 |
 | 0.7.1 | Scheme highlighting: binding sites are variables, named-let names are procedures | 3.13 |
+| 0.7.2 | User manual (`user_manual/manual.md`, a deck built and tested with the examples); no rule changes | 2.1 |

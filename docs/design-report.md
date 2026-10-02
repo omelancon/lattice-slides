@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.7.1. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.7.2. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -181,6 +181,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 **v0.6 (done).** Navigation: Left walks the structure backward when the history is empty, skip keys that play ten steps quickly or jump to the last step, a Keybindings section in the presenter view; detour steps, so an animation can pause for a refresher; the `arrow` component.
 
 **v0.7 (done).** Rich text in the versioning and abstract interpretation animations: operation badges, version chips in origin colours, coloured types, intervals, keywords and removed tests in captions, nodes and panel; drawings keep their height in narrow columns; origin colours survive a version being hidden and shown again.
+
+**v0.7.1 and v0.7.2 (done).** Scheme highlighting of binding sites; the user manual, a deck of its own in `user_manual/` that shows every feature live and is built and checked with the examples.
 
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".

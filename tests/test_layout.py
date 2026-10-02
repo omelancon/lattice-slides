@@ -1,7 +1,8 @@
 """Layout checks in a real browser: nothing drawn in a column may spill into its neighbour, and
 nothing drawn in a slide may spill below its body (over the footer).
 
-Every slide of every example is visited at its first and at its last step. Content inside a clipping
+Every slide of every example and of the user manual is visited at its first and at its last step.
+Content inside a clipping
 container (overflow other than `visible`, such as a scrolling code block) is skipped, since it cannot
 paint outside that container.
 """
@@ -15,6 +16,7 @@ from lattice.emit import emit_html
 pw = pytest.importorskip("playwright.sync_api")
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
+MANUAL = Path(__file__).resolve().parent.parent / "user_manual" / "manual.md"
 
 FIND_OVERFLOW = """(id) => {
   const out = [];
@@ -58,7 +60,7 @@ FIND_OVERFLOW = """(id) => {
 def example_pages(tmp_path_factory):
     out = tmp_path_factory.mktemp("layout")
     pages = []
-    for talk in sorted(EXAMPLES.glob("*/talk.md")):
+    for talk in sorted(EXAMPLES.glob("*/talk.md")) + [MANUAL]:
         html = out / f"{talk.parent.name}.html"
         html.write_text(emit_html(build_deck(talk, use_cache=False)), encoding="utf-8")
         pages.append(html)

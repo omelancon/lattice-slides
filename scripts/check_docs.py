@@ -11,7 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = {"README": ROOT / "README.md", "spec": ROOT / "docs/spec.md",
-        "report": ROOT / "docs/design-report.md", "skill": ROOT / "docs/SKILL.md"}
+        "report": ROOT / "docs/design-report.md", "skill": ROOT / "docs/SKILL.md",
+        "manual": ROOT / "user_manual/manual.md"}
 problems: list[str] = []
 
 
@@ -35,7 +36,7 @@ for m in re.finditer(r"\(?section (\d+(?:\.\d+)?)\)?", texts["spec"]):
         problems.append(f"spec: internal reference to section {m.group(1)} does not exist")
 
 # 2. cited repository paths exist
-path_re = re.compile(r"`((?:src|docs|examples|scripts|tests)/[\w./*-]+)`")
+path_re = re.compile(r"`((?:src|docs|examples|scripts|tests|user_manual)/[\w./*-]+)`")
 for name, text in texts.items():
     for p in set(path_re.findall(text)):
         if "*" in p:
@@ -59,6 +60,9 @@ for name, text in texts.items():
 # 4. components mentioned in backticks are registered
 sys.path.insert(0, str(ROOT / "src"))
 from lattice.components import REGISTRY  # noqa: E402
+from lattice.components.base import import_path  # noqa: E402
+
+import_path(ROOT / "user_manual/lattice_plugins.py")  # the manual's own components
 
 for name, text in texts.items():
     for comp in set(re.findall(r"```([a-z]+-(?:anim|steps))\b", text)) | set(re.findall(r"`([a-z]+-(?:anim|steps))`", text)):
@@ -80,7 +84,7 @@ version = re.search(r'__version__ = "([^"]+)"', (ROOT / "src/lattice/__init__.py
 pyproject = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M).group(1)
 if version != pyproject:
     problems.append(f"version {version} in __init__.py but {pyproject} in pyproject.toml")
-for name in ("README", "spec", "report"):
+for name in ("README", "spec", "report", "manual"):
     found = set(re.findall(r"\bv?(\d+\.\d+\.\d+)\b", texts[name].split("\n## ")[0]))
     if version not in found:
         problems.append(f"{name}: the introduction does not name the current version {version}")

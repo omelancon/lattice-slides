@@ -1,0 +1,8 @@
+graph city {
+  A -- B [weight=4];
+  A -- C [weight=2];
+  B -- C [weight=1];
+  B -- D [weight=5];
+  C -- D [weight=8];
+  D -- E [weight=2];
+}

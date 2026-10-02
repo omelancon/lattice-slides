@@ -1,0 +1,9 @@
+n,algorithm,ms
+1000,insertion,1.9
+1000,merge,0.4
+2000,insertion,7.6
+2000,merge,0.9
+5000,insertion,47.0
+5000,merge,2.4
+10000,insertion,190.0
+10000,merge,5.1

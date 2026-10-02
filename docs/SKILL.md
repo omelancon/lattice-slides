@@ -17,6 +17,7 @@ This file is for contributors. It explains where things live, how to verify chan
 | `docs/spec.md` | The normative definition: grammar (section 3), Deck model (4), graph resolution (5), steps, timelines and detour steps (6), navigation state machine (7), Python component contract (8, the `arrow` component in 8.9), frames (9), JS runtime contract (10), output format (11), diagnostics (12), changes since draft 1 (15) | Before changing behavior. The spec wins over every other document |
 | `docs/design-report.md` | Why: goals and non-goals, design rationale (section 3), technology choices (5), the roadmap (6) and the decisions table (7) | You are about to make a design choice, or want to know what is planned |
 | `docs/SKILL.md` (this file) | How to work on the code: structure, setup, verification, pitfalls, release and documentation upkeep | Always, first |
+| `user_manual/manual.md` | The user manual, a Lattice deck: every feature shown live, with its syntax, options and keys | You changed anything user-visible: the manual must show it (built like the examples, checked by the suite) |
 
 ## Setup
 
@@ -26,7 +27,7 @@ playwright install chromium      # browser tests, screenshots and PDF export
 playwright install firefox       # optional: layout checks of the versioning drawings (see Pitfalls)
 dot -V                           # Graphviz CLI; needed for dot diagrams, .dot graphs and the overview map
 pytest                           # the full suite, including browser tests; must pass before and after your change
-python scripts/build_examples.py # rebuilds examples/*/talk.html
+python scripts/build_examples.py # rebuilds examples/*/talk.html and user_manual/manual.html
 ```
 
 Python 3.10 or newer. Without Graphviz, animated graphs fall back to a NetworkX layout and the overview map is empty; without Chromium the browser tests and the PDF export test skip, so a green run without Chromium proves less than it seems.
@@ -66,6 +67,7 @@ src/lattice/
     vendor/       KaTeX, Vega, Vega-Lite, Plotly (with licenses), embedded only when used
 tests/            pytest suites (see Verification)
 examples/         seven decks with their built talk.html; they double as integration tests
+user_manual/      the user manual deck (manual.md, manual.html) with its demo sources and plugin
 scripts/          build_examples.py, snapshot.py (drive a deck in Chromium, take screenshots),
                   check_docs.py (mechanical documentation checks)
 docs/             this file, the spec and the design report
@@ -111,9 +113,9 @@ Run `pytest` after every change; it takes about twenty seconds. The suites:
 | `test_bbv.py` | the type lattice and intervals, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), abstract interpretation against figures 1, 2 and 4, frames, layout, the components |
 | `test_output.py` | plot backends, diff-steps, the arrow component, images, directory output, overview map, library inclusion |
 | `test_pdf.py` | `pdf` steps and LT053, the page plan (tour, appendix, back links), a real export in Chromium |
-| `test_cli.py` | CLI commands and building every example |
+| `test_cli.py` | CLI commands, building every example, the user manual building without warnings and using every component |
 | `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys, detour steps), the presenter preview, scrubber and keybindings, the arrow geometry, the tree, grid, versioning and abstract interpretation runtimes, in Chromium |
-| `test_layout.py` | no content spills out of a column or below the slide body, at the first and last step of every example slide |
+| `test_layout.py` | no content spills out of a column or below the slide body, at the first and last step of every slide of the examples and the manual |
 
 Tests prove structure, not appearance. After any visual change (CSS, runtime rendering, a component's HTML, an example), rebuild the examples and look at screenshots of the affected slides:
 
@@ -146,7 +148,7 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 ## Release
 
 1. Bump the version in `src/lattice/__init__.py` and `pyproject.toml` (patch for fixes, minor for features).
-2. `pytest`, then `python scripts/build_examples.py`, then check screenshots of anything visual.
+2. `pytest`, then `python scripts/build_examples.py`, then check screenshots of anything visual (the manual included).
    (The version must also appear in the introductions of the README, the spec and the report; `check_docs.py` enforces it.)
 3. Run the documentation coherence pass below.
 4. Remove `.lattice-cache/`, `__pycache__/`, `*.egg-info/` and `.pytest_cache/`.
@@ -155,7 +157,7 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 
 Do this after every major task (a feature, a fix that changes behavior, a release), not only when something looks wrong. Documentation drifts one small edit at a time, and each document is read by someone who trusts it.
 
-1. **Reread every document in full:** `README.md`, every file in `docs/`, and any README inside `examples/`. Skimming misses contradictions; they hide in examples and tables.
+1. **Reread every document in full:** `README.md`, every file in `docs/`, `user_manual/manual.md`, and any README inside `examples/`. Skimming misses contradictions; they hide in examples and tables.
 2. **Check each statement against the code and against its owner** in the documentation map above. The spec owns behavior; the report owns rationale and plans; the README owns user-facing usage; this file owns contributor workflow.
 3. **Remove duplication.** When a fact appears in two places, keep it in its owner and replace the other occurrence with a reference (for example "see spec section 7.6"). A user-facing summary in the README is acceptable only if it links to the owning section and adds no facts of its own.
 4. **Fix contradictions in place.** Update the text that is wrong rather than appending corrections elsewhere. Spec section 15 is a changelog table that points to the amended sections; it must not hold rules found nowhere else.
