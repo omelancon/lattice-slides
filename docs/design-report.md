@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.9.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.10.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -188,7 +188,7 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.7.1 and v0.7.2 (done).** Scheme highlighting of binding sites; the user manual, a deck of its own in `user_manual/` that shows every feature live and is built and checked with the examples.
 
-**v0.8 and v0.9 (done).** Badges that wait for their detour step (`badge=step`, `badge=next`), so a slide does not announce its questions before their turn; badges placed anywhere on the slide with `::detour-badge` (in a column, for instance), several per detour.
+**v0.8 to v0.10 (done).** Badges that wait for their detour step (`badge=step`, `badge=next`), so a slide does not announce its questions before their turn; badges placed anywhere on the slide with `::detour-badge` (in a column, for instance), several per detour; `.reveal-with`, which reveals a block on the same step as the previous fragment.
 
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".

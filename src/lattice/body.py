@@ -93,6 +93,7 @@ class BodyBuilder:
                         g[1].children = self.md.parseInline(rest, self.env)[0].children
                     except AttrError:
                         pass
+            self.group_loc = self.loc(self.slide, t)
             if t.type == "lt_include":
                 self.d.error("LT034", "::include is only allowed at the top level of a file or of a detour",
                              self.loc(self.slide, t))
@@ -119,7 +120,7 @@ class BodyBuilder:
         """HTML attributes from an attribute line, and whether it asks for reveal."""
         if attrs is None:
             return {}, False
-        classes = [c for c in attrs.classes if c != "reveal"]
+        classes = [c for c in attrs.classes if c not in ("reveal", "reveal-with")]
         reveal = "reveal" in attrs.classes
         out: dict[str, str] = {}
         if attrs.id:
@@ -127,6 +128,15 @@ class BodyBuilder:
         if classes:
             out["class"] = " ".join(classes)
         out.update(attrs.kv)
+        if "reveal-with" in attrs.classes:
+            # `.reveal-with`: the block joins the last fragment numbered so far instead of opening one (spec 3.12)
+            loc = getattr(self, "group_loc", self.slide.loc)
+            if reveal:
+                self.d.error("LT057", "a block is either .reveal or .reveal-with, not both", loc)
+            elif self.slide.reveal_count == 0:
+                self.d.error("LT057", ".reveal-with needs a fragment before it on this slide", loc)
+            else:
+                out["data-lt-reveal"] = str(self.slide.reveal_count)
         return out, reveal
 
     @staticmethod
@@ -353,7 +363,7 @@ class BodyBuilder:
         extra = sorted(set(attrs.kv) - {"ref", "label", "badge"})
         if extra:
             problems.append(f"unknown attribute {extra[0]!r} (allowed: ref, label, badge, #id, classes)")
-        if pending is not None and "reveal" in pending.classes:
+        if pending is not None and {"reveal", "reveal-with"} & set(pending.classes):
             problems.append("a detour badge cannot be a reveal fragment; use badge=step or badge=next")
         if pending is not None and pending.kv:
             problems.append("an attribute line before a detour badge may only give an #id and classes")
@@ -390,7 +400,7 @@ class BodyBuilder:
         if pending is not None:
             if pending.id:
                 out.setdefault("id", pending.id)
-            classes = [c for c in pending.classes if c != "reveal"]
+            classes = [c for c in pending.classes if c not in ("reveal", "reveal-with")]
             if classes:
                 out["class"] = " ".join(filter(None, [*classes, out.get("class")]))
         d.badges.append((mode, loc))

@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-02, after the 0.9.0 implementation (`implementation-report-2026-10-02.md`, sections 9 and 10). The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; everything done in those phases stays recorded there.
+Updated 2026-10-02, after the 0.10.0 implementation (`implementation-report-2026-10-02.md`, sections 9 to 11). The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; everything done in those phases stays recorded there.
 
 ## Waiting on Olivier
 
@@ -38,5 +38,5 @@ Basic block versioning and abstract interpretation (from `archive/todo.md`, plus
 
 ## Notes for whoever picks this up
 
-- `check_docs.py` enforces version agreement across README, spec, report, `__init__.py` and `pyproject.toml`; the highest diagnostic code is LT056.
+- `check_docs.py` enforces version agreement across README, spec, report, `__init__.py` and `pyproject.toml`; the highest diagnostic code is LT057.
 - Release step 4 of SKILL.md (removing `.lattice-cache/`, `__pycache__/`, `*.egg-info/`, `.pytest_cache/`) is for Olivier's working tree.

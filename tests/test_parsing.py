@@ -159,6 +159,52 @@ def test_reveal_fragments(deck):
     assert s.body_html.count("data-lt-reveal") == 3
 
 
+def test_reveal_with_joins_the_previous_fragment(deck):
+    """Spec 3.12: `.reveal-with` puts a block on the last fragment numbered so far, without opening one."""
+    root = deck({"talk.md": """
+        # A
+        {.reveal}
+        - one
+        - two
+
+        {.reveal-with .wide}
+        ```python
+        x = 1
+        ```
+
+        {.reveal-with}
+        - a whole list
+        - joins too
+
+        :::: columns
+        ::: column
+        {.reveal}
+        Next.
+        :::
+        ::: column
+        {.reveal-with}
+        Beside it, in the other column.
+        :::
+        ::::
+    """})
+    s = build_deck(root, use_cache=False).slides["a"]
+    assert s.reveal_count == 3 and s.steps == 4
+    html = s.body_html
+    assert 'class="lt-c lt-c-code wide" data-component="code" data-instance="a/c1" data-lt-reveal="2"' in html
+    assert '<ul data-lt-reveal="2">' in html  # the list as a whole, not one fragment per item
+    assert "<p data-lt-reveal=\"3\">Beside it" in html
+    assert html.count('data-lt-reveal="3"') == 2
+
+
+def test_reveal_with_errors(deck):
+    root = deck({"talk.md": "# A\n{.reveal-with}\nAlone.\n"})
+    assert "LT057" in codes(check_deck(root, use_cache=False))  # no fragment before it
+    root.write_text("# A\n{.reveal}\n- x\n\n{.reveal .reveal-with}\nBoth.\n")
+    assert "LT057" in codes(check_deck(root, use_cache=False))
+    root.write_text("# A\n{.reveal}\n- x\n\n{.reveal-with}\n::detour-badge{ref=d}\n::: detour {#d}\n# In\n:::\n")
+    assert "LT056" in codes(check_deck(root, use_cache=False))  # a badge is never a fragment
+
+
 def test_container_typo_warning(deck):
     root = deck({"talk.md": "# A\n::: colums\nx\n:::\n"})
     assert "LT019" in codes(build_deck(root, use_cache=False).diagnostics)

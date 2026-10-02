@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.9.0
+author: Lattice 0.10.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -197,6 +197,9 @@ Code fences are highlighted by Pygments, for any language it knows. An unknown f
 
 {.reveal}
 A paragraph, revealed as one block.
+
+{.reveal-with}
+A remark, on the same step.
 ```
 :::
 ::: column {width=1fr}
@@ -205,6 +208,9 @@ A paragraph, revealed as one block.
 - A list reveals one top-level item per step; any other block is one fragment
 - Fragments are numbered across the slide and form its **reveal track**
 - Hidden fragments keep their space, so nothing jumps
+
+{.reveal-with}
+`{.reveal-with}` brought this line with the last bullet: the block shares the previous fragment's step.
 :::
 ::::
 
@@ -1239,7 +1245,7 @@ Lattice.component("stack-anim", {
 | LT029, LT030, LT031 | error, warning, error | Two timelines; a cue changes nothing; two ranges on one line |
 | LT033, LT036 | error | Component track needs an `#id`; option given both as attribute and in the body |
 | LT049, LT053, LT054 | error | Timeline syntax; invalid `pdf` attribute; invalid detour step |
-| LT055, LT056 | error | `badge=step` or `badge=next` without a detour step; invalid `::detour-badge` |
+| LT055, LT056, LT057 | error | `badge=step` or `badge=next` without a detour step; invalid `::detour-badge`; `.reveal-with` with no fragment before it |
 
 # Plugins and output {#diagnostics-output .dense}
 
@@ -1265,7 +1271,7 @@ Lattice.component("stack-anim", {
 | `#` | An untitled slide |
 | `::include{file="x.md" offpath=true}` | Slides from another file |
 | `[[id]]`, `[[id\|label]]` | A link (an excursion) |
-| `{.reveal}` before a block | Fragments |
+| `{.reveal}`, `{.reveal-with}` before a block | Fragments |
 | `::: detour {key=k at=2 badge=next}` | Nested slides that return |
 | `::detour-badge{ref=id}` | A detour's badge, placed here |
 | `::: branch {layout=cards}` + links | A choice |

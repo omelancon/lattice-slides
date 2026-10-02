@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.9.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.10.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -251,6 +251,7 @@ Final remark, revealed as one block.
 
 - An attribute line containing the class `reveal` marks the next block as revealable. If the block is a list, each top-level item is one fragment; otherwise the whole block is one fragment.
 - Fragments are numbered 1, 2, 3, ... in document order across the slide (excluding detour content).
+- An attribute line containing the class `reveal-with` puts the next block on the last fragment numbered so far, in document order, instead of opening a new one: it appears on the same step as that fragment. A list marked `reveal-with` joins as a whole. `reveal-with` before the first fragment of the slide, or together with `reveal` on one line, is an error (LT057); a placed detour badge is never a fragment (LT056, section 3.9).
 - All fragments of a slide form the single **reveal track** (section 6.1).
 
 ### 3.13 Fenced component blocks
@@ -941,7 +942,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.9.0">
+  <meta name="generator" content="lattice 0.10.0">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -1115,6 +1116,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT054 | error | Invalid detour step: unknown detour in a timeline, `at` out of range or combined with a timeline, or a malformed `detour` line |
 | LT055 | error | `badge=step` or `badge=next` on a detour, or on one of its placed badges, when the detour is not a detour step of its origin |
 | LT056 | error | Invalid placed badge (`::detour-badge`): missing or unknown `ref`, a detour of another slide, without an explicit id or with `badge=false`, an unknown attribute or value, an attribute line with `reveal` or key-value attributes, or a badge in speaker notes or in a branch |
+| LT057 | error | `.reveal-with` with no fragment before it on the slide, or together with `.reveal` |
 
 Diagnostics are printed as `file:line:col: severity LTnnn: message`. `lattice check` exits with status 1 if any error is reported, 0 otherwise (`--strict` also fails on warnings).
 
@@ -1297,3 +1299,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.7.2 | User manual (`user_manual/manual.md`, a deck built and tested with the examples); no rule changes | 2.1 |
 | 0.8 | `badge=step` and `badge=next` on detours: a badge shown according to its detour step; LT055 | 3.9, 4, 6.4, 10.4, 11.5, 12 |
 | 0.9 | Placed badges: the `::detour-badge` leaf directive, several badges per detour with their own label and mode; LT056; an include in a list item or a quote is LT034 | 2.3, 3.2, 3.9, 4, 10.4, 12 |
+| 0.10 | `.reveal-with`: a block revealed on the same step as the previous fragment; LT057 | 3.12, 12 |

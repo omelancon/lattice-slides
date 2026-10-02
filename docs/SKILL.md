@@ -89,7 +89,7 @@ Each of these was decided deliberately; the reasoning is in the report (sections
 - **Registered components take precedence over Pygments lexers** (spec 3.13). Never register a component under a common language name; that is why the diff component is `diff-steps`.
 - **Output is self-contained.** Images, fonts, data and libraries are embedded in single-file mode. Heavy libraries are embedded only when an instance requires them (`RenderResult.requires`).
 - **Columns contain their content.** Nothing may paint outside its column or below the slide body; `tests/test_layout.py` checks every example slide at its first and last step. A component option such as `height` must be honoured in every layout mode (the animation panels switch to a column under 760 px of container width).
-- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT056. New code, new row in spec section 12.
+- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT057. New code, new row in spec section 12.
 
 ## Common tasks
 
@@ -109,7 +109,7 @@ Run `pytest` after every change; it takes about twenty seconds. The suites:
 
 | File | Covers |
 |---|---|
-| `test_parsing.py` | attributes, ids, includes, links, reveal, containers, leaf directives |
+| `test_parsing.py` | attributes, ids, includes, links, reveal and `.reveal-with`, containers, leaf directives |
 | `test_graph.py` | next resolution, detours, branches, keys, tours |
 | `test_steps.py` | tracks, timelines, detour steps and the badges of their detours (modes, placed badges, LT055 and LT056), followers, deltas, frame stores, tree and grid traces, tree layouts |
 | `test_bbv.py` | the type lattice and intervals, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), abstract interpretation against figures 1, 2 and 4, frames, layout, the components |

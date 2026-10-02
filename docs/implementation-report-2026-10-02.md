@@ -67,3 +67,13 @@ Olivier wanted the two badges of a slide in two different columns. A badge is dr
 - **Version.** 0.9.0. Spec 3.2, 3.9, 4, 10.4, 11.1 (generator), 12, 15; README syntax row; report 3.12, roadmap, decision 18; SKILL (structure, LT056, test table); todo.
 - **Fixed on the way.** An `::include` inside a list item rendered as `< />` without a word (since 0.1); it is now LT034, like an include inside a container.
 - **Verification.** Suite green (112 tests), examples and manual rebuilt, `lattice check --strict` clean on the manual, screenshots of the new slide at each step, of its detours and of the touched manual slides at 1280x720 in Chromium, `check_docs.py` clean; a second review of the code and the documents, whose findings are fixed (attribute lines limited to `#id` and classes, badges in branches rejected, the detour's own mode still checked by LT055).
+
+## 11. Addendum, 0.10.0: `.reveal-with`
+
+Olivier wanted the last item of a list and a code block revealed on the same step. Until now each `{.reveal}` block opened a fragment; the workarounds were a container around the last item and the code (which splits the list) or a hand-written `data-lt-reveal` attribute (which breaks when a fragment is added before it).
+
+- **Rule (spec 3.12).** An attribute line with the class `reveal-with` gives the next block the number of the last fragment numbered so far, in document order across the slide (so a block in a right column can join a fragment of the left one), without opening a new one. A list joins as a whole. Nothing changes in the step table or the runtime: the block simply carries `data-lt-reveal` with that number.
+- **LT057.** `reveal-with` before any fragment of the slide, or together with `reveal` on one line. A placed badge with `reveal-with` is LT056, like `reveal`.
+- **Code.** `BodyBuilder.wrapper_attrs` handles the class for paragraphs, lists, fenced blocks and containers; the walker records the location of each block for the diagnostic.
+- **Tests.** `test_reveal_with_joins_the_previous_fragment` (a code block and a whole list joining a list item, a paragraph in another column joining one in the first), `test_reveal_with_errors`. Checked in Chromium.
+- **Docs.** Spec 3.12, 12, 15; README row; report roadmap; SKILL (LT057, test table); manual "Fragments" slide (syntax and a live `{.reveal-with}` line), cheat sheet and diagnostics rows. Version 0.10.0.
