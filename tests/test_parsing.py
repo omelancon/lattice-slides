@@ -162,3 +162,15 @@ def test_reveal_fragments(deck):
 def test_container_typo_warning(deck):
     root = deck({"talk.md": "# A\n::: colums\nx\n:::\n"})
     assert "LT019" in codes(build_deck(root, use_cache=False).diagnostics)
+
+
+def test_detour_badge_directive_is_a_leaf_block_anywhere():
+    """Spec 3.2: `::detour-badge{...}` alone on its line is a leaf directive, inside containers and lists too."""
+    from lattice.markdown import create_markdown
+
+    md = create_markdown()
+    src = ("::: column\n::detour-badge{ref=a}\n:::\n\n- item\n- ::detour-badge{ref=b label=\"B\"}\n\n"
+           "> ::detour-badge{ref=c}\n\ntext ::detour-badge{ref=d}\n\n::detour-badge\n")
+    badges = [t.info for t in md.parse(src, {}) if t.type == "lt_badge"]
+    assert badges == ["{ref=a}", '{ref=b label="B"}', "{ref=c}"]  # not inline, and braces are required
+    assert [t.type for t in md.parse("::include{file=x.md}\n", {})] == ["lt_include"]

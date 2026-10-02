@@ -400,9 +400,10 @@ const Lattice = (() => {
       const dot = (i) => `<i class="${[i <= nav.cur.step ? "on" : "", stepDetour(nav.cur.slide, i) ? "dt" : ""].join(" ").trim()}"></i>`;
       bits.push(`<span class="lt-steps">${Array.from({ length: s.steps }, (_, i) => dot(i)).join("")}</span>`);
     }
-    // the Down hint names the first detour, unless its badge is waiting for its step (spec 3.9)
-    const firstBadge = s.detours.length ? sections[nav.cur.slide].querySelector(`[data-lt-badge][data-lt-detour="${CSS.escape(s.detours[0])}"]`) : null;
-    if (s.detours.length && !(firstBadge && firstBadge.classList.contains("lt-hidden"))) {
+    // the Down hint names the first detour, unless all its badges are waiting for their step (spec 3.9)
+    const firstBadges = s.detours.length ? $$(`.lt-detour-badge[data-lt-detour="${CSS.escape(s.detours[0])}"]`, sections[nav.cur.slide]) : [];
+    const waiting = firstBadges.length > 0 && firstBadges.every((b) => b.dataset.ltBadge && b.classList.contains("lt-hidden"));
+    if (s.detours.length && !waiting) {
       bits.push(`<span class="lt-hint"><kbd>\u2193</kbd>${esc(deck.detours[s.detours[0]].label)}</span>`);
     }
     if (topExcursion() >= 0 || d) bits.push(`<span class="lt-hint"><kbd>\u2191</kbd>${esc(label(returnTarget()))}</span>`);

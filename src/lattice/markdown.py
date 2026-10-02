@@ -10,7 +10,9 @@ from mdit_py_plugins.dollarmath import dollarmath_plugin
 from mdit_py_plugins.front_matter import front_matter_plugin
 
 WIKI_RE = re.compile(r"\s*([A-Za-z0-9][A-Za-z0-9_-]*)\s*(?:\|(.*))?\Z", re.S)
-INCLUDE_RE = re.compile(r"::include\s*(\{.*\})\s*\Z")
+# Leaf directives (spec 3.2): `::include{...}` and `::detour-badge{...}`, each alone on its line.
+DIRECTIVE_RE = re.compile(r"::(include|detour-badge)\s*(\{.*\})\s*\Z")
+DIRECTIVE_TOKENS = {"include": "lt_include", "detour-badge": "lt_badge"}
 
 
 def title_placeholder(target: str) -> str:
@@ -52,21 +54,33 @@ def self_md(env):
     return env["__md__"]
 
 
-def _include_rule(state, start_line: int, end_line: int, silent: bool) -> bool:
+def _directive_rule(state, start_line: int, end_line: int, silent: bool) -> bool:
     if state.sCount[start_line] - state.blkIndent >= 4:
         return False
     pos = state.bMarks[start_line] + state.tShift[start_line]
     line = state.src[pos : state.eMarks[start_line]]
-    m = INCLUDE_RE.match(line.rstrip())
+    m = DIRECTIVE_RE.match(line.rstrip())
     if not m:
         return False
     if silent:
         return True
-    tok = state.push("lt_include", "", 0)
-    tok.info = m.group(1)
+    tok = state.push(DIRECTIVE_TOKENS[m.group(1)], "", 0)
+    tok.info = m.group(2)
     tok.map = [start_line, start_line + 1]
     state.line = start_line + 1
     return True
+
+
+def _render_badge(self, tokens, idx, options, env):
+    """A placed detour badge met inside a block rendered as a whole (a list item, a quote)."""
+    render = env.get("badge")
+    return render(tokens[idx], None) if render else ""
+
+
+def _render_include(self, tokens, idx, options, env):
+    """An `::include` inside a block rendered as a whole: reported by the body builder, rendered as nothing."""
+    report = env.get("include")
+    return report(tokens[idx], None) if report else ""
 
 
 def _render_math_inline(self, tokens, idx, options, env):
@@ -88,9 +102,11 @@ def create_markdown() -> MarkdownIt:
     dollarmath_plugin(md, allow_digits=False, allow_space=False)
     md.inline.ruler.before("link", "lt_wikilink", _wikilink_rule)
     md.block.ruler.before(
-        "paragraph", "lt_include", _include_rule, {"alt": ["paragraph", "reference", "blockquote", "list"]}
+        "paragraph", "lt_directive", _directive_rule, {"alt": ["paragraph", "reference", "blockquote", "list"]}
     )
     md.add_render_rule("lt_wikilink", _render_wikilink)
+    md.add_render_rule("lt_badge", _render_badge)
+    md.add_render_rule("lt_include", _render_include)
     md.add_render_rule("math_inline", _render_math_inline)
     md.add_render_rule("math_inline_double", _render_math_block)
     md.add_render_rule("math_block", _render_math_block)

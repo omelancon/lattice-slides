@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.8.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.9.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -73,7 +73,7 @@ Unknown top-level keys produce warning LT040 and are otherwise ignored.
 ````
 
 - An include is a **leaf directive**: a line starting with `::include` followed by an attribute block (section 3.4). Attributes: `file` (required), `offpath` (bool, default `false`).
-- An include MAY appear at the top level of any source file or at the top level of a detour container. It MUST NOT appear inside any other container (LT034).
+- An include MAY appear at the top level of any source file or at the top level of a detour container. It MUST NOT appear inside any other container, a list item or a block quote (LT034).
 - An include acts as a slide boundary: it ends the current slide, and the included slides are spliced into the enclosing scope at that point, in order.
 - The included file MUST start (after blank lines) with a slide heading or another include (LT002).
 - `offpath=true` marks every slide of the included file (and of its nested includes) as offpath.
@@ -95,12 +95,13 @@ top_item       = slide | include ;
 slide          = slide_heading { slide_block } ;
 slide_heading  = "#" [ SP { SP } title ] [ SP { SP } attr_block ] { SP } NL ;
 slide_block    = markdown_block | attr_line | container | detour
-               | branch | fenced_block ;
+               | branch | fenced_block | detour_badge ;
 detour         = ":::" { ":" } SP "detour" [ SP attr_block ] NL
                  { detour_item }
                  ":::" { ":" } NL ;
 detour_item    = slide | include ;
 include        = "::include" attr_block NL ;
+detour_badge   = "::detour-badge" attr_block NL ;   (* section 3.9 *)
 container      = ":::" { ":" } SP NAME [ SP attr_block ] NL
                  { slide_block }
                  ":::" { ":" } NL ;
@@ -113,6 +114,7 @@ Notes:
 - Non-blank content before the first slide heading of a file (or of a detour) is an error (LT002).
 - Setext level-1 headings (a line underlined with `=`) are an error (LT001).
 - Containers nest in the markdown-it-container way: an outer fence uses more colons than the fences it contains.
+- `include` and `detour_badge` are **leaf directives**: alone on their line, with their attribute block required. A `detour_badge` is also recognized inside list items and block quotes; in the middle of a line the text is literal.
 
 ### 3.3 Slide headings and titles
 
@@ -210,10 +212,11 @@ Content never paints outside its column: a table wider than its column scrolls h
 - A detour container MUST appear at the top level of a slide body (LT034 inside another container). That slide is its **origin**.
 - Its body MUST contain at least one slide (directly or through includes) (LT016).
 - `label` defaults to the plain-text title of the entry slide. `badge` controls the badge rendered at the container's position in the origin slide: `true` (the default) shows it at every step, `false` renders none. Without a badge the detour is still reachable by key, Down, links and the overview.
-- `badge=step` and `badge=next` tie the badge to the detour's detour step (section 6.4), for a detour that should not be announced before its turn. Let `k` be the step of its first detour step: with `step` the badge is hidden at the steps before `k - 1` and shown from step `k - 1` on; with `next` it is shown only at the step right before each of its detour steps, when NEXT would enter it. A hidden badge keeps its place (as a reveal fragment, section 10.4) and cannot be clicked; the key, Down, links and the overview still enter the detour. The footer hint for Down, which names the slide's first detour, is left out while that detour's badge is hidden. This is display only: the step table, `at` numbering and navigation are unchanged. Both values are an error (LT055) on a detour that is not a detour step of its origin.
+- `badge=step` and `badge=next` tie the badge to the detour's detour step (section 6.4), for a detour that should not be announced before its turn. Let `k` be the step of its first detour step: with `step` the badge is hidden at the steps before `k - 1` and shown from step `k - 1` on; with `next` it is shown only at the step right before each of its detour steps, when NEXT would enter it. A hidden badge keeps its place (as a reveal fragment, section 10.4) and cannot be clicked; the key, Down, links and the overview still enter the detour. The footer hint for Down, which names the slide's first detour, is left out while every badge of that detour is hidden and waiting for its step. This is display only: the step table, `at` numbering and navigation are unchanged. Both values are an error (LT055) on a detour that is not a detour step of its origin.
 - `at` (a step number, from 0) makes the detour a **detour step** of its origin, entered after that step (section 6.4). It MUST NOT be used on a slide that has a timeline, which declares detour steps itself (LT054). `blocking` (bool, default `false`) makes that detour step blocking: a multi-step move stops in front of it (section 7.2, SKIP).
 - Detours MAY nest. A nested detour's origin is the detour slide that contains it.
-- The container is removed from the origin's content; only the badge remains.
+- The container is removed from the origin's content; only the badge remains, at the container's position unless it is placed elsewhere (below).
+- **Placed badges.** `::detour-badge{ref=ID}` renders a badge of the detour `ID` at its own position: in a column, a callout, a list item, a block quote or the top level of the body (not in a branch or in speaker notes). `ID` MUST be the explicit `#id` of a detour of the same slide (a nested detour's badges go in its origin, the detour slide that declares it). A detour MAY have several placed badges; once it has one, no badge is rendered at the container's position. Each placed badge inherits the detour's `label` and `badge` mode and MAY override them with its own `label=` and `badge=` (`true`, `step` or `next`); it MAY carry its own `#id` and classes, and an attribute line before it (at the top level or in a container) MAY add an `#id` and classes. The detour's `key`, `at` and `blocking` cannot be set on a badge: the key is shown on every badge, and the detour step belongs to the detour. Errors (LT056): a missing or unknown `ref`, a detour of another slide or without an explicit id, a detour with `badge=false`, another attribute, `badge=false` on the placed badge, an attribute line with a `reveal` class (the badge's visibility is its `badge` mode) or with key-value attributes, and a placed badge in speaker notes or in a branch. LT055 applies to the detour's own `badge` value and to each placed badge: a placed badge whose mode is `step` or `next` is an error at its own line when the detour has no detour step.
 
 ### 3.10 Branches
 
@@ -365,6 +368,7 @@ class Detour:
     key: str | None
     badge: bool                   # false: no badge
     badge_mode: str | None        # "step" or "next": shown according to the detour step (3.9)
+    badges: list[(str | None, SourceLoc)]  # rendered badges, default or placed, with their mode (3.9)
     at: int | None                # detour step after this step of the origin (6.4)
     blocking: bool                # a blocking detour step (6.4)
     slides: list[str]             # in document order; slides[0] is the entry
@@ -922,7 +926,7 @@ Requirements:
 ### 10.4 Core-managed features
 
 - Reveal: elements carry `data-lt-reveal="k"`; the core shows fragment `k` when the reveal position is at least `k`, using `visibility: hidden` so layout does not shift.
-- Badges that wait for their step (section 3.9): the badge carries `data-lt-badge="step"` or `data-lt-badge="next"`; at every step the core looks up the detour steps of its `data-lt-detour` in the slide's `stepDetours` and hides the badge the same way as a fragment. The presenter preview and print mode render positions through the same path, so they follow.
+- Badges that wait for their step (section 3.9): the badge carries `data-lt-badge="step"` or `data-lt-badge="next"`; at every step the core looks up the detour steps of its `data-lt-detour` in the slide's `stepDetours` and hides the badge the same way as a fragment. Each badge is handled on its own, so the placed badges of one detour may differ. The presenter preview and print mode render positions through the same path, so they follow.
 - Branch menus, detour badges, wiki links, transitions, overview, go-to, presenter view (with its preview and scrubber) and print mode (section 11.5) are implemented by the core.
 - The core exports helpers for runtimes: `Lattice.frames(store)`, `Lattice.applyDelta`, `Lattice.renderPanel(el, panel, keys)` (the variable panel of the animation components) and `Lattice.esc` (HTML escaping).
 
@@ -937,7 +941,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.8.0">
+  <meta name="generator" content="lattice 0.9.0">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -1109,7 +1113,8 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT052 | warning | Unknown theme (the default theme is used) |
 | LT053 | error | Invalid `pdf` slide attribute, or a `pdf` step beyond the slide's last step |
 | LT054 | error | Invalid detour step: unknown detour in a timeline, `at` out of range or combined with a timeline, or a malformed `detour` line |
-| LT055 | error | `badge=step` or `badge=next` on a detour that is not a detour step of its origin |
+| LT055 | error | `badge=step` or `badge=next` on a detour, or on one of its placed badges, when the detour is not a detour step of its origin |
+| LT056 | error | Invalid placed badge (`::detour-badge`): missing or unknown `ref`, a detour of another slide, without an explicit id or with `badge=false`, an unknown attribute or value, an attribute line with `reveal` or key-value attributes, or a badge in speaker notes or in a branch |
 
 Diagnostics are printed as `file:line:col: severity LTnnn: message`. `lattice check` exits with status 1 if any error is reported, 0 otherwise (`--strict` also fails on warnings).
 
@@ -1291,3 +1296,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.7.1 | Scheme highlighting: binding sites are variables, named-let names are procedures | 3.13 |
 | 0.7.2 | User manual (`user_manual/manual.md`, a deck built and tested with the examples); no rule changes | 2.1 |
 | 0.8 | `badge=step` and `badge=next` on detours: a badge shown according to its detour step; LT055 | 3.9, 4, 6.4, 10.4, 11.5, 12 |
+| 0.9 | Placed badges: the `::detour-badge` leaf directive, several badges per detour with their own label and mode; LT056; an include in a list item or a quote is LT034 | 2.3, 3.2, 3.9, 4, 10.4, 12 |

@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.8.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.9.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -101,6 +101,8 @@ A detour step lets an animation pause for a refresher and resume where it left o
 
 A badge announces its detour from the first step, which gives the game away when the detour is a question the presenter means to ask later: a slide that reveals some code and then pauses on two questions would show both at once. `badge=step` and `badge=next` show the badge from the step before its detour step on, or only at the step before each of its detour steps, so the badge appears when Right is about to enter it. This is display only, like a reveal fragment: no new step, no change to `at` numbering or to navigation, and the runtime decides from the step alone, so the scrubber, a reload, the preview and the PDF agree. The runtime finds the step in `stepDetours`, which the deck already carries, rather than a step index stamped into the badge at build time, because badges are rendered before steps are compiled; a lookup in a table the build produced is not the computation the runtime is kept from. Both values are an error on a detour that is not a step, rather than a silent `true`, since the author asked for something that cannot happen (decision 17).
 
+A badge is drawn where its detour is written, and a detour must sit at the top level of the slide, so a badge could not go in a column. Allowing detours inside columns would bury their slides in the column markup and deepen the colon nesting; instead, `::detour-badge{ref=ID}`, a leaf directive like `::include`, places a badge of a detour declared at the top level (decision 18). A placed badge replaces the default one rather than requiring a `badge=ref` value, so the detour's `badge` mode stays a default that its badges inherit; a badge may override its label and mode, which lets one detour have several badges that differ, but not its key, `at` or `blocking`, since those belong to the detour and to the step table, which must not depend on where badges are drawn.
+
 The `arrow` component is the one place where the runtime measures: element boxes exist only in the browser, so an arrow pointing at an element has to be laid out there. Everything else about it is decided at build time, including its default direction, a fixed angle of 315 degrees (decision 14): a direction computed from the layout at runtime would make the drawing depend on the window and on timing, and would be the first step down a path the project avoids.
 
 ### 3.13 One vocabulary for what the algorithms say (spec section 9.5)
@@ -186,7 +188,7 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.7.1 and v0.7.2 (done).** Scheme highlighting of binding sites; the user manual, a deck of its own in `user_manual/` that shows every feature live and is built and checked with the examples.
 
-**v0.8 (done).** Badges that wait for their detour step (`badge=step`, `badge=next`), so a slide does not announce its questions before their turn.
+**v0.8 and v0.9 (done).** Badges that wait for their detour step (`badge=step`, `badge=next`), so a slide does not announce its questions before their turn; badges placed anywhere on the slide with `::detour-badge` (in a column, for instance), several per detour.
 
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
@@ -219,4 +221,5 @@ Decisions taken while writing the specification, and since.
 | 14 | Arrow component | Built in, named `arrow` (registered names win over the obscure Pygments `arrow` lexer). Targets by element id or CSS selector, resolved in the browser, which also measures the geometry: the only runtime layout in Lattice. Default direction: a fixed angle of 315 degrees (the arrow comes from the lower right), never a direction computed from the layout. Steps make it a track. |
 | 15 | Backward navigation without history | PREV falls back to the structural predecessor (tour, main path, `next`, branch, detour origin) and records nothing. Skip moves are step moves, clamped to the slide, played quickly. Detour steps are entered only by NEXT and skipped by PREV; a `blocking` detour step stops a skip playback, and `skip-detour` (Shift+Down) is the explicit way over a detour step. |
 | 16 | Rich text of the versioning animations | One vocabulary for captions, node contexts and the panel: badge for the operation (colour by category), chips in origin colours for versions, a colour each for variables, types and intervals, keywords coloured, removed tests struck through. The build writes captions with an inline backtick markup (`lattice.bbv.rich`); the runtime styles it. The `;;` notation stays in the nodes, with the types aligned. |
-| 17 | Badges of detour steps | `badge=step` (from the step before the detour step on) and `badge=next` (only at the step before each of its detour steps) beside `true` and `false`. Display only, like a reveal fragment; the runtime reads the step from `stepDetours`. The footer's Down hint follows the first detour's badge. An error (LT055) on a detour that is not a detour step. |
+| 17 | Badges of detour steps | `badge=step` (from the step before the detour step on) and `badge=next` (only at the step before each of its detour steps) beside `true` and `false`. Display only, like a reveal fragment; the runtime reads the step from `stepDetours`. The footer's Down hint follows the first detour's badges. An error (LT055) on a detour that is not a detour step. |
+| 18 | Placed badges | `::detour-badge{ref=ID}`, a leaf directive, places a badge of a detour of the same slide anywhere (columns, callouts, lists); the detour stays at the top level and needs an explicit id. A placed badge replaces the default one; it inherits the label and mode and may override them, not the key, `at` or `blocking`. Errors are LT056. |

@@ -63,7 +63,7 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 /* detour badges and branch menus */
 .lt-detour-badge{align-self:flex-start;display:inline-flex;align-items:center;gap:12px;font:inherit;font-size:21px;
   color:var(--lt-detour-ink);background:transparent;border:2px dashed var(--lt-detour);border-radius:999px;
-  padding:6px 18px 6px 12px;cursor:pointer}
+  padding:6px 18px 6px 12px;cursor:pointer;max-width:100%;text-align:left}
 .lt-detour-badge::before{content:"\2193";font-weight:700}
 .lt-detour-badge:hover,.lt-detour-badge:focus-visible{background:var(--lt-detour-soft);outline:none}
 .lt-branch{display:flex;flex-direction:column;gap:12px;margin-top:6px}

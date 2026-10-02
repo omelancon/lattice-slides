@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.8.0
+author: Lattice 0.9.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -479,6 +479,55 @@ def fib(n):
 ```
 
 Each value is computed once: about $2n$ calls instead of $1.6^n$. Press Right to return; the badge of `memo` stays, since it uses `badge=step`.
+:::
+
+# Badges where you want them {#placed-badges .dense}
+
+::::: columns
+:::: column {width=1fr}
+````markdown
+::: column
+{.reveal}
+`::detour-badge{ref=ID}` draws ...
+
+::detour-badge{ref=inherits label="Inherited?"}
+:::
+
+::: detour {#inherits at=1 badge=step key=n}
+# What a placed badge inherits
+...
+:::
+````
+
+::detour-badge{ref=inside}
+::::
+:::: column {width=1fr}
+{.reveal}
+`::detour-badge{ref=ID}` draws a badge of the detour `ID` where it stands: in a column, a callout or a list item. The detour stays at the top level of the slide and needs an `#id`; once placed, its badge no longer appears where the detour is written. A detour may have several badges.
+
+::detour-badge{ref=inherits label="Inherited?"}
+::::
+:::::
+
+::: detour {#inside label="Why not a detour inside the column?" at=1 badge=step key=i}
+# Why not a detour inside the column? {#why-not-inside}
+
+- A detour's slides would sit in the middle of the column, far from the rest of the slide's text
+- The column's fences would need more colons than the detour's, and more again if the detour's slides use columns
+- So the detour stays at the top level and only its badge moves: the slide's source stays readable
+:::
+
+::: detour {#inherits label="What does a placed badge inherit?" at=1 badge=step key=n}
+# What a placed badge inherits {#badge-inheritance}
+
+| Attribute | On a placed badge |
+|---|---|
+| `label` | inherited; `label=` overrides it |
+| `badge` (`true`, `step`, `next`) | inherited; `badge=` overrides it, so one detour can have a `next` badge here and a `step` badge there |
+| `key`, `at`, `blocking` | the detour's, not settable: the key shows on every badge, and the detour step belongs to the detour |
+| `#id`, classes | the badge's own |
+
+A placed badge with no detour to name, or one that breaks these rules, is error LT056.
 :::
 
 # Components {#pick-a-component}
@@ -1190,7 +1239,7 @@ Lattice.component("stack-anim", {
 | LT029, LT030, LT031 | error, warning, error | Two timelines; a cue changes nothing; two ranges on one line |
 | LT033, LT036 | error | Component track needs an `#id`; option given both as attribute and in the body |
 | LT049, LT053, LT054 | error | Timeline syntax; invalid `pdf` attribute; invalid detour step |
-| LT055 | error | `badge=step` or `badge=next` on a detour that is not a detour step |
+| LT055, LT056 | error | `badge=step` or `badge=next` without a detour step; invalid `::detour-badge` |
 
 # Plugins and output {#diagnostics-output .dense}
 
@@ -1218,6 +1267,7 @@ Lattice.component("stack-anim", {
 | `[[id]]`, `[[id\|label]]` | A link (an excursion) |
 | `{.reveal}` before a block | Fragments |
 | `::: detour {key=k at=2 badge=next}` | Nested slides that return |
+| `::detour-badge{ref=id}` | A detour's badge, placed here |
 | `::: branch {layout=cards}` + links | A choice |
 | `::: notes` | Speaker notes |
 | `:::: columns` / `::: column {width=2fr}` | Columns |

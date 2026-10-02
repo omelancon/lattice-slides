@@ -358,3 +358,87 @@ def test_badge_step_errors(deck):
     assert "LT009" in codes(check_deck(root, use_cache=False))
     root.write_text("# A\n{.reveal}\n- x\n::: detour {#d1 at=0 badge=Next}\n# Inside\n:::\n")
     assert not check_deck(root, use_cache=False).errors  # values are case-insensitive, like booleans
+
+
+PLACED_BADGES = """
+# A
+:::: columns
+::: column
+{.reveal}
+- x
+
+::detour-badge{ref=d1}
+:::
+::: column
+- see ::detour-badge{ref=d1} inline is text
+- ::detour-badge{ref=d2 label="Short" badge=next #b2 .wide}
+
+{.loud}
+::detour-badge{ref=d2 badge=true}
+:::
+::::
+
+::: detour {#d1 at=1 badge=step key=a}
+# Inside one
+:::
+
+::: detour {#d2 at=1 badge=step key=b}
+# Inside two
+:::
+
+::: detour {#d3 key=c}
+# Inside three
+:::
+"""
+
+
+def test_placed_badges(deck):
+    """Spec 3.9: a placed badge replaces the default one, inherits the detour's mode and label, and may override them."""
+    root = deck({"talk.md": PLACED_BADGES})
+    d = build_deck(root, use_cache=False)
+    a = d.slides["a"]
+    body = a.body_html
+    assert a.step_detours == {2: {"id": "d1", "blocking": False}, 3: {"id": "d2", "blocking": False}}
+    assert body.count('data-lt-detour="d1"') == 1 and body.count('data-lt-detour="d2"') == 2
+    assert 'class="lt-detour-badge" type="button" data-lt-detour="d1" data-lt-badge="step"><kbd>a</kbd>' in body
+    assert ('class="lt-detour-badge wide" type="button" data-lt-detour="d2" id="b2" data-lt-badge="next">'
+            '<kbd>b</kbd><span>Short</span>') in body
+    assert 'class="lt-detour-badge loud" type="button" data-lt-detour="d2"><kbd>b</kbd><span>Inside two</span>' in body
+    assert 'data-lt-detour="d3">' in body  # an unplaced detour keeps its default badge
+    first, second = body.split('<div class="lt-column"')[1:]
+    assert 'data-lt-detour="d1"' in first and 'data-lt-detour="d2"' not in first  # each badge in its column
+    assert second.count('data-lt-detour="d2"') == 2
+    assert "\x00" not in body
+    assert [m for m, _ in d.detours["d2"].badges] == ["next", None]
+
+
+def test_placed_badge_errors(deck):
+    def check(src):
+        return codes(check_deck(root, use_cache=False)) if root.write_text(src) is not None else None
+
+    root = deck({"talk.md": "# A\n"})
+    det = "::: detour {#d1 at=0 key=a}\n# Inside\n:::\n"
+    assert "LT056" in check("# A\n::detour-badge{label=x}\n" + det)  # no ref
+    assert "LT056" in check("# A\n::detour-badge{ref=nope}\n" + det)  # unknown
+    assert "LT056" in check("# A\n::detour-badge{ref=d1}\n# B\n" + det)  # a detour of another slide
+    assert "LT056" in check("# A\n::detour-badge{ref=a-detour-1}\n::: detour\n# Inside\n:::\n")  # generated id
+    assert "LT056" in check("# A\n::detour-badge{ref=d1}\n::: detour {#d1 badge=false}\n# Inside\n:::\n")
+    assert "LT056" in check("# A\n::detour-badge{ref=d1 key=z}\n" + det)  # key belongs to the detour
+    assert "LT056" in check("# A\n::detour-badge{ref=d1 at=2}\n" + det)  # so does at
+    assert "LT056" in check("# A\n::detour-badge{ref=d1 badge=false}\n" + det)
+    assert "LT056" in check("# A\n{.reveal}\n::detour-badge{ref=d1}\n" + det)
+    assert "LT056" in check("# A\n::: notes\n::detour-badge{ref=d1}\n:::\n" + det)
+    assert not check("# A\n::detour-badge{ref=d1 badge=next}\n" + det)
+    # LT055 for each badge that waits for a detour step the detour does not have
+    nostep = "::: detour {#d1 key=a}\n# Inside\n:::\n"
+    assert "LT055" in check("# A\n::detour-badge{ref=d1 badge=step}\n" + nostep)
+    lt055 = [x for x in check_deck(root, use_cache=False).items if x.code == "LT055"]
+    assert [x.loc.line for x in lt055] == [2]  # reported at the badge, not at the detour
+    assert "LT055" in check("# A\n::detour-badge{ref=d1}\n::: detour {#d1 badge=next}\n# Inside\n:::\n")
+    # the detour's own mode is checked even when its placed badges override it
+    assert "LT055" in check("# A\n::detour-badge{ref=d1 badge=true}\n::: detour {#d1 badge=next}\n# Inside\n:::\n")
+    assert not check("# A\n::detour-badge{ref=d1 badge=true}\n::: detour {#d1}\n# Inside\n:::\n")
+    # an attribute line gives only an #id and classes; a branch cannot hold a badge
+    assert "LT056" in check("# A\n{.wide type=submit}\n::detour-badge{ref=d1}\n" + det)
+    assert "LT056" in check("# A\n::: branch\n- [[b]] go\n  ::detour-badge{ref=d1}\n:::\n" + det + "# B\n")
+    assert "LT034" in check("# A\n- item\n  ::include{file=x.md}\n")  # an include in a list item

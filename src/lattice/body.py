@@ -55,7 +55,11 @@ class BodyBuilder:
     def build(self, slide: Slide) -> None:
         self.slide = slide
         self.env = new_env(self.md)
+        self.env["badge"] = self.placed_badge
+        self.env["include"] = self.nested_include
+        self.in_notes = False
         slide.body_html = self.render_groups(slide.groups, container=None)
+        self.default_badges(slide)
         links = slide.links + self.env["links"]
         slide.links = list(dict.fromkeys(links))
         slide.uses_math = slide.uses_math or self.env["math"]
@@ -67,7 +71,8 @@ class BodyBuilder:
         pending: Attrs | None = None
         for g in groups:
             if isinstance(g, tuple):
-                out.append(self.detour_badge(g[1]))
+                # the default badge, kept only if no ::detour-badge places this detour (default_badges)
+                out.append(f"\x00BADGE:{g[1].id}\x00")
                 pending = None
                 continue
             t = g[0]
@@ -95,7 +100,9 @@ class BodyBuilder:
             if t.type == "heading_open" and t.tag == "h1" and container is not None:
                 self.d.warn("LT041", "level-1 heading inside a container is not a slide boundary",
                             self.loc(self.slide, t))
-            if t.type == "fence":
+            if t.type == "lt_badge":
+                out.append(self.placed_badge(t, pending))
+            elif t.type == "fence":
                 out.append(self.fence(t, pending))
             elif t.type == "container_lt_open":
                 out.append(self.container(g, pending))
@@ -217,7 +224,9 @@ class BodyBuilder:
         if name == "branch":
             return self.branch(inner, cattrs, loc)
         if name == "notes":
+            outer, self.in_notes = self.in_notes, True
             notes = self.render_groups(inner, container="notes")
+            self.in_notes = outer
             slide.notes_html = (slide.notes_html or "") + notes
             return ""
         body = self.render_groups(inner, container=name)
@@ -248,6 +257,9 @@ class BodyBuilder:
         slide = self.slide
         if slide.branch is not None:
             self.d.error("LT017", "a slide can contain only one branch", loc)
+            return ""
+        if any(t.type == "lt_badge" for grp in inner for t in grp):
+            self.d.error("LT056", "a detour badge cannot be placed in a branch", loc)
             return ""
         if len(inner) != 1 or inner[0][0].type != "bullet_list_open":
             self.d.error("LT017", "a branch must contain exactly one bullet list", loc)
@@ -303,11 +315,83 @@ class BodyBuilder:
         slide.body_html = slide.body_html.replace("\x00BRANCH\x00", menu)
 
     # ------------------------------------------------------------------ detours
-    def detour_badge(self, d: Detour) -> str:
-        if not d.badge:
-            return ""
+    def detour_badge(self, d: Detour, mode: str | None, label: str, extra: dict[str, str] | None = None) -> str:
         key = f"<kbd>{html.escape(d.key)}</kbd>" if d.key else ""
+        attrs = dict(extra or {})
+        cls = " ".join(filter(None, ["lt-detour-badge", attrs.pop("class", None)]))
         # badge=step|next: the runtime shows it according to the step of the detour (spec 3.9, 10.4)
-        mode = f' data-lt-badge="{d.badge_mode}"' if d.badge_mode else ""
-        return (f'<button class="lt-detour-badge" type="button" data-lt-detour="{html.escape(d.id)}"{mode}>'
-                f'{key}<span>{html.escape(d.label)}</span></button>')
+        if mode:
+            attrs["data-lt-badge"] = mode
+        return (f'<button class="{cls}" type="button" data-lt-detour="{html.escape(d.id)}"{self.attrs_html(attrs)}>'
+                f'{key}<span>{html.escape(label)}</span></button>')
+
+    def default_badges(self, slide: Slide) -> None:
+        """Badges at the detour containers' positions, unless the detour has none or is placed elsewhere."""
+        for d in slide.detours:
+            html_ = ""
+            if d.badge and not d.badges:
+                html_ = self.detour_badge(d, d.badge_mode, d.label)
+                d.badges.append((d.badge_mode, d.loc))
+            slide.body_html = slide.body_html.replace(f"\x00BADGE:{d.id}\x00", html_)
+
+    def nested_include(self, tok, pending) -> str:
+        """`::include` met inside a list item or a quote (the walker reports the other places)."""
+        self.d.error("LT034", "::include is only allowed at the top level of a file or of a detour",
+                     self.loc(self.slide, tok))
+        return ""
+
+    def placed_badge(self, tok, pending: Attrs | None) -> str:
+        """`::detour-badge{ref=ID label=... badge=...}`: a badge of a detour of this slide, anywhere (spec 3.9)."""
+        slide = self.slide
+        loc = self.loc(slide, tok)
+        try:
+            attrs = parse_attr_block(tok.info)
+        except AttrError as e:
+            self.d.error("LT009", str(e), loc)
+            return ""
+        problems = []
+        extra = sorted(set(attrs.kv) - {"ref", "label", "badge"})
+        if extra:
+            problems.append(f"unknown attribute {extra[0]!r} (allowed: ref, label, badge, #id, classes)")
+        if pending is not None and "reveal" in pending.classes:
+            problems.append("a detour badge cannot be a reveal fragment; use badge=step or badge=next")
+        if pending is not None and pending.kv:
+            problems.append("an attribute line before a detour badge may only give an #id and classes")
+        if self.in_notes:
+            problems.append("a detour badge cannot be placed in speaker notes")
+        ref = attrs.get("ref")
+        d = next((x for x in slide.detours if x.id == ref), None) if ref else None
+        if not ref:
+            problems.append("::detour-badge needs ref=ID, the id of a detour of this slide")
+        elif d is None:
+            problems.append(f"{ref!r} is not a detour of this slide")
+        elif d.attrs.id is None:
+            problems.append(f"give the detour an explicit id to place its badge (#{ref} is generated)")
+        elif not d.badge:
+            problems.append(f"detour {ref!r} has badge=false; remove it or the ::detour-badge")
+        mode = d.badge_mode if d is not None else None
+        if "badge" in attrs.kv:
+            value = attrs.kv["badge"].strip().lower()
+            if value in ("step", "next"):
+                mode = value
+            elif value in ("true", "yes", "1", "on"):
+                mode = None
+            else:
+                problems.append(f"badge={attrs.kv['badge']!r} on a placed badge must be true, step or next")
+        if problems:
+            for p in problems:
+                self.d.error("LT056", p, loc)
+            return ""
+        out: dict[str, str] = {}
+        if attrs.id:
+            out["id"] = attrs.id
+        if attrs.classes:
+            out["class"] = " ".join(attrs.classes)
+        if pending is not None:
+            if pending.id:
+                out.setdefault("id", pending.id)
+            classes = [c for c in pending.classes if c != "reveal"]
+            if classes:
+                out["class"] = " ".join(filter(None, [*classes, out.get("class")]))
+        d.badges.append((mode, loc))
+        return self.detour_badge(d, mode, attrs.get("label") or d.label, out)

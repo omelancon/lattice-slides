@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.8.0. This README covers usage in brief. The rest:
+This is version 0.9.0. This README covers usage in brief. The rest:
 
 - [`user_manual/manual.md`](user_manual/manual.md) is the user manual, itself a Lattice deck (open
   [`user_manual/manual.html`](user_manual/manual.html)): every feature, with a live example of each.
@@ -80,6 +80,7 @@ The last slide of a detour returns to where you came from.
 | `::include{file="x.md"}` | Splice the slides of another file here (also inside a detour) |
 | `::: detour {#id label=... key=k at=2 blocking=true}` | Nested slides entered with Down or `k`, returning automatically; `at=2` makes it a step of the slide, entered after step 2, and `blocking` keeps skip keys from rolling over it (spec section 6.4) |
 | `::: detour {at=2 badge=next}` | The badge of a detour step appears only when Right is about to enter it; `badge=step` keeps it from then on, `badge=false` hides it (spec section 3.9) |
+| `::detour-badge{ref=id label=... badge=next}` | The badge of detour `id` placed here (in a column, say) instead of where the detour is written; several are allowed (spec section 3.9) |
 | `::: branch` with a list of `[[target\|label]]` | A choice point, keys 1 to 9 by default |
 | `::: notes` | Speaker notes, shown in presenter view |
 | ` ```timeline ` with a line `detour id` (or `detour id blocking`) | A step that enters that detour, between the slide's other steps (spec section 6.4) |
@@ -221,7 +222,7 @@ Rebuild them all, and the user manual, with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.8.0 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.9.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

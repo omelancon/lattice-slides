@@ -131,6 +131,7 @@ class Detour:
     key: str | None = None
     badge: bool = True
     badge_mode: Literal["step", "next"] | None = None  # `badge=step|next`: shown according to the detour step (spec 3.9)
+    badges: list[tuple[str | None, SourceLoc]] = field(default_factory=list)  # rendered badges: (mode, location)
     at: int | None = None  # `at=N`: entered as a detour step after step N of the origin (spec 6.4)
     blocking: bool = False  # a blocking detour step cannot be rolled over by a multi-step move
 

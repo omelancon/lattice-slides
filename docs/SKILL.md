@@ -38,11 +38,11 @@ Python 3.10 or newer. Without Graphviz, animated graphs fall back to a NetworkX 
 src/lattice/
   cli.py          commands: new, build (--dir), check, serve, graph, pdf
   build.py        pipeline orchestration and plugin loading
-  markdown.py     markdown-it setup: containers, ::include, [[links]], $math$
+  markdown.py     markdown-it setup: containers, leaf directives (::include, ::detour-badge), [[links]], $math$
   parser.py       Loader: files, includes, h1 segmentation, detours, ids, slide attributes
   attrs.py, ids.py  attribute blocks and slug ids
-  body.py         BodyBuilder: blocks, reveal, containers, detour badges, branch menus, notes, timelines,
-                  component placeholders
+  body.py         BodyBuilder: blocks, reveal, containers, detour badges (default and placed), branch
+                  menus, notes, timelines, component placeholders
   graph.py        next resolution, edges, keys, main path, reachability, tours
   timeline.py     timeline parsing, step compilation, detour steps (and LT055 for badges tied to them)
   render.py       component rendering, cache, tracks
@@ -89,7 +89,7 @@ Each of these was decided deliberately; the reasoning is in the report (sections
 - **Registered components take precedence over Pygments lexers** (spec 3.13). Never register a component under a common language name; that is why the diff component is `diff-steps`.
 - **Output is self-contained.** Images, fonts, data and libraries are embedded in single-file mode. Heavy libraries are embedded only when an instance requires them (`RenderResult.requires`).
 - **Columns contain their content.** Nothing may paint outside its column or below the slide body; `tests/test_layout.py` checks every example slide at its first and last step. A component option such as `height` must be honoured in every layout mode (the animation panels switch to a column under 760 px of container width).
-- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT055. New code, new row in spec section 12.
+- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT056. New code, new row in spec section 12.
 
 ## Common tasks
 
@@ -109,14 +109,14 @@ Run `pytest` after every change; it takes about twenty seconds. The suites:
 
 | File | Covers |
 |---|---|
-| `test_parsing.py` | attributes, ids, includes, links, reveal, containers |
+| `test_parsing.py` | attributes, ids, includes, links, reveal, containers, leaf directives |
 | `test_graph.py` | next resolution, detours, branches, keys, tours |
-| `test_steps.py` | tracks, timelines, detour steps and the badge modes of their detours, followers, deltas, frame stores, tree and grid traces, tree layouts |
+| `test_steps.py` | tracks, timelines, detour steps and the badges of their detours (modes, placed badges, LT055 and LT056), followers, deltas, frame stores, tree and grid traces, tree layouts |
 | `test_bbv.py` | the type lattice and intervals, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), abstract interpretation against figures 1, 2 and 4, frames, layout, the components |
 | `test_output.py` | plot backends, diff-steps, the arrow component, images, directory output, overview map, library inclusion |
 | `test_pdf.py` | `pdf` steps and LT053, the page plan (tour, appendix, back links), a real export in Chromium |
 | `test_cli.py` | CLI commands, building every example, the user manual building without warnings and using every component |
-| `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys, detour steps, badges that wait for their detour step), the presenter preview, scrubber and keybindings, the arrow geometry, the tree, grid, versioning and abstract interpretation runtimes, in Chromium |
+| `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys, detour steps, badges that wait for their detour step, placed in columns), the presenter preview, scrubber and keybindings, the arrow geometry, the tree, grid, versioning and abstract interpretation runtimes, in Chromium |
 | `test_layout.py` | no content spills out of a column or below the slide body, at the first and last step of every slide of the examples and the manual |
 
 Tests prove structure, not appearance. After any visual change (CSS, runtime rendering, a component's HTML, an example), rebuild the examples and look at screenshots of the affected slides:

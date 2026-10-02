@@ -140,13 +140,18 @@ def compile_steps(slide: Slide, diags: Diagnostics) -> None:
             inserted += 1
     slide.step_detours = step_detours
 
-    # `badge=step|next` ties the badge to a detour step (spec 3.9); `at=` detours already
-    # reported by LT054 are left out so that one mistake gives one error.
+    # `badge=step|next` ties a badge to a detour step (spec 3.9), checked for every badge of the detour,
+    # placed or not; `at=` detours already reported by LT054 are left out so that one mistake gives one error.
     stepped = {v["id"] for v in step_detours.values()}
     for d in slide.detours:
-        if d.badge_mode and d.id not in stepped and d.at is None:
-            diags.error("LT055", f"badge={d.badge_mode} needs a detour step: give the detour at=N "
-                                 f"or name it in a `detour {d.id}` timeline line", d.loc)
+        if d.id in stepped or d.at is not None:
+            continue
+        waiting = {loc: mode for mode, loc in d.badges if mode}
+        if d.badge_mode:  # the detour's own mode, even when every placed badge overrides it
+            waiting.setdefault(d.loc, d.badge_mode)
+        for loc, mode in waiting.items():
+            diags.error("LT055", f"badge={mode} needs a detour step: give the detour {d.id!r} at=N "
+                                 f"or name it in a `detour {d.id}` timeline line", loc)
 
     def value(row, t: Track) -> int:
         seen = set()

@@ -331,6 +331,86 @@ def test_badges_wait_for_their_detour_step(tmp_path):
     assert not errors
 
 
+PLACED_BADGE_DECK = """
+# Two questions
+
+:::: columns
+::: column {width=2fr}
+{.reveal}
+- the program
+
+::detour-badge{ref=assert}
+:::
+::: column {width=1fr}
+::detour-badge{ref=useful label="Why?"}
+
+::detour-badge{ref=useful badge=next label="Next: why?"}
+:::
+::::
+
+::: detour {#assert label="What can we assert?" key=q at=1 badge=step}
+# What we can assert
+:::
+
+::: detour {#useful label="Why is that useful?" key=w at=1 badge=step}
+# Why it is useful
+:::
+
+# After
+"""
+
+
+def test_placed_badges_in_columns(tmp_path):
+    """Spec 3.9: badges placed with ::detour-badge sit in their columns and wait for their detour step."""
+    src = tmp_path / "talk.md"
+    src.write_text(PLACED_BADGE_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(out.as_uri())
+
+            def press(*keys):
+                for k in keys:
+                    page.keyboard.press(k)
+                return page.evaluate("Lattice.state().cur")
+
+            def shown():
+                """The current step, and the visible badges by column (label text)."""
+                return page.evaluate("""() => [Lattice.state().cur.step,
+                    [...document.querySelectorAll('#s-two-questions .lt-column')].map((c) =>
+                      [...c.querySelectorAll('.lt-detour-badge')]
+                        .filter((b) => !b.classList.contains('lt-hidden'))
+                        .map((b) => b.querySelector('span').textContent))]""")
+
+            assert page.locator("#s-two-questions > .lt-body > .lt-detour-badge").count() == 0  # no default badge
+            assert shown() == [0, [[], []]]
+            assert "What can we assert?" not in page.inner_text("#lt-progress")
+            press("ArrowRight")
+            assert shown() == [1, [["What can we assert?"], []]]
+            assert "What can we assert?" in page.inner_text("#lt-progress")
+            assert press("ArrowRight") == {"slide": "what-we-can-assert", "step": 0}
+            assert press("ArrowRight") == {"slide": "two-questions", "step": 2}
+            assert shown() == [2, [["What can we assert?"], ["Why?", "Next: why?"]]]
+            assert press("ArrowRight") == {"slide": "why-it-is-useful", "step": 0}
+            assert press("ArrowRight") == {"slide": "two-questions", "step": 3}
+            assert shown() == [3, [["What can we assert?"], ["Why?"]]]  # the `next` override is done
+            press("ArrowLeft")  # Left skips both detour steps
+            assert shown() == [1, [["What can we assert?"], []]]
+            page.click("#s-two-questions [data-lt-detour=assert]")  # a placed badge enters its detour
+            assert page.evaluate("Lattice.state().cur") == {"slide": "what-we-can-assert", "step": 0}
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
 PRESENTER_DECK = """
 # Intro
 
