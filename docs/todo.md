@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-02, after the 0.10.0 implementation (`implementation-report-2026-10-02.md`, sections 9 to 11). The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; everything done in those phases stays recorded there.
+Updated 2026-10-02, after the 0.11.0 implementation (`implementation-report-2026-10-02.md`, sections 9 to 12). The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; everything done in those phases stays recorded there.
 
 ## Waiting on Olivier
 
@@ -14,7 +14,9 @@ Updated 2026-10-02, after the 0.10.0 implementation (`implementation-report-2026
 
 - [ ] 0.7.2: read the user manual (`user_manual/manual.html`) once as a user would; wording and chapter order are open to change, and every slide was sized at 1280x720 in Chromium.
 - [ ] 0.8.0: try the slide "Badges that wait for their turn" of the manual. A hidden badge keeps its place, like a fragment, so with two `badge=next` detours the second badge appears one row below where the first one was; say if you would rather have waiting badges take no space (then the slide's layout would shift as they come and go).
-- [ ] 0.9.0: try placed badges (`::detour-badge`) on your two-column slide; the manual's new slide "Badges where you want them" places one live badge per column. Ids on badges are not checked for duplicates, like ids on other blocks.
+- [ ] 0.9.0: try placed badges (`::detour-badge`) on your two-column slide; the manual's new slide "Badges where you want them" places one live badge per column. (Since 0.11.0, ids on badges and other blocks are checked for duplicates on a slide, LT058.)
+- [ ] 0.11.0: replace the `<span class="tail">` of `src/background.md` with `from_anchor: left`, and the `:nth-child` targets with segments in `programs/sum-to-n.scm`. A bullet still has no id of its own, so `from` names it with a selector (`li:nth-child(2)`) or an id on a span; on a two-line bullet `left` is the middle of the whole item, not of its first line.
+- [ ] 0.11.0: the length of the handles of an anchored end (0.45 of the distance, between 40 and 260 slide pixels, `curveOf` in `arrow.js`) was tuned on two slides; say if the curves bulge too much or too little.
 
 ## Later, if wanted
 
@@ -23,7 +25,10 @@ Authoring and parsing:
 - [ ] A `{.reveal}` line before a `::: detour` container is still ignored without a word (the badge is not a fragment). Either make the badge a fragment of the reveal track (a step-table change) or warn; `badge=step` covers the case that motivated it.
 
 Navigation and presenter view:
-- [ ] Arrow labels: a `label_at` option (tail, middle, head). A label beside the middle of a `from` arrow can overlap text when the two boxes are close; `curve` moves it for now.
+- [ ] Arrow labels: a `label_at` option (tail, middle, head). A label beside the middle of a `from` arrow can overlap text when the two boxes are close; `curve` moves it for now. A tail label near the slide edge is pushed back inside and then sits over its own line, which shows through the spaces of the label.
+- [ ] Ids on list items and inline spans (`[text]{#id}`, the attrs plugin of mdit-py-plugins), so that an arrow can leave a bullet without a selector.
+- [ ] The manual's samples of `arrow` blocks ("Arrows that move", "Arrow anchors") show red error boxes: Pygments has an `arrow` lexer, which the Markdown lexer uses inside the sample fence.
+- [ ] Segments in `bbv-cfg` and `bbv-anim` drawings (a block or an instruction as an arrow target).
 - [ ] Detour steps inside a tour: a detour step enters its detour as anywhere else and the tour successor applies only at the last step; decide whether a tour should be able to turn detour steps off.
 - [ ] `archive/reading-notes.md` still cites the older `docs/this_phase/` paths of the thesis and the Gambit sources; harmless in an archive, fix if the files are ever moved.
 
@@ -38,5 +43,5 @@ Basic block versioning and abstract interpretation (from `archive/todo.md`, plus
 
 ## Notes for whoever picks this up
 
-- `check_docs.py` enforces version agreement across README, spec, report, `__init__.py` and `pyproject.toml`; the highest diagnostic code is LT057.
+- `check_docs.py` enforces version agreement across README, spec, report, `__init__.py` and `pyproject.toml`; the highest diagnostic code is LT058.
 - Release step 4 of SKILL.md (removing `.lattice-cache/`, `__pycache__/`, `*.egg-info/`, `.pytest_cache/`) is for Olivier's working tree.

@@ -41,6 +41,7 @@ class RenderResult:
     meta: list[dict] | None = None
     assets: list[Asset] = field(default_factory=list)
     requires: list[str] = field(default_factory=list)  # shared libraries for this instance only
+    anchors: list[str] = field(default_factory=list)   # element ids this instance defines for authors (8.10)
 
 
 class Component:

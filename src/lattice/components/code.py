@@ -12,6 +12,7 @@ from pygments.formatters import HtmlFormatter
 
 from .scheme import lexer_for
 from .base import Component, ComponentError, RenderResult, register
+from .segments import NAME_RE, Marked, MarkerError, parse_markers, pieces, plain, select, trim, wrap_line
 
 
 class CodeOptions(BaseModel):
@@ -25,30 +26,50 @@ class CodeOptions(BaseModel):
     line_base: Literal["snippet", "file"] = "snippet"
     title: str | None = None
     meta: str | None = None  # as a follower: the leader's per-position meta key holding the lines
+    markers: bool = True     # read segment markers (spec 8.10); false shows the text as written
 
 
 class CodeStepsOptions(CodeOptions):
-    steps: list[str | int] = Field(default_factory=list)
+    steps: list[str | int | list[str | int]] = Field(default_factory=list)
 
 
 def parse_ranges(spec: str | int | None) -> list[int]:
     """``"1-3, 7"`` -> ``[1, 2, 3, 7]``."""
+    lines, names = parse_targets(spec)
+    if names:
+        raise ComponentError(f"invalid line range {names[0]!r}")
+    return lines
+
+
+def parse_targets(spec, segments: set[str] | None = None) -> tuple[list[int], list[str]]:
+    """Line ranges and segment names: ``"1-3, i-init, 7"`` -> ``([1, 2, 3, 7], ["i-init"])``. A list
+    holds the same items. With ``segments``, a name must be one of them."""
     if spec is None or spec == "":
-        return []
-    out: list[int] = []
-    for part in str(spec).split(","):
-        part = part.strip()
+        return [], []
+    parts = spec if isinstance(spec, (list, tuple)) else str(spec).split(",")
+    lines: list[int] = []
+    names: list[str] = []
+    for part in parts:
+        if isinstance(part, int):
+            lines.append(part)
+            continue
+        part = str(part).strip()
         if not part:
             continue
         m = re.fullmatch(r"(\d+)\s*-\s*(\d+)", part)
         if m:
             a, b = int(m.group(1)), int(m.group(2))
-            out.extend(range(min(a, b), max(a, b) + 1))
+            lines.extend(range(min(a, b), max(a, b) + 1))
         elif part.isdigit():
-            out.append(int(part))
+            lines.append(int(part))
+        elif NAME_RE.match(part):
+            if segments is not None and part not in segments:
+                raise ComponentError(f"no segment named {part!r} in this code"
+                                     + (f" (segments: {', '.join(sorted(segments))})" if segments else ""))
+            names.append(part)
         else:
             raise ComponentError(f"invalid line range {part!r}")
-    return out
+    return lines, names
 
 
 def extract_symbol(source: str, symbol: str) -> tuple[int, int]:
@@ -86,45 +107,74 @@ def read_source_file(file: str, ctx) -> str:
     return ctx.path(file).read_text(encoding="utf-8")
 
 
-def load_source(opts: CodeOptions, body: str, ctx) -> tuple[str, int]:
-    """Return the snippet text and the file line number of its first line."""
+def _marked(text: str, opts: CodeOptions, where: str) -> Marked:
+    if not opts.markers:
+        return plain(text)
+    try:
+        return parse_markers(text)
+    except MarkerError as e:
+        raise ComponentError(f"{where}:{e.line}: {e}") from None
+
+
+def load_source(opts: CodeOptions, body: str, ctx) -> Marked:
+    """The displayed lines (markers removed, spec 8.10), the original line number of each, and the
+    segments. ``symbol`` and ``lines`` count the lines of the file as written."""
     if opts.file:
         text = read_source_file(opts.file, ctx)
-        all_lines = text.split("\n")
-        first = 1
+        marked = _marked(text, opts, opts.file)
         if opts.symbol:
             if opts.lang not in ("python", "py", "python3"):
                 raise ComponentError("symbol extraction is only supported for Python")
             a, b = extract_symbol(text, opts.symbol)
-            all_lines, first = all_lines[a - 1 : b], a
+            marked = select(marked, a, b)
         if opts.lines:
             wanted = parse_ranges(opts.lines)
-            lo, hi = min(wanted), max(wanted)
-            all_lines = all_lines[lo - first : hi - first + 1]
-            first = lo
-        return "\n".join(all_lines).rstrip("\n"), first
+            marked = select(marked, min(wanted), max(wanted))
+        return trim(marked)
     if opts.symbol or opts.lines:
         raise ComponentError("'symbol' and 'lines' require 'file'")
-    return body.rstrip("\n"), 1
+    return trim(_marked(body, opts, "line"))
 
 
-def render_code_html(code: str, lang: str, first_line: int, number_from: int, linenos: bool,
-                     static_hl: set[int], title: str | None) -> str:
+def render_code_html(src: Marked, lang: str, numbers: list[int], linenos: bool,
+                     static_hl: set[int], static_segs: set[str], title: str | None) -> str:
+    code = src.text
     body = highlight(code, lexer_for(lang), HtmlFormatter(nowrap=True)).rstrip("\n")
+    segs = pieces(src)
+    in_seg = {i for i, ps in segs.items() if any(g.name in static_segs for _, _, g, _ in ps)}
     rows = []
     for i, line in enumerate(body.split("\n")):
-        n = number_from + i
+        n = numbers[i] if i < len(numbers) else (numbers[-1] if numbers else 0) + 1
         cls = "lt-line lt-hl" if n in static_hl else "lt-line"
-        gutter = f'<span class="lt-ln">{first_line + i}</span>' if linenos else ""
+        if i in in_seg:
+            cls += " lt-hl-in"
+        if i in segs:
+            line = wrap_line(line, segs[i], static_segs)
+        gutter = f'<span class="lt-ln">{src.orig[i] if i < len(src.orig) else n}</span>' if linenos else ""
         rows.append(f'<span class="{cls}" data-line="{n}">{gutter}{line or " "}</span>')
     head = f'<div class="lt-code-title">{html.escape(title)}</div>' if title else ""
-    dim = " lt-has-hl" if static_hl else ""
+    dim = " lt-has-hl" if static_hl or static_segs else ""
     return (f'<div class="lt-code{dim}" data-lang="{html.escape(lang)}">{head}'
             f'<pre><code>{"".join(rows)}</code></pre></div>')
 
 
-def _number_base(opts: CodeOptions, first: int) -> int:
-    return first if opts.line_base == "file" else 1
+def _numbers(opts: CodeOptions, src: Marked) -> list[int]:
+    """The ``data-line`` of each displayed line: its line in the file (``line_base=file``) or its rank."""
+    return list(src.orig) if opts.line_base == "file" else list(range(1, len(src.lines) + 1))
+
+
+def _render(opts: CodeOptions, src: Marked) -> tuple[str, list[str]]:
+    names = {g.name for g in src.segments}
+    lines, segs = parse_targets(opts.highlight, names)
+    html_ = render_code_html(src, opts.lang, _numbers(opts, src), opts.linenos, set(lines), set(segs), opts.title)
+    return html_, sorted(names)
+
+
+def _steps_data(targets: list[tuple[list[int], list[str]]]) -> dict:
+    data = {"steps": [t[0] for t in targets]}
+    if any(t[1] for t in targets):
+        data["segs"] = [t[1] for t in targets]
+    return data
 
 
 @register("code")
@@ -134,20 +184,16 @@ class Code(Component):
     runtime = "code.js"
 
     def render(self, block, opts: CodeOptions, ctx) -> RenderResult:
-        code, first = load_source(opts, block.body, ctx)
-        base = _number_base(opts, first)
-        html_ = render_code_html(code, opts.lang, first, base, opts.linenos,
-                                 set(parse_ranges(opts.highlight)), opts.title)
+        src = load_source(opts, block.body, ctx)
+        html_, anchors = _render(opts, src)
         if ctx.leader is None:
-            return RenderResult(html_)
-        steps = []
+            return RenderResult(html_, anchors=anchors)
+        names = set(anchors)
+        targets = []
         for m in (ctx.leader.meta or [{}] * ctx.leader.positions):
             lines = m.get(opts.meta) if opts.meta else m.get("lines", m.get("line"))
-            if isinstance(lines, (list, tuple)):
-                steps.append([int(x) for x in lines])
-            else:
-                steps.append(parse_ranges(lines))
-        return RenderResult(html_, data={"steps": steps}, positions=ctx.leader.positions)
+            targets.append(parse_targets(lines, names))
+        return RenderResult(html_, data=_steps_data(targets), positions=ctx.leader.positions, anchors=anchors)
 
 
 @register("code-steps")
@@ -159,12 +205,11 @@ class CodeSteps(Component):
     def render(self, block, opts: CodeStepsOptions, ctx) -> RenderResult:
         if opts.file is None:
             raise ComponentError("code-steps needs 'file' (the body holds the steps)")
-        code, first = load_source(opts, "", ctx)
-        base = _number_base(opts, first)
-        steps = [[]] + [parse_ranges(s) for s in opts.steps]
-        html_ = render_code_html(code, opts.lang, first, base, opts.linenos,
-                                 set(parse_ranges(opts.highlight)), opts.title)
-        return RenderResult(html_, data={"steps": steps}, positions=len(steps))
+        src = load_source(opts, "", ctx)
+        html_, anchors = _render(opts, src)
+        names = set(anchors)
+        targets = [([], [])] + [parse_targets(s, names) for s in opts.steps]
+        return RenderResult(html_, data=_steps_data(targets), positions=len(targets), anchors=anchors)
 
 
 class DiffOptions(BaseModel):
@@ -173,6 +218,7 @@ class DiffOptions(BaseModel):
     versions: list[str | dict] = Field(default_factory=list)
     context: int | None = None  # lines of context around changes; None shows everything
     title: str | None = None
+    markers: bool = True  # remove segment markers (spec 8.10); diffs define no segments
 
 
 def _highlight_lines(code: str, lang: str) -> list[str]:
@@ -198,10 +244,10 @@ class Diff(Component):
             if isinstance(v, str):
                 v = {"file": v}
             if "file" in v:
-                texts.append(ctx.path(v["file"]).read_text(encoding="utf-8").rstrip("\n"))
+                texts.append(self._clean(ctx.path(v["file"]).read_text(encoding="utf-8"), opts, v["file"]))
                 labels.append(v.get("label", v["file"]))
             elif "code" in v:
-                texts.append(str(v["code"]).rstrip("\n"))
+                texts.append(self._clean(str(v["code"]), opts, f"version {i + 1}, line"))
                 labels.append(v.get("label", f"version {i + 1}"))
             else:
                 raise ComponentError("each version is a file path, or a mapping with 'file' or 'code'")
@@ -234,6 +280,15 @@ class Diff(Component):
         title = f'<div class="lt-code-title">{html.escape(opts.title)}</div>' if opts.title else ""
         return RenderResult(f'<div class="lt-code lt-diff" data-lang="{html.escape(opts.lang)}">{title}{"".join(panes)}</div>',
                             data={"count": len(texts)}, positions=len(texts))
+
+    @staticmethod
+    def _clean(text: str, opts: DiffOptions, where: str) -> str:
+        if opts.markers:
+            try:
+                text = parse_markers(text).text
+            except MarkerError as e:
+                raise ComponentError(f"{where}:{e.line}: {e}") from None
+        return text.rstrip("\n")
 
     @staticmethod
     def _collapse(rows, context):

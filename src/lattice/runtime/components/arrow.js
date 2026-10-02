@@ -17,17 +17,31 @@
 
   // Box of an element in slide units, relative to the slide section: the extent of its contents when it
   // has some (a heading or a code line fills its whole row, but the arrow should point at the text).
+  // A code segment (spec 8.10) is the union of its pieces, one per line it spans.
   function box(el, section) {
     const s = section.getBoundingClientRect();
     const scale = s.width / section.offsetWidth || 1;
-    let r = el.getBoundingClientRect();
-    if (el.childNodes.length) {
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      const c = range.getBoundingClientRect();
-      if (c.width > 0 && c.height > 0) r = c;
+    const rect = (e) => {
+      let r = e.getBoundingClientRect();
+      if (e.childNodes.length) {
+        const range = document.createRange();
+        range.selectNodeContents(e);
+        const c = range.getBoundingClientRect();
+        if (c.width > 0 && c.height > 0) r = c;
+      }
+      return r;
+    };
+    let parts = [el];
+    if (el.dataset && el.dataset.ltSeg) {
+      const code = el.closest(".lt-code") || section;
+      parts = Array.from(code.querySelectorAll(`[data-lt-seg="${CSS.escape(el.dataset.ltSeg)}"]`));
     }
-    return { x: (r.left - s.left) / scale, y: (r.top - s.top) / scale, w: r.width / scale, h: r.height / scale };
+    let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+    for (const p of parts) {
+      const q = rect(p);
+      l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom);
+    }
+    return { x: (l - s.left) / scale, y: (t - s.top) / scale, w: (r - l) / scale, h: (b - t) / scale };
   }
   // The largest length along `u` from `p` that stays inside the slide, with a margin.
   function room(p, u, section, margin) {
@@ -44,8 +58,47 @@
   }
   const norm = (v) => { const l = Math.hypot(v.x, v.y) || 1; return { x: v.x / l, y: v.y / l }; };
   const lerp = (a, b, t) => a + (b - a) * t;
+  // Unit vector of an angle in degrees, counterclockwise on screen (y goes down), 0 pointing right.
+  const dir = (deg) => { const a = (deg * Math.PI) / 180; return { x: Math.cos(a), y: -Math.sin(a) }; };
+  const anchored = (a) => typeof a === "number";
 
-  // Geometry of one step: tail, head, control point of the curve and where the label goes.
+  // One end of an arrow between two boxes: its point on the box `b` and the direction it leaves the box
+  // in (away from the box). An angle anchor (sides are angles, spec 8.9) fixes both; `center` is the
+  // center itself; otherwise the end aims at `toward`, the other end's reference point.
+  function end(b, anchor, toward) {
+    if (anchored(anchor)) {
+      const d = dir(anchor);
+      const p = exit(b, d);
+      return { p: { x: p.x + d.x * GAP, y: p.y + d.y * GAP }, d, fixed: true };
+    }
+    const c = center(b);
+    const d = norm({ x: toward.x - c.x, y: toward.y - c.y });
+    if (anchor === "center") return { p: c, d, fixed: false };
+    const p = exit(b, d);
+    return { p: { x: p.x + d.x * GAP, y: p.y + d.y * GAP }, d, fixed: false };
+  }
+  // The point another end aims at: an anchored end's point on its box, else the box center.
+  const ref = (b, anchor) => (anchored(anchor) ? exit(b, dir(anchor)) : center(b));
+
+  // A cubic curve from `tail` to `head`. An end with a fixed direction leaves (or enters) along it; a free
+  // end follows the chord, so with two free ends the curve is the quadratic of the earlier versions,
+  // bent sideways by `curve` times its length.
+  function curveOf(tail, head, dTail, dHead, curve) {
+    const len = Math.hypot(tail.x - head.x, tail.y - head.y);
+    const u = norm({ x: tail.x - head.x, y: tail.y - head.y }); // from the head toward the tail
+    const perp = { x: -u.y, y: u.x };
+    const bend = (curve * len * 2) / 3;
+    const reach = Math.min(Math.max(len * 0.45, 40), 260); // handle of an end with a fixed direction
+    const h1 = dTail ? { x: dTail.x * reach, y: dTail.y * reach } : { x: -u.x * len / 3, y: -u.y * len / 3 };
+    const h2 = dHead ? { x: dHead.x * reach, y: dHead.y * reach } : { x: u.x * len / 3, y: u.y * len / 3 };
+    return {
+      tail, head, perp,
+      c1: { x: tail.x + h1.x + perp.x * bend, y: tail.y + h1.y + perp.y * bend },
+      c2: { x: head.x + h2.x + perp.x * bend, y: head.y + h2.y + perp.y * bend },
+    };
+  }
+
+  // Geometry of one step: tail, head, control points of the curve and where the label goes.
   function geometry(inst, step) {
     const target = find(inst.section, step.to, inst.slideId);
     if (!target) {
@@ -53,41 +106,43 @@
       return null;
     }
     const tb = box(target, inst.section);
-    let u, tail, head; // u points from the head toward the tail
     const from = step.from ? find(inst.section, step.from, inst.slideId) : null;
+    let g, label;
     if (from) {
       const fb = box(from, inst.section);
-      u = norm({ x: center(fb).x - center(tb).x, y: center(fb).y - center(tb).y });
-      tail = exit(fb, { x: -u.x, y: -u.y });
-      head = exit(tb, u);
-      tail = { x: tail.x - u.x * GAP, y: tail.y - u.y * GAP };
+      const t = end(fb, step.from_anchor, ref(tb, step.to_anchor));
+      const h = end(tb, step.to_anchor, ref(fb, step.from_anchor));
+      g = curveOf(t.p, h.p, t.fixed ? t.d : null, h.fixed ? h.d : null, inst.curve);
+      const mid = { x: (g.tail.x + 3 * g.c1.x + 3 * g.c2.x + g.head.x) / 8, y: (g.tail.y + 3 * g.c1.y + 3 * g.c2.y + g.head.y) / 8 };
+      const off = 14 * Math.sign(inst.curve || 1);
+      label = { x: mid.x + g.perp.x * off, y: mid.y + g.perp.y * off, anchor: "middle", base: g.perp.y > 0 ? "hanging" : "auto" };
     } else {
-      const a = (step.angle * Math.PI) / 180;
-      u = { x: Math.cos(a), y: -Math.sin(a) }; // counterclockwise on screen: y goes down
-      head = exit(tb, u);
-      const length = Math.min(step.length, room(head, u, inst.section, 24) - GAP);
-      tail = { x: head.x + u.x * (GAP + length), y: head.y + u.y * (GAP + length) };
-    }
-    head = { x: head.x + u.x * GAP, y: head.y + u.y * GAP };
-    const len = Math.hypot(tail.x - head.x, tail.y - head.y);
-    const mid = { x: (tail.x + head.x) / 2, y: (tail.y + head.y) / 2 };
-    const perp = { x: -u.y, y: u.x };
-    const bend = inst.curve * len;
-    const ctrl = { x: mid.x + perp.x * bend, y: mid.y + perp.y * bend };
-    let label;
-    if (from) {
-      const off = bend / 2 + 14 * Math.sign(bend || 1);
-      label = { x: mid.x + perp.x * off, y: mid.y + perp.y * off, anchor: "middle", base: perp.y > 0 ? "hanging" : "auto" };
-    } else {
+      const u = dir(step.angle); // from the target toward the tail
+      let head0, dHead = null;
+      if (anchored(step.to_anchor)) {
+        dHead = dir(step.to_anchor);
+        head0 = exit(tb, dHead);
+      } else if (step.to_anchor === "center") {
+        head0 = center(tb);
+      } else {
+        head0 = exit(tb, u);
+      }
+      const length = Math.min(step.length, room(head0, u, inst.section, 24) - GAP);
+      const tail = { x: head0.x + u.x * (GAP + length), y: head0.y + u.y * (GAP + length) };
+      const push = step.to_anchor === "center" ? 0 : GAP;
+      const hd = dHead || u;
+      const head = { x: head0.x + hd.x * push, y: head0.y + hd.y * push };
+      g = curveOf(tail, head, null, dHead, inst.curve);
       label = { x: tail.x + u.x * 10, y: tail.y + u.y * 10,
         anchor: u.x > 0.3 ? "start" : u.x < -0.3 ? "end" : "middle", base: u.y > 0.3 ? "hanging" : u.y < -0.3 ? "auto" : "middle" };
     }
-    return { tail, head, ctrl, label, text: step.label || "" };
+    return { tail: g.tail, head: g.head, c1: g.c1, c2: g.c2, label, text: step.label || "" };
   }
 
   function draw(inst, g) {
-    const { tail, head, ctrl } = g;
-    inst.path.setAttribute("d", `M${tail.x.toFixed(1)},${tail.y.toFixed(1)} Q${ctrl.x.toFixed(1)},${ctrl.y.toFixed(1)} ${head.x.toFixed(1)},${head.y.toFixed(1)}`);
+    const { tail, head, c1, c2 } = g;
+    const f = (p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+    inst.path.setAttribute("d", `M${f(tail)} C${f(c1)} ${f(c2)} ${f(head)}`);
     inst.text.textContent = g.text;
     inst.text.setAttribute("x", g.label.x.toFixed(1));
     inst.text.setAttribute("y", g.label.y.toFixed(1));
@@ -104,7 +159,7 @@
 
   function mix(a, b, t) {
     const pt = (p, q) => ({ x: lerp(p.x, q.x, t), y: lerp(p.y, q.y, t) });
-    return { tail: pt(a.tail, b.tail), head: pt(a.head, b.head), ctrl: pt(a.ctrl, b.ctrl),
+    return { tail: pt(a.tail, b.tail), head: pt(a.head, b.head), c1: pt(a.c1, b.c1), c2: pt(a.c2, b.c2),
       label: Object.assign({}, b.label, pt(a.label, b.label)), text: b.text };
   }
 

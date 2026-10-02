@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.10.0
+author: Lattice 0.11.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -569,7 +569,7 @@ inline code
 |---|---|
 | `lang` | Pygments language (a fence named after a language sets it) |
 | `file`, `lines=4-9`, `symbol=f` | Read a file, a line range, or a Python function or class |
-| `highlight=2-3,7` | Emphasized lines |
+| `highlight=2-3,7` | Emphasized lines (or segments, see later) |
 | `linenos`, `line_base=file` | Line numbers, counted in the file rather than the snippet |
 | `title` | A caption bar |
 | `file="lattice:bbv/pseudocode/sbbv.txt"` | A file bundled with Lattice |
@@ -710,6 +710,85 @@ steps:
   - to: .lt-line[data-line="9"]
     from: arrow-code-note
     label: ""
+```
+
+# Named code segments {#code-segments .dense}
+
+:::: columns
+::: column {width=1fr}
+```code-steps {#seg-walk lang=scheme file="programs/sum-to-n.scm" lines=2-9}
+steps: [i-init, body]
+```
+
+````scheme {markers=false title="programs/sum-to-n.scm"}
+  (let loop (#|@i-init|# (i 0) #|@end|#
+             (acc 0))
+    #|@body|#
+    (if (> i n) ...)
+    #|@end|#))
+````
+:::
+::: column {width=1fr}
+{#seg-note}
+A comment holding only `@name` opens a segment, `@end` closes it:
+
+- inline, in `#| |#`, `/* */`, `(* *)`, `{- -}` or `<!-- -->`
+- on a line of its own, `# @loop` (also `;`, `//`, `--`, `%`)
+
+The markers vanish from the slide and the segment becomes an element id: `to: i-init` for an arrow, `highlight=i-init` or a `steps:` entry for a highlight. Line numbers still count the file as written; `markers=false` shows a block as written, as below on the left.
+:::
+::::
+
+```arrow {#seg-arrow follow=seg-walk color=detour}
+steps:
+  - to: i-init
+    to_anchor: bottom
+    angle: 300
+    label: "to: i-init"
+  - to: i-init
+    to_anchor: bottom
+    angle: 300
+    label: "steps: [i-init, ...]"
+  - to: body
+    to_anchor: right
+    length: 70
+    label: body
+```
+
+# Arrow anchors {#arrow-anchors .dense}
+
+:::: columns
+::: column {width=1fr}
+```code {lang=scheme file="programs/sum-to-n.scm" lines=2-9}
+```
+
+````markdown
+```arrow {to=i-init}
+from: "#anchor-points > li:nth-child(1)"
+from_anchor: left
+to_anchor: bottom
+```
+````
+:::
+::: column {width=1fr}
+{#anchor-points}
+- The counter starts at zero
+- The loop adds `i` until it passes `n`
+
+`from_anchor` and `to_anchor` pick where the arrow leaves `from` and enters `to`: `left`, `right`, `top`, `bottom` (the middle of that side), `center`, or an angle in degrees (0 right, 90 top, counterclockwise). The curve leaves and enters along that direction.
+:::
+::::
+
+```arrow {#anchor-walk from="#anchor-points > li:nth-child(1)" from_anchor=left to_anchor=bottom}
+steps:
+  - i-init
+  - to: body
+    from: "#anchor-points > li:nth-child(2)"
+    to_anchor: right
+  - to: i-init
+    from: ""
+    to_anchor: 30
+    label: "to_anchor: 30"
 ```
 
 # Graph animations {#graph-anim}
@@ -1246,6 +1325,7 @@ Lattice.component("stack-anim", {
 | LT033, LT036 | error | Component track needs an `#id`; option given both as attribute and in the body |
 | LT049, LT053, LT054 | error | Timeline syntax; invalid `pdf` attribute; invalid detour step |
 | LT055, LT056, LT057 | error | `badge=step` or `badge=next` without a detour step; invalid `::detour-badge`; `.reveal-with` with no fragment before it |
+| LT058 | error | An id used twice on a slide: element ids, component ids, code segment names |
 
 # Plugins and output {#diagnostics-output .dense}
 
@@ -1286,7 +1366,8 @@ Lattice.component("stack-anim", {
 | ` ```code {file=... symbol=f follow=trace} ` | Code that follows an animation |
 | ` ```code-steps `, ` ```diff-steps ` | Walk through code, through versions |
 | ` ```plot {data=... x=... y=...} ` | A chart |
-| ` ```dot `, ` ```math `, ` ```arrow {to=id} ` | A diagram, display math, an arrow |
+| ` ```dot `, ` ```math `, ` ```arrow {to=id to_anchor=left} ` | A diagram, display math, an arrow |
+| `#\|@name\|# ... #\|@end\|#`, `# @name` in code | A named segment of code |
 | ` ```graph-anim `, ` ```array-anim `, ` ```tree-anim `, ` ```grid-anim ` | Animations from your Python |
 | ` ```bbv-anim `, ` ```bbv-cfg `, ` ```abstract-interp-anim ` | Compiler animations |
 | ` ```timeline ` | Steps of several tracks |

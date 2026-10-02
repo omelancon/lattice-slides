@@ -178,6 +178,8 @@ def render_slide_components(deck: Deck, slide: Slide, cache: Cache, palette: dic
         if result.positions > 1 and comp_cls.runtime is None:
             diags.error("LT047", f"{b.name} has several positions but no runtime", b.loc)
 
+    _check_ids(slide, blocks, results, diags)
+
     # substitute placeholders, register instances
     body = slide.body_html
     for b in blocks:
@@ -223,6 +225,31 @@ def render_slide_components(deck: Deck, slide: Slide, cache: Cache, palette: dic
                 diags.error("LT033", f"component {blk.name!r} needs an #id to be used in a timeline", blk.loc)
     slide.tracks = tracks
     compile_steps(slide, diags)
+
+
+def _check_ids(slide: Slide, blocks, results, diags: Diagnostics) -> None:
+    """LT058: an id given twice on a slide. Author ids are those of the slide's own HTML (attribute
+    lines, placed badges, raw HTML), of attribute lines before blocks, explicit component ids and the
+    anchors a component defines (code segments, spec 8.10). Ids generated inside component HTML are not
+    author ids. Two components with one id are LT007 already."""
+    seen: dict[str, str] = {}
+
+    def add(ident: str, what: str, loc) -> None:
+        if ident not in seen:
+            seen[ident] = what
+        elif not (what == seen[ident] == "a component id"):
+            diags.error("LT058", f"id {ident!r} is used twice on this slide ({seen[ident]} and {what})", loc)
+
+    for ident in re.findall(r'\sid="([^"]+)"', slide.title_html + slide.body_html):
+        add(ident, "an element id", slide.loc)
+    for b in blocks:
+        if b.wrapper_attrs.get("id"):
+            add(b.wrapper_attrs["id"], "an element id", b.loc)
+        if b.attrs.id:
+            add(b.attrs.id, "a component id", b.loc)
+        r = results.get(b.index)
+        for a in (r.anchors if r is not None else []):
+            add(a, f"a segment of {b.name} {b.id!r}", b.loc)
 
 
 def _check_arrow_targets(slide: Slide, blocks, results, diags: Diagnostics) -> None:

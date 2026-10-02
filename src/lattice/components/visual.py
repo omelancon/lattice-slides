@@ -7,9 +7,9 @@ import inspect
 import io
 import json
 import re
-from typing import Literal
+from typing import Annotated, Literal, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 from .base import Component, ComponentError, RenderResult, register
 
@@ -331,6 +331,24 @@ class MathBlock(Component):
 
 
 # ---------------------------------------------------------------- arrow
+ANCHOR_ANGLES = {"right": 0.0, "top": 90.0, "left": 180.0, "bottom": 270.0}
+
+
+def _anchor(v):
+    """A side, `center`, or an angle in degrees (a number, or a string holding one)."""
+    if isinstance(v, str) and (v in ANCHOR_ANGLES or v == "center"):
+        return v
+    try:
+        if isinstance(v, bool):
+            raise ValueError
+        return float(v)
+    except (TypeError, ValueError):
+        raise ValueError("an anchor is left, right, top, bottom, center or an angle in degrees") from None
+
+
+Anchor = Annotated[Union[str, float], BeforeValidator(_anchor)]
+
+
 class ArrowStep(BaseModel):
     """One target of an `arrow` with `steps:`; unset fields fall back to the block's options."""
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
@@ -339,6 +357,8 @@ class ArrowStep(BaseModel):
     angle: float | None = None
     length: float | None = None
     label: str | None = None
+    from_anchor: Anchor | None = None
+    to_anchor: Anchor | None = None
 
 
 class ArrowOptions(BaseModel):
@@ -351,12 +371,23 @@ class ArrowOptions(BaseModel):
     color: str | None = None       # a CSS color, or a theme token: accent, detour, muted, ink
     width: float = 4               # stroke width
     curve: float = 0               # bend, as a fraction of the arrow's length; 0 is straight
+    from_anchor: Anchor | None = None  # where the arrow leaves `from`: a side, center, or degrees
+    to_anchor: Anchor | None = None    # where it enters `to`
     steps: list[ArrowStep | str] | None = None   # several targets, one per position
 
 
 ARROW_DEFAULT_ANGLE = 315.0
 _ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 _THEME_COLORS = {"accent", "detour", "muted", "ink"}
+
+
+def anchor_value(a: Anchor | None) -> float | str | None:
+    """A side becomes its angle (counterclockwise, 0 is right); `center` stays; degrees are taken mod 360."""
+    if a is None or a == "center":
+        return a
+    if isinstance(a, str):
+        return ANCHOR_ANGLES[a]
+    return float(a) % 360.0
 
 
 @register("arrow")
@@ -373,19 +404,32 @@ class Arrow(Component):
             raise ComponentError("arrow: give either `to` or `steps`, not both")
         entries = opts.steps or [ArrowStep(to=opts.to)]
         steps = []
-        for e in entries:
+        for i, e in enumerate(entries):
             if isinstance(e, str):
                 e = ArrowStep(to=e)
-            steps.append({
+            frm = (e.from_ or None) if e.from_ is not None else opts.from_  # "" drops the block's `from`
+            if e.from_anchor is not None and frm is None:
+                raise ComponentError(f"arrow: step {i + 1} has `from_anchor` but no `from`")
+            step = {
                 "to": e.to,
-                "from": (e.from_ or None) if e.from_ is not None else opts.from_,  # "" drops the block's `from`
+                "from": frm,
                 "angle": e.angle if e.angle is not None else opts.angle,
                 "length": e.length if e.length is not None else opts.length,
                 "label": e.label if e.label is not None else opts.label,
-            })
+            }
+            fa = anchor_value(e.from_anchor if e.from_anchor is not None else opts.from_anchor)
+            ta = anchor_value(e.to_anchor if e.to_anchor is not None else opts.to_anchor)
+            if fa is not None and frm is not None:  # the block's from_anchor applies to steps with a `from`
+                step["from_anchor"] = fa
+            if ta is not None:
+                step["to_anchor"] = ta
+            steps.append(step)
+        if opts.from_anchor is not None and not any(s["from"] for s in steps):
+            raise ComponentError("arrow: `from_anchor` needs `from`")
         for s in steps:
             if s["from"] is None and s["angle"] is None:
-                s["angle"] = ARROW_DEFAULT_ANGLE
+                ta = s.get("to_anchor")
+                s["angle"] = ta if isinstance(ta, float) else ARROW_DEFAULT_ANGLE  # a side gives the direction
         color = opts.color
         if color in _THEME_COLORS:
             color = f"var(--lt-{color})"

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.10.0">
+<meta name="generator" content="lattice 0.11.0">
 <title>Getting started with Lattice</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -97,6 +97,11 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-line{display:block;padding:0 22px;white-space:pre;transition:opacity .2s,background-color .2s;border-left:4px solid transparent}
 .lt-has-hl .lt-line{opacity:.38}
 .lt-has-hl .lt-line.lt-hl,.lt-line.lt-hl{opacity:1;background:var(--lt-hl-bg);border-left-color:var(--lt-hl)}
+/* named segments (spec 8.10): a highlighted segment is marked itself, and its lines stay undimmed */
+.lt-has-hl .lt-line.lt-hl-in{opacity:1}
+.lt-seg{border-radius:4px;transition:background-color .2s,box-shadow .2s}
+.lt-seg.lt-hl{background:var(--lt-hl-bg);box-shadow:0 0 0 2px var(--lt-hl-bg),inset 0 -2px 0 var(--lt-hl)}
+.lt-line.lt-hl .lt-seg.lt-hl{background:none;box-shadow:inset 0 -2px 0 var(--lt-hl)}
 .lt-column .lt-code pre{font-size:16.5px}
 .lt-ln{display:inline-block;width:2.6em;margin-left:-.4em;color:var(--lt-muted);opacity:.6;user-select:none}
 .lt-c-plot,.lt-c-dot{flex:1 1 0;min-height:120px}
@@ -663,7 +668,7 @@ and every index from <code>hi</code> on holds a value at least <code>target</cod
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.10.0","meta":{"title":"Getting started with Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"welcome","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["welcome","markdown","talk-3","code","the-graph","the-loop-invariant","termination","diagram","thanks","proof"],"slides":{"welcome":{"title":"Getting started with Lattice","label":"Getting started with Lattice","scope":"root","next":{"slide":"markdown"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":8},"notes":"<p>Press <code>p<\/code> to open this presenter view in another window. Both windows stay in sync.<\/p>\n"},"markdown":{"title":"Every # heading is a slide","label":"Every # heading is a slide","scope":"root","next":{"slide":"talk-3"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"talk.md","line":16},"notes":"<p>The next slide has no title at all: it was written as a bare <code>#<\/code>.<\/p>\n"},"talk-3":{"title":"","label":"talk-3","scope":"root","next":{"slide":"code"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":28}},"code":{"title":"Code, highlighted at build time","label":"Code, highlighted at build time","scope":"root","next":{"slide":"the-graph"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"arrows","kind":"component","instance":"code/arrows"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":43}},"the-graph":{"title":"Nothing here is linear","label":"Nothing here is linear","scope":"root","next":{"slide":"diagram"},"branches":[],"detours":["invariant-detour"],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":82},"stepDetours":{"2":{"id":"invariant-detour","blocking":false}},"notes":"<p>The detour is also a step of this slide (<code>at=1<\/code>): the Right after the first bullet enters it,\nand the Right after returning reveals the second bullet. Press <code>w<\/code> to enter it at any time.<\/p>\n"},"the-loop-invariant":{"title":"The loop invariant","label":"The loop invariant","scope":"invariant-detour","next":{"slide":"termination"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":92}},"termination":{"title":"Termination","label":"Termination","scope":"invariant-detour","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":98}},"diagram":{"title":"Diagrams from Graphviz","label":"Diagrams from Graphviz","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":111}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":124}},"proof":{"title":"Proof of correctness","label":"Proof of correctness","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"talk.md","line":128}}},"detours":{"invariant-detour":{"origin":"the-graph","entry":"the-loop-invariant","label":"Why binary search terminates","key":"w","slides":["the-loop-invariant","termination"]}},"instances":{"code/c1":{"component":"code","slide":"code","data":null},"code/arrows":{"component":"arrow","slide":"code","data":"lt-data-code/arrows"},"diagram/c1":{"component":"dot","slide":"diagram","data":null}},"tours":{"quick":["welcome","markdown","code","the-graph","thanks"]},"mainPath":["welcome","markdown","talk-3","code","the-graph","diagram","thanks"],"overview":{"nodes":{"welcome":{"x":94.0,"y":63.0,"w":172.0,"h":26.0,"label":"Getting started with Latt…"},"markdown":{"x":293.0,"y":63.0,"w":166.0,"h":26.0,"label":"Every # heading is a slide"},"talk-3":{"x":433.0,"y":63.0,"w":54.0,"h":26.0,"label":"talk-3"},"code":{"x":574.5,"y":63.0,"w":169.0,"h":26.0,"label":"Code, highlighted at buil…"},"the-graph":{"x":760.5,"y":63.0,"w":143.0,"h":26.0,"label":"Nothing here is linear"},"the-loop-invariant":{"x":940.5,"y":21.0,"w":121.0,"h":26.0,"label":"The loop invariant"},"termination":{"x":1092.5,"y":21.0,"w":87.0,"h":26.0,"label":"Termination"},"diagram":{"x":940.5,"y":63.0,"w":157.0,"h":26.0,"label":"Diagrams from Graphviz"},"thanks":{"x":1092.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"},"proof":{"x":1232.5,"y":82.0,"w":133.0,"h":26.0,"label":"Proof of correctness"}},"edges":[{"from":"welcome","to":"markdown","kind":"next","path":"M180.3,63.0 C187.9,63.0 195.6,63.0 203.3,63.0 L209.7,63.0"},{"from":"markdown","to":"talk-3","kind":"next","path":"M376.3,63.0 C384.4,63.0 392.3,63.0 399.4,63.0 L405.8,63.0"},{"from":"talk-3","to":"code","kind":"next","path":"M460.2,63.0 C467.2,63.0 475.0,63.0 483.3,63.0 L489.7,63.0"},{"from":"code","to":"the-graph","kind":"next","path":"M659.1,63.0 C666.9,63.0 674.8,63.0 682.5,63.0 L689.0,63.0"},{"from":"the-graph","to":"the-loop-invariant","kind":"detour","path":"M816.8,49.9 C836.4,45.3 858.4,40.1 878.3,35.4 L884.2,34.1"},{"from":"the-graph","to":"diagram","kind":"next","path":"M832.1,63.0 C839.9,63.0 847.9,63.0 855.9,63.0 L862.0,63.0"},{"from":"the-graph","to":"proof","kind":"link","path":"M813.6,76.0 C829.1,79.3 846.1,82.4 862.0,84.0 C965.0,94.6 1085.1,91.1 1159.7,87.0 L1165.9,86.6"},{"from":"the-loop-invariant","to":"termination","kind":"next","path":"M1001.2,21.0 C1014.8,21.0 1029.2,21.0 1042.3,21.0 L1048.6,21.0"},{"from":"diagram","to":"thanks","kind":"next","path":"M1019.1,63.0 C1032.3,63.0 1045.3,63.0 1056.6,63.0 L1062.7,63.0"}],"width":1307.0,"height":103.0},"hash":"d454062c9babb5db"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.11.0","meta":{"title":"Getting started with Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"welcome","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["welcome","markdown","talk-3","code","the-graph","the-loop-invariant","termination","diagram","thanks","proof"],"slides":{"welcome":{"title":"Getting started with Lattice","label":"Getting started with Lattice","scope":"root","next":{"slide":"markdown"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":8},"notes":"<p>Press <code>p<\/code> to open this presenter view in another window. Both windows stay in sync.<\/p>\n"},"markdown":{"title":"Every # heading is a slide","label":"Every # heading is a slide","scope":"root","next":{"slide":"talk-3"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"talk.md","line":16},"notes":"<p>The next slide has no title at all: it was written as a bare <code>#<\/code>.<\/p>\n"},"talk-3":{"title":"","label":"talk-3","scope":"root","next":{"slide":"code"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":28}},"code":{"title":"Code, highlighted at build time","label":"Code, highlighted at build time","scope":"root","next":{"slide":"the-graph"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"arrows","kind":"component","instance":"code/arrows"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":43}},"the-graph":{"title":"Nothing here is linear","label":"Nothing here is linear","scope":"root","next":{"slide":"diagram"},"branches":[],"detours":["invariant-detour"],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":82},"stepDetours":{"2":{"id":"invariant-detour","blocking":false}},"notes":"<p>The detour is also a step of this slide (<code>at=1<\/code>): the Right after the first bullet enters it,\nand the Right after returning reveals the second bullet. Press <code>w<\/code> to enter it at any time.<\/p>\n"},"the-loop-invariant":{"title":"The loop invariant","label":"The loop invariant","scope":"invariant-detour","next":{"slide":"termination"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":92}},"termination":{"title":"Termination","label":"Termination","scope":"invariant-detour","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":98}},"diagram":{"title":"Diagrams from Graphviz","label":"Diagrams from Graphviz","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":111}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":124}},"proof":{"title":"Proof of correctness","label":"Proof of correctness","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"talk.md","line":128}}},"detours":{"invariant-detour":{"origin":"the-graph","entry":"the-loop-invariant","label":"Why binary search terminates","key":"w","slides":["the-loop-invariant","termination"]}},"instances":{"code/c1":{"component":"code","slide":"code","data":null},"code/arrows":{"component":"arrow","slide":"code","data":"lt-data-code/arrows"},"diagram/c1":{"component":"dot","slide":"diagram","data":null}},"tours":{"quick":["welcome","markdown","code","the-graph","thanks"]},"mainPath":["welcome","markdown","talk-3","code","the-graph","diagram","thanks"],"overview":{"nodes":{"welcome":{"x":94.0,"y":63.0,"w":172.0,"h":26.0,"label":"Getting started with Latt…"},"markdown":{"x":293.0,"y":63.0,"w":166.0,"h":26.0,"label":"Every # heading is a slide"},"talk-3":{"x":433.0,"y":63.0,"w":54.0,"h":26.0,"label":"talk-3"},"code":{"x":574.5,"y":63.0,"w":169.0,"h":26.0,"label":"Code, highlighted at buil…"},"the-graph":{"x":760.5,"y":63.0,"w":143.0,"h":26.0,"label":"Nothing here is linear"},"the-loop-invariant":{"x":940.5,"y":21.0,"w":121.0,"h":26.0,"label":"The loop invariant"},"termination":{"x":1092.5,"y":21.0,"w":87.0,"h":26.0,"label":"Termination"},"diagram":{"x":940.5,"y":63.0,"w":157.0,"h":26.0,"label":"Diagrams from Graphviz"},"thanks":{"x":1092.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"},"proof":{"x":1232.5,"y":82.0,"w":133.0,"h":26.0,"label":"Proof of correctness"}},"edges":[{"from":"welcome","to":"markdown","kind":"next","path":"M180.3,63.0 C187.9,63.0 195.6,63.0 203.3,63.0 L209.7,63.0"},{"from":"markdown","to":"talk-3","kind":"next","path":"M376.3,63.0 C384.4,63.0 392.3,63.0 399.4,63.0 L405.8,63.0"},{"from":"talk-3","to":"code","kind":"next","path":"M460.2,63.0 C467.2,63.0 475.0,63.0 483.3,63.0 L489.7,63.0"},{"from":"code","to":"the-graph","kind":"next","path":"M659.1,63.0 C666.9,63.0 674.8,63.0 682.5,63.0 L689.0,63.0"},{"from":"the-graph","to":"the-loop-invariant","kind":"detour","path":"M816.8,49.9 C836.4,45.3 858.4,40.1 878.3,35.4 L884.2,34.1"},{"from":"the-graph","to":"diagram","kind":"next","path":"M832.1,63.0 C839.9,63.0 847.9,63.0 855.9,63.0 L862.0,63.0"},{"from":"the-graph","to":"proof","kind":"link","path":"M813.6,76.0 C829.1,79.3 846.1,82.4 862.0,84.0 C965.0,94.6 1085.1,91.1 1159.7,87.0 L1165.9,86.6"},{"from":"the-loop-invariant","to":"termination","kind":"next","path":"M1001.2,21.0 C1014.8,21.0 1029.2,21.0 1042.3,21.0 L1048.6,21.0"},{"from":"diagram","to":"thanks","kind":"next","path":"M1019.1,63.0 C1032.3,63.0 1045.3,63.0 1056.6,63.0 L1062.7,63.0"}],"width":1307.0,"height":103.0},"hash":"f417ceb3c638c646"}</script>
 <script type="application/json" id="lt-data-code/arrows">{"steps":[{"to":".lt-line[data-line=\"3\"]","from":"emphasis","angle":null,"length":120,"label":"the loop"},{"to":".lt-line[data-line=\"4\"]","from":"emphasis","angle":null,"length":120,"label":"the midpoint"},{"to":".lt-line[data-line=\"9\"]","from":null,"angle":315.0,"length":120,"label":"the answer"}],"color":"var(--lt-detour)","width":4,"curve":0.2}</script>
 <script type="module">
 // Lattice runtime: navigation state machine (spec section 7) and component host (spec section 10).
@@ -1623,17 +1628,31 @@ window.Lattice = Lattice;
 
   // Box of an element in slide units, relative to the slide section: the extent of its contents when it
   // has some (a heading or a code line fills its whole row, but the arrow should point at the text).
+  // A code segment (spec 8.10) is the union of its pieces, one per line it spans.
   function box(el, section) {
     const s = section.getBoundingClientRect();
     const scale = s.width / section.offsetWidth || 1;
-    let r = el.getBoundingClientRect();
-    if (el.childNodes.length) {
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      const c = range.getBoundingClientRect();
-      if (c.width > 0 && c.height > 0) r = c;
+    const rect = (e) => {
+      let r = e.getBoundingClientRect();
+      if (e.childNodes.length) {
+        const range = document.createRange();
+        range.selectNodeContents(e);
+        const c = range.getBoundingClientRect();
+        if (c.width > 0 && c.height > 0) r = c;
+      }
+      return r;
+    };
+    let parts = [el];
+    if (el.dataset && el.dataset.ltSeg) {
+      const code = el.closest(".lt-code") || section;
+      parts = Array.from(code.querySelectorAll(`[data-lt-seg="${CSS.escape(el.dataset.ltSeg)}"]`));
     }
-    return { x: (r.left - s.left) / scale, y: (r.top - s.top) / scale, w: r.width / scale, h: r.height / scale };
+    let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+    for (const p of parts) {
+      const q = rect(p);
+      l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom);
+    }
+    return { x: (l - s.left) / scale, y: (t - s.top) / scale, w: (r - l) / scale, h: (b - t) / scale };
   }
   // The largest length along `u` from `p` that stays inside the slide, with a margin.
   function room(p, u, section, margin) {
@@ -1650,8 +1669,47 @@ window.Lattice = Lattice;
   }
   const norm = (v) => { const l = Math.hypot(v.x, v.y) || 1; return { x: v.x / l, y: v.y / l }; };
   const lerp = (a, b, t) => a + (b - a) * t;
+  // Unit vector of an angle in degrees, counterclockwise on screen (y goes down), 0 pointing right.
+  const dir = (deg) => { const a = (deg * Math.PI) / 180; return { x: Math.cos(a), y: -Math.sin(a) }; };
+  const anchored = (a) => typeof a === "number";
 
-  // Geometry of one step: tail, head, control point of the curve and where the label goes.
+  // One end of an arrow between two boxes: its point on the box `b` and the direction it leaves the box
+  // in (away from the box). An angle anchor (sides are angles, spec 8.9) fixes both; `center` is the
+  // center itself; otherwise the end aims at `toward`, the other end's reference point.
+  function end(b, anchor, toward) {
+    if (anchored(anchor)) {
+      const d = dir(anchor);
+      const p = exit(b, d);
+      return { p: { x: p.x + d.x * GAP, y: p.y + d.y * GAP }, d, fixed: true };
+    }
+    const c = center(b);
+    const d = norm({ x: toward.x - c.x, y: toward.y - c.y });
+    if (anchor === "center") return { p: c, d, fixed: false };
+    const p = exit(b, d);
+    return { p: { x: p.x + d.x * GAP, y: p.y + d.y * GAP }, d, fixed: false };
+  }
+  // The point another end aims at: an anchored end's point on its box, else the box center.
+  const ref = (b, anchor) => (anchored(anchor) ? exit(b, dir(anchor)) : center(b));
+
+  // A cubic curve from `tail` to `head`. An end with a fixed direction leaves (or enters) along it; a free
+  // end follows the chord, so with two free ends the curve is the quadratic of the earlier versions,
+  // bent sideways by `curve` times its length.
+  function curveOf(tail, head, dTail, dHead, curve) {
+    const len = Math.hypot(tail.x - head.x, tail.y - head.y);
+    const u = norm({ x: tail.x - head.x, y: tail.y - head.y }); // from the head toward the tail
+    const perp = { x: -u.y, y: u.x };
+    const bend = (curve * len * 2) / 3;
+    const reach = Math.min(Math.max(len * 0.45, 40), 260); // handle of an end with a fixed direction
+    const h1 = dTail ? { x: dTail.x * reach, y: dTail.y * reach } : { x: -u.x * len / 3, y: -u.y * len / 3 };
+    const h2 = dHead ? { x: dHead.x * reach, y: dHead.y * reach } : { x: u.x * len / 3, y: u.y * len / 3 };
+    return {
+      tail, head, perp,
+      c1: { x: tail.x + h1.x + perp.x * bend, y: tail.y + h1.y + perp.y * bend },
+      c2: { x: head.x + h2.x + perp.x * bend, y: head.y + h2.y + perp.y * bend },
+    };
+  }
+
+  // Geometry of one step: tail, head, control points of the curve and where the label goes.
   function geometry(inst, step) {
     const target = find(inst.section, step.to, inst.slideId);
     if (!target) {
@@ -1659,41 +1717,43 @@ window.Lattice = Lattice;
       return null;
     }
     const tb = box(target, inst.section);
-    let u, tail, head; // u points from the head toward the tail
     const from = step.from ? find(inst.section, step.from, inst.slideId) : null;
+    let g, label;
     if (from) {
       const fb = box(from, inst.section);
-      u = norm({ x: center(fb).x - center(tb).x, y: center(fb).y - center(tb).y });
-      tail = exit(fb, { x: -u.x, y: -u.y });
-      head = exit(tb, u);
-      tail = { x: tail.x - u.x * GAP, y: tail.y - u.y * GAP };
+      const t = end(fb, step.from_anchor, ref(tb, step.to_anchor));
+      const h = end(tb, step.to_anchor, ref(fb, step.from_anchor));
+      g = curveOf(t.p, h.p, t.fixed ? t.d : null, h.fixed ? h.d : null, inst.curve);
+      const mid = { x: (g.tail.x + 3 * g.c1.x + 3 * g.c2.x + g.head.x) / 8, y: (g.tail.y + 3 * g.c1.y + 3 * g.c2.y + g.head.y) / 8 };
+      const off = 14 * Math.sign(inst.curve || 1);
+      label = { x: mid.x + g.perp.x * off, y: mid.y + g.perp.y * off, anchor: "middle", base: g.perp.y > 0 ? "hanging" : "auto" };
     } else {
-      const a = (step.angle * Math.PI) / 180;
-      u = { x: Math.cos(a), y: -Math.sin(a) }; // counterclockwise on screen: y goes down
-      head = exit(tb, u);
-      const length = Math.min(step.length, room(head, u, inst.section, 24) - GAP);
-      tail = { x: head.x + u.x * (GAP + length), y: head.y + u.y * (GAP + length) };
-    }
-    head = { x: head.x + u.x * GAP, y: head.y + u.y * GAP };
-    const len = Math.hypot(tail.x - head.x, tail.y - head.y);
-    const mid = { x: (tail.x + head.x) / 2, y: (tail.y + head.y) / 2 };
-    const perp = { x: -u.y, y: u.x };
-    const bend = inst.curve * len;
-    const ctrl = { x: mid.x + perp.x * bend, y: mid.y + perp.y * bend };
-    let label;
-    if (from) {
-      const off = bend / 2 + 14 * Math.sign(bend || 1);
-      label = { x: mid.x + perp.x * off, y: mid.y + perp.y * off, anchor: "middle", base: perp.y > 0 ? "hanging" : "auto" };
-    } else {
+      const u = dir(step.angle); // from the target toward the tail
+      let head0, dHead = null;
+      if (anchored(step.to_anchor)) {
+        dHead = dir(step.to_anchor);
+        head0 = exit(tb, dHead);
+      } else if (step.to_anchor === "center") {
+        head0 = center(tb);
+      } else {
+        head0 = exit(tb, u);
+      }
+      const length = Math.min(step.length, room(head0, u, inst.section, 24) - GAP);
+      const tail = { x: head0.x + u.x * (GAP + length), y: head0.y + u.y * (GAP + length) };
+      const push = step.to_anchor === "center" ? 0 : GAP;
+      const hd = dHead || u;
+      const head = { x: head0.x + hd.x * push, y: head0.y + hd.y * push };
+      g = curveOf(tail, head, null, dHead, inst.curve);
       label = { x: tail.x + u.x * 10, y: tail.y + u.y * 10,
         anchor: u.x > 0.3 ? "start" : u.x < -0.3 ? "end" : "middle", base: u.y > 0.3 ? "hanging" : u.y < -0.3 ? "auto" : "middle" };
     }
-    return { tail, head, ctrl, label, text: step.label || "" };
+    return { tail: g.tail, head: g.head, c1: g.c1, c2: g.c2, label, text: step.label || "" };
   }
 
   function draw(inst, g) {
-    const { tail, head, ctrl } = g;
-    inst.path.setAttribute("d", `M${tail.x.toFixed(1)},${tail.y.toFixed(1)} Q${ctrl.x.toFixed(1)},${ctrl.y.toFixed(1)} ${head.x.toFixed(1)},${head.y.toFixed(1)}`);
+    const { tail, head, c1, c2 } = g;
+    const f = (p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+    inst.path.setAttribute("d", `M${f(tail)} C${f(c1)} ${f(c2)} ${f(head)}`);
     inst.text.textContent = g.text;
     inst.text.setAttribute("x", g.label.x.toFixed(1));
     inst.text.setAttribute("y", g.label.y.toFixed(1));
@@ -1710,7 +1770,7 @@ window.Lattice = Lattice;
 
   function mix(a, b, t) {
     const pt = (p, q) => ({ x: lerp(p.x, q.x, t), y: lerp(p.y, q.y, t) });
-    return { tail: pt(a.tail, b.tail), head: pt(a.head, b.head), ctrl: pt(a.ctrl, b.ctrl),
+    return { tail: pt(a.tail, b.tail), head: pt(a.head, b.head), c1: pt(a.c1, b.c1), c2: pt(a.c2, b.c2),
       label: Object.assign({}, b.label, pt(a.label, b.label)), text: b.text };
   }
 
@@ -1779,23 +1839,39 @@ window.Lattice = Lattice;
   });
 })();
 
-// Line highlighting for `code` (as a follower) and `code-steps`.
+// Line and segment highlighting for `code` (as a follower) and `code-steps` (spec 8.8, 8.10).
 (() => {
   const controller = {
     mount(el, data) {
       const box = el.querySelector(".lt-code");
       const lines = new Map(Array.from(el.querySelectorAll(".lt-line")).map((l) => [Number(l.dataset.line), l]));
-      return { box, lines, steps: (data && data.steps) || [[]], pre: el.querySelector("pre") };
+      const segs = new Map(); // name -> its pieces (a segment spanning lines has one piece per line)
+      for (const p of el.querySelectorAll(".lt-seg")) {
+        if (!segs.has(p.dataset.ltSeg)) segs.set(p.dataset.ltSeg, []);
+        segs.get(p.dataset.ltSeg).push(p);
+      }
+      return { box, lines, segs, steps: (data && data.steps) || [[]], segSteps: (data && data.segs) || null,
+        pre: el.querySelector("pre") };
     },
     show(inst, position) {
       const hl = new Set(inst.steps[position] || []);
+      const on = new Set(inst.segSteps ? inst.segSteps[position] || [] : []);
+      const holders = new Set(); // lines holding a highlighted segment stay undimmed
+      for (const [name, parts] of inst.segs) {
+        const lit = on.has(name);
+        for (const p of parts) {
+          p.classList.toggle("lt-hl", lit);
+          if (lit) holders.add(p.closest(".lt-line"));
+        }
+      }
       let first = null;
       for (const [n, line] of inst.lines) {
-        const on = hl.has(n);
-        line.classList.toggle("lt-hl", on);
-        if (on && !first) first = line;
+        const lit = hl.has(n);
+        line.classList.toggle("lt-hl", lit);
+        line.classList.toggle("lt-hl-in", holders.has(line));
+        if ((lit || holders.has(line)) && !first) first = line;
       }
-      inst.box.classList.toggle("lt-has-hl", hl.size > 0);
+      inst.box.classList.toggle("lt-has-hl", hl.size > 0 || on.size > 0);
       if (first && inst.pre.scrollHeight > inst.pre.clientHeight) {
         inst.pre.scrollTo({ top: first.offsetTop - inst.pre.clientHeight / 3, behavior: "smooth" });
       }

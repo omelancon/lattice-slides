@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.10.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.11.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -93,7 +93,7 @@ Companions are followers: `bbv-cfg` highlights the origin block being specialize
 
 The analysis that SBBV extends works on a fixed graph, so its animation keeps the source CFG still and changes the annotation inside the blocks: contexts gain intervals, grow by union with widening and shrink at conditionals. Reusing the `bbv-cfg` drawing and the `bbv.js` runtime (with per-frame context lines) keeps the three techniques visually comparable on consecutive slides, which is the point of showing them together. Intervals live inside the type values rather than beside them, so one context class serves all three algorithms; the versioning algorithms simply drop intervals, as the thesis's implementations do. Widening uses thresholds because that is what reproduces the thesis's own chain (decision 13), and the chain is shown in the panel rather than as a drawn lattice.
 
-### 3.12 Pointing at things, and pausing an animation (spec sections 3.9, 6.4, 7.2 and 8.9)
+### 3.12 Pointing at things, and pausing an animation (spec sections 3.9, 6.4, 7.2, 8.9 and 8.10)
 
 Left undoes the last move, but a deck opened on a deep link has no history to undo. Rather than stopping, PREV then falls back to the structural predecessor (tour, main path, `next` edges, branches, detour origin) without recording anything, so the presenter can keep walking backward and the history model stays untouched (decision 15). Skipping ten steps or jumping to the last step of a slide are step moves, so they never touch history; the intermediate steps are played quickly instead of jumped over, because an animation that disappears is harder to follow than one that runs fast.
 
@@ -103,7 +103,9 @@ A badge announces its detour from the first step, which gives the game away when
 
 A badge is drawn where its detour is written, and a detour must sit at the top level of the slide, so a badge could not go in a column. Allowing detours inside columns would bury their slides in the column markup and deepen the colon nesting; instead, `::detour-badge{ref=ID}`, a leaf directive like `::include`, places a badge of a detour declared at the top level (decision 18). A placed badge replaces the default one rather than requiring a `badge=ref` value, so the detour's `badge` mode stays a default that its badges inherit; a badge may override its label and mode, which lets one detour have several badges that differ, but not its key, `at` or `blocking`, since those belong to the detour and to the step table, which must not depend on where badges are drawn.
 
-The `arrow` component is the one place where the runtime measures: element boxes exist only in the browser, so an arrow pointing at an element has to be laid out there. Everything else about it is decided at build time, including its default direction, a fixed angle of 315 degrees (decision 14): a direction computed from the layout at runtime would make the drawing depend on the window and on timing, and would be the first step down a path the project avoids.
+The `arrow` component is the one place where the runtime measures: element boxes exist only in the browser, so an arrow pointing at an element has to be laid out there. Everything else about it is decided at build time, including its default direction, a fixed angle of 315 degrees (decision 14): a direction computed from the layout at runtime would make the drawing depend on the window and on timing, and would be the first step down a path the project avoids. Anchors follow the same line: `from_anchor` and `to_anchor` are angles fixed by the author (a side is an angle), the build turns names into numbers, and the runtime only intersects a ray with a box.
+
+An arrow is only as stable as its target. Line numbers and token positions (`.lt-line[data-line="2"] > :nth-child(10)`) move silently when the source file is edited, and cannot name an expression that spans several tokens. Named segments (decision 19) put the name in the source, inside comments, so the file stays the single source of truth and still runs: `#|@i-init|# (i 0) #|@end|#`. Block comments are recognized whatever the language, since the delimiters are distinctive and some files are shown as `text`; languages with line comments only use a whole-line form. The markers vanish from the slide, line numbers keep counting the file as written (so `lines=` matches the editor), and Pygments' output is wrapped rather than re-rendered, so code without markers renders exactly as before. A segment is an element id like any other, checked for duplicates on its slide (LT058), and highlights accept it beside line ranges.
 
 ### 3.13 One vocabulary for what the algorithms say (spec section 9.5)
 
@@ -190,6 +192,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.8 to v0.10 (done).** Badges that wait for their detour step (`badge=step`, `badge=next`), so a slide does not announce its questions before their turn; badges placed anywhere on the slide with `::detour-badge` (in a column, for instance), several per detour; `.reveal-with`, which reveals a block on the same step as the previous fragment.
 
+**v0.11 (done).** Named segments in code, written as markers in comments of the source, so arrows and highlights point at `i-init` rather than a line and a token; arrow anchors, so an arrow leaves and enters at a chosen side or angle.
+
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
 - Plugin hooks beyond components (new syntax, generated slides, custom checks).
@@ -223,3 +227,5 @@ Decisions taken while writing the specification, and since.
 | 16 | Rich text of the versioning animations | One vocabulary for captions, node contexts and the panel: badge for the operation (colour by category), chips in origin colours for versions, a colour each for variables, types and intervals, keywords coloured, removed tests struck through. The build writes captions with an inline backtick markup (`lattice.bbv.rich`); the runtime styles it. The `;;` notation stays in the nodes, with the types aligned. |
 | 17 | Badges of detour steps | `badge=step` (from the step before the detour step on) and `badge=next` (only at the step before each of its detour steps) beside `true` and `false`. Display only, like a reveal fragment; the runtime reads the step from `stepDetours`. The footer's Down hint follows the first detour's badges. An error (LT055) on a detour that is not a detour step. |
 | 18 | Placed badges | `::detour-badge{ref=ID}`, a leaf directive, places a badge of a detour of the same slide anywhere (columns, callouts, lists); the detour stays at the top level and needs an explicit id. A placed badge replaces the default one; it inherits the label and mode and may override them, not the key, `at` or `blocking`. Errors are LT056. |
+| 19 | Named segments in code | Markers in comments of the source (`@NAME` ... `@end`), block comments of any language inline, line comments on lines of their own; removed from the display with the spaces they leave. Line numbers count the file as written. Segments are `.lt-seg` spans, one piece per line, the first with the id. Usable by arrows and in highlights. Ids unique per slide (LT058); `markers=false` to show markers. |
+| 20 | Arrow anchors | `from_anchor` and `to_anchor`: a side, `center` or an angle in degrees, with the convention of `angle`; the end sits where the ray from the box center at that angle leaves the box, and the curve leaves or enters along it. Cubic curves, reducing to the earlier quadratic without anchors. |

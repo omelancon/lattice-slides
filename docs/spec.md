@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.10.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.11.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -273,6 +273,8 @@ The info string is `NAME [attr_block]`. `NAME` is resolved in this order:
 Because registered names win over lexers, components MUST NOT be registered under common language names; this is why the diff component is `diff-steps` and ` ```diff ` still highlights unified diffs.
 
 Highlighting is Pygments' for every language, with one correction for `scheme`: the symbols that a binding form introduces are variables, not calls. The head of each binding of `let`, `let*`, `letrec`, `letrec*`, `do` and `fluid-let`, the formals of `let-values` and `let*-values`, and the parameters of `lambda`, `define-values` and `case-lambda` clauses are `Name.Variable`; the name of a named `let` is `Name.Function`, like the head of `(define (f ...))` and like its calls (`lattice.components.scheme`).
+
+Code read by `code`, `code-steps` and `diff-steps` (a file or the block's body) MAY contain **segment markers**, comments that name a stretch of code for arrows and highlights; they are removed from the displayed text (section 8.10).
 
 Reserved attributes, handled by the core and not passed to component options: `#id`, classes, `follow`.
 
@@ -698,11 +700,13 @@ class RenderResult:
     meta: list[dict] | None = None     # per-position metadata, build time only
     assets: list[Asset] = field(default_factory=list)   # extra files to embed
     requires: list[str] = field(default_factory=list)   # shared libraries for this instance only
+    anchors: list[str] = field(default_factory=list)    # element ids defined for authors (8.10)
 ```
 
 - `positions` MUST be at least 1. `meta`, if present, MUST have length `positions` (LT047).
 - A component with `positions > 1` MUST declare a `runtime` (LT047), since only the runtime can change what is shown.
 - `requires` adds shared libraries for this instance only (a `plot` needs Vega only with `backend=vega`). Libraries are embedded only in decks that use them.
+- `anchors` lists the element ids of `html` that the author names (the segments of a `code` block, section 8.10). They take part in the check of ids on a slide (LT058, section 8.10); other ids inside a component's HTML (those of a matplotlib SVG, say) do not.
 
 ### 8.5 Render order
 
@@ -721,9 +725,9 @@ A `ComponentError` raised by `render` becomes error LT022 at the block's locatio
 
 | Name | Body | Positions | Main options |
 |---|---|---|---|
-| `code` | text | 1, or leader's count when following | `lang`, `file` (a file of the deck, or `lattice:PATH` for a file bundled with Lattice, such as `lattice:bbv/pseudocode/sbbv.txt`), `lines`, `symbol`, `highlight`, `title`, `linenos`, `line_base` (`snippet` or `file`: how highlighted line numbers are counted); as a follower, highlights `meta[i]["lines"]` or `meta[i]["line"]`, or `meta[i][KEY]` with `meta=KEY` |
-| `code-steps` | yaml | `len(steps) + 1` | same as `code` (`file` required); body `steps: [line ranges]` |
-| `diff-steps` | yaml | number of versions | `lang`, `context` (lines around changes), `title`; body `versions:` file paths, or mappings with `file` or `code` and an optional `label` |
+| `code` | text | 1, or leader's count when following | `lang`, `file` (a file of the deck, or `lattice:PATH` for a file bundled with Lattice, such as `lattice:bbv/pseudocode/sbbv.txt`), `lines`, `symbol`, `highlight` (line ranges and segment names, section 8.10), `title`, `linenos`, `line_base` (`snippet` or `file`: how highlighted line numbers are counted), `markers` (default `true`: read segment markers; `false` shows the text as written); as a follower, highlights `meta[i]["lines"]` or `meta[i]["line"]`, or `meta[i][KEY]` with `meta=KEY` (line numbers, ranges or segment names) |
+| `code-steps` | yaml | `len(steps) + 1` | same as `code` (`file` required); body `steps:` one entry per step, a line range, a segment name, or a list or comma-separated string of them |
+| `diff-steps` | yaml | number of versions | `lang`, `context` (lines around changes), `title`, `markers` (default `true`: segment markers are removed; a diff defines no segments); body `versions:` file paths, or mappings with `file` or `code` and an optional `label` |
 | `plot` | yaml | 1 | `backend` (`matplotlib`: static SVG; `vega`: Vega-Lite compiled in the browser; `plotly`), `source`, `spec` (raw Vega-Lite spec or Plotly figure), `data` (CSV), shorthand `kind`, `x`, `y`, `group`, `xlabel`, `ylabel`, `title`, `logx`, `logy`, `width`, `height` (inches, 96 px per inch for vega and plotly), `legend`. Theme colors and fonts are merged into the spec's `config` or `layout`; values given by the author win |
 | `dot` | text | 1 | `engine` |
 | `graph-anim` | yaml | number of frames | `source`, `graph` or `edges` (inline `"u v weight"` lines), `directed`, `engine`, `rankdir`, `panel`, `edge_labels`, `height`; other keys are passed to the trace function |
@@ -734,7 +738,7 @@ A `ComponentError` raised by `render` becomes error LT022 at the block's locatio
 | `bbv-cfg` | yaml | 1, or leader's count when following | `program` or `source`, `functions`, `show` (default `label` and `code`), `colors`, `direction`, `prims`, `height`; as a follower of a `bbv-anim`, highlights the block named by `meta[i]["block"]` |
 | `abstract-interp-anim` | yaml | number of frames | `program` or `source`, `entry` (the function analysed; default the first), `thresholds` (`thesis`, `sign`, `none` or a list of integers), `narrowing` (default `true`), `fixnum_bits` (default 62), `events` (among `start`, `dequeue`, `instruction`, `propagate`, `done`), `granularity` (`block` or `instruction`), `until`, `history` (`BLOCK.VAR` entries whose chain of entry values the panel shows), `panel` (keys among `worklist`, `iterations`, `history`), `show`, `colors`, `direction`, `wrap`, `caption`, `prims`, `height`, `max_steps` (section 9.6) |
 | `math` | text | 1 | display math block |
-| `arrow` | yaml | 1, or `len(steps)` | `to` (an element id, or a CSS selector, resolved inside the slide), `from` (another element), `angle` (degrees), `length` (default 120), `label`, `color` (a CSS color or a theme token: `accent`, `detour`, `muted`, `ink`), `width` (default 4), `curve` (bend as a fraction of the length, default 0); body `steps:` a list of targets (a string, or a mapping with the same `to`, `from`, `angle`, `length`, `label` keys, defaulting to the block's options; `from: ""` drops the block's `from`), one position each (section 8.9) |
+| `arrow` | yaml | 1, or `len(steps)` | `to` (an element id, or a CSS selector, resolved inside the slide), `from` (another element), `angle` (degrees), `length` (default 120), `label`, `color` (a CSS color or a theme token: `accent`, `detour`, `muted`, `ink`), `width` (default 4), `curve` (bend as a fraction of the length, default 0), `from_anchor` and `to_anchor` (`left`, `right`, `top`, `bottom`, `center` or an angle in degrees); body `steps:` a list of targets (a string, or a mapping with the same `to`, `from`, `angle`, `length`, `label`, `from_anchor`, `to_anchor` keys, defaulting to the block's options; `from: ""` drops the block's `from`), one position each (section 8.9) |
 
 The exact option schemas are the pydantic `Options` models in `src/lattice/components/`.
 
@@ -742,11 +746,36 @@ The exact option schemas are the pydantic `Options` models in `src/lattice/compo
 
 An `arrow` draws an arrow over the current slide, pointing at one of its elements. It is the one component whose geometry is computed in the browser, because element boxes exist only there; the build still decides everything else (targets, directions, steps).
 
-- **Targets.** `to` and `from` name an element of the slide: a bare identifier is an element id (an `{#id}` attribute line, a component `#id`, or any id in the rendered body), anything else is a CSS selector such as `.lt-line[data-line="4"]` or `.lt-title`, resolved inside the slide section. A bare id that no element of the slide carries is warning LT046 at build time; a target not found at runtime hides the arrow (console warning). The box of a target is the extent of its contents when it has some (so a heading or a code line is pointed at its text, not at its full row), else the element's box.
-- **Direction.** With `from`, the arrow runs from the edge of the `from` box to the edge of the `to` box, along the line between their centers, shortened by a small gap at both ends. Otherwise the arrow comes from `angle`: degrees measured from the target toward the tail, counterclockwise with 0 pointing right (90 means the arrow comes from above, 315 from the lower right); its head sits at the target's edge along that direction and its tail `length` slide pixels further, shortened when it would leave the slide. The default is `angle: 315`, a fixed direction chosen over any direction computed at runtime (report, decision 14).
-- **Appearance.** A quadratic curve bent sideways by `curve` times its length (0 is straight; negative bends the other way), an arrowhead at `to`, the `label` at the tail (or beside the middle with `from`), kept inside the slide. `color` defaults to the theme accent.
+- **Targets.** `to` and `from` name an element of the slide: a bare identifier is an element id (an `{#id}` attribute line, a component `#id`, a code segment of section 8.10, or any id in the rendered body), anything else is a CSS selector such as `.lt-line[data-line="4"]` or `.lt-title`, resolved inside the slide section. A bare id that no element of the slide carries is warning LT046 at build time; a target not found at runtime hides the arrow (console warning). The box of a target is the extent of its contents when it has some (so a heading or a code line is pointed at its text, not at its full row), else the element's box; the box of a code segment is the union of its pieces, one per line it spans.
+- **Anchors.** `from_anchor` and `to_anchor` choose where the arrow leaves `from` and enters `to`. A side is an angle: `right` is 0, `top` 90, `left` 180, `bottom` 270, and a number is an angle in degrees with the convention of `angle` (counterclockwise, 0 pointing right). The end sits where the ray from the center of the box at that angle leaves the box (for a side, the middle of that side), a small gap outside it, and the curve leaves or enters along that ray. `center` puts the end at the center of the box, with no gap. A step whose `from_anchor` is set has a `from` (LT022); the block's `from_anchor` applies to the steps that have one.
+- **Direction.** With `from`, an end without an anchor (or with `center`) aims at the other end: at its anchor point, or at the center of its box. With no anchor at all, the arrow runs from the edge of the `from` box to the edge of the `to` box along the line between their centers, shortened by a small gap at both ends. Without `from`, the arrow comes from `angle`: degrees measured from the target toward the tail, counterclockwise with 0 pointing right (90 means the arrow comes from above, 315 from the lower right); its head sits at the target's edge along that direction, or at `to_anchor` when it is set, and its tail `length` slide pixels from the head's edge point along `angle`, shortened when it would leave the slide. `angle` defaults to the direction of `to_anchor` when it is an angle or a side, else to 315, a fixed direction chosen over any direction computed at runtime (report, decision 14).
+- **Appearance.** A cubic curve from tail to head. An end with an angle anchor has a handle along its ray, a free end a handle along the chord, so with no anchor the curve is the quadratic of earlier versions; `curve` bends it sideways by `curve` times its length (0 is straight; negative bends the other way). An arrowhead at `to` follows the curve's direction there; the `label` is at the tail (or beside the middle of the curve with `from`), kept inside the slide. `color` defaults to the theme accent.
 - **Steps.** With `steps:` the block has one position per entry and is a track (section 6.1): position `i` points at entry `i`. On a single-step move the arrow glides from its previous geometry (`info.animate`, section 10.1); any other move places it directly.
 - **Placement.** The runtime moves the block's wrapper out of the body to the slide section as an overlay covering the whole slide, above the content and ignoring pointer events, so the block's position in the Markdown does not matter and it takes no space. A `{.reveal}` attribute line before the block hides it until its fragment is shown, as for any block. The arrow is re-measured when the slide is entered, on every step, when the window is resized and when the slide body changes size. The presenter preview and the PDF export draw it like any component.
+
+### 8.10 Named segments in code
+
+A **segment** names a stretch of code shown by `code` or `code-steps`, so that an arrow can say `to: i-init` and a highlight `i-init` instead of a line number and a token position. Segments are written in the source itself, in comments, so the file stays the single source of truth and keeps running.
+
+````text
+(let loop (#|@i-init|# (i 0) #|@end|#        ; inline form, block comments
+           (acc 0))
+  ...)
+
+# @loop                                      # whole-line form, line comments
+while lo < hi:
+    ...
+# @end
+````
+
+- **Markers.** A marker is a comment holding only `@NAME` (opens a segment named `NAME`, an `IDENT` of section 3.4) or `@end` (closes the innermost open segment; `@end NAME` also checks its name), with optional spaces inside the comment. The **inline form** uses a block comment, `#| |#`, `/* */`, `(* *)`, `{- -}` or `<!-- -->`, whatever the language, and may sit anywhere in a line. The **whole-line form** is a line holding only a line comment, `#`, `;`, `//`, `--` or `%`, followed by the marker; it is for languages without block comments (Python, shell, `.bbv` programs). Markers are recognized anywhere in the text, string literals included. Segments MAY span lines and MAY nest.
+- **Removal.** Markers are removed from the displayed code. An opening marker takes the spaces and tabs after it, a closing marker those before it unless they are the indentation of its line, so `(#|@i-init|# (i 0) #|@end|#)` displays as `((i 0))`. Spaces left at the end of a line by a removed marker are removed, and a line left blank (a whole-line marker, or a line of inline markers only) is dropped.
+- **Line numbers.** `lines`, `symbol`, `line_base=file` and the gutter of `linenos` count the lines of the file as written; a dropped marker line keeps its number, so displayed numbers may skip it. Numbers with `line_base=snippet` count the displayed lines. A segment partly outside `lines` or `symbol` is cut to the lines shown; one wholly outside is dropped.
+- **Rendering.** Each segment is wrapped in `<span class="lt-seg" data-lt-seg="NAME">`, one piece per displayed line it spans, without the spaces at the edges of a piece; the first piece carries `id="NAME"`. A Pygments token cut by a segment boundary is split into two spans of the same class; code without segments renders exactly as before.
+- **Highlights.** `highlight`, the entries of `code-steps` `steps:` and the lines a follower reads from its leader's `meta` accept segment names beside line numbers and ranges (`"3, i-init"`, `[i-init, 4-5]`). A highlighted segment is marked itself (the highlight background with an underline in `--lt-hl`), and the lines holding it are not dimmed. A name that is not a segment of the block is LT022.
+- **Errors.** An unclosed segment, an `@end` with no open segment or naming another one, a name defined twice in one text, or an empty segment is error LT022, its message giving the file and line of the marker.
+- **Ids on a slide.** Segment names are element ids: on a slide, the ids written by the author (attribute lines, placed badges, raw HTML in the body), explicit component ids and segment names MUST be distinct (LT058; two components with one id are LT007). Two blocks showing the same annotated file on one slide therefore collide; give one of them `markers=false`, which shows the text as written, markers included. Ids MAY repeat on different slides: arrows resolve them inside their slide.
+- `diff-steps` removes markers from its versions (unless `markers=false`) and defines no segments.
 
 ---
 
@@ -942,7 +971,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.10.0">
+  <meta name="generator" content="lattice 0.11.0">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -1117,6 +1146,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT055 | error | `badge=step` or `badge=next` on a detour, or on one of its placed badges, when the detour is not a detour step of its origin |
 | LT056 | error | Invalid placed badge (`::detour-badge`): missing or unknown `ref`, a detour of another slide, without an explicit id or with `badge=false`, an unknown attribute or value, an attribute line with `reveal` or key-value attributes, or a badge in speaker notes or in a branch |
 | LT057 | error | `.reveal-with` with no fragment before it on the slide, or together with `.reveal` |
+| LT058 | error | An id used twice on a slide: element ids written by the author, explicit component ids and code segment names (section 8.10) |
 
 Diagnostics are printed as `file:line:col: severity LTnnn: message`. `lattice check` exits with status 1 if any error is reported, 0 otherwise (`--strict` also fails on warnings).
 
@@ -1300,3 +1330,5 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.8 | `badge=step` and `badge=next` on detours: a badge shown according to its detour step; LT055 | 3.9, 4, 6.4, 10.4, 11.5, 12 |
 | 0.9 | Placed badges: the `::detour-badge` leaf directive, several badges per detour with their own label and mode; LT056; an include in a list item or a quote is LT034 | 2.3, 3.2, 3.9, 4, 10.4, 12 |
 | 0.10 | `.reveal-with`: a block revealed on the same step as the previous fragment; LT057 | 3.12, 12 |
+| 0.11 | Named segments in code (markers in comments, `markers` option, segment highlights), `RenderResult.anchors`, LT058 for ids used twice on a slide | 3.13, 8.4, 8.8, 8.10, 12 |
+| 0.11 | Arrow anchors (`from_anchor`, `to_anchor`) and cubic arrow curves; arrows at code segments | 8.8, 8.9 |

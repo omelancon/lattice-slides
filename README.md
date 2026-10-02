@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.10.0. This README covers usage in brief. The rest:
+This is version 0.11.0. This README covers usage in brief. The rest:
 
 - [`user_manual/manual.md`](user_manual/manual.md) is the user manual, itself a Lattice deck (open
   [`user_manual/manual.html`](user_manual/manual.html)): every feature, with a live example of each.
@@ -102,6 +102,7 @@ code language.
 | ` ```python {highlight=2-3 title="x.py" linenos=true} ` | Highlighted code (any Pygments language) |
 | ` ```code {lang=python file="algo.py" symbol=dijkstra} ` | Code from a file, a line range or a Python symbol; with `follow=trace` it highlights the lines named by an animation |
 | ` ```code-steps {file=... lang=...} ` + `steps: [1-3, 5]` | Walk through code, one highlighted range per step |
+| `(let (#\|@i-init\|# (i 0) #\|@end\|#) ...)` in a code file | A named segment: markers in comments (`#\| \|#`, `/* */`, or whole lines `# @loop` ... `# @end`) are removed from the slide and give the code an id, so `to: i-init` or `highlight=i-init` survives edits of the file (spec 8.10) |
 | ` ```graph-anim {#trace source="algos.py:bfs" graph="city.dot"} ` | Animated graph from a `GraphTrace` built in Python |
 | ` ```array-anim {source="sorts.py:bubble"} ` + `values: [...]` | Animated array from an `ArrayTrace` |
 | ` ```tree-anim {source="avl.py:avl_trace"} ` + `values: [...]` | Animated tree from a `TreeTrace`: insertions, deletions and rotations, nodes glide to their new places |
@@ -113,7 +114,7 @@ code language.
 | ` ```diff-steps {lang=python context=3} ` + `versions: [...]` | Step through versions of a file; each step marks added and removed lines |
 | ` ```dot ` | Graphviz diagram, themed |
 | ` ```timeline ` | Orders the steps of several stepping elements on one slide |
-| ` ```arrow {to=proof label="here" angle=315} ` | An arrow drawn over the slide, pointing at an element (an id or a CSS selector), from a direction or from another element (`from=`); with `steps:` it moves from one element to the next |
+| ` ```arrow {to=proof label="here" angle=315} ` | An arrow drawn over the slide, pointing at an element (an id or a CSS selector), from a direction or from another element (`from=`), leaving and entering at a chosen side or angle (`from_anchor=left`, `to_anchor=bottom`); with `steps:` it moves from one element to the next |
 
 Animations are computed at build time. A trace function receives the graph (or values) and
 keyword options from the block, and records frames as deltas:
@@ -223,7 +224,7 @@ Rebuild them all, and the user manual, with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.10.0 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.11.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

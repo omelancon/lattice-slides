@@ -645,3 +645,134 @@ def test_arrow_runtime_points_at_its_targets(tmp_path):
             pytest.skip("Chromium for Playwright is not installed")
         raise
     assert not errors
+
+
+ANCHOR_DECK = """
+# Anchors
+
+:::: columns
+::: column
+```code-steps {#cs lang=scheme file="sum.scm"}
+steps: [i-init, body]
+```
+:::
+::: column
+{#note}
+A note on the right.
+:::
+::::
+
+```arrow {#a from=note from_anchor=left to_anchor=bottom}
+steps:
+  - i-init
+  - to: body
+    to_anchor: right
+  - to: body
+    from: ""
+    to_anchor: center
+  - to: note
+    from: ""
+    to_anchor: 45
+    angle: 45
+```
+
+```timeline
+a 1, cs 1
+a 2, cs 2
+a 3
+```
+"""
+
+SUM_SCM = """\
+(define (sum-to n)
+  (let loop (#|@i-init|# (i 0) #|@end|#
+             (acc 0))
+    #|@body|#
+    (if (> i n)
+        acc
+        (loop (+ i 1) (+ acc i)))
+    #|@end|#))
+"""
+
+
+def test_arrow_anchors_and_code_segments(tmp_path):
+    """Spec 8.9 and 8.10: anchored ends sit on the chosen side and leave or enter along it, a segment is
+    measured as the union of its pieces, and code-steps highlight segments."""
+    src = tmp_path / "talk.md"
+    src.write_text(ANCHOR_DECK)
+    (tmp_path / "sum.scm").write_text(SUM_SCM)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type in ("error", "warning") else None)
+            page.goto(out.as_uri())
+            page.wait_for_timeout(300)
+
+            def measure(target, source=None):
+                return page.evaluate("""([target, source]) => {
+                    const sec = document.querySelector('.lt-slide:not([hidden])');
+                    const path = sec.querySelector('.lt-arrow-line');
+                    const n = path.getTotalLength();
+                    const pt = (q) => ({x: q.x, y: q.y});
+                    const s = sec.getBoundingClientRect(), scale = s.width / sec.offsetWidth;
+                    const boxOf = (sel) => {
+                        let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+                        for (const e of sec.querySelectorAll(sel)) {
+                            const range = document.createRange(); range.selectNodeContents(e);
+                            const q = range.getBoundingClientRect();
+                            l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom);
+                        }
+                        return {x: (l - s.left) / scale, y: (t - s.top) / scale, w: (r - l) / scale, h: (b - t) / scale};
+                    };
+                    return {head: pt(path.getPointAtLength(n)), nearHead: pt(path.getPointAtLength(n - 4)),
+                            tail: pt(path.getPointAtLength(0)), nearTail: pt(path.getPointAtLength(4)),
+                            box: boxOf(target), from: source ? boxOf(source) : null,
+                            lit: Array.from(sec.querySelectorAll('.lt-seg.lt-hl')).map(e => e.dataset.ltSeg),
+                            pieces: sec.querySelectorAll('[data-lt-seg="body"]').length};
+                }""", [target, source])
+
+            m = measure('[data-lt-seg="i-init"]', "#note")
+            f, b = m["from"], m["box"]
+            # leaves the left side of the note, in the middle, heading left
+            assert 0 < f["x"] - m["tail"]["x"] < 12 and abs(m["tail"]["y"] - (f["y"] + f["h"] / 2)) < 1
+            assert m["nearTail"]["x"] < m["tail"]["x"] and abs(m["nearTail"]["y"] - m["tail"]["y"]) < 0.5
+            # enters the bottom of `(i 0)`, in the middle, heading up
+            assert 0 < m["head"]["y"] - (b["y"] + b["h"]) < 12 and abs(m["head"]["x"] - (b["x"] + b["w"] / 2)) < 1
+            assert m["nearHead"]["y"] > m["head"]["y"] and abs(m["nearHead"]["x"] - m["head"]["x"]) < 0.5
+            assert m["lit"] == []
+
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(500)
+            m = measure('[data-lt-seg="body"]')
+            b = m["box"]
+            assert m["pieces"] == 3 and m["lit"] == ["i-init"]
+            # the right side of the three-line segment, in the middle
+            assert 0 < m["head"]["x"] - (b["x"] + b["w"]) < 12 and abs(m["head"]["y"] - (b["y"] + b["h"] / 2)) < 1
+
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(500)
+            m = measure('[data-lt-seg="body"]')
+            b = m["box"]
+            assert abs(m["head"]["x"] - (b["x"] + b["w"] / 2)) < 1 and abs(m["head"]["y"] - (b["y"] + b["h"] / 2)) < 1
+            assert set(m["lit"]) == {"body"}
+
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(500)
+            m = measure("#note")
+            b = m["box"]
+            c = {"x": b["x"] + b["w"] / 2, "y": b["y"] + b["h"] / 2}
+            # 45 degrees: up and to the right of the center, on the ray from it
+            dx, dy = m["head"]["x"] - c["x"], c["y"] - m["head"]["y"]
+            assert dx > 0 and dy > 0 and abs(dx - dy) < 1.5
+            assert m["tail"]["x"] > m["head"]["x"] and m["tail"]["y"] < m["head"]["y"]
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors

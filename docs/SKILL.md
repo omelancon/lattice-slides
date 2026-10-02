@@ -14,7 +14,7 @@ This file is for contributors. It explains where things live, how to verify chan
 | Document | Owns | Read it when |
 |---|---|---|
 | `README.md` | User-facing usage: install, CLI, syntax cheat sheet, keys, examples list, release status | You need to know what users see, or you changed anything user-visible |
-| `docs/spec.md` | The normative definition: grammar (section 3), Deck model (4), graph resolution (5), steps, timelines and detour steps (6), navigation state machine (7), Python component contract (8, the `arrow` component in 8.9), frames (9), JS runtime contract (10), output format (11), diagnostics (12), changes since draft 1 (15) | Before changing behavior. The spec wins over every other document |
+| `docs/spec.md` | The normative definition: grammar (section 3), Deck model (4), graph resolution (5), steps, timelines and detour steps (6), navigation state machine (7), Python component contract (8, the `arrow` component in 8.9, code segments in 8.10), frames (9), JS runtime contract (10), output format (11), diagnostics (12), changes since draft 1 (15) | Before changing behavior. The spec wins over every other document |
 | `docs/design-report.md` | Why: goals and non-goals, design rationale (section 3), technology choices (5), the roadmap (6) and the decisions table (7) | You are about to make a design choice, or want to know what is planned |
 | `docs/SKILL.md` (this file) | How to work on the code: structure, setup, verification, pitfalls, release and documentation upkeep | Always, first |
 | `user_manual/manual.md` | The user manual, a Lattice deck: every feature shown live, with its syntax, options and keys | You changed anything user-visible: the manual must show it (built like the examples, checked by the suite) |
@@ -58,8 +58,8 @@ src/lattice/
   diagnostics.py  Diagnostic, BuildError
   themes.py       theme table: CSS file, Pygments style, palette for components
   server.py       dev server: polling watcher and server-sent events for reload
-  components/     base.py (contract, registry, RenderContext), code.py, scheme.py (the Scheme highlighting
-                  filter), visual.py (plot, dot, math, arrow), animations.py, bbv.py
+  components/     base.py (contract, registry, RenderContext), code.py, segments.py (segment markers in code),
+                  scheme.py (the Scheme highlighting filter), visual.py (plot, dot, math, arrow), animations.py, bbv.py
   runtime/
     lattice.js    navigation state machine (with the structural predecessor, skip playback and detour
                   steps), reveal and badge visibility per step, overlays, presenter view (preview,
@@ -89,7 +89,7 @@ Each of these was decided deliberately; the reasoning is in the report (sections
 - **Registered components take precedence over Pygments lexers** (spec 3.13). Never register a component under a common language name; that is why the diff component is `diff-steps`.
 - **Output is self-contained.** Images, fonts, data and libraries are embedded in single-file mode. Heavy libraries are embedded only when an instance requires them (`RenderResult.requires`).
 - **Columns contain their content.** Nothing may paint outside its column or below the slide body; `tests/test_layout.py` checks every example slide at its first and last step. A component option such as `height` must be honoured in every layout mode (the animation panels switch to a column under 760 px of container width).
-- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT057. New code, new row in spec section 12.
+- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT058. New code, new row in spec section 12.
 
 ## Common tasks
 
@@ -114,9 +114,10 @@ Run `pytest` after every change; it takes about twenty seconds. The suites:
 | `test_steps.py` | tracks, timelines, detour steps and the badges of their detours (modes, placed badges, LT055 and LT056), followers, deltas, frame stores, tree and grid traces, tree layouts |
 | `test_bbv.py` | the type lattice and intervals, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), abstract interpretation against figures 1, 2 and 4, frames, layout, the components |
 | `test_output.py` | plot backends, diff-steps, the arrow component, images, directory output, overview map, library inclusion |
+| `test_segments.py` | code segment markers (both forms, spaces, line numbers, errors), wrapping of Pygments output, segment highlights, LT058, arrow anchor options |
 | `test_pdf.py` | `pdf` steps and LT053, the page plan (tour, appendix, back links), a real export in Chromium |
 | `test_cli.py` | CLI commands, building every example, the user manual building without warnings and using every component |
-| `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys, detour steps, badges that wait for their detour step, placed in columns), the presenter preview, scrubber and keybindings, the arrow geometry, the tree, grid, versioning and abstract interpretation runtimes, in Chromium |
+| `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys, detour steps, badges that wait for their detour step, placed in columns), the presenter preview, scrubber and keybindings, the arrow geometry (anchors, segments as targets), the tree, grid, versioning and abstract interpretation runtimes, in Chromium |
 | `test_layout.py` | no content spills out of a column or below the slide body, at the first and last step of every slide of the examples and the manual |
 
 Tests prove structure, not appearance. After any visual change (CSS, runtime rendering, a component's HTML, an example), rebuild the examples and look at screenshots of the affected slides:
@@ -134,7 +135,9 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 - **Container nesting.** An outer container needs more colons than its children (`::::` around `:::`). With equal counts, the first `:::` closes the outer container and the rest of the file parses oddly.
 - **Attribute values are strings.** Lists and mappings go in the YAML body of a block, not in `{...}`. Extra options of animation components are read as YAML scalars (spec 15).
 - **DOT keywords.** `graph`, `node`, `edge`, `digraph`, `subgraph` and `strict` cannot be bare node names in `dot` blocks.
-- **Line-based references.** `code-steps` steps, `lines=` ranges and `meta["line"]` in traces point at line numbers. Editing a referenced file (for example `examples/04-custom-components/lattice_plugins.py`) can silently shift highlights; recheck those slides.
+- **Line-based references.** `code-steps` steps, `lines=` ranges and `meta["line"]` in traces point at line numbers. Editing a referenced file (for example `examples/04-custom-components/lattice_plugins.py`) can silently shift highlights; recheck those slides, or name the code with segment markers (spec 8.10), which move with the code.
+- **Segment markers are read everywhere.** A comment holding only `@word` (`/*@param*/`, or a line `// @ts-ignore`) is a segment marker; an unclosed one fails the build with LT022. `markers=false` on the block shows such text as written; the manual uses it to display the syntax.
+- **Code HTML is wrapped, not re-rendered.** `segments.wrap_line` relies on Pygments' `nowrap` output being a flat run of `<span class="X">` and text per line; a line of another shape is left without its segments. Code without markers must render byte for byte as before.
 - **Counting key presses** in `snapshot.py`: a slide with `n` steps needs `n` presses to leave it (steps 1 to `n-1`, then the move).
 - **Step numbers differ by audience.** The URL hash and the `pdf` attribute count steps from 0; the HUD and the presenter view show them from 1.
 - **Element ids in component HTML** are duplicated in the PDF (one copy per page). Print mode renames ids and `url(#...)` or `href="#..."` references inside each copy; a component that refers to its ids another way (for example from CSS) breaks in print.
