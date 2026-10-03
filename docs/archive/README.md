@@ -1,0 +1,14 @@
+# Archive
+
+Documents kept as they were written, for the history behind features. They are not updated: the live rules are in `../spec.md`, the reasons in `../design-report.md`, the open items in `../todo.md`, and contributor workflow in `../SKILL.md`. Paths cited inside these files may be out of date (`reading-notes.md` cites the older `docs/this_phase/` locations of the thesis and the Gambit sources).
+
+| File | What it is |
+|---|---|
+| `plan.md` | Design, strategy, decisions and questions of the basic block versioning phase (0.4.0) |
+| `reading-notes.md` | Notes from the readings of that phase: the thesis, the Gambit ΛV implementation, the SBBV blog post |
+| `plan-abstract-interpretation.md` | The plan of the abstract interpretation phase (0.5.0) with its decisions |
+| `implementation-report.md` | What shipped in 0.4.0, with a 0.5.0 addendum: fidelity notes against the thesis figures, numbers |
+| `todo.md` | Status and todo of those phases; its open items were carried over to `../todo.md` |
+| `implementation-report-2026-10-01.md` | Lattice 0.6.0: backward navigation without history, skip keys, detour steps, the `arrow` component |
+| `implementation-report-2026-10-02.md` | Lattice 0.7.0 to 0.11.0: rich captions of the versioning animations, Scheme highlighting, the user manual, badges that wait for their detour step, placed badges, `.reveal-with`, named code segments and arrow anchors |
+| `thesis.pdf` | The thesis on basic block versioning that the 0.4.0 and 0.5.0 work follows |

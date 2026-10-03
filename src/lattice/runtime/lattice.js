@@ -742,6 +742,10 @@ const Lattice = (() => {
     const sec = sections[entry.slide];
     const clone = sec.cloneNode(true);
     clone.hidden = false;
+    // a copy does not keep scroll positions (a code block scrolled to its highlight): note them now, while
+    // the copy still has the original's structure, and restore them once the copy is in the document
+    const copies = $$("*", clone);
+    const scrolled = $$("*", sec).map((e, i) => [copies[i], e.scrollTop, e.scrollLeft]).filter(([, t, l]) => t || l);
     clone.classList.remove(...Array.from(clone.classList).filter((c) => c.startsWith("lt-anim-")));
     const src = $$("canvas", sec);
     $$("canvas", clone).forEach((c, i) => {
@@ -777,6 +781,7 @@ const Lattice = (() => {
     page.className = "lt-print-page";
     page.id = `lt-page-${entry.n}`;
     page.appendChild(clone);
+    page.ltScrolled = scrolled;
     const sec2 = entry.section != null ? plan.sections[entry.section] : null;
     let where = esc(plan.title);
     if (sec2) {
@@ -799,7 +804,9 @@ const Lattice = (() => {
       render(prev, { kind: "sync", dir: 0 });
       await nextFrame();
       if (prev.slide !== entry.slide && (instancesBySlide[entry.slide] || []).length) await sleep(120); // async renderers (Vega)
-      holder.appendChild(snapshot(entry, plan));
+      const page = snapshot(entry, plan);
+      holder.appendChild(page);
+      for (const [e, top, left] of page.ltScrolled) { e.scrollTop = top; e.scrollLeft = left; }
     }
     $("#lt-root").hidden = true;
     document.documentElement.classList.add("lt-printed");

@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.12.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.12.1. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -57,7 +57,7 @@ Runtimes always receive an absolute position. This single rule makes backward na
 
 ### 3.4 Build time does the work (spec sections 8 and 9)
 
-A component is a Python class that turns a block into HTML plus data, and optionally names a small JavaScript runtime. Algorithm traces run the real Python implementation at build time, so an animation cannot drift from the code shown on the next slide. Layouts are computed once over every element that ever appears, so nodes never jump between frames. Results are cached by their inputs and dependencies, which keeps rebuilds fast while editing.
+A component is a Python class that turns a block into HTML plus data, and optionally names a small JavaScript runtime. Algorithm traces run the real Python implementation at build time, so an animation cannot drift from the code shown on the next slide. Graph layouts are computed once over every element that ever appears, so nodes never jump between frames (trees and versioning drawings, whose shape is the point, are the exceptions of 3.7 and 3.10). Results are cached by their inputs and dependencies, which keeps rebuilds fast while editing.
 
 ### 3.5 Output is self-contained (spec section 11)
 
@@ -202,7 +202,7 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.11 (done).** Named segments in code, written as markers in comments of the source, so arrows and highlights point at `i-init` rather than a line and a token; arrow anchors, so an arrow leaves and enters at a chosen side or angle.
 
-**v0.12 (done).** `code-morph`: code whose text changes in place between positions, tokens gliding to their new places, from versions (a language each, if wanted) or from new text for named segments of one file; arrows follow the code as it moves.
+**v0.12 (done).** `code-morph`: code whose text changes in place between positions, tokens gliding to their new places, from versions (a language each, if wanted) or from new text for named segments of one file; arrows follow the code as it moves. 0.12.1 fixes the scrolling of tall code blocks to their highlight, on screen and in the PDF.
 
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".

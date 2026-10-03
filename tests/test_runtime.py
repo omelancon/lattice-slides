@@ -1020,3 +1020,83 @@ def test_code_morph_in_preview_and_print(tmp_path):
             pytest.skip("Chromium for Playwright is not installed")
         raise
     assert not errors
+
+
+SCROLL_DECK = """
+# Long code {#long}
+
+Some text above the block, to push it down the slide.
+
+```code-steps {#walk lang=python file="long.py" title="long.py"}
+steps: [40, 70, 5, 20]
+```
+
+# Long morph {#lmorph}
+
+Some text above the block, to push it down the slide.
+
+```code-morph {#lm lang=python}
+versions: [long.py, long2.py]
+```
+"""
+
+SCROLL_SEEN = """(sid) => { const pre = document.querySelector(`${sid} pre`);
+  const line = pre.querySelector('.lt-line.lt-hl') || pre.querySelector('.lt-mt:not(.lt-mt-off)[data-probe]');
+  const p = pre.getBoundingClientRect(), r = line.getBoundingClientRect(), scale = p.height / pre.offsetHeight;
+  return {at: Math.round((r.top - p.top) / scale), third: Math.round(pre.clientHeight / 3),
+          visible: r.top >= p.top - 1 && r.bottom <= p.bottom + 1}; }"""
+
+
+def test_scrolled_code_shows_its_highlight_on_screen_and_in_print(tmp_path):
+    """A code block taller than its space scrolls its highlight a third of the way down, whatever sits
+    above it on the slide, however the step is reached; the print copy keeps the scroll (spec 8.8, 11.5).
+    A morph scrolls its first changed row into view the same way (spec 8.11)."""
+    src = tmp_path / "talk.md"
+    src.write_text(SCROLL_DECK)
+    lines = [f"x{i} = {i}  # line {i}" for i in range(1, 81)]
+    (tmp_path / "long.py").write_text("\n".join(lines) + "\n")
+    lines[69] = "x70 = 70 + changed  # line 70"
+    (tmp_path / "long2.py").write_text("\n".join(lines) + "\n")
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    probe = "() => { const t = [...document.querySelectorAll('#s-lmorph .lt-mt')].find(e => e.textContent === 'changed'); t.dataset.probe = '1'; }"
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(out.as_uri())
+            page.wait_for_timeout(300)
+            for k in range(1, 5):  # single steps, smooth
+                page.keyboard.press("ArrowRight")
+                page.wait_for_timeout(900)
+                seen = page.evaluate(SCROLL_SEEN, "#s-long")
+                assert seen["visible"], (k, seen)
+                if k != 3:  # line 5 sits higher: the box cannot scroll above its start
+                    assert abs(seen["at"] - seen["third"]) <= 2, (k, seen)
+            page.evaluate("location.hash = '#/long/2'")  # a jump: placed at once
+            page.wait_for_timeout(60)
+            assert page.evaluate(SCROLL_SEEN, "#s-long")["visible"]
+            page.goto(out.as_uri() + "#/lmorph/1")
+            page.reload()
+            page.wait_for_timeout(300)
+            page.evaluate(probe)
+            assert page.evaluate(SCROLL_SEEN, "#s-lmorph")["visible"]
+
+            page.goto(out.as_uri() + "?print")
+            page.wait_for_timeout(300)
+            plan = {"title": "t", "pageOf": {}, "sections": [],
+                    "pages": [{"slide": "long", "step": k, "n": k} for k in range(1, 5)]
+                    + [{"slide": "lmorph", "step": 1, "n": 5}]}
+            assert page.evaluate("plan => Lattice.print(plan)", plan) == 5
+            for n in range(1, 5):
+                assert page.evaluate(SCROLL_SEEN, f"#lt-page-{n}")["visible"], n
+            page.evaluate("() => { const t = [...document.querySelectorAll('#lt-page-5 .lt-mt')].find(e => e.textContent === 'changed'); t.dataset.probe = '1'; }")
+            assert page.evaluate(SCROLL_SEEN, "#lt-page-5")["visible"]
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors

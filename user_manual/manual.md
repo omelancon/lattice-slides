@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.12.0
+author: Lattice 0.12.1
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -538,11 +538,11 @@ A placed badge with no detour to name, or one that breaks these rules, is error 
 
 # Components {#pick-a-component}
 
-A fenced block whose name is a registered component renders it; any other name is a code language. Pick a family, or keep pressing Right to see them all.
+A fenced block whose name is a registered component renders it; any other name is a code language. Pick a family with its key or a click; from there, Right walks through the families that follow it.
 
 ::: branch {layout=cards}
-- [[code-blocks|Code]] {key=c} code, code-steps, diff-steps, code-morph
-- [[plots|Plots and diagrams]] {key=l} plot, dot, math, arrow
+- [[code-blocks|Code]] {key=c} code, code-steps, diff-steps
+- [[plots|Plots and diagrams]] {key=l} plot, dot, math, arrow, then code segments and code-morph
 - [[graph-anim|Animations]] {key=a} graph, array, tree, grid
 - [[compiler-animations|Compiler animations]] {key=v} bbv-anim, bbv-cfg, abstract-interp-anim
 :::
@@ -1401,7 +1401,7 @@ Lattice.component("stack-anim", {
 | LT015, LT016 | warning, error | Unreachable slide; detour without slides |
 | LT017, LT018 | error | Malformed branch, or two on a slide; duplicate key, or a global one, on a slide |
 | LT019, LT020 | warning | Container name close to a built-in; unknown fenced block name |
-| LT034, LT035 | error | Include inside a container other than a detour; detour does not terminate |
+| LT034, LT035 | error | An include or a detour where it is not allowed (in a container, a list item, a quote); detour does not terminate |
 | LT041, LT042, LT043 | warning, error, error | Level-1 heading inside a container; no start slide; slide repeated in a tour |
 
 # Components and steps {#diagnostics-steps .dense}

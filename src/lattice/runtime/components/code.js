@@ -12,7 +12,7 @@
       return { box, lines, segs, steps: (data && data.steps) || [[]], segSteps: (data && data.segs) || null,
         pre: el.querySelector("pre") };
     },
-    show(inst, position) {
+    show(inst, position, info) {
       const hl = new Set(inst.steps[position] || []);
       const on = new Set(inst.segSteps ? inst.segSteps[position] || [] : []);
       const holders = new Set(); // lines holding a highlighted segment stay undimmed
@@ -32,7 +32,13 @@
       }
       inst.box.classList.toggle("lt-has-hl", hl.size > 0 || on.size > 0);
       if (first && inst.pre.scrollHeight > inst.pre.clientHeight) {
-        inst.pre.scrollTo({ top: first.offsetTop - inst.pre.clientHeight / 3, behavior: "smooth" });
+        // the line's offset inside the scrolled box (offsetTop counts from the slide, its offsetParent),
+        // in the box's own pixels: the slide may be scaled to the window
+        const pre = inst.pre;
+        const box = pre.getBoundingClientRect();
+        const scale = box.height / pre.offsetHeight || 1;
+        const top = (first.getBoundingClientRect().top - box.top) / scale + pre.scrollTop;
+        pre.scrollTo({ top: Math.max(0, top - pre.clientHeight / 3), behavior: info && info.animate ? "smooth" : "auto" });
       }
     },
   };

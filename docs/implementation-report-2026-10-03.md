@@ -1,4 +1,4 @@
-# Implementation report: code that changes in place (Lattice 0.12.0, 2026-10-03)
+# Implementation report: code that changes in place (Lattice 0.12.0 and 0.12.1, 2026-10-03)
 
 A new built-in component, `code-morph`: the text of a code block changes from one position to the next, and the audience watches the old text turn into the new one. The motivating case is a bug fix (a line rewritten into another, into several, or several lines collapsing into one). The rules are in spec 8.11 (with 3.13, 8.6, 8.8, 8.9, 8.10, 10.4, 12 and 15); the rationale is report 3.14 and decision 21. The design was proposed and agreed before implementation (project doc `claude/v0.12-design.md`); Olivier's answers: `room=max` by default with `room=fit` on request, 600 ms, cumulative steps with a reserved `label` key, `mark` implemented but off by default, and a per-version `lang`.
 
@@ -33,3 +33,22 @@ Firefox and Safari (not available): the morph relies on `ch`, `overflow: clip`, 
 ## 5. Documentation touched
 
 Spec (header, 3.13, 8.6, 8.8, 8.9, 8.10, new 8.11, 10.4, 12, 15); README (version, components table, example 05); design report (version, 3.6, new 3.14, 4.4, roadmap v0.12, decision 21); SKILL.md (structure, LT060, test table, two pitfalls); manual (slides "Code that changes" and "Morphing named segments", the components branch, diagnostics, cheat sheet, runtime contract; a `bound` segment in `programs/sum-to-n.scm`, inline so no line moves); example 05 (slide "A bug, fixed in place", file `versions/v0-bug.py`); todo. Version 0.12.0.
+
+## 6. Addendum, 0.12.1: tall code blocks scroll to their highlight, on screen and in the PDF
+
+Noticed while writing the morph's scrolling, then confirmed and reported before fixing.
+
+- **The bug.** `code.js` scrolled a `code` or `code-steps` block taller than its space with `line.offsetTop - clientHeight / 3`. The `offsetParent` of a line is the slide (`.lt-slide` is the first positioned ancestor), so the target was too large by the block's distance from the top of the slide. Measured on an 80-line file under a title and a paragraph: the highlighted line landed 76 px above the visible top instead of 144 px below it, at 3 of 4 steps, at every window size. In the examples and the manual, one slide was hit: the manual's "Extending Lattice: a plugin file", whose steps 1 and 2 showed dimmed code only.
+- **A second bug.** The PDF copies each slide with `cloneNode`, which does not keep scroll positions, so a scrolled block printed from its top (the plugin slide's last step printed without its highlighted lines). `code-morph` had the same problem.
+- **Fixes.** `code.js` measures the line against the block itself (bounding boxes divided by the slide scale, plus `scrollTop`), as `code-morph.js` does, and scrolls smoothly only on an animated step, at once otherwise (print and preview included). `snapshot` in `lattice.js` notes the scroll positions of the slide's elements while the copy still has the original's structure, and `print` restores them once the copy is in the document. Spec 8.8 now states the scrolling, 11.5 that copies keep scroll positions; changelog row 0.12.1.
+- **Verification.** New Chromium test `test_scrolled_code_shows_its_highlight_on_screen_and_in_print` (single steps, a jump, a reload, print copies, and a long `code-morph` whose change is near the end); it fails with either old file and passes with the fixes. 180 passed. Looked at: the plugin slide at each step, and a real `lattice pdf --steps all` of the test deck (every page shows its highlighted line a third of the way down).
+
+## 7. Documentation cleanup (no version change)
+
+Every live document was reread against the code and against its owner (SKILL.md, "Keeping the documentation coherent").
+
+- **Archived.** `implementation-report-2026-10-01.md` (0.6.0) and `implementation-report-2026-10-02.md` (0.7.0 to 0.11.0) moved to `docs/archive/`: their rules are in the spec, their reasons in the design report and their open items in the todo. `docs/archive/README.md` now lists the archive. SKILL.md gives the todo list, the latest report and the archive a row each in its documentation map, and makes archiving a step of the coherence pass and writing the report a step of the release.
+- **Fixed.** LT034 in spec 12 and the manual (it also covers an include in a list item or quote, and a detour that is not at the top level); the manual's component branch said Right walks through every family from the branch slide, which has no `next`, and its Code card named `code-morph`, whose slides follow the arrows in the Plots run; design report 3.4 said no layout moves, which trees and versioning drawings do; SKILL.md cited spec 15 for a rule of spec 8.2, gave a test time of twenty seconds (now about ninety) and split one pitfall in two.
+- **Removed duplication.** The todo no longer repeats the roadmap's versioning plans or SKILL.md's notes on `check_docs.py`, and drops an item about an archived file; its waiting items are in version order.
+- **Added.** SKILL.md setup: a preinstalled Chromium needs the matching Playwright release, or the browser tests skip without failing. A todo item: matplotlib's random SVG ids make every rebuild of a deck with plots differ (examples 02 and 03), against the reproducibility goal.
+

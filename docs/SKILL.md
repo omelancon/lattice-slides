@@ -18,6 +18,9 @@ This file is for contributors. It explains where things live, how to verify chan
 | `docs/design-report.md` | Why: goals and non-goals, design rationale (section 3), technology choices (5), the roadmap (6) and the decisions table (7) | You are about to make a design choice, or want to know what is planned |
 | `docs/SKILL.md` (this file) | How to work on the code: structure, setup, verification, pitfalls, release and documentation upkeep | Always, first |
 | `user_manual/manual.md` | The user manual, a Lattice deck: every feature shown live, with its syntax, options and keys | You changed anything user-visible: the manual must show it (built like the examples, checked by the suite) |
+| `docs/todo.md` | What waits on Olivier (things to look at or decide) and small items left for later; larger plans belong to the roadmap | You finish a task (add what is left open) or look for something to do |
+| `docs/implementation-report-*.md` | The record of the latest release: what was built, decided and verified, and what was not | You need the history of a recent change; write a new one for each release (see the last section) |
+| `docs/archive/` | Earlier plans, reading notes and implementation reports, kept as written (its `README.md` lists them) | You need the history behind an older feature; do not update these files |
 
 ## Setup
 
@@ -30,7 +33,7 @@ pytest                           # the full suite, including browser tests; must
 python scripts/build_examples.py # rebuilds examples/*/talk.html and user_manual/manual.html
 ```
 
-Python 3.10 or newer. Without Graphviz, animated graphs fall back to a NetworkX layout and the overview map is empty; without Chromium the browser tests and the PDF export test skip, so a green run without Chromium proves less than it seems.
+Python 3.10 or newer. Without Graphviz, animated graphs fall back to a NetworkX layout and the overview map is empty; without Chromium the browser tests and the PDF export test skip, so a green run without Chromium proves less than it seems. Playwright looks for the Chromium build of its own version: where a Chromium is preinstalled (a sandbox, a CI image), install the Playwright release that matches it, or the browser tests skip silently. Check that `pytest -rs` reports no skips.
 
 ## Project structure
 
@@ -74,7 +77,8 @@ examples/         seven decks with their built talk.html; they double as integra
 user_manual/      the user manual deck (manual.md, manual.html) with its demo sources and plugin
 scripts/          build_examples.py, snapshot.py (drive a deck in Chromium, take screenshots),
                   check_docs.py (mechanical documentation checks)
-docs/             this file, the spec, the design report, the todo list and the implementation reports
+docs/             this file, the spec, the design report, the todo list, the latest implementation report;
+                  archive/ holds earlier plans, notes and reports
 ```
 
 The build pipeline, in order: `Loader.load` (files, includes, slides, detours, ids) then `BodyBuilder.build` per slide, then `resolve_graph`, then `render_components` (which also compiles steps), then `check_steps` (LT053), then wiki-link title substitution, then `emit_html` or `emit_dir`. `lattice pdf` then opens the single-file output in Chromium with `?print` and prints the pages of `pdf_plan`. Errors stop the build between phases (`diags.raise_if_errors()`), so structural errors never trigger component execution.
@@ -107,7 +111,7 @@ Each of these was decided deliberately; the reasoning is in the report (sections
 
 ## Verification
 
-Run `pytest` after every change; it takes about twenty seconds. The suites:
+Run `pytest` after every change; it takes about a minute and a half, most of it in Chromium. The suites:
 
 | File | Covers |
 |---|---|
@@ -135,8 +139,8 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 ## Pitfalls
 
 - **Stale renders.** The cache key includes a hash of the Lattice sources, so library changes invalidate it; `--no-cache` or deleting `.lattice-cache/` forces a clean render when you doubt it.
-- **Container nesting.** An outer container needs more colons than its children (`::::` around `:::`). With equal counts, the first `:::` closes the outer container and the rest of the file parses oddly.
-- **Attribute values are strings.** Lists and mappings go in the YAML body of a block, not in `{...}`. Extra options of animation components are read as YAML scalars (spec 15).
+- **Container nesting.** An outer container needs more colons than its children (`::::` around `:::`). With equal counts, the first `:::` closes the outer container and the rest of the file parses oddly. A detour holding slides that use `::::` columns therefore needs `:::::` fences (see `examples/07-basic-block-versioning`).
+- **Attribute values are strings.** Lists and mappings go in the YAML body of a block, not in `{...}`. Extra options of animation components are read as YAML scalars (spec 8.2).
 - **DOT keywords.** `graph`, `node`, `edge`, `digraph`, `subgraph` and `strict` cannot be bare node names in `dot` blocks.
 - **Line-based references.** `code-steps` steps, `lines=` ranges and `meta["line"]` in traces point at line numbers. Editing a referenced file (for example `examples/04-custom-components/lattice_plugins.py`) can silently shift highlights; recheck those slides, or name the code with segment markers (spec 8.10), which move with the code.
 - **Segment markers are read everywhere.** A comment holding only `@word` (`/*@param*/`, or a line `// @ts-ignore`) is a segment marker; an unclosed one fails the build with LT022. `markers=false` on the block shows such text as written; the manual uses it to display the syntax.
@@ -147,7 +151,6 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 - **Versioning programs.** `tests/test_bbv.py` pins properties of the thesis figures (which versions exist, which tests disappear, how many return points), not exact drawings: the thesis took liberties with types and heuristics to keep its figures short, so the algorithm's real output differs in details. When changing `sbbv.py` or `lv.py`, rerun the example and look at the captions; a wrong cascade shows up as return points that flicker between frames.
 - **Intervals are only for the abstract interpreter.** `Specializer.type_of` strips them (`intervals = False`), so SBBV and ΛV contexts never carry one; a change to `prims.py` result rules must keep working without intervals.
 - **The drawing of `bbv.js` must never rescale between frames.** Its SVG keeps its aspect ratio, so anything that changes the canvas size (a panel growing with the queue, a caption wrapping to a second line) rescales the whole drawing. The panel has a fixed width, `.lt-ga-main` does not shrink, and the caption shrinks its text to fit the space left (`fitCaption`). Check both Chromium and Firefox after touching that layout; Firefox resolves these flex sizes differently.
-- **Container nesting again.** A detour holding slides that use `::::` columns needs `:::::` fences (see `examples/07-basic-block-versioning`).
 - **Quoted containers close real ones.** A `:::` line inside a fenced code block still closes an enclosing container of three colons: the container rule does not see the fence. A slide that shows container syntax inside a column needs `::::` columns and `:::::` around them (the manual's "Detours" and "Badges that wait for their turn" slides). The symptom is a later container reported out of place (LT034) or a column whose fragments vanish.
 - **Node elements are reused across frames.** `bbv.js` rewrites the class attribute of a node at every frame, including when it hides it; anything the node must keep (its origin colour) lives in the node record, never in the current classes. A colour that survives forward playback and vanishes after stepping back is this bug.
 - **Captions are marked up, not HTML.** The versioning and abstract interpretation captions carry the backtick spans of `bbv/rich.py` (spec 9.5); tests compare them through `rich.plain` or on the markup itself, and a note written in `sbbv.py`, `lv.py` or `absint.py` uses the helpers rather than f-strings of raw names and types.
@@ -158,20 +161,21 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 
 ## Release
 
-1. Bump the version in `src/lattice/__init__.py` and `pyproject.toml` (patch for fixes, minor for features).
+1. Bump the version in `src/lattice/__init__.py` and `pyproject.toml` (patch for fixes, minor for features), and in the introductions of the README, the spec, the report and the manual (`check_docs.py` enforces it).
 2. `pytest`, then `python scripts/build_examples.py`, then check screenshots of anything visual (the manual included).
-   (The version must also appear in the introductions of the README, the spec and the report; `check_docs.py` enforces it.)
-3. Run the documentation coherence pass below.
-4. Remove `.lattice-cache/`, `__pycache__/`, `*.egg-info/` and `.pytest_cache/`.
+3. Write the implementation report of the release, a `docs/implementation-report-*.md` named after its date (a patch release adds a section to the report of its minor version), and update `docs/todo.md` with what is left open.
+4. Run the documentation coherence pass below.
+5. Remove `.lattice-cache/`, `__pycache__/`, `*.egg-info/` and `.pytest_cache/`.
 
 ## Keeping the documentation coherent
 
 Do this after every major task (a feature, a fix that changes behavior, a release), not only when something looks wrong. Documentation drifts one small edit at a time, and each document is read by someone who trusts it.
 
-1. **Reread every document in full:** `README.md`, every file in `docs/`, `user_manual/manual.md`, and any README inside `examples/`. Skimming misses contradictions; they hide in examples and tables.
+1. **Reread every document in full:** `README.md`, every file in `docs/` except `docs/archive/`, `user_manual/manual.md`, and any README inside `examples/`. Skimming misses contradictions; they hide in examples and tables.
 2. **Check each statement against the code and against its owner** in the documentation map above. The spec owns behavior; the report owns rationale and plans; the README owns user-facing usage; this file owns contributor workflow.
 3. **Remove duplication.** When a fact appears in two places, keep it in its owner and replace the other occurrence with a reference (for example "see spec section 7.6"). A user-facing summary in the README is acceptable only if it links to the owning section and adds no facts of its own.
 4. **Fix contradictions in place.** Update the text that is wrong rather than appending corrections elsewhere. Spec section 15 is a changelog table that points to the amended sections; it must not hold rules found nowhere else.
 5. **Keep statuses aligned.** The version in `src/lattice/__init__.py` and `pyproject.toml`, the version named in the README and at the top of the spec and the report, and the roadmap (report section 6) must agree. The spec does not keep its own list of planned features; section 14 points to the roadmap.
 6. **Check references.** Run `python scripts/check_docs.py`. It verifies that cited sections, repository paths, component names, CLI commands and flags exist, that the diagnostic codes in the code match spec section 12, and that versions agree. It cannot judge prose, so it complements steps 1 to 5 and does not replace them.
-7. **Update this file** when the structure, setup, test suites or release steps change.
+7. **Archive what is no longer current.** When a new implementation report is written, the previous one moves to `docs/archive/` (`git mv`) once its rules live in the spec, its reasons in the report and its open items in the todo; add it to `docs/archive/README.md`. Archived files are history: do not update them, and do not cite them from the live documents except as history.
+8. **Update this file** when the structure, setup, test suites or release steps change.

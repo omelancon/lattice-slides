@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.12.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.12.1 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -743,6 +743,8 @@ A `ComponentError` raised by `render` becomes error LT022 at the block's locatio
 
 The exact option schemas are the pydantic `Options` models in `src/lattice/components/`.
 
+A `code` or `code-steps` block taller than its space scrolls. At each position that highlights something, the first highlighted line (or line holding a highlighted segment) is scrolled a third of the way down the block, smoothly on a single-step move and at once otherwise (`code-morph` does the same with its first changed row, section 8.11).
+
 ### 8.9 The `arrow` component
 
 An `arrow` draws an arrow over the current slide, pointing at one of its elements. It is the one component whose geometry is computed in the browser, because element boxes exist only there; the build still decides everything else (targets, directions, steps).
@@ -1018,7 +1020,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.12.0">
+  <meta name="generator" content="lattice 0.12.1">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -1131,7 +1133,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 - **Pages.** The tour (default: the main path; `main` also names it) is printed first, in order. Each slide gives one page per selected step: its `pdf` attribute (section 3.5) if present, else `--steps` (default `last`). `all` leaves out detour steps (section 6.4), which repeat the page before them.
 - **Appendix** (unless `--no-appendix`). Starting from the printed slides, breadth first, and then from each appendix slide in turn: every detour with slides not yet printed becomes a section; every branch option whose target is not yet printed becomes a section holding the target and the slides that follow it along `next`, up to a slide already printed; off-path root slides linked from a printed slide are collected in a final section, "Linked slides". Sections are lettered A, B, ... in that order.
 - **Links.** Wiki links, detour badges and branch options link to the first page of their target when it is printed (badges and options also show its page number) and become plain text otherwise. A badge with `badge=step` or `badge=next` is printed as it is at the printed step (section 3.9). A `next` badge is therefore never on a slide's last step (the default), and with `all`, which leaves out detour steps, a badge shown only at detour steps appears on no page; its detour is still printed in the appendix. Each appendix page names its section and links back to the page that leads to it.
-- **Rendering.** The command builds the single-file HTML and opens it in Chromium with `?print` at the design size. In print mode the runtime is passive (as the preview of section 7.5). `Lattice.print(plan)` renders each page of the plan with `animate: false`, then copies the slide into a static page: canvases become images, and ids inside the copy get a per-page suffix, with `url(#...)` and `href="#..."` references updated. Chromium prints the copies in one pass, one page per slide page, so the links above are links inside the PDF.
+- **Rendering.** The command builds the single-file HTML and opens it in Chromium with `?print` at the design size. In print mode the runtime is passive (as the preview of section 7.5). `Lattice.print(plan)` renders each page of the plan with `animate: false`, then copies the slide into a static page: canvases become images, and ids inside the copy get a per-page suffix, with `url(#...)` and `href="#..."` references updated. A copy keeps the scroll positions of the slide it was made from (a code block scrolled to its highlight). Chromium prints the copies in one pass, one page per slide page, so the links above are links inside the PDF.
 
 ---
 
@@ -1172,7 +1174,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT031 | error | More than one range on a timeline line |
 | LT032 | warning | Single-file output larger than 50 MB |
 | LT033 | error | Component track needs an `#id` |
-| LT034 | error | Include inside a container other than a detour |
+| LT034 | error | An include inside a container other than a detour, a list item or a block quote; a detour that is not at the top level of a slide body |
 | LT035 | error | Detour does not terminate with `back` |
 | LT036 | error | Option given both as attribute and in the YAML body |
 | LT040 | warning | Unknown front matter key |
@@ -1384,3 +1386,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.12 | `code-morph`: code whose text changes between positions, with versions (a language per version) or segment replacements; LT059, LT060 | 3.13, 8.8, 8.10, 8.11, 12 |
 | 0.12 | The `lt-relayout` event; arrows re-measure when a component moves content | 8.9, 10.4 |
 | 0.12 | Cached render results keep their anchors and warnings (LT058 and component warnings on cached builds) | 8.6 |
+| 0.12.1 | A scrolled code block brings its highlight into view (stated, and fixed: it scrolled too far); the PDF keeps scroll positions | 8.8, 11.5 |
