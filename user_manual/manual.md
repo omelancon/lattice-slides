@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.11.0
+author: Lattice 0.12.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -541,7 +541,7 @@ A placed badge with no detour to name, or one that breaks these rules, is error 
 A fenced block whose name is a registered component renders it; any other name is a code language. Pick a family, or keep pressing Right to see them all.
 
 ::: branch {layout=cards}
-- [[code-blocks|Code]] {key=c} code, code-steps, diff-steps
+- [[code-blocks|Code]] {key=c} code, code-steps, diff-steps, code-morph
 - [[plots|Plots and diagrams]] {key=l} plot, dot, math, arrow
 - [[graph-anim|Animations]] {key=a} graph, array, tree, grid
 - [[compiler-animations|Compiler animations]] {key=v} bbv-anim, bbv-cfg, abstract-interp-anim
@@ -789,6 +789,97 @@ steps:
     from: ""
     to_anchor: 30
     label: "to_anchor: 30"
+```
+
+# Code that changes {#code-morph .dense}
+
+:::: columns
+::: column {width=1fr}
+```code-morph {#mean lang=python title="mean" linenos=true}
+versions:
+  - {file: versions/v1.py, label: "v1: a loop"}
+  - code: |
+      def mean(xs):
+          if not xs:
+              raise ValueError("mean of an empty sequence")
+          total = 0
+          for x in xs:
+              total += x
+          return total / len(xs)
+    label: "an empty check"
+  - {file: versions/v2.py, label: "v2: sum"}
+```
+
+````markdown
+```code-morph {#mean lang=python title="mean"}
+versions:
+  - {file: versions/v1.py, label: "v1: a loop"}
+  - {code: "...", label: "an empty check"}
+  - {file: versions/v2.py, label: "v2: sum"}
+```
+````
+:::
+::: column {width=1fr}
+The text changes in place: tokens that survive glide to their new place, the others fade out or in. `versions:` is read as by `diff-steps`.
+
+| Option | Meaning |
+|---|---|
+| `room=fit` | Height of the current version (default `max`: the tallest, nothing below moves) |
+| `duration=900` | Milliseconds of one step (default 600) |
+| `mark=true` | Tint arriving tokens for a moment |
+| `linenos`, `title` | Numbers for the rows shown; a caption bar with the version's label |
+| `lang` in a version | That version in another language |
+:::
+::::
+
+# Morphing named segments {#morph-segments .dense}
+
+:::: columns
+::: column {width=1fr}
+```code-morph {#loop lang=scheme file="programs/sum-to-n.scm" lines=2-9 label="as written" mark=true}
+steps:
+  - bound: "(>= i n)"
+    label: "stop before n"
+  - i-init: "(i 1)"
+    label: "start at 1"
+```
+
+```code-morph {#tr lang=python}
+versions:
+  - code: |
+      def total(xs):
+          return sum(xs)
+  - code: |
+      (define (total xs)
+        (apply + xs))
+    lang: scheme
+```
+:::
+::: column {width=1fr}
+````markdown
+```code-morph {#loop lang=scheme
+     file="programs/sum-to-n.scm"}
+steps:
+  - bound: "(>= i n)"
+    label: "stop before n"
+  - i-init: "(i 1)"
+```
+````
+
+{.reveal}
+- The file is written once; each step replaces the text of named segments, and steps add up
+- An arrow at `bound` follows the segment as its text changes
+- A version with its own `lang` turns the code into another language
+:::
+::::
+
+```arrow {#morph-arrow to=bound to_anchor=right length=70 label=bound color=detour}
+```
+
+```timeline
+loop 1, reveal 1
+loop 2, reveal 2
+tr 1, reveal 3
 ```
 
 # Graph animations {#graph-anim}
@@ -1272,6 +1363,7 @@ Lattice.component("stack-anim", {
 - `show` must work for any position in any order: backward moves, the scrubber, reloads and the PDF export depend on it; `info.animate` is true only on single steps
 - `api.frames(store)` reads a frame store (`at(i)`, `count`); `api.goto(id)` jumps; `api.palette` reads theme tokens; `api.onResize(cb)` follows the slide scale; `Lattice.esc` escapes HTML, `Lattice.renderPanel(el, panel, keys)` draws a panel
 - No global key listeners; stop timers in `leave`
+- A runtime that moves text an arrow may point at dispatches `lt-relayout` on its element: arrows re-measure
 - `render` must be a pure function of its options, body, files and leader: results are cached
 
 # Diagnostics {#diagnostics .dense}
@@ -1326,6 +1418,7 @@ Lattice.component("stack-anim", {
 | LT049, LT053, LT054 | error | Timeline syntax; invalid `pdf` attribute; invalid detour step |
 | LT055, LT056, LT057 | error | `badge=step` or `badge=next` without a detour step; invalid `::detour-badge`; `.reveal-with` with no fragment before it |
 | LT058 | error | An id used twice on a slide: element ids, component ids, code segment names |
+| LT059, LT060 | warning | Two consecutive versions of a `code-morph` are identical; a character of a morph that is not one column wide |
 
 # Plugins and output {#diagnostics-output .dense}
 
@@ -1365,6 +1458,7 @@ Lattice.component("stack-anim", {
 | ` ```python {highlight=2} ` | Highlighted code |
 | ` ```code {file=... symbol=f follow=trace} ` | Code that follows an animation |
 | ` ```code-steps `, ` ```diff-steps ` | Walk through code, through versions |
+| ` ```code-morph ` + `versions:` or `steps:` | Code that changes in place |
 | ` ```plot {data=... x=... y=...} ` | A chart |
 | ` ```dot `, ` ```math `, ` ```arrow {to=id to_anchor=left} ` | A diagram, display math, an arrow |
 | `#\|@name\|# ... #\|@end\|#`, `# @name` in code | A named segment of code |

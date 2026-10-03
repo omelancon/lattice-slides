@@ -118,6 +118,37 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-diff-stat{float:right;margin-left:20px}
 .lt-diff-pane[hidden]{display:none}
 .lt-diff-pane{display:flex;flex-direction:column;min-height:0}
+/* code-morph (spec 8.11): units on a monospace grid (--r rows, --c columns from the origin of the text),
+   under a transparent copy of the current text; at rest it looks like a `code` block */
+.lt-morph-box{display:block}
+.lt-morph-stage{display:block;position:relative;box-sizing:content-box;padding:0 22px 0 26px;width:calc(var(--cols) * 1ch);height:calc(var(--h) * 1.5em);
+  overflow:clip;overflow-clip-margin:2px}
+.lt-morph-ln-on .lt-morph-stage{padding-left:calc(26px + 2.2em)}
+.lt-mt,.lt-morph-ln,.lt-morph-text{position:absolute;top:0;left:26px;white-space:pre}
+.lt-morph-ln-on .lt-mt,.lt-morph-ln-on .lt-morph-text{left:calc(26px + 2.2em)}
+.lt-mt,.lt-morph-ln{transform:translate(calc(var(--c, 0) * 1ch),calc(var(--r) * 1.5em))}
+@supports (transform:translateY(round(down, 1.5px, 1px))){ /* rows on whole pixels, as lines of text are */
+  .lt-mt,.lt-morph-ln{transform:translate(calc(var(--c, 0) * 1ch),round(down, calc(var(--r) * 1.5em), 1px))}}
+.lt-morph-ln{left:calc(26px - .4em);color:var(--lt-muted);opacity:.6;user-select:none}
+.lt-morph-toks{user-select:none}
+.lt-morph-text{color:transparent}
+.lt-mt.lt-mt-off,.lt-morph-ln.lt-mt-off{opacity:0;visibility:hidden}
+.lt-morph-label{float:right;margin-left:20px}
+.lt-morph-label-solo{float:none;margin-left:0}
+.lt-morph-play .lt-mt-stay{transition:transform calc(var(--lt-md) * .6) ease-in-out calc(var(--lt-md) * .2),
+  color calc(var(--lt-md) * .6) ease calc(var(--lt-md) * .2)}
+.lt-morph-play .lt-mt-out{transition:opacity calc(var(--lt-md) * .4) ease-out,visibility calc(var(--lt-md) * .4) linear}
+.lt-morph-play .lt-mt-in{transition:opacity calc(var(--lt-md) * .4) ease-in calc(var(--lt-md) * .6),
+  visibility calc(var(--lt-md) * .4) linear calc(var(--lt-md) * .6)}
+.lt-morph-play .lt-morph-stage{transition:height calc(var(--lt-md) * .6) ease-in-out calc(var(--lt-md) * .2)}
+.lt-morph-quick .lt-mt,.lt-morph-quick .lt-morph-ln{transition:transform var(--lt-mq) ease-out,color var(--lt-mq),
+  opacity var(--lt-mq),visibility var(--lt-mq) linear}
+.lt-morph-quick .lt-morph-stage{transition:height var(--lt-mq) ease-out}
+.lt-morph-quick .lt-mt-in{transition:opacity var(--lt-mq),visibility var(--lt-mq) linear}
+.lt-morph-still .lt-mt,.lt-morph-still .lt-morph-ln,.lt-morph-still .lt-morph-stage{transition:none !important;animation:none !important}
+.lt-mt-new{border-radius:3px;animation:lt-morph-mark 1.6s ease-out calc(var(--lt-md) * .6) both}
+@keyframes lt-morph-mark{from{background:var(--lt-add-bg);box-shadow:0 0 0 2px var(--lt-add-bg)}
+  to{background:transparent;box-shadow:0 0 0 2px transparent}}
 .lt-math-block{text-align:center;font-size:1.1em}
 .lt-error{color:var(--lt-warn);font-family:var(--lt-font-code);font-size:18px;border:2px dashed var(--lt-warn);padding:12px}
 

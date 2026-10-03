@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.11.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.12.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -65,7 +65,7 @@ A single HTML file embeds styles, scripts, data, images and math fonts, and incl
 
 ### 3.6 Built-in components
 
-Code with highlighting, stepping and diffs; plots with matplotlib, Vega-Lite and Plotly; Graphviz diagrams; math; animated graphs, arrays, trees and grids; basic block versioning and abstract interpretation run on small programs (3.10 and 3.11). The list with options is spec section 8.8, and `examples/` shows each one in use.
+Code with highlighting, stepping, diffs and morphing; plots with matplotlib, Vega-Lite and Plotly; Graphviz diagrams; math; animated graphs, arrays, trees and grids; basic block versioning and abstract interpretation run on small programs (3.10 and 3.11). The list with options is spec section 8.8, and `examples/` shows each one in use.
 
 ### 3.7 Trees move, graphs do not (spec sections 9.1 and 9.4)
 
@@ -111,6 +111,14 @@ An arrow is only as stable as its target. Line numbers and token positions (`.lt
 
 A versioning or abstract interpretation frame has three places that talk: the context lines inside the nodes, the caption under the drawing and the panel beside it. Plain text made them all look alike, and a caption such as "B: i: fx [0, 127] ∪ fx [1, 128] = fx [0, 128]" asked the audience to parse it. The three now share one vocabulary (decision 16): the operation of the frame comes first as a badge whose colour says what kind of event it is (specialization, removal or merge, growth, completion), versions are chips filled with the origin colour of their block so that a caption points at the node it names, variables, types and intervals each have a colour, and removed tests are struck through in the caption as in the node. The build still decides every word: `trace.py` writes the caption with a small inline markup and the runtime only turns spans into styled text, which keeps captions strings for the frame stores, the presenter view and the PDF. Inside the nodes the `;;` comment notation of the thesis stays, with the types aligned in a column, because telling a context from code at a glance is what the notation is for.
 
+### 3.14 Code that changes in place (spec section 8.11)
+
+A bug fix is a change of a few tokens, and the audience should see those tokens change, not a second pane replace the first. `code-morph` treats the code as units (words and single symbols) on a monospace grid: every unit is an element at a row and a column, and a version is a set of positions. Python aligns consecutive versions (lines first, then the units of each changed region, so a unit can survive onto another line), gives every surviving unit one identity, and ships the positions; the runtime sets two numbers per unit and lets CSS transitions do the motion (decision 21). Nothing is measured, since a monospace grid needs no measuring, and nothing is diffed in the browser.
+
+Spaces are gaps, not units. Indentation is then a column, so code that moves into a new block slides right instead of being deleted and retyped. Transitions rather than a frame loop because they continue from wherever an interrupted change left the units, which is what the skip keys need, and because the final values are the same inline values a direct `show` writes, so the end state cannot depend on the path. A transparent copy of the current text over the units keeps selection working and carries the segments, which therefore have their final boxes as soon as the position changes; arrows re-measure when the morph announces a move (`lt-relayout`) and glide with the code's own timing.
+
+Two authoring forms share that pipeline. `versions:` is the input of `diff-steps`, so a slide can switch between the static, marked-up view and the morph; a version may change language, matched on text alone. `file` with `steps:` writes the code once, with segment markers, and each step gives new text to named segments, so the surrounding code has a single source and the segment's name follows its text (an arrow at the bug points at the fix). By default the block keeps the height of its tallest version (`room=max`), so nothing else on the slide moves; `room=fit` is there for when the reserved space would look empty.
+
 ---
 
 ## 4. Use Cases
@@ -129,7 +137,7 @@ A workshop starts with a branch: the audience picks one of three approaches. Eac
 
 ### 4.4 Code walkthrough
 
-A code review talk includes the real source file with `code-steps`, highlighting the parts discussed in order, then `diff-steps` walks through the refactoring version by version. Because code is included from files, the repository's tests guarantee the slides show working code. (`examples/05-refactoring-a-cache`)
+A code review talk includes the real source file with `code-steps`, highlighting the parts discussed in order, then `diff-steps` walks through the refactoring version by version, and a bug is fixed in place with `code-morph`, the audience watching the faulty comparison turn into the right one. Because code is included from files, the repository's tests guarantee the slides show working code. (`examples/05-refactoring-a-cache`)
 
 ### 4.5 Data results presentation
 
@@ -194,6 +202,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.11 (done).** Named segments in code, written as markers in comments of the source, so arrows and highlights point at `i-init` rather than a line and a token; arrow anchors, so an arrow leaves and enters at a chosen side or angle.
 
+**v0.12 (done).** `code-morph`: code whose text changes in place between positions, tokens gliding to their new places, from versions (a language each, if wanted) or from new text for named segments of one file; arrows follow the code as it moves.
+
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
 - Plugin hooks beyond components (new syntax, generated slides, custom checks).
@@ -229,3 +239,4 @@ Decisions taken while writing the specification, and since.
 | 18 | Placed badges | `::detour-badge{ref=ID}`, a leaf directive, places a badge of a detour of the same slide anywhere (columns, callouts, lists); the detour stays at the top level and needs an explicit id. A placed badge replaces the default one; it inherits the label and mode and may override them, not the key, `at` or `blocking`. Errors are LT056. |
 | 19 | Named segments in code | Markers in comments of the source (`@NAME` ... `@end`), block comments of any language inline, line comments on lines of their own; removed from the display with the spaces they leave. Line numbers count the file as written. Segments are `.lt-seg` spans, one piece per line, the first with the id. Usable by arrows and in highlights. Ids unique per slide (LT058); `markers=false` to show markers. |
 | 20 | Arrow anchors | `from_anchor` and `to_anchor`: a side, `center` or an angle in degrees, with the convention of `angle`; the end sits where the ray from the box center at that angle leaves the box, and the curve leaves or enters along it. Cubic curves, reducing to the earlier quadratic without anchors. |
+| 21 | Code that changes | `code-morph`: units (words and single symbols, spaces as gaps) on a monospace grid, aligned in Python by lines then by the units of each changed region, matched on class and text (text alone across a language change); one element per surviving unit, placed with `ch` and line units and moved by CSS transitions in three phases (out, glide, in; 600 ms); a transparent text copy for selection and segments; `room=max` by default; `versions:` as `diff-steps`, or `file` with cumulative `steps:` replacing named segments; `lt-relayout` for arrows. `diff-steps` unchanged. |

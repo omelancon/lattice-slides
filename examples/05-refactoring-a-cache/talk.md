@@ -17,6 +17,34 @@ On a hit, the key moves to the right end. When full, the leftmost key is evicted
 The image is embedded in the HTML at build time, like everything else.
 :::
 
+# A bug, fixed in place {#bug}
+
+```code-morph {#fix lang=python file="versions/v0-bug.py" symbol=Cache.put label="v0: one item too many" title="put"}
+steps:
+  - full: "elif len(self.items) == self.capacity:"
+    label: "fix: evict when full"
+  - evict: "del self.items[self.order.pop(0)]"
+    label: "two lines become one"
+  - refresh: |
+      self.items[key] = value
+      self.order.remove(key)
+      self.order.append(key)
+      return
+    label: "one line becomes four"
+```
+
+```arrow {follow=fix to_anchor=right length=90}
+steps:
+  - {to: full, label: "> lets the cache grow past capacity"}
+  - {to: full, label: "== evicts before it grows"}
+  - {to: evict, label: inlined}
+  - {to: refresh, label: "an update needs no eviction"}
+```
+
+::: notes
+The code is written once, in `versions/v0-bug.py`; each step replaces the text of one named segment. Tokens that survive glide to their new place.
+:::
+
 # From a list to an OrderedDict, then to statistics {#diff}
 
 ```diff-steps {lang=python context=3}

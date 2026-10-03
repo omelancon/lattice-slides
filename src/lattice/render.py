@@ -36,7 +36,7 @@ class Cache:
         self.dir = directory
         self.enabled = enabled
 
-    def get(self, key: str) -> tuple[RenderResult, set[Path]] | None:
+    def get(self, key: str) -> tuple[RenderResult, set[Path], list] | None:
         if not self.enabled:
             return None
         f = self.dir / f"{key}.json"
@@ -48,19 +48,21 @@ class Cache:
                 if not Path(p).is_file() or file_hash(Path(p)) != h:
                     return None
             r = entry["result"]
-            result = RenderResult(r["html"], r["data"], r["positions"], r["meta"], requires=r.get("requires", []))
-            return result, {Path(p) for p in entry["deps"]}
+            result = RenderResult(r["html"], r["data"], r["positions"], r["meta"], requires=r.get("requires", []),
+                                  anchors=r.get("anchors", []))
+            return result, {Path(p) for p in entry["deps"]}, entry.get("warnings", [])
         except (OSError, ValueError, KeyError):
             return None
 
-    def put(self, key: str, result: RenderResult, deps: set[Path]) -> None:
+    def put(self, key: str, result: RenderResult, deps: set[Path], warnings: list | None = None) -> None:
         if not self.enabled:
             return
         try:
             self.dir.mkdir(parents=True, exist_ok=True)
             entry = {"deps": {str(p): file_hash(p) for p in deps if p.is_file()},
                      "result": {"html": result.html, "data": result.data, "positions": result.positions,
-                                "meta": result.meta, "requires": result.requires}}
+                                "meta": result.meta, "requires": result.requires, "anchors": result.anchors},
+                     "warnings": list(warnings or [])}
             (self.dir / f"{key}.json").write_text(json.dumps(entry), encoding="utf-8")
         except (OSError, TypeError, ValueError):
             pass
@@ -147,7 +149,9 @@ def render_slide_components(deck: Deck, slide: Slide, cache: Cache, palette: dic
                          keys.get(leader.index) if leader else None, palette])
         hit = cache.get(key)
         if hit is not None:
-            result, deps = hit
+            result, deps, warnings = hit
+            for code, message in warnings:  # warnings of the render that produced the entry (8.6)
+                diags.warn(code, message, b.loc)
         else:
             ctx = RenderContext(meta=deck.meta, slide_id=slide.id, instance_id=instance, root_dir=deck.root.parent,
                                 file_dir=b.file_dir, palette=palette,
@@ -168,7 +172,7 @@ def render_slide_components(deck: Deck, slide: Slide, cache: Cache, palette: dic
             deps = ctx.dependencies
             if not _valid_result(result, b, diags):
                 continue
-            cache.put(key, result, deps)
+            cache.put(key, result, deps, ctx.warnings)
         deck.dependencies.update(deps)
         results[b.index] = result
         keys[b.index] = key
@@ -261,6 +265,7 @@ def _check_arrow_targets(slide: Slide, blocks, results, diags: Diagnostics) -> N
         return
     ids = set(re.findall(r'\sid="([^"]+)"', slide.body_html + slide.title_html))
     ids |= {b.id for b in blocks if b.id}
+    ids |= {a for r in results.values() for a in r.anchors}  # segments of later positions (code-morph)
     for b in arrows:
         for ref in arrow_targets(results[b.index].data or {}):
             if ref not in ids:

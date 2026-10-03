@@ -39,5 +39,5 @@ def test_user_manual_builds_without_warnings(tmp_path, capsys):
     deck = json.loads(re.search(r'id="lt-deck">(.*?)</script>', (tmp_path / "manual.html").read_text(), re.S).group(1))
     used = {i["component"] for i in deck["instances"].values()}
     for name in ("graph-anim", "array-anim", "tree-anim", "grid-anim", "bbv-anim", "bbv-cfg", "abstract-interp-anim",
-                 "code-steps", "diff-steps", "plot", "arrow", "stack-anim"):
+                 "code-steps", "diff-steps", "code-morph", "plot", "arrow", "stack-anim"):
         assert name in used, name

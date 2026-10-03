@@ -776,3 +776,247 @@ def test_arrow_anchors_and_code_segments(tmp_path):
             pytest.skip("Chromium for Playwright is not installed")
         raise
     assert not errors
+
+
+MORPH_DECK = """
+# Fix {#fix}
+
+```code-morph {#m lang=python title="fix" linenos=true}
+versions:
+  - code: |
+      total = 0
+      for i in range(len(xs) - 1):
+          total += xs[i]
+      print(total)
+  - code: |
+      total = 0
+      for x in xs:
+          total += x
+      print(total)
+  - code: |
+      total = 0
+      for x in xs:
+          if x > 0:
+              total += x
+      print(total)
+  - code: |
+      total = sum(x for x in xs if x > 0)
+      print(total)
+```
+
+# Bound {#bound}
+
+```code-morph {#loop lang=scheme file="sum.scm" mark=true}
+steps:
+  - bound: "(>= i n)"
+  - init: "(i 1)"
+  - bound: |
+      (or (> i n)
+          (< n 0))
+```
+
+```arrow
+to: bound
+angle: 300
+```
+
+Text under the code.
+
+# Fit {#fit}
+
+```code-morph {#f room=fit}
+versions:
+  - code: "a = 1"
+  - code: "a = 1\\nb = 2\\nc = 3"
+```
+
+Text under the fitted code.
+"""
+
+MORPH_SCM = """\
+(define (sum-to n)
+  (let loop (#|@init|# (i 0) #|@end|#
+             (acc 0))
+    (if #|@bound|# (> i n) #|@end|#
+        acc
+        (loop (+ i 1) (+ acc i)))))
+"""
+
+# Geometry of a morph: every unit (box relative to the text, opacity, visibility, colour), the line numbers,
+# the text copy and its segments, the box of the code block and of the text under it, and the arrow.
+MORPH_GEOMETRY = """(sid) => {
+  const sec = document.querySelector(`#s-${CSS.escape(sid)}`);
+  const stage = sec.querySelector('.lt-morph-stage');
+  const o = stage.getBoundingClientRect();
+  const r1 = (x) => Math.round(x * 2) / 2;
+  const unit = (e) => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e), on = cs.visibility !== 'hidden';
+    return [e.textContent, on ? r1(r.left - o.left) : null, on ? r1(r.top - o.top) : null, cs.opacity, cs.visibility,
+            cs.color, cs.backgroundColor]; };  // a hidden unit has no place
+  const seg = sec.querySelector('.lt-morph-text #bound') || sec.querySelector('.lt-morph-text .lt-seg[id]');
+  const path = sec.querySelector('.lt-arrow-line');
+  const head = path && path.getAttribute('d') ? path.getPointAtLength(path.getTotalLength()) : null;
+  const below = sec.querySelector('.lt-body > p');
+  return {units: Array.from(sec.querySelectorAll('.lt-mt')).map(unit),
+          lines: Array.from(sec.querySelectorAll('.lt-morph-ln')).map(unit),
+          text: sec.querySelector('.lt-morph-text').textContent,
+          label: (sec.querySelector('.lt-morph-label') || {}).textContent || null,
+          seg: seg ? [seg.id, seg.textContent, r1(seg.getBoundingClientRect().left - o.left), r1(seg.getBoundingClientRect().top - o.top)] : null,
+          height: r1(stage.getBoundingClientRect().height),
+          overflow: Math.max(0, sec.querySelector('pre').scrollHeight - sec.querySelector('pre').clientHeight),
+          below: below ? r1(below.getBoundingClientRect().top) : null,
+          head: head ? [r1(head.x), r1(head.y)] : null};
+}"""
+
+
+MORPH_ANIMATIONS = """document.getAnimations().filter(a => a.effect && a.effect.target
+                       && a.effect.target.closest && a.effect.target.closest('.lt-morph')).length"""
+
+
+def _morph_page(tmp_path):
+    src = tmp_path / "talk.md"
+    src.write_text(MORPH_DECK)
+    (tmp_path / "sum.scm").write_text(MORPH_SCM)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    return out
+
+
+def test_code_morph_runtime_renders_positions_alike(tmp_path):
+    """Spec 8.11 and 10.2: a morph shows the same geometry at a position however it was reached: a fresh
+    load, a jump in any order, a single animated step (once finished), an interrupted step, backward
+    steps, skip playback; the arrow at a segment ends where a fresh load puts it."""
+    import random
+
+    out = _morph_page(tmp_path)
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            ctx = browser.new_context(viewport={"width": 1280, "height": 720})
+            page = ctx.new_page()
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type in ("error", "warning") else None)
+
+            fresh = {}
+            for sid, n in (("fix", 4), ("bound", 4), ("fit", 2)):
+                for k in range(n):
+                    page.goto(f"{out.as_uri()}#/{sid}/{k}")
+                    page.reload()
+                    page.wait_for_timeout(250)
+                    fresh[sid, k] = page.evaluate(MORPH_GEOMETRY, sid)
+            assert fresh["fix", 0]["text"].startswith("total = 0\nfor i in range")
+            assert fresh["fix", 3]["text"] == "total = sum(x for x in xs if x > 0)\nprint(total)"
+            assert [u[3] for u in fresh["fix", 3]["lines"]] == ["0.6", "0.6", "0", "0", "0"]
+            assert fresh["bound", 1]["seg"][:2] == ["bound", "(>= i n)"]
+            assert fresh["bound", 3]["seg"][1] == "(or (> i n)\n          (< n 0))".split("\n")[0]
+            assert fresh["fit", 0]["height"] < fresh["fit", 1]["height"]
+            assert all(g["overflow"] == 0 for g in fresh.values())  # hidden units take no room
+            assert fresh["fit", 0]["below"] < fresh["fit", 1]["below"]  # room=fit moves what follows
+            assert fresh["bound", 0]["head"] != fresh["bound", 1]["head"]  # the arrow follows its segment
+
+            def settle(ms=450):
+                page.evaluate("document.getAnimations().forEach(a => a.finish())")
+                page.wait_for_timeout(ms)  # the arrow's own glide is not a CSS transition
+
+            def now(sid):
+                return page.evaluate(MORPH_GEOMETRY, sid)
+
+            # jumps in a random order (no animation)
+            rnd = random.Random(7)
+            order = [(sid, k) for sid, n in (("fix", 4), ("bound", 4)) for k in range(n)]
+            rnd.shuffle(order)
+            last = None
+            for sid, k in order:
+                page.evaluate("(h) => { location.hash = h; }", f"#/{sid}/{k}")
+                page.wait_for_timeout(120)
+                if not (last and last[0] == sid and abs(last[1] - k) == 1):  # an adjacent step is a step
+                    assert page.evaluate(MORPH_ANIMATIONS) == 0, (last, sid, k)
+                last = (sid, k)
+                settle(350)
+                assert now(sid) == fresh[sid, k], (sid, k)
+
+            # single steps forward and backward, animated, then finished
+            for sid, n in (("fix", 4), ("bound", 4), ("fit", 2)):
+                page.evaluate("(h) => { location.hash = h; }", f"#/{sid}/0")
+                page.wait_for_timeout(150)
+                for k in range(1, n):
+                    page.keyboard.press("ArrowRight")
+                    assert page.evaluate(MORPH_ANIMATIONS) > 0, (sid, k)
+                    settle()
+                    assert now(sid) == fresh[sid, k], (sid, k, "forward")
+                for k in range(n - 2, -1, -1):
+                    page.keyboard.press("ArrowLeft")
+                    settle()
+                    assert now(sid) == fresh[sid, k], (sid, k, "backward")
+
+            # a step pressed in the middle of another: continues from where the units are, ends right
+            page.evaluate("(h) => { location.hash = h; }", "#/fix/0")
+            page.wait_for_timeout(150)
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(200)
+            page.keyboard.press("ArrowRight")
+            assert page.evaluate("document.querySelector('#s-fix .lt-morph-box').classList.contains('lt-morph-quick')")
+            settle()
+            assert now("fix") == fresh["fix", 2]
+
+            # skip playback (several steps in rapid succession)
+            page.evaluate("(h) => { location.hash = h; }", "#/bound/0")
+            page.wait_for_timeout(150)
+            page.evaluate("Lattice.actions()['last-step']()")
+            page.wait_for_timeout(400)
+            settle()
+            assert page.evaluate("Lattice.state().cur") == {"slide": "bound", "step": 3}
+            assert now("bound") == fresh["bound", 3]
+
+            # reduced motion: steps are placed directly
+            page.emulate_media(reduced_motion="reduce")
+            page.evaluate("(h) => { location.hash = h; }", "#/fix/0")
+            page.wait_for_timeout(150)
+            page.keyboard.press("ArrowRight")
+            assert page.evaluate(MORPH_ANIMATIONS) == 0
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
+def test_code_morph_in_preview_and_print(tmp_path):
+    """Passive windows (spec 7.5, 11.5) render a morph position directly, without animation."""
+    out = _morph_page(tmp_path)
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(f"{out.as_uri()}#/fix/2")
+            page.reload()
+            page.wait_for_timeout(250)
+            want = page.evaluate(MORPH_GEOMETRY, "fix")
+            page.goto(out.as_uri() + "?preview")
+            page.wait_for_timeout(250)
+            page.evaluate("window.postMessage({lattice: 'preview', slide: 'fix', step: 1}, '*')")
+            page.wait_for_timeout(100)
+            page.evaluate("window.postMessage({lattice: 'preview', slide: 'fix', step: 2}, '*')")
+            page.wait_for_timeout(150)
+            assert page.evaluate(MORPH_ANIMATIONS) == 0
+            assert page.evaluate(MORPH_GEOMETRY, "fix") == want
+            page.goto(out.as_uri() + "?print")
+            page.wait_for_timeout(250)
+            plan = {"title": "t", "pageOf": {}, "sections": [],
+                    "pages": [{"slide": "fix", "step": 1, "n": 1}, {"slide": "fix", "step": 2, "n": 2}]}
+            assert page.evaluate("plan => Lattice.print(plan)", plan) == 2
+            printed = page.evaluate("""() => Array.from(document.querySelectorAll('#lt-print-pages .lt-morph-text'))
+                                       .map(e => e.textContent)""")
+            assert printed[1] == want["text"] and printed[0] != printed[1]
+            hidden = page.evaluate("""() => Array.from(document.querySelectorAll('#lt-page-2 .lt-mt'))
+                                      .filter(e => getComputedStyle(e).visibility === 'hidden').length""")
+            assert hidden == sum(1 for u in want["units"] if u[4] == "hidden")
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors

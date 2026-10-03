@@ -121,6 +121,7 @@ class RenderContext:
         self._diags = diags
         self.frames_config = frames_config
         self.dependencies: set[Path] = set()
+        self.warnings: list[tuple[str, str]] = []
         self.seed = int(hashlib.sha256(instance_id.encode()).hexdigest()[:8], 16)
 
     # -- files
@@ -156,8 +157,11 @@ class RenderContext:
         return layout(graph, engine=engine, seed=self.seed, **kw)
 
     # -- diagnostics
-    def warn(self, message: str) -> None:
-        self._diags.warn("LT046", message, self.loc)
+    def warn(self, message: str, code: str = "LT046") -> None:
+        """A warning at the block's location (LT046; built-in components pass their own code). Warnings are
+        kept with a cached result and reported again when it is reused (spec 8.6)."""
+        self.warnings.append((code, message))
+        self._diags.warn(code, message, self.loc)
 
 
 def cache_key(parts: list[Any]) -> str:

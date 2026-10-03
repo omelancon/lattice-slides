@@ -1,6 +1,6 @@
 ---
 name: lattice-development
-description: Onboarding and working rules for the Lattice codebase, a Python library that compiles Markdown into non-linear HTML slide decks for computer science talks (slide graph with detours, branches and links; animated graph, array, tree and grid traces; basic block versioning and abstract interpretation animations; code stepping; plots; presenter view; PDF export). Use this skill before any work in the Lattice repository, even small edits, including changing the parser, graph resolution, components, the JavaScript runtime, themes, examples, tests or documentation, adding a component or diagnostic, fixing a rendering bug, preparing a release, or answering questions about how Lattice works internally.
+description: Onboarding and working rules for the Lattice codebase, a Python library that compiles Markdown into non-linear HTML slide decks for computer science talks (slide graph with detours, branches and links; animated graph, array, tree and grid traces; basic block versioning and abstract interpretation animations; code stepping and morphing; plots; presenter view; PDF export). Use this skill before any work in the Lattice repository, even small edits, including changing the parser, graph resolution, components, the JavaScript runtime, themes, examples, tests or documentation, adding a component or diagnostic, fixing a rendering bug, preparing a release, or answering questions about how Lattice works internally.
 ---
 
 # Working on Lattice
@@ -14,7 +14,7 @@ This file is for contributors. It explains where things live, how to verify chan
 | Document | Owns | Read it when |
 |---|---|---|
 | `README.md` | User-facing usage: install, CLI, syntax cheat sheet, keys, examples list, release status | You need to know what users see, or you changed anything user-visible |
-| `docs/spec.md` | The normative definition: grammar (section 3), Deck model (4), graph resolution (5), steps, timelines and detour steps (6), navigation state machine (7), Python component contract (8, the `arrow` component in 8.9, code segments in 8.10), frames (9), JS runtime contract (10), output format (11), diagnostics (12), changes since draft 1 (15) | Before changing behavior. The spec wins over every other document |
+| `docs/spec.md` | The normative definition: grammar (section 3), Deck model (4), graph resolution (5), steps, timelines and detour steps (6), navigation state machine (7), Python component contract (8, the `arrow` component in 8.9, code segments in 8.10, `code-morph` in 8.11), frames (9), JS runtime contract (10), output format (11), diagnostics (12), changes since draft 1 (15) | Before changing behavior. The spec wins over every other document |
 | `docs/design-report.md` | Why: goals and non-goals, design rationale (section 3), technology choices (5), the roadmap (6) and the decisions table (7) | You are about to make a design choice, or want to know what is planned |
 | `docs/SKILL.md` (this file) | How to work on the code: structure, setup, verification, pitfalls, release and documentation upkeep | Always, first |
 | `user_manual/manual.md` | The user manual, a Lattice deck: every feature shown live, with its syntax, options and keys | You changed anything user-visible: the manual must show it (built like the examples, checked by the suite) |
@@ -59,13 +59,15 @@ src/lattice/
   themes.py       theme table: CSS file, Pygments style, palette for components
   server.py       dev server: polling watcher and server-sent events for reload
   components/     base.py (contract, registry, RenderContext), code.py, segments.py (segment markers in code),
-                  scheme.py (the Scheme highlighting filter), visual.py (plot, dot, math, arrow), animations.py, bbv.py
+                  morph.py (code-morph: units, alignment, segment replacement), scheme.py (the Scheme highlighting
+                  filter), visual.py (plot, dot, math, arrow), animations.py, bbv.py
   runtime/
     lattice.js    navigation state machine (with the structural predecessor, skip playback and detour
                   steps), reveal and badge visibility per step, overlays, presenter view (preview,
                   scrubber, keybindings), print mode, component host
     lattice.css   layout and component styles; themes/*.css hold custom properties only
-    components/   one runtime per animated or interactive component (arrow.js measures element boxes)
+    components/   one runtime per animated or interactive component (arrow.js measures element boxes;
+                  code-morph.js places units on a grid and moves them with CSS transitions)
     vendor/       KaTeX, Vega, Vega-Lite, Plotly (with licenses), embedded only when used
 tests/            pytest suites (see Verification)
 examples/         seven decks with their built talk.html; they double as integration tests
@@ -89,13 +91,13 @@ Each of these was decided deliberately; the reasoning is in the report (sections
 - **Registered components take precedence over Pygments lexers** (spec 3.13). Never register a component under a common language name; that is why the diff component is `diff-steps`.
 - **Output is self-contained.** Images, fonts, data and libraries are embedded in single-file mode. Heavy libraries are embedded only when an instance requires them (`RenderResult.requires`).
 - **Columns contain their content.** Nothing may paint outside its column or below the slide body; `tests/test_layout.py` checks every example slide at its first and last step. A component option such as `height` must be honoured in every layout mode (the animation panels switch to a column under 760 px of container width).
-- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT058. New code, new row in spec section 12.
+- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT060. New code, new row in spec section 12.
 
 ## Common tasks
 
 **Add a built-in component.** Write the class in `components/` (spec 8.2), register it in `components/__init__.py`, add a runtime in `runtime/components/` if it has positions or interactivity (spec 10), add styles to `lattice.css` using theme custom properties, add a row to spec 8.8 and to the README components table, add a test, and use it in an example so the layout test covers it.
 
-**Add a diagnostic.** Emit it through `diags.error` or `diags.warn` with a new code, add the row to spec section 12, and add a test asserting the code appears.
+**Add a diagnostic.** Emit it through `diags.error` or `diags.warn` with a new code (a component's warning through `ctx.warn(msg, code)`, so that a cached build reports it again), add the row to spec section 12, and add a test asserting the code appears.
 
 **Change the syntax or semantics.** Change the spec section that owns the rule first, then the code, then the README summary if users see it. Add a row to the changelog table of spec section 15 pointing to that section.
 
@@ -115,9 +117,10 @@ Run `pytest` after every change; it takes about twenty seconds. The suites:
 | `test_bbv.py` | the type lattice and intervals, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), abstract interpretation against figures 1, 2 and 4, frames, layout, the components |
 | `test_output.py` | plot backends, diff-steps, the arrow component, images, directory output, overview map, library inclusion |
 | `test_segments.py` | code segment markers (both forms, spaces, line numbers, errors), wrapping of Pygments output, segment highlights, LT058, arrow anchor options |
+| `test_morph.py` | `code-morph` at build time: units and alignment (every version rebuilt from the data, survivors across lines, moves, tabs, a language change), the steps form (cumulative replacements, indentation, removed lines, nesting errors), options, LT059, LT060, the cache |
 | `test_pdf.py` | `pdf` steps and LT053, the page plan (tour, appendix, back links), a real export in Chromium |
 | `test_cli.py` | CLI commands, building every example, the user manual building without warnings and using every component |
-| `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys, detour steps, badges that wait for their detour step, placed in columns), the presenter preview, scrubber and keybindings, the arrow geometry (anchors, segments as targets), the tree, grid, versioning and abstract interpretation runtimes, in Chromium |
+| `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys, detour steps, badges that wait for their detour step, placed in columns), the presenter preview, scrubber and keybindings, the arrow geometry (anchors, segments as targets), the tree, grid, versioning and abstract interpretation runtimes, `code-morph` (the same geometry however a position is reached: fresh load, jumps, animated, interrupted and skipped steps, preview, print; an arrow following a segment), in Chromium |
 | `test_layout.py` | no content spills out of a column or below the slide body, at the first and last step of every slide of the examples and the manual |
 
 Tests prove structure, not appearance. After any visual change (CSS, runtime rendering, a component's HTML, an example), rebuild the examples and look at screenshots of the affected slides:
@@ -149,6 +152,8 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 - **Node elements are reused across frames.** `bbv.js` rewrites the class attribute of a node at every frame, including when it hides it; anything the node must keep (its origin colour) lives in the node record, never in the current classes. A colour that survives forward playback and vanishes after stepping back is this bug.
 - **Captions are marked up, not HTML.** The versioning and abstract interpretation captions carry the backtick spans of `bbv/rich.py` (spec 9.5); tests compare them through `rich.plain` or on the markup itself, and a note written in `sbbv.py`, `lv.py` or `absint.py` uses the helpers rather than f-strings of raw names and types.
 - **Arrow targets are measured, not styled.** `arrow.js` reads `getBoundingClientRect` of the target's contents and draws in slide units; a change to `.lt-slide` positioning or to how the viewport is scaled (`fit`) must keep `test_arrow_runtime_points_at_its_targets` green. The classes of its SVG are `lt-arrow-box`, `lt-arrow-line` and `lt-arrow-text`: `.lt-arrow` already belongs to the graph animation's arrowheads.
+- **Morph units are placed, not laid out.** A `code-morph` unit sits at `--c` columns (`ch`) and `--r` rows (`1.5em`, the line height of `.lt-code pre`) from the origin of the text; a change to the font, the line height or the padding of `.lt-code` must be mirrored in the `.lt-morph-*` rules of `lattice.css` (the stage is `content-box`, against the global `border-box`), or the block stops looking like a `code` block at rest. A unit that is hidden keeps its last position; the stage clips (`overflow: clip`) so that it never adds scrolling. Compare a morph and a `code` block of the same text in a screenshot after such a change.
+- **Arrows re-measure on `lt-relayout`.** A runtime that moves content without changing its box dispatches it (spec 10.4); `arrow.js` handles it in a microtask, after every `show` of the step. A new component that moves text an arrow may point at should dispatch it too.
 - **Writing style.** The project owner avoids em dashes in prose; use colons, commas or parentheses.
 
 ## Release

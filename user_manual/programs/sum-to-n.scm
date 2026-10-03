@@ -3,7 +3,7 @@
   (let loop (#|@i-init|# (i 0) #|@end|#
              (acc 0))
     #|@body|#
-    (if (> i n)
+    (if #|@bound|# (> i n) #|@end|#
         acc
         (loop (+ i 1) (+ acc i)))
     #|@end|#))

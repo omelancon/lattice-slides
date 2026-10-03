@@ -140,6 +140,7 @@
   }
 
   function draw(inst, g) {
+    inst.drawn = g;
     const { tail, head, c1, c2 } = g;
     const f = (p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
     inst.path.setAttribute("d", `M${f(tail)} C${f(c1)} ${f(c2)} ${f(head)}`);
@@ -163,7 +164,8 @@
       label: Object.assign({}, b.label, pt(a.label, b.label)), text: b.text };
   }
 
-  function update(inst, animate) {
+  // `timing` ({delay, duration} in ms, from an `lt-relayout` event) makes the glide follow the content.
+  function update(inst, animate, timing) {
     const step = inst.steps[Math.max(0, Math.min(inst.position, inst.steps.length - 1))];
     const svg = inst.svg;
     svg.setAttribute("viewBox", `0 0 ${inst.section.offsetWidth} ${inst.section.offsetHeight}`);
@@ -171,12 +173,13 @@
     cancelAnimationFrame(inst.raf);
     svg.style.visibility = g ? "" : "hidden";
     if (!g) return;
-    if (animate && inst.last) {
-      const from = inst.last;
-      const t0 = performance.now();
+    if (animate && (inst.drawn || inst.last)) {
+      const from = inst.drawn || inst.last; // from what is on screen, even halfway through a glide
+      const t0 = performance.now() + ((timing && timing.delay) || 0);
+      const ms = (timing && timing.duration) || TWEEN_MS;
       const frame = (now) => {
-        const t = Math.min(1, (now - t0) / TWEEN_MS);
-        const e = 1 - (1 - t) * (1 - t);
+        const t = Math.max(0, Math.min(1, (now - t0) / ms));
+        const e = timing ? (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2) : 1 - (1 - t) * (1 - t);
         draw(inst, mix(from, g, e));
         if (t < 1) inst.raf = requestAnimationFrame(frame);
       };
@@ -210,6 +213,12 @@
         if (body) inst.observer.observe(body);
       }
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+      // a component moved content of the slide (a code-morph changing its text, spec 10.4)
+      // (after every show of this step, so that the arrow's own step, if any, is the one measured)
+      section.addEventListener("lt-relayout", (e) => {
+        const d = e.detail || {};
+        queueMicrotask(() => { if (!section.hidden) update(inst, !!d.animate, d.timing); });
+      });
       return inst;
     },
     show(inst, position, info) {

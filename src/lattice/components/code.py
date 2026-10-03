@@ -4,6 +4,7 @@ from __future__ import annotations
 import ast
 import html
 import re
+from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -226,6 +227,36 @@ def _highlight_lines(code: str, lang: str) -> list[str]:
     return body.split("\n") if code else []
 
 
+@dataclass
+class Version:
+    """One entry of a ``versions:`` list (``diff-steps``, ``code-morph``), as written."""
+    text: str
+    label: str           # the label given, else the file name or "version N"
+    explicit: bool       # whether the label was given
+    lang: str | None     # a language of its own (``code-morph`` only), else None
+    where: str           # prefix of marker error messages: "FILE" or "version N, line"
+
+
+def read_versions(versions: list, ctx) -> list[Version]:
+    """Read a ``versions:`` list: file paths, or mappings with ``file`` or ``code`` and an optional
+    ``label`` (and ``lang``, which only ``code-morph`` uses)."""
+    out = []
+    for i, v in enumerate(versions):
+        if isinstance(v, str):
+            v = {"file": v}
+        lang = v.get("lang")
+        lang = None if lang is None else str(lang)
+        if "file" in v:
+            text = read_source_file(v["file"], ctx)
+            out.append(Version(text, v.get("label", v["file"]), "label" in v, lang, v["file"]))
+        elif "code" in v:
+            out.append(Version(str(v["code"]), v.get("label", f"version {i + 1}"), "label" in v, lang,
+                               f"version {i + 1}, line"))
+        else:
+            raise ComponentError("each version is a file path, or a mapping with 'file' or 'code'")
+    return out
+
+
 @register("diff-steps")
 class Diff(Component):
     """Step through successive versions of a snippet; each step marks what changed."""
@@ -239,18 +270,9 @@ class Diff(Component):
 
         if len(opts.versions) < 2:
             raise ComponentError("diff needs at least two versions")
-        texts, labels = [], []
-        for i, v in enumerate(opts.versions):
-            if isinstance(v, str):
-                v = {"file": v}
-            if "file" in v:
-                texts.append(self._clean(ctx.path(v["file"]).read_text(encoding="utf-8"), opts, v["file"]))
-                labels.append(v.get("label", v["file"]))
-            elif "code" in v:
-                texts.append(self._clean(str(v["code"]), opts, f"version {i + 1}, line"))
-                labels.append(v.get("label", f"version {i + 1}"))
-            else:
-                raise ComponentError("each version is a file path, or a mapping with 'file' or 'code'")
+        loaded = read_versions(opts.versions, ctx)
+        texts = [self._clean(v.text, opts, v.where) for v in loaded]
+        labels = [v.label for v in loaded]
         lines = [t.split("\n") if t else [] for t in texts]
         hl = [_highlight_lines(t, opts.lang) for t in texts]
         panes = []

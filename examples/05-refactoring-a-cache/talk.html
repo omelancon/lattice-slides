@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.11.0">
+<meta name="generator" content="lattice 0.12.0">
 <title>Refactoring a cache</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -126,6 +126,37 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-diff-stat{float:right;margin-left:20px}
 .lt-diff-pane[hidden]{display:none}
 .lt-diff-pane{display:flex;flex-direction:column;min-height:0}
+/* code-morph (spec 8.11): units on a monospace grid (--r rows, --c columns from the origin of the text),
+   under a transparent copy of the current text; at rest it looks like a `code` block */
+.lt-morph-box{display:block}
+.lt-morph-stage{display:block;position:relative;box-sizing:content-box;padding:0 22px 0 26px;width:calc(var(--cols) * 1ch);height:calc(var(--h) * 1.5em);
+  overflow:clip;overflow-clip-margin:2px}
+.lt-morph-ln-on .lt-morph-stage{padding-left:calc(26px + 2.2em)}
+.lt-mt,.lt-morph-ln,.lt-morph-text{position:absolute;top:0;left:26px;white-space:pre}
+.lt-morph-ln-on .lt-mt,.lt-morph-ln-on .lt-morph-text{left:calc(26px + 2.2em)}
+.lt-mt,.lt-morph-ln{transform:translate(calc(var(--c, 0) * 1ch),calc(var(--r) * 1.5em))}
+@supports (transform:translateY(round(down, 1.5px, 1px))){ /* rows on whole pixels, as lines of text are */
+  .lt-mt,.lt-morph-ln{transform:translate(calc(var(--c, 0) * 1ch),round(down, calc(var(--r) * 1.5em), 1px))}}
+.lt-morph-ln{left:calc(26px - .4em);color:var(--lt-muted);opacity:.6;user-select:none}
+.lt-morph-toks{user-select:none}
+.lt-morph-text{color:transparent}
+.lt-mt.lt-mt-off,.lt-morph-ln.lt-mt-off{opacity:0;visibility:hidden}
+.lt-morph-label{float:right;margin-left:20px}
+.lt-morph-label-solo{float:none;margin-left:0}
+.lt-morph-play .lt-mt-stay{transition:transform calc(var(--lt-md) * .6) ease-in-out calc(var(--lt-md) * .2),
+  color calc(var(--lt-md) * .6) ease calc(var(--lt-md) * .2)}
+.lt-morph-play .lt-mt-out{transition:opacity calc(var(--lt-md) * .4) ease-out,visibility calc(var(--lt-md) * .4) linear}
+.lt-morph-play .lt-mt-in{transition:opacity calc(var(--lt-md) * .4) ease-in calc(var(--lt-md) * .6),
+  visibility calc(var(--lt-md) * .4) linear calc(var(--lt-md) * .6)}
+.lt-morph-play .lt-morph-stage{transition:height calc(var(--lt-md) * .6) ease-in-out calc(var(--lt-md) * .2)}
+.lt-morph-quick .lt-mt,.lt-morph-quick .lt-morph-ln{transition:transform var(--lt-mq) ease-out,color var(--lt-mq),
+  opacity var(--lt-mq),visibility var(--lt-mq) linear}
+.lt-morph-quick .lt-morph-stage{transition:height var(--lt-mq) ease-out}
+.lt-morph-quick .lt-mt-in{transition:opacity var(--lt-mq),visibility var(--lt-mq) linear}
+.lt-morph-still .lt-mt,.lt-morph-still .lt-morph-ln,.lt-morph-still .lt-morph-stage{transition:none !important;animation:none !important}
+.lt-mt-new{border-radius:3px;animation:lt-morph-mark 1.6s ease-out calc(var(--lt-md) * .6) both}
+@keyframes lt-morph-mark{from{background:var(--lt-add-bg);box-shadow:0 0 0 2px var(--lt-add-bg)}
+  to{background:transparent;box-shadow:0 0 0 2px transparent}}
 .lt-math-block{text-align:center;font-size:1.1em}
 .lt-error{color:var(--lt-warn);font-family:var(--lt-font-code);font-size:18px;border:2px dashed var(--lt-warn);padding:12px}
 
@@ -540,6 +571,14 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <section class="lt-slide layout-default" id="s-idea" data-slide="idea" hidden><header class="lt-head"><h1 class="lt-title">What an LRU cache keeps</h1></header><div class="lt-body"><p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1NjAgMTUwIiBmb250LWZhbWlseT0iSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiI+CiAgPHRleHQgeD0iMTAiIHk9IjI0IiBmaWxsPSIjNWQ2Nzc4Ij5sZWFzdCByZWNlbnRseSB1c2VkPC90ZXh0PgogIDx0ZXh0IHg9IjU1MCIgeT0iMjQiIGZpbGw9IiM1ZDY3NzgiIHRleHQtYW5jaG9yPSJlbmQiPm1vc3QgcmVjZW50bHkgdXNlZDwvdGV4dD4KICA8ZyBzdHJva2U9IiMwYjZlN2YiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0iI2Q1ZWNlZiI+CiAgICA8cmVjdCB4PSIxMCIgeT0iNTAiIHdpZHRoPSI5MCIgaGVpZ2h0PSI1NiIgcng9IjgiLz48cmVjdCB4PSIxMjAiIHk9IjUwIiB3aWR0aD0iOTAiIGhlaWdodD0iNTYiIHJ4PSI4Ii8+CiAgICA8cmVjdCB4PSIyMzAiIHk9IjUwIiB3aWR0aD0iOTAiIGhlaWdodD0iNTYiIHJ4PSI4Ii8+PHJlY3QgeD0iMzQwIiB5PSI1MCIgd2lkdGg9IjkwIiBoZWlnaHQ9IjU2IiByeD0iOCIvPgogICAgPHJlY3QgeD0iNDUwIiB5PSI1MCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI1NiIgcng9IjgiIGZpbGw9IiNmYmVlZGQiIHN0cm9rZT0iI2M4NzQxYSIvPgogIDwvZz4KICA8ZyBmaWxsPSIjMWQyNDMzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4KICAgIDx0ZXh0IHg9IjU1IiB5PSI4NCI+azc8L3RleHQ+PHRleHQgeD0iMTY1IiB5PSI4NCI+azI8L3RleHQ+PHRleHQgeD0iMjc1IiB5PSI4NCI+azk8L3RleHQ+CiAgICA8dGV4dCB4PSIzODUiIHk9Ijg0Ij5rNDwvdGV4dD48dGV4dCB4PSI1MDAiIHk9Ijg0Ij5rMTwvdGV4dD4KICA8L2c+CiAgPHRleHQgeD0iNTUiIHk9IjEzNiIgZmlsbD0iI2IyM2E0OCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+ZXZpY3RlZCBuZXh0PC90ZXh0PgogIDx0ZXh0IHg9IjUwMCIgeT0iMTM2IiBmaWxsPSIjYzg3NDFhIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5qdXN0IHVzZWQ8L3RleHQ+Cjwvc3ZnPgo=" alt="Keys ordered from least to most recently used" /></p>
 <p>On a hit, the key moves to the right end. When full, the leftmost key is evicted.</p>
 </div></section>
+<section class="lt-slide layout-default" id="s-bug" data-slide="bug" hidden><header class="lt-head"><h1 class="lt-title">A bug, fixed in place</h1></header><div class="lt-body"><div class="lt-c lt-c-code-morph" data-component="code-morph" data-instance="bug/fix"><div class="lt-code lt-morph" data-lang="python"><div class="lt-code-title">put<span class="lt-morph-label">v0: one item too many</span></div><pre><code class="lt-morph-box"><span class="lt-morph-stage" style="--h:10;--cols:46"><span class="lt-morph-toks" aria-hidden="true"><span class="lt-mt k" style="--r:0;--c:4">def</span><span class="lt-mt nf" style="--r:0;--c:8">put</span><span class="lt-mt p" style="--r:0;--c:11">(</span><span class="lt-mt bp" style="--r:0;--c:12">self</span><span class="lt-mt p" style="--r:0;--c:16">,</span><span class="lt-mt n" style="--r:0;--c:18">key</span><span class="lt-mt p" style="--r:0;--c:21">,</span><span class="lt-mt n" style="--r:0;--c:23">value</span><span class="lt-mt p" style="--r:0;--c:28">)</span><span class="lt-mt p" style="--r:0;--c:29">:</span><span class="lt-mt k" style="--r:1;--c:8">if</span><span class="lt-mt n" style="--r:1;--c:11">key</span><span class="lt-mt ow" style="--r:1;--c:15">in</span><span class="lt-mt bp" style="--r:1;--c:18">self</span><span class="lt-mt o" style="--r:1;--c:22">.</span><span class="lt-mt n" style="--r:1;--c:23">items</span><span class="lt-mt p" style="--r:1;--c:28">:</span><span class="lt-mt bp" style="--r:2;--c:12">self</span><span class="lt-mt o" style="--r:2;--c:16">.</span><span class="lt-mt n" style="--r:2;--c:17">order</span><span class="lt-mt o" style="--r:2;--c:22">.</span><span class="lt-mt n" style="--r:2;--c:23">remove</span><span class="lt-mt p" style="--r:2;--c:29">(</span><span class="lt-mt n" style="--r:2;--c:30">key</span><span class="lt-mt p" style="--r:2;--c:33">)</span><span class="lt-mt k" style="--r:3;--c:8">elif</span><span class="lt-mt nb" style="--r:3;--c:13">len</span><span class="lt-mt p" style="--r:3;--c:16">(</span><span class="lt-mt bp" style="--r:3;--c:17">self</span><span class="lt-mt o" style="--r:3;--c:21">.</span><span class="lt-mt n" style="--r:3;--c:22">items</span><span class="lt-mt p" style="--r:3;--c:27">)</span><span class="lt-mt o" style="--r:3;--c:29">&gt;</span><span class="lt-mt bp" style="--r:3;--c:31">self</span><span class="lt-mt o" style="--r:3;--c:35">.</span><span class="lt-mt n" style="--r:3;--c:36">capacity</span><span class="lt-mt p" style="--r:3;--c:44">:</span><span class="lt-mt n" style="--r:4;--c:12">oldest</span><span class="lt-mt o" style="--r:4;--c:19">=</span><span class="lt-mt bp" style="--r:4;--c:21">self</span><span class="lt-mt o" style="--r:4;--c:25">.</span><span class="lt-mt n" style="--r:4;--c:26">order</span><span class="lt-mt o" style="--r:4;--c:31">.</span><span class="lt-mt n" style="--r:4;--c:32">pop</span><span class="lt-mt p" style="--r:4;--c:35">(</span><span class="lt-mt mi" style="--r:4;--c:36">0</span><span class="lt-mt p" style="--r:4;--c:37">)</span><span class="lt-mt k" style="--r:5;--c:12">del</span><span class="lt-mt bp" style="--r:5;--c:16">self</span><span class="lt-mt o" style="--r:5;--c:20">.</span><span class="lt-mt n" style="--r:5;--c:21">items</span><span class="lt-mt p" style="--r:5;--c:26">[</span><span class="lt-mt n" style="--r:5;--c:27">oldest</span><span class="lt-mt p" style="--r:5;--c:33">]</span><span class="lt-mt bp" style="--r:6;--c:8">self</span><span class="lt-mt o" style="--r:6;--c:12">.</span><span class="lt-mt n" style="--r:6;--c:13">items</span><span class="lt-mt p" style="--r:6;--c:18">[</span><span class="lt-mt n" style="--r:6;--c:19">key</span><span class="lt-mt p" style="--r:6;--c:22">]</span><span class="lt-mt o" style="--r:6;--c:24">=</span><span class="lt-mt n" style="--r:6;--c:26">value</span><span class="lt-mt bp" style="--r:7;--c:8">self</span><span class="lt-mt o" style="--r:7;--c:12">.</span><span class="lt-mt n" style="--r:7;--c:13">order</span><span class="lt-mt o" style="--r:7;--c:18">.</span><span class="lt-mt n" style="--r:7;--c:19">append</span><span class="lt-mt p" style="--r:7;--c:25">(</span><span class="lt-mt n" style="--r:7;--c:26">key</span><span class="lt-mt p" style="--r:7;--c:29">)</span><span class="lt-mt o lt-mt-off" style="--r:3;--c:29">=</span><span class="lt-mt o lt-mt-off" style="--r:3;--c:30">=</span><span class="lt-mt k lt-mt-off" style="--r:4;--c:12">del</span><span class="lt-mt bp lt-mt-off" style="--r:4;--c:16">self</span><span class="lt-mt o lt-mt-off" style="--r:4;--c:20">.</span><span class="lt-mt n lt-mt-off" style="--r:4;--c:21">items</span><span class="lt-mt p lt-mt-off" style="--r:4;--c:26">[</span><span class="lt-mt bp lt-mt-off" style="--r:2;--c:12">self</span><span class="lt-mt o lt-mt-off" style="--r:2;--c:16">.</span><span class="lt-mt n lt-mt-off" style="--r:2;--c:17">items</span><span class="lt-mt p lt-mt-off" style="--r:2;--c:22">[</span><span class="lt-mt n lt-mt-off" style="--r:2;--c:23">key</span><span class="lt-mt p lt-mt-off" style="--r:2;--c:26">]</span><span class="lt-mt o lt-mt-off" style="--r:2;--c:28">=</span><span class="lt-mt n lt-mt-off" style="--r:2;--c:30">value</span><span class="lt-mt bp lt-mt-off" style="--r:4;--c:12">self</span><span class="lt-mt o lt-mt-off" style="--r:4;--c:16">.</span><span class="lt-mt n lt-mt-off" style="--r:4;--c:17">order</span><span class="lt-mt o lt-mt-off" style="--r:4;--c:22">.</span><span class="lt-mt n lt-mt-off" style="--r:4;--c:23">append</span><span class="lt-mt p lt-mt-off" style="--r:4;--c:29">(</span><span class="lt-mt n lt-mt-off" style="--r:4;--c:30">key</span><span class="lt-mt p lt-mt-off" style="--r:4;--c:33">)</span><span class="lt-mt k lt-mt-off" style="--r:5;--c:12">return</span></span><span class="lt-morph-text">    def put(self, key, value):
+        if key in self.items:
+            <span class="lt-seg" data-lt-seg="refresh" id="refresh">self.order.remove(key)</span>
+        <span class="lt-seg" data-lt-seg="full" id="full">elif len(self.items) &gt; self.capacity:</span>
+            <span class="lt-seg" data-lt-seg="evict" id="evict">oldest = self.order.pop(0)</span>
+            <span class="lt-seg" data-lt-seg="evict">del self.items[oldest]</span>
+        self.items[key] = value
+        self.order.append(key)</span></span></code></pre></div></div><div class="lt-c lt-c-arrow" data-component="arrow" data-instance="bug/c2"><div class="lt-arrow-box" aria-hidden="true"></div></div></div></section>
 <section class="lt-slide layout-default" id="s-diff" data-slide="diff" hidden><header class="lt-head"><h1 class="lt-title">From a list to an OrderedDict, then to statistics</h1></header><div class="lt-body"><div class="lt-c lt-c-diff-steps" data-component="diff-steps" data-instance="diff/c1"><div class="lt-code lt-diff" data-lang="python"><div class="lt-diff-pane" data-pane="0"><div class="lt-code-title">v1: dict + list</div><pre><code><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Cache</span><span class="p">:</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">capacity</span><span class="p">):</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span> <span class="o">=</span> <span class="n">capacity</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="bp">self</span><span class="o">.</span><span class="n">items</span> <span class="o">=</span> <span class="p">{}</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="bp">self</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="p">[]</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span> </span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">:</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>            <span class="k">return</span> <span class="kc">None</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span> </span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>    <span class="k">def</span><span class="w"> </span><span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">:</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>            <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span><span class="p">:</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>            <span class="n">oldest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">[</span><span class="n">oldest</span><span class="p">]</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span></span></code></pre></div><div class="lt-diff-pane" data-pane="1" hidden><div class="lt-code-title">v2: OrderedDict<span class="lt-diff-stat">+7 -8</span></div><pre><code><span class="lt-line lt-diff-add"><span class="lt-diff-sign">+</span><span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">OrderedDict</span></span><span class="lt-line lt-diff-add"><span class="lt-diff-sign">+</span> </span><span class="lt-line lt-diff-add"><span class="lt-diff-sign">+</span> </span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span><span class="k">class</span><span class="w"> </span><span class="nc">Cache</span><span class="p">:</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">capacity</span><span class="p">):</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span> <span class="o">=</span> <span class="n">capacity</span></span><span class="lt-line lt-diff-del"><span class="lt-diff-sign">-</span>        <span class="bp">self</span><span class="o">.</span><span class="n">items</span> <span class="o">=</span> <span class="p">{}</span></span><span class="lt-line lt-diff-del"><span class="lt-diff-sign">-</span>        <span class="bp">self</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="p">[]</span></span><span class="lt-line lt-diff-add"><span class="lt-diff-sign">+</span>        <span class="bp">self</span><span class="o">.</span><span class="n">items</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span> </span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">:</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>            <span class="k">return</span> <span class="kc">None</span></span><span class="lt-line lt-diff-del"><span class="lt-diff-sign">-</span>        <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span></span><span class="lt-line lt-diff-del"><span class="lt-diff-sign">-</span>        <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span></span><span class="lt-line lt-diff-add"><span class="lt-diff-sign">+</span>        <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="o">.</span><span class="n">move_to_end</span><span class="p">(</span><span class="n">key</span><span class="p">)</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span> </span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>    <span class="k">def</span><span class="w"> </span><span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">:</span></span><span class="lt-line lt-diff-del"><span class="lt-diff-sign">-</span>            <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span></span><span class="lt-line lt-diff-add"><span class="lt-diff-sign">+</span>            <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="o">.</span><span class="n">move_to_end</span><span class="p">(</span><span class="n">key</span><span class="p">)</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span><span class="p">:</span></span><span class="lt-line lt-diff-del"><span class="lt-diff-sign">-</span>            <span class="n">oldest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></span><span class="lt-line lt-diff-del"><span class="lt-diff-sign">-</span>            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">[</span><span class="n">oldest</span><span class="p">]</span></span><span class="lt-line lt-diff-add"><span class="lt-diff-sign">+</span>            <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="o">.</span><span class="n">popitem</span><span class="p">(</span><span class="n">last</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span></span><span class="lt-line lt-diff-del"><span class="lt-diff-sign">-</span>        <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span></span></code></pre></div><div class="lt-diff-pane" data-pane="2" hidden><div class="lt-code-title">v3: hit and miss counters<span class="lt-diff-stat">+3 -0</span></div><pre><code><span class="lt-line lt-diff-gap"><span class="lt-diff-sign"></span><span class="lt-diff-gap">⋯</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">capacity</span><span class="p">):</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span> <span class="o">=</span> <span class="n">capacity</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="bp">self</span><span class="o">.</span><span class="n">items</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span></span><span class="lt-line lt-diff-add"><span class="lt-diff-sign">+</span>        <span class="bp">self</span><span class="o">.</span><span class="n">hits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">misses</span> <span class="o">=</span> <span class="mi">0</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span> </span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">:</span></span><span class="lt-line lt-diff-add"><span class="lt-diff-sign">+</span>            <span class="bp">self</span><span class="o">.</span><span class="n">misses</span> <span class="o">+=</span> <span class="mi">1</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>            <span class="k">return</span> <span class="kc">None</span></span><span class="lt-line lt-diff-add"><span class="lt-diff-sign">+</span>        <span class="bp">self</span><span class="o">.</span><span class="n">hits</span> <span class="o">+=</span> <span class="mi">1</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="o">.</span><span class="n">move_to_end</span><span class="p">(</span><span class="n">key</span><span class="p">)</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></span><span class="lt-line lt-diff-ctx"><span class="lt-diff-sign"> </span> </span><span class="lt-line lt-diff-gap"><span class="lt-diff-sign"></span><span class="lt-diff-gap">⋯</span></span></code></pre></div></div></div></div></section>
 <section class="lt-slide layout-default" id="s-bench" data-slide="bench" hidden><header class="lt-head"><h1 class="lt-title">Was it worth it?</h1></header><div class="lt-body"><div class="lt-c lt-c-plot" data-component="plot" data-instance="bench/c1"><div class="lt-plot lt-plot-vega"></div></div><p>Hover the points for exact values. Measured on a Pareto-distributed key stream (20,000 operations).</p>
 </div></section>
@@ -552,7 +591,9 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.11.0","meta":{"title":"Refactoring a cache","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"refactoring-a-cache","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"slides":{"refactoring-a-cache":{"title":"Refactoring a cache","label":"Refactoring a cache","scope":"root","next":{"slide":"idea"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"idea":{"title":"What an LRU cache keeps","label":"What an LRU cache keeps","scope":"root","next":{"slide":"diff"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>The image is embedded in the HTML at build time, like everything else.<\/p>\n"},"diff":{"title":"From a list to an OrderedDict, then to statistics","label":"From a list to an OrderedDict, then to statistics","scope":"root","next":{"slide":"bench"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"diff/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":20},"notes":"<p>Step 1 is the original. Step 2 removes <code>order.remove(key)<\/code>, which is linear in the cache size.<\/p>\n"},"bench":{"title":"Was it worth it?","label":"Was it worth it?","scope":"root","next":{"slide":"hits"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":33}},"hits":{"title":"Hit rate by capacity","label":"Hit rate by capacity","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":42}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":51}}},"detours":{},"instances":{"diff/c1":{"component":"diff-steps","slide":"diff","data":"lt-data-diff/c1"},"bench/c1":{"component":"plot","slide":"bench","data":"lt-data-bench/c1"},"hits/c1":{"component":"plot","slide":"hits","data":"lt-data-hits/c1"}},"tours":{},"mainPath":["refactoring-a-cache","idea","diff","bench","hits","thanks"],"overview":{"nodes":{"refactoring-a-cache":{"x":73.0,"y":21.0,"w":130.0,"h":26.0,"label":"Refactoring a cache"},"idea":{"x":251.0,"y":21.0,"w":166.0,"h":26.0,"label":"What an LRU cache keeps"},"diff":{"x":451.5,"y":21.0,"w":175.0,"h":26.0,"label":"From a list to an Ordered…"},"bench":{"x":623.5,"y":21.0,"w":109.0,"h":26.0,"label":"Was it worth it?"},"hits":{"x":773.0,"y":21.0,"w":130.0,"h":26.0,"label":"Hit rate by capacity"},"thanks":{"x":897.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"refactoring-a-cache","to":"idea","kind":"next","path":"M138.0,21.0 C145.8,21.0 153.8,21.0 161.8,21.0 L168.0,21.0"},{"from":"idea","to":"diff","kind":"next","path":"M334.2,21.0 C342.0,21.0 349.9,21.0 357.9,21.0 L363.9,21.0"},{"from":"diff","to":"bench","kind":"next","path":"M539.5,21.0 C547.3,21.0 555.0,21.0 562.5,21.0 L568.7,21.0"},{"from":"bench","to":"hits","kind":"next","path":"M678.2,21.0 C685.9,21.0 693.8,21.0 701.8,21.0 L707.8,21.0"},{"from":"hits","to":"thanks","kind":"next","path":"M838.1,21.0 C846.3,21.0 854.3,21.0 861.8,21.0 L867.8,21.0"}],"width":935.0,"height":42.0},"hash":"136706da4cc705ef"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.12.0","meta":{"title":"Refactoring a cache","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"refactoring-a-cache","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["refactoring-a-cache","idea","bug","diff","bench","hits","thanks"],"slides":{"refactoring-a-cache":{"title":"Refactoring a cache","label":"Refactoring a cache","scope":"root","next":{"slide":"idea"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"idea":{"title":"What an LRU cache keeps","label":"What an LRU cache keeps","scope":"root","next":{"slide":"bug"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>The image is embedded in the HTML at build time, like everything else.<\/p>\n"},"bug":{"title":"A bug, fixed in place","label":"A bug, fixed in place","scope":"root","next":{"slide":"diff"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"fix","kind":"component","instance":"bug/fix"},{"id":"c2","kind":"component","instance":"bug/c2","follow":"fix"}],"positions":[[0,0],[1,1],[2,2],[3,3]],"offpath":false,"source":{"file":"talk.md","line":20},"notes":"<p>The code is written once, in <code>versions/v0-bug.py<\/code>; each step replaces the text of one named segment. Tokens that survive glide to their new place.<\/p>\n"},"diff":{"title":"From a list to an OrderedDict, then to statistics","label":"From a list to an OrderedDict, then to statistics","scope":"root","next":{"slide":"bench"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"diff/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":48},"notes":"<p>Step 1 is the original. Step 2 removes <code>order.remove(key)<\/code>, which is linear in the cache size.<\/p>\n"},"bench":{"title":"Was it worth it?","label":"Was it worth it?","scope":"root","next":{"slide":"hits"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":61}},"hits":{"title":"Hit rate by capacity","label":"Hit rate by capacity","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":70}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":79}}},"detours":{},"instances":{"bug/fix":{"component":"code-morph","slide":"bug","data":"lt-data-bug/fix"},"bug/c2":{"component":"arrow","slide":"bug","data":"lt-data-bug/c2"},"diff/c1":{"component":"diff-steps","slide":"diff","data":"lt-data-diff/c1"},"bench/c1":{"component":"plot","slide":"bench","data":"lt-data-bench/c1"},"hits/c1":{"component":"plot","slide":"hits","data":"lt-data-hits/c1"}},"tours":{},"mainPath":["refactoring-a-cache","idea","bug","diff","bench","hits","thanks"],"overview":{"nodes":{"refactoring-a-cache":{"x":73.0,"y":21.0,"w":130.0,"h":26.0,"label":"Refactoring a cache"},"idea":{"x":251.0,"y":21.0,"w":166.0,"h":26.0,"label":"What an LRU cache keeps"},"bug":{"x":430.5,"y":21.0,"w":133.0,"h":26.0,"label":"A bug, fixed in place"},"diff":{"x":614.5,"y":21.0,"w":175.0,"h":26.0,"label":"From a list to an Ordered…"},"bench":{"x":786.5,"y":21.0,"w":109.0,"h":26.0,"label":"Was it worth it?"},"hits":{"x":936.0,"y":21.0,"w":130.0,"h":26.0,"label":"Hit rate by capacity"},"thanks":{"x":1060.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"refactoring-a-cache","to":"idea","kind":"next","path":"M138.0,21.0 C145.8,21.0 153.8,21.0 161.8,21.0 L168.0,21.0"},{"from":"idea","to":"bug","kind":"next","path":"M334.2,21.0 C342.0,21.0 349.8,21.0 357.4,21.0 L363.7,21.0"},{"from":"bug","to":"diff","kind":"next","path":"M497.2,21.0 C504.9,21.0 512.9,21.0 520.9,21.0 L527.0,21.0"},{"from":"diff","to":"bench","kind":"next","path":"M702.5,21.0 C710.3,21.0 718.0,21.0 725.5,21.0 L731.7,21.0"},{"from":"bench","to":"hits","kind":"next","path":"M841.2,21.0 C848.9,21.0 856.8,21.0 864.8,21.0 L870.8,21.0"},{"from":"hits","to":"thanks","kind":"next","path":"M1001.1,21.0 C1009.3,21.0 1017.3,21.0 1024.8,21.0 L1030.8,21.0"}],"width":1098.0,"height":42.0},"hash":"438b7915e2ec7115"}</script>
+<script type="application/json" id="lt-data-bug/fix">{"pos":[[[0,4,0],[0,4,0],[0,4,0],[0,4,0]],[[0,8,1],[0,8,1],[0,8,1],[0,8,1]],[[0,11,2],[0,11,2],[0,11,2],[0,11,2]],[[0,12,3],[0,12,3],[0,12,3],[0,12,3]],[[0,16,2],[0,16,2],[0,16,2],[0,16,2]],[[0,18,4],[0,18,4],[0,18,4],[0,18,4]],[[0,21,2],[0,21,2],[0,21,2],[0,21,2]],[[0,23,4],[0,23,4],[0,23,4],[0,23,4]],[[0,28,2],[0,28,2],[0,28,2],[0,28,2]],[[0,29,2],[0,29,2],[0,29,2],[0,29,2]],[[1,8,0],[1,8,0],[1,8,0],[1,8,0]],[[1,11,4],[1,11,4],[1,11,4],[1,11,4]],[[1,15,5],[1,15,5],[1,15,5],[1,15,5]],[[1,18,3],[1,18,3],[1,18,3],[1,18,3]],[[1,22,6],[1,22,6],[1,22,6],[1,22,6]],[[1,23,4],[1,23,4],[1,23,4],[1,23,4]],[[1,28,2],[1,28,2],[1,28,2],[1,28,2]],[[2,12,3],[2,12,3],[2,12,3],[3,12,3]],[[2,16,6],[2,16,6],[2,16,6],[3,16,6]],[[2,17,4],[2,17,4],[2,17,4],[3,17,4]],[[2,22,6],[2,22,6],[2,22,6],[3,22,6]],[[2,23,4],[2,23,4],[2,23,4],[3,23,4]],[[2,29,2],[2,29,2],[2,29,2],[3,29,2]],[[2,30,4],[2,30,4],[2,30,4],[3,30,4]],[[2,33,2],[2,33,2],[2,33,2],[3,33,2]],[[3,8,0],[3,8,0],[3,8,0],[6,8,0]],[[3,13,7],[3,13,7],[3,13,7],[6,13,7]],[[3,16,2],[3,16,2],[3,16,2],[6,16,2]],[[3,17,3],[3,17,3],[3,17,3],[6,17,3]],[[3,21,6],[3,21,6],[3,21,6],[6,21,6]],[[3,22,4],[3,22,4],[3,22,4],[6,22,4]],[[3,27,2],[3,27,2],[3,27,2],[6,27,2]],[[3,29,6],null,null,null],[[3,31,3],[3,32,3],[3,32,3],[6,32,3]],[[3,35,6],[3,36,6],[3,36,6],[6,36,6]],[[3,36,4],[3,37,4],[3,37,4],[6,37,4]],[[3,44,2],[3,45,2],[3,45,2],[6,45,2]],[[4,12,4],[4,12,4],null,null],[[4,19,6],[4,19,6],null,null],[[4,21,3],[4,21,3],[4,27,3],[7,27,3]],[[4,25,6],[4,25,6],[4,31,6],[7,31,6]],[[4,26,4],[4,26,4],[4,32,4],[7,32,4]],[[4,31,6],[4,31,6],[4,37,6],[7,37,6]],[[4,32,4],[4,32,4],[4,38,4],[7,38,4]],[[4,35,2],[4,35,2],[4,41,2],[7,41,2]],[[4,36,8],[4,36,8],[4,42,8],[7,42,8]],[[4,37,2],[4,37,2],[4,43,2],[7,43,2]],[[5,12,0],[5,12,0],null,null],[[5,16,3],[5,16,3],null,null],[[5,20,6],[5,20,6],null,null],[[5,21,4],[5,21,4],null,null],[[5,26,2],[5,26,2],null,null],[[5,27,4],[5,27,4],null,null],[[5,33,2],[5,33,2],[4,44,2],[7,44,2]],[[6,8,3],[6,8,3],[5,8,3],[8,8,3]],[[6,12,6],[6,12,6],[5,12,6],[8,12,6]],[[6,13,4],[6,13,4],[5,13,4],[8,13,4]],[[6,18,2],[6,18,2],[5,18,2],[8,18,2]],[[6,19,4],[6,19,4],[5,19,4],[8,19,4]],[[6,22,2],[6,22,2],[5,22,2],[8,22,2]],[[6,24,6],[6,24,6],[5,24,6],[8,24,6]],[[6,26,4],[6,26,4],[5,26,4],[8,26,4]],[[7,8,3],[7,8,3],[6,8,3],[9,8,3]],[[7,12,6],[7,12,6],[6,12,6],[9,12,6]],[[7,13,4],[7,13,4],[6,13,4],[9,13,4]],[[7,18,6],[7,18,6],[6,18,6],[9,18,6]],[[7,19,4],[7,19,4],[6,19,4],[9,19,4]],[[7,25,2],[7,25,2],[6,25,2],[9,25,2]],[[7,26,4],[7,26,4],[6,26,4],[9,26,4]],[[7,29,2],[7,29,2],[6,29,2],[9,29,2]],[null,[3,29,6],[3,29,6],[6,29,6]],[null,[3,30,6],[3,30,6],[6,30,6]],[null,null,[4,12,0],[7,12,0]],[null,null,[4,16,3],[7,16,3]],[null,null,[4,20,6],[7,20,6]],[null,null,[4,21,4],[7,21,4]],[null,null,[4,26,2],[7,26,2]],[null,null,null,[2,12,3]],[null,null,null,[2,16,6]],[null,null,null,[2,17,4]],[null,null,null,[2,22,2]],[null,null,null,[2,23,4]],[null,null,null,[2,26,2]],[null,null,null,[2,28,6]],[null,null,null,[2,30,4]],[null,null,null,[4,12,3]],[null,null,null,[4,16,6]],[null,null,null,[4,17,4]],[null,null,null,[4,22,6]],[null,null,null,[4,23,4]],[null,null,null,[4,29,2]],[null,null,null,[4,30,4]],[null,null,null,[4,33,2]],[null,null,null,[5,12,0]]],"classes":["k","nf","p","bp","n","ow","o","nb","mi"],"rows":[8,8,7,10],"height":10,"labels":["v0: one item too many","fix: evict when full","two lines become one","one line becomes four"],"layers":["    def put(self, key, value):\n        if key in self.items:\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\" id=\"refresh\">self.order.remove(key)<\/span>\n        <span class=\"lt-seg\" data-lt-seg=\"full\" id=\"full\">elif len(self.items) &gt; self.capacity:<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"evict\" id=\"evict\">oldest = self.order.pop(0)<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"evict\">del self.items[oldest]<\/span>\n        self.items[key] = value\n        self.order.append(key)","    def put(self, key, value):\n        if key in self.items:\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\" id=\"refresh\">self.order.remove(key)<\/span>\n        <span class=\"lt-seg\" data-lt-seg=\"full\" id=\"full\">elif len(self.items) == self.capacity:<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"evict\" id=\"evict\">oldest = self.order.pop(0)<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"evict\">del self.items[oldest]<\/span>\n        self.items[key] = value\n        self.order.append(key)","    def put(self, key, value):\n        if key in self.items:\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\" id=\"refresh\">self.order.remove(key)<\/span>\n        <span class=\"lt-seg\" data-lt-seg=\"full\" id=\"full\">elif len(self.items) == self.capacity:<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"evict\" id=\"evict\">del self.items[self.order.pop(0)]<\/span>\n        self.items[key] = value\n        self.order.append(key)","    def put(self, key, value):\n        if key in self.items:\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\" id=\"refresh\">self.items[key] = value<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\">self.order.remove(key)<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\">self.order.append(key)<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\">return<\/span>\n        <span class=\"lt-seg\" data-lt-seg=\"full\" id=\"full\">elif len(self.items) == self.capacity:<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"evict\" id=\"evict\">del self.items[self.order.pop(0)]<\/span>\n        self.items[key] = value\n        self.order.append(key)"],"changed":[0,3,4,2],"duration":600,"room":"max","mark":false,"linenos":false}</script>
+<script type="application/json" id="lt-data-bug/c2">{"steps":[{"to":"full","from":null,"angle":0.0,"length":90.0,"label":"> lets the cache grow past capacity","to_anchor":0.0},{"to":"full","from":null,"angle":0.0,"length":90.0,"label":"== evicts before it grows","to_anchor":0.0},{"to":"evict","from":null,"angle":0.0,"length":90.0,"label":"inlined","to_anchor":0.0},{"to":"refresh","from":null,"angle":0.0,"length":90.0,"label":"an update needs no eviction","to_anchor":0.0}],"color":null,"width":4,"curve":0}</script>
 <script type="application/json" id="lt-data-diff/c1">{"count":3}</script>
 <script type="application/json" id="lt-data-bench/c1">{"backend":"vega","spec":{"mark":{"type":"line","point":true},"encoding":{"x":{"field":"capacity","type":"quantitative","title":"capacity (log scale)","scale":{"type":"log"}},"y":{"field":"us_per_op","type":"quantitative","title":"microseconds per operation"},"color":{"field":"version","type":"nominal","title":null},"tooltip":[{"field":"capacity"},{"field":"us_per_op"},{"field":"version"}]},"data":{"values":[{"capacity":16,"version":"list (v1)","us_per_op":0.246,"hit_rate":0.946},{"capacity":16,"version":"OrderedDict (v2)","us_per_op":0.151,"hit_rate":0.946},{"capacity":64,"version":"list (v1)","us_per_op":0.554,"hit_rate":0.987},{"capacity":64,"version":"OrderedDict (v2)","us_per_op":0.16,"hit_rate":0.987},{"capacity":256,"version":"list (v1)","us_per_op":0.855,"hit_rate":0.992},{"capacity":256,"version":"OrderedDict (v2)","us_per_op":0.138,"hit_rate":0.992},{"capacity":1024,"version":"list (v1)","us_per_op":0.864,"hit_rate":0.992},{"capacity":1024,"version":"OrderedDict (v2)","us_per_op":0.146,"hit_rate":0.992}]},"width":864,"height":326,"config":{"background":"transparent","font":"Avenir Next, Segoe UI, Helvetica Neue, Arial, DejaVu Sans","axis":{"labelColor":"#5d6778","titleColor":"#1d2433","gridColor":"#e3e7ee","domainColor":"#5d6778","tickColor":"#5d6778","labelFontSize":16,"titleFontSize":17,"titleFontWeight":500,"titlePadding":10},"legend":{"labelColor":"#1d2433","titleColor":"#5d6778","labelFontSize":16,"symbolSize":120},"title":{"color":"#1d2433","fontSize":18},"range":{"category":["#0b6e7f","#c8741a","#6a4fb3","#2f8f4e","#b23a48","#5d6778"]},"view":{"stroke":null},"line":{"strokeWidth":2.5},"point":{"size":60}},"$schema":"https://vega.github.io/schema/vega-lite/v5.json"}}</script>
 <script type="application/json" id="lt-data-hits/c1">{"backend":"plotly","spec":{"data":[{"type":"bar","name":"list (v1)","x":[16,64,256,1024],"y":[0.946,0.987,0.992,0.992]},{"type":"bar","name":"OrderedDict (v2)","x":[16,64,256,1024],"y":[0.946,0.987,0.992,0.992]}],"layout":{"width":864,"height":365,"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","font":{"family":"Avenir Next, Segoe UI, Helvetica Neue, Arial, DejaVu Sans","color":"#1d2433","size":15},"colorway":["#0b6e7f","#c8741a","#6a4fb3","#2f8f4e","#b23a48","#5d6778"],"xaxis":{"gridcolor":"#e3e7ee","zerolinecolor":"#e3e7ee","linecolor":"#5d6778","tickfont":{"color":"#5d6778"},"title":{"text":"capacity"},"type":"category"},"yaxis":{"gridcolor":"#e3e7ee","zerolinecolor":"#e3e7ee","linecolor":"#5d6778","tickfont":{"color":"#5d6778"},"title":{"text":"hit rate"}},"margin":{"l":70,"r":20,"t":16,"b":60},"legend":{"bgcolor":"rgba(0,0,0,0)"},"showlegend":true}}}</script>
@@ -1494,6 +1535,352 @@ const Lattice = (() => {
   return { component, boot, frames, applyDelta, renderPanel, esc, print, actions: () => actions, state: () => nav };
 })();
 window.Lattice = Lattice;
+
+// `arrow`: an arrow drawn over the slide, pointing at an element (spec 8.9).
+// The only runtime geometry in Lattice: element boxes exist only in the browser. Everything is
+// measured in slide units (the design size), so the drawing is independent of the window scale.
+(() => {
+  const NS = "http://www.w3.org/2000/svg";
+  const GAP = 6; // space between the arrow and the boxes it touches
+  const TWEEN_MS = 280;
+
+  function find(section, ref, slideId) {
+    if (!ref) return null;
+    if (/^[A-Za-z][A-Za-z0-9_-]*$/.test(ref)) {
+      return section.querySelector(`#${CSS.escape(ref)}`) ||
+        section.querySelector(`[data-instance="${CSS.escape(`${slideId}/${ref}`)}"]`);
+    }
+    try { return section.querySelector(ref); } catch (e) { return null; }
+  }
+
+  // Box of an element in slide units, relative to the slide section: the extent of its contents when it
+  // has some (a heading or a code line fills its whole row, but the arrow should point at the text).
+  // A code segment (spec 8.10) is the union of its pieces, one per line it spans.
+  function box(el, section) {
+    const s = section.getBoundingClientRect();
+    const scale = s.width / section.offsetWidth || 1;
+    const rect = (e) => {
+      let r = e.getBoundingClientRect();
+      if (e.childNodes.length) {
+        const range = document.createRange();
+        range.selectNodeContents(e);
+        const c = range.getBoundingClientRect();
+        if (c.width > 0 && c.height > 0) r = c;
+      }
+      return r;
+    };
+    let parts = [el];
+    if (el.dataset && el.dataset.ltSeg) {
+      const code = el.closest(".lt-code") || section;
+      parts = Array.from(code.querySelectorAll(`[data-lt-seg="${CSS.escape(el.dataset.ltSeg)}"]`));
+    }
+    let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+    for (const p of parts) {
+      const q = rect(p);
+      l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom);
+    }
+    return { x: (l - s.left) / scale, y: (t - s.top) / scale, w: (r - l) / scale, h: (b - t) / scale };
+  }
+  // The largest length along `u` from `p` that stays inside the slide, with a margin.
+  function room(p, u, section, margin) {
+    const W = section.offsetWidth, H = section.offsetHeight;
+    const lim = (pos, dir, max) => (dir > 0 ? (max - margin - pos) / dir : dir < 0 ? (margin - pos) / dir : Infinity);
+    return Math.max(0, Math.min(lim(p.x, u.x, W), lim(p.y, u.y, H)));
+  }
+  const center = (b) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+  // Where a ray from the center of `b` along the unit vector `u` leaves the box.
+  function exit(b, u) {
+    const c = center(b);
+    const t = Math.min(u.x ? Math.abs(b.w / 2 / u.x) : Infinity, u.y ? Math.abs(b.h / 2 / u.y) : Infinity);
+    return { x: c.x + u.x * t, y: c.y + u.y * t };
+  }
+  const norm = (v) => { const l = Math.hypot(v.x, v.y) || 1; return { x: v.x / l, y: v.y / l }; };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  // Unit vector of an angle in degrees, counterclockwise on screen (y goes down), 0 pointing right.
+  const dir = (deg) => { const a = (deg * Math.PI) / 180; return { x: Math.cos(a), y: -Math.sin(a) }; };
+  const anchored = (a) => typeof a === "number";
+
+  // One end of an arrow between two boxes: its point on the box `b` and the direction it leaves the box
+  // in (away from the box). An angle anchor (sides are angles, spec 8.9) fixes both; `center` is the
+  // center itself; otherwise the end aims at `toward`, the other end's reference point.
+  function end(b, anchor, toward) {
+    if (anchored(anchor)) {
+      const d = dir(anchor);
+      const p = exit(b, d);
+      return { p: { x: p.x + d.x * GAP, y: p.y + d.y * GAP }, d, fixed: true };
+    }
+    const c = center(b);
+    const d = norm({ x: toward.x - c.x, y: toward.y - c.y });
+    if (anchor === "center") return { p: c, d, fixed: false };
+    const p = exit(b, d);
+    return { p: { x: p.x + d.x * GAP, y: p.y + d.y * GAP }, d, fixed: false };
+  }
+  // The point another end aims at: an anchored end's point on its box, else the box center.
+  const ref = (b, anchor) => (anchored(anchor) ? exit(b, dir(anchor)) : center(b));
+
+  // A cubic curve from `tail` to `head`. An end with a fixed direction leaves (or enters) along it; a free
+  // end follows the chord, so with two free ends the curve is the quadratic of the earlier versions,
+  // bent sideways by `curve` times its length.
+  function curveOf(tail, head, dTail, dHead, curve) {
+    const len = Math.hypot(tail.x - head.x, tail.y - head.y);
+    const u = norm({ x: tail.x - head.x, y: tail.y - head.y }); // from the head toward the tail
+    const perp = { x: -u.y, y: u.x };
+    const bend = (curve * len * 2) / 3;
+    const reach = Math.min(Math.max(len * 0.45, 40), 260); // handle of an end with a fixed direction
+    const h1 = dTail ? { x: dTail.x * reach, y: dTail.y * reach } : { x: -u.x * len / 3, y: -u.y * len / 3 };
+    const h2 = dHead ? { x: dHead.x * reach, y: dHead.y * reach } : { x: u.x * len / 3, y: u.y * len / 3 };
+    return {
+      tail, head, perp,
+      c1: { x: tail.x + h1.x + perp.x * bend, y: tail.y + h1.y + perp.y * bend },
+      c2: { x: head.x + h2.x + perp.x * bend, y: head.y + h2.y + perp.y * bend },
+    };
+  }
+
+  // Geometry of one step: tail, head, control points of the curve and where the label goes.
+  function geometry(inst, step) {
+    const target = find(inst.section, step.to, inst.slideId);
+    if (!target) {
+      console.warn(`lattice: arrow target ${step.to} not found on slide ${inst.slideId}`);
+      return null;
+    }
+    const tb = box(target, inst.section);
+    const from = step.from ? find(inst.section, step.from, inst.slideId) : null;
+    let g, label;
+    if (from) {
+      const fb = box(from, inst.section);
+      const t = end(fb, step.from_anchor, ref(tb, step.to_anchor));
+      const h = end(tb, step.to_anchor, ref(fb, step.from_anchor));
+      g = curveOf(t.p, h.p, t.fixed ? t.d : null, h.fixed ? h.d : null, inst.curve);
+      const mid = { x: (g.tail.x + 3 * g.c1.x + 3 * g.c2.x + g.head.x) / 8, y: (g.tail.y + 3 * g.c1.y + 3 * g.c2.y + g.head.y) / 8 };
+      const off = 14 * Math.sign(inst.curve || 1);
+      label = { x: mid.x + g.perp.x * off, y: mid.y + g.perp.y * off, anchor: "middle", base: g.perp.y > 0 ? "hanging" : "auto" };
+    } else {
+      const u = dir(step.angle); // from the target toward the tail
+      let head0, dHead = null;
+      if (anchored(step.to_anchor)) {
+        dHead = dir(step.to_anchor);
+        head0 = exit(tb, dHead);
+      } else if (step.to_anchor === "center") {
+        head0 = center(tb);
+      } else {
+        head0 = exit(tb, u);
+      }
+      const length = Math.min(step.length, room(head0, u, inst.section, 24) - GAP);
+      const tail = { x: head0.x + u.x * (GAP + length), y: head0.y + u.y * (GAP + length) };
+      const push = step.to_anchor === "center" ? 0 : GAP;
+      const hd = dHead || u;
+      const head = { x: head0.x + hd.x * push, y: head0.y + hd.y * push };
+      g = curveOf(tail, head, null, dHead, inst.curve);
+      label = { x: tail.x + u.x * 10, y: tail.y + u.y * 10,
+        anchor: u.x > 0.3 ? "start" : u.x < -0.3 ? "end" : "middle", base: u.y > 0.3 ? "hanging" : u.y < -0.3 ? "auto" : "middle" };
+    }
+    return { tail: g.tail, head: g.head, c1: g.c1, c2: g.c2, label, text: step.label || "" };
+  }
+
+  function draw(inst, g) {
+    inst.drawn = g;
+    const { tail, head, c1, c2 } = g;
+    const f = (p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+    inst.path.setAttribute("d", `M${f(tail)} C${f(c1)} ${f(c2)} ${f(head)}`);
+    inst.text.textContent = g.text;
+    inst.text.setAttribute("x", g.label.x.toFixed(1));
+    inst.text.setAttribute("y", g.label.y.toFixed(1));
+    inst.text.setAttribute("text-anchor", g.label.anchor);
+    inst.text.setAttribute("dominant-baseline", g.label.base);
+    inst.text.style.display = g.text ? "" : "none";
+    if (g.text) { // keep the label inside the slide
+      const W = inst.section.offsetWidth;
+      const bb = inst.text.getBBox();
+      const dx = bb.x + bb.width > W - 12 ? W - 12 - (bb.x + bb.width) : bb.x < 12 ? 12 - bb.x : 0;
+      if (dx) inst.text.setAttribute("x", (g.label.x + dx).toFixed(1));
+    }
+  }
+
+  function mix(a, b, t) {
+    const pt = (p, q) => ({ x: lerp(p.x, q.x, t), y: lerp(p.y, q.y, t) });
+    return { tail: pt(a.tail, b.tail), head: pt(a.head, b.head), c1: pt(a.c1, b.c1), c2: pt(a.c2, b.c2),
+      label: Object.assign({}, b.label, pt(a.label, b.label)), text: b.text };
+  }
+
+  // `timing` ({delay, duration} in ms, from an `lt-relayout` event) makes the glide follow the content.
+  function update(inst, animate, timing) {
+    const step = inst.steps[Math.max(0, Math.min(inst.position, inst.steps.length - 1))];
+    const svg = inst.svg;
+    svg.setAttribute("viewBox", `0 0 ${inst.section.offsetWidth} ${inst.section.offsetHeight}`);
+    const g = geometry(inst, step);
+    cancelAnimationFrame(inst.raf);
+    svg.style.visibility = g ? "" : "hidden";
+    if (!g) return;
+    if (animate && (inst.drawn || inst.last)) {
+      const from = inst.drawn || inst.last; // from what is on screen, even halfway through a glide
+      const t0 = performance.now() + ((timing && timing.delay) || 0);
+      const ms = (timing && timing.duration) || TWEEN_MS;
+      const frame = (now) => {
+        const t = Math.max(0, Math.min(1, (now - t0) / ms));
+        const e = timing ? (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2) : 1 - (1 - t) * (1 - t);
+        draw(inst, mix(from, g, e));
+        if (t < 1) inst.raf = requestAnimationFrame(frame);
+      };
+      inst.raf = requestAnimationFrame(frame);
+    } else {
+      draw(inst, g);
+    }
+    inst.last = g;
+  }
+
+  Lattice.component("arrow", {
+    mount(el, data, api) {
+      const section = el.closest(".lt-slide");
+      const slideId = section.dataset.slide;
+      section.appendChild(el); // an overlay over the whole slide, above the content
+      el.classList.add("lt-arrow-overlay");
+      const markerId = `lt-arrow-head-${api.instanceId.replace(/[^A-Za-z0-9_-]/g, "_")}`;
+      const color = data.color || "var(--lt-accent)";
+      const svg = document.createElementNS(NS, "svg");
+      svg.innerHTML = `<defs><marker id="${markerId}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${color}"/></marker></defs>` +
+        `<path class="lt-arrow-line" stroke="${color}" stroke-width="${data.width}" marker-end="url(#${markerId})"/>` +
+        `<text class="lt-arrow-text" fill="${color}"></text>`;
+      el.querySelector(".lt-arrow-box").appendChild(svg);
+      const inst = { el, svg, section, slideId, steps: data.steps, curve: data.curve || 0, position: 0, last: null,
+        raf: 0, path: svg.querySelector("path.lt-arrow-line"), text: svg.querySelector("text") };
+      const relayout = () => { if (!section.hidden) update(inst, false); };
+      api.onResize(relayout);
+      if (window.ResizeObserver) {
+        inst.observer = new ResizeObserver(relayout);
+        const body = section.querySelector(".lt-body");
+        if (body) inst.observer.observe(body);
+      }
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+      // a component moved content of the slide (a code-morph changing its text, spec 10.4)
+      // (after every show of this step, so that the arrow's own step, if any, is the one measured)
+      section.addEventListener("lt-relayout", (e) => {
+        const d = e.detail || {};
+        queueMicrotask(() => { if (!section.hidden) update(inst, !!d.animate, d.timing); });
+      });
+      return inst;
+    },
+    show(inst, position, info) {
+      inst.position = position;
+      update(inst, !!(info && info.animate));
+    },
+    enter(inst) {
+      requestAnimationFrame(() => { if (!inst.section.hidden) update(inst, false); }); // once the slide has its layout
+    },
+    leave(inst) {
+      cancelAnimationFrame(inst.raf);
+    },
+    destroy(inst) {
+      if (inst.observer) inst.observer.disconnect();
+    },
+  });
+})();
+
+// `code-morph` (spec 8.11): code whose text changes between positions. The build aligned the versions;
+// each unit is an element placed on a monospace grid (`--r` rows, `--c` columns), so showing a version is
+// setting two numbers per unit. On a single step CSS transitions make the change visible: leaving units
+// fade out, surviving ones glide, arriving ones fade in. Every other move places the units directly.
+// A transparent copy of the current text lies on top, for selection and for arrows (its segments).
+(() => {
+  const QUICK = 140; // ms of the unphased glide used when a step arrives during a change
+
+  const reduced = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  // Tell measuring runtimes (arrows) that the text moved; `timing` is when the surviving units glide.
+  function relayout(inst, animate, timing) {
+    inst.el.dispatchEvent(new CustomEvent("lt-relayout", { bubbles: true, detail: { animate, timing } }));
+  }
+
+  // The class of a unit at version `v`: its Pygments class there (or the last one it had), then its role.
+  function unitClass(inst, i, v, role) {
+    const p = inst.d.pos[i][v];
+    if (p) inst.cls[i] = inst.d.classes[p[2]];
+    return `lt-mt${inst.cls[i] ? ` ${inst.cls[i]}` : ""}${role}`;
+  }
+
+  function place(inst, v, mode) {
+    const { d, toks, lns, prev } = inst;
+    const playing = mode !== "still";
+    toks.forEach((t, i) => {
+      const p = d.pos[i][v];
+      const q = d.pos[i][prev];
+      let role;
+      if (p) {
+        t.style.setProperty("--r", p[0]);
+        t.style.setProperty("--c", p[1]);
+        role = !playing ? "" : q ? " lt-mt-stay" : (d.mark && mode === "play" ? " lt-mt-in lt-mt-new" : " lt-mt-in");
+      } else {
+        role = playing && q ? " lt-mt-off lt-mt-out" : " lt-mt-off";
+      }
+      t.className = unitClass(inst, i, v, role);
+    });
+    lns.forEach((n, r) => {
+      const on = r < d.rows[v];
+      const was = r < d.rows[prev];
+      n.className = `lt-morph-ln${on ? (playing && !was ? " lt-mt-in" : "") : (playing && was ? " lt-mt-off lt-mt-out" : " lt-mt-off")}`;
+    });
+    if (d.room === "fit") inst.stage.style.setProperty("--h", Math.max(1, d.rows[v]));
+  }
+
+  // Bring the first changed row into view when the code overflows its box (as code-steps does).
+  function reveal(inst, v, animate) {
+    const pre = inst.pre;
+    if (pre.scrollHeight <= pre.clientHeight + 1) return;
+    const lh = parseFloat(getComputedStyle(pre).lineHeight) || 0;
+    const box = pre.getBoundingClientRect();
+    const scale = box.height / pre.offsetHeight || 1; // the slide may be scaled to the window
+    const origin = (inst.stage.getBoundingClientRect().top - box.top) / scale + pre.scrollTop;
+    const top = origin + inst.d.changed[v] * lh - pre.clientHeight / 3;
+    pre.scrollTo({ top: Math.max(0, top), behavior: animate ? "smooth" : "auto" });
+  }
+
+  Lattice.component("code-morph", {
+    mount(el, data) {
+      const box = el.querySelector(".lt-morph-box");
+      const stage = el.querySelector(".lt-morph-stage");
+      box.style.setProperty("--lt-md", `${data.duration}ms`);
+      const toks = Array.from(el.querySelectorAll(".lt-mt"));
+      const inst = { el, box, stage, toks, d: data, v: 0, prev: 0, until: 0,
+        lns: Array.from(el.querySelectorAll(".lt-morph-ln")),
+        cls: toks.map((t, i) => { const p = data.pos[i].find((x) => x); return p ? data.classes[p[2]] : ""; }),
+        text: el.querySelector(".lt-morph-text"), label: el.querySelector(".lt-morph-label"), pre: el.querySelector("pre") };
+      stage.addEventListener("transitionend", (e) => { // room=fit: arrows follow the content below
+        if (e.target === stage && e.propertyName === "height") relayout(inst, true);
+      });
+      return inst;
+    },
+
+    show(inst, position, info) {
+      const v = Math.max(0, Math.min(position, inst.d.rows.length - 1));
+      const now = performance.now();
+      const animate = !!(info && info.animate) && inst.d.duration > 0 && v !== inst.v && !reduced();
+      const mode = !animate ? "still" : now < inst.until ? "quick" : "play";
+      inst.prev = inst.v;
+      inst.v = v;
+      inst.box.classList.remove("lt-morph-still", "lt-morph-play", "lt-morph-quick");
+      inst.box.classList.add(`lt-morph-${mode}`);
+      inst.box.style.setProperty("--lt-mq", `${Math.min(QUICK, inst.d.duration)}ms`);
+      place(inst, v, mode);
+      if (mode === "still") void inst.box.offsetWidth; // apply the final values with transitions off
+      inst.until = mode === "play" ? now + inst.d.duration : mode === "quick" ? now + Math.min(QUICK, inst.d.duration) : 0;
+      inst.text.innerHTML = inst.d.layers[v];
+      if (inst.label) inst.label.textContent = inst.d.labels[v];
+      reveal(inst, v, animate);
+      const D = inst.d.duration;
+      relayout(inst, animate, mode === "play" ? { delay: 0.2 * D, duration: 0.6 * D }
+        : mode === "quick" ? { delay: 0, duration: Math.min(QUICK, D) } : null);
+    },
+
+    leave(inst) {
+      // stop whatever is playing: the units jump to the values of the current version
+      inst.box.classList.remove("lt-morph-play", "lt-morph-quick");
+      inst.box.classList.add("lt-morph-still");
+      inst.prev = inst.v;
+      place(inst, inst.v, "still");
+      void inst.box.offsetWidth;
+      inst.until = 0;
+    },
+  });
+})();
 
 // Show one version per position; the Python side already marked the changes.
 Lattice.component("diff-steps", {

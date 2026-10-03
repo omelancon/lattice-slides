@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.11.0. This README covers usage in brief. The rest:
+This is version 0.12.0. This README covers usage in brief. The rest:
 
 - [`user_manual/manual.md`](user_manual/manual.md) is the user manual, itself a Lattice deck (open
   [`user_manual/manual.html`](user_manual/manual.html)): every feature, with a live example of each.
@@ -112,6 +112,7 @@ code language.
 | ` ```abstract-interp-anim {program="sum-to-n.bbv"} ` + `history: [B.i]` | Abstract interpretation over the fixed CFG: contexts with types and intervals grow by union with widening and are narrowed at conditionals, until a fixed point; the panel can show the widening chain of a variable |
 | ` ```plot {data="bench.csv" x=n y=ms group=algo logy=true} ` | Chart from a CSV with matplotlib (static SVG), or `backend=vega` / `backend=plotly` for interactive charts; also `source="file.py:fn"` or a raw `spec:` |
 | ` ```diff-steps {lang=python context=3} ` + `versions: [...]` | Step through versions of a file; each step marks added and removed lines |
+| ` ```code-morph {lang=python} ` + `versions: [...]`, or `file=...` + `steps:` | The code changes in place from one version to the next: unchanged tokens glide, removed ones fade out, new ones fade in. Versions as for `diff-steps` (each may have its own `lang`), or one file whose named segments get new text at each step (spec 8.11) |
 | ` ```dot ` | Graphviz diagram, themed |
 | ` ```timeline ` | Orders the steps of several stepping elements on one slide |
 | ` ```arrow {to=proof label="here" angle=315} ` | An arrow drawn over the slide, pointing at an element (an id or a CSS selector), from a direction or from another element (`from=`), leaving and entering at a chosen side or angle (`from_anchor=left`, `to_anchor=bottom`); with `steps:` it moves from one element to the next |
@@ -210,7 +211,8 @@ Each folder in [`examples/`](examples) holds a deck and its built `talk.html`:
    converge), array animations and a comparison plot computed at build time.
 4. `04-custom-components`: two local plugins, a static truth table and an animated call stack with its
    own runtime.
-5. `05-refactoring-a-cache`: `diff-steps` through three versions of an LRU cache, an embedded image,
+5. `05-refactoring-a-cache`: a bug fixed in place with `code-morph` (with an arrow that follows the
+   changed code), `diff-steps` through three versions of an LRU cache, an embedded image,
    and the same benchmark as an interactive Vega-Lite chart and a Plotly bar chart.
 6. `06-trees-and-grids`: AVL insertions with rotations traced from the lab's own code (followed by the
    code), a rotation in a detour, breadth-first search in a maze and a longest common subsequence
@@ -224,7 +226,7 @@ Rebuild them all, and the user manual, with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.11.0 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.12.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.11.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.12.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -274,7 +274,7 @@ Because registered names win over lexers, components MUST NOT be registered unde
 
 Highlighting is Pygments' for every language, with one correction for `scheme`: the symbols that a binding form introduces are variables, not calls. The head of each binding of `let`, `let*`, `letrec`, `letrec*`, `do` and `fluid-let`, the formals of `let-values` and `let*-values`, and the parameters of `lambda`, `define-values` and `case-lambda` clauses are `Name.Variable`; the name of a named `let` is `Name.Function`, like the head of `(define (f ...))` and like its calls (`lattice.components.scheme`).
 
-Code read by `code`, `code-steps` and `diff-steps` (a file or the block's body) MAY contain **segment markers**, comments that name a stretch of code for arrows and highlights; they are removed from the displayed text (section 8.10).
+Code read by `code`, `code-steps`, `diff-steps` and `code-morph` (a file or the block's body) MAY contain **segment markers**, comments that name a stretch of code for arrows and highlights; they are removed from the displayed text (section 8.10).
 
 Reserved attributes, handled by the core and not passed to component options: `#id`, classes, `follow`.
 
@@ -687,7 +687,7 @@ Option construction:
 | `seed` | Integer derived from `instance_id`, for deterministic randomness |
 | `leader` | The leader's `RenderResult` for a follower, else `None` |
 | `frames_config` | `max_full_bytes`, `keyframe_interval` |
-| `warn(msg)` | Emit warning LT046 at the block's location |
+| `warn(msg, code="LT046")` | Emit a warning at the block's location: LT046, or the code a built-in component passes (LT059, LT060). Warnings emitted this way are reported again when the result comes from the cache (section 8.6) |
 
 ### 8.4 RenderResult
 
@@ -706,7 +706,7 @@ class RenderResult:
 - `positions` MUST be at least 1. `meta`, if present, MUST have length `positions` (LT047).
 - A component with `positions > 1` MUST declare a `runtime` (LT047), since only the runtime can change what is shown.
 - `requires` adds shared libraries for this instance only (a `plot` needs Vega only with `backend=vega`). Libraries are embedded only in decks that use them.
-- `anchors` lists the element ids of `html` that the author names (the segments of a `code` block, section 8.10). They take part in the check of ids on a slide (LT058, section 8.10); other ids inside a component's HTML (those of a matplotlib SVG, say) do not.
+- `anchors` lists the element ids of `html` that the author names (the segments of a `code` block, or of every position of a `code-morph`, sections 8.10 and 8.11). They take part in the check of ids on a slide (LT058, section 8.10); other ids inside a component's HTML (those of a matplotlib SVG, say) do not.
 
 ### 8.5 Render order
 
@@ -715,7 +715,7 @@ class RenderResult:
 
 ### 8.6 Caching
 
-The cache key is the SHA-256 of: the Lattice version and a hash of its Python sources, the component's name, version and module, canonical JSON of the options, the body, the block's directory, the leader's cache key and the theme palette; a cached entry is used only if the content hash of every registered dependency is unchanged. Only files registered through `path`, `depends` and `call` are tracked; modules imported indirectly by a called file are not. `lattice build --no-cache` bypasses the cache.
+The cache key is the SHA-256 of: the Lattice version and a hash of its Python sources, the component's name, version and module, canonical JSON of the options, the body, the block's directory, the leader's cache key and the theme palette; a cached entry is used only if the content hash of every registered dependency is unchanged. A cached entry keeps the render result (`html`, `data`, `positions`, `meta`, `requires`, `anchors`) and the warnings the render emitted through `ctx.warn`, which are reported again when the entry is used. Only files registered through `path`, `depends` and `call` are tracked; modules imported indirectly by a called file are not. `lattice build --no-cache` bypasses the cache.
 
 ### 8.7 Errors
 
@@ -739,6 +739,7 @@ A `ComponentError` raised by `render` becomes error LT022 at the block's locatio
 | `abstract-interp-anim` | yaml | number of frames | `program` or `source`, `entry` (the function analysed; default the first), `thresholds` (`thesis`, `sign`, `none` or a list of integers), `narrowing` (default `true`), `fixnum_bits` (default 62), `events` (among `start`, `dequeue`, `instruction`, `propagate`, `done`), `granularity` (`block` or `instruction`), `until`, `history` (`BLOCK.VAR` entries whose chain of entry values the panel shows), `panel` (keys among `worklist`, `iterations`, `history`), `show`, `colors`, `direction`, `wrap`, `caption`, `prims`, `height`, `max_steps` (section 9.6) |
 | `math` | text | 1 | display math block |
 | `arrow` | yaml | 1, or `len(steps)` | `to` (an element id, or a CSS selector, resolved inside the slide), `from` (another element), `angle` (degrees), `length` (default 120), `label`, `color` (a CSS color or a theme token: `accent`, `detour`, `muted`, `ink`), `width` (default 4), `curve` (bend as a fraction of the length, default 0), `from_anchor` and `to_anchor` (`left`, `right`, `top`, `bottom`, `center` or an angle in degrees); body `steps:` a list of targets (a string, or a mapping with the same `to`, `from`, `angle`, `length`, `label`, `from_anchor`, `to_anchor` keys, defaulting to the block's options; `from: ""` drops the block's `from`), one position each (section 8.9) |
+| `code-morph` | yaml | number of versions, or `len(steps) + 1` | `lang`, `title`, `markers`, `linenos`, `duration` (ms, default 600), `room` (`max` or `fit`), `mark` (default `false`); body either `versions:` (as `diff-steps`, and a version MAY set its own `lang`) or `file` with `steps:` (replacement texts of named segments, cumulative), with `lines`, `symbol` and `label`; the text of the block changes between positions and unchanged tokens glide (section 8.11) |
 
 The exact option schemas are the pydantic `Options` models in `src/lattice/components/`.
 
@@ -746,16 +747,16 @@ The exact option schemas are the pydantic `Options` models in `src/lattice/compo
 
 An `arrow` draws an arrow over the current slide, pointing at one of its elements. It is the one component whose geometry is computed in the browser, because element boxes exist only there; the build still decides everything else (targets, directions, steps).
 
-- **Targets.** `to` and `from` name an element of the slide: a bare identifier is an element id (an `{#id}` attribute line, a component `#id`, a code segment of section 8.10, or any id in the rendered body), anything else is a CSS selector such as `.lt-line[data-line="4"]` or `.lt-title`, resolved inside the slide section. A bare id that no element of the slide carries is warning LT046 at build time; a target not found at runtime hides the arrow (console warning). The box of a target is the extent of its contents when it has some (so a heading or a code line is pointed at its text, not at its full row), else the element's box; the box of a code segment is the union of its pieces, one per line it spans.
+- **Targets.** `to` and `from` name an element of the slide: a bare identifier is an element id (an `{#id}` attribute line, a component `#id`, a code segment of section 8.10, or any id in the rendered body), anything else is a CSS selector such as `.lt-line[data-line="4"]` or `.lt-title`, resolved inside the slide section. A bare id that no element of the slide carries, and that is not an anchor of one of its components (a segment of a later position of a `code-morph`, say), is warning LT046 at build time; a target not found at runtime hides the arrow (console warning). The box of a target is the extent of its contents when it has some (so a heading or a code line is pointed at its text, not at its full row), else the element's box; the box of a code segment is the union of its pieces, one per line it spans.
 - **Anchors.** `from_anchor` and `to_anchor` choose where the arrow leaves `from` and enters `to`. A side is an angle: `right` is 0, `top` 90, `left` 180, `bottom` 270, and a number is an angle in degrees with the convention of `angle` (counterclockwise, 0 pointing right). The end sits where the ray from the center of the box at that angle leaves the box (for a side, the middle of that side), a small gap outside it, and the curve leaves or enters along that ray. `center` puts the end at the center of the box, with no gap. A step whose `from_anchor` is set has a `from` (LT022); the block's `from_anchor` applies to the steps that have one.
 - **Direction.** With `from`, an end without an anchor (or with `center`) aims at the other end: at its anchor point, or at the center of its box. With no anchor at all, the arrow runs from the edge of the `from` box to the edge of the `to` box along the line between their centers, shortened by a small gap at both ends. Without `from`, the arrow comes from `angle`: degrees measured from the target toward the tail, counterclockwise with 0 pointing right (90 means the arrow comes from above, 315 from the lower right); its head sits at the target's edge along that direction, or at `to_anchor` when it is set, and its tail `length` slide pixels from the head's edge point along `angle`, shortened when it would leave the slide. `angle` defaults to the direction of `to_anchor` when it is an angle or a side, else to 315, a fixed direction chosen over any direction computed at runtime (report, decision 14).
 - **Appearance.** A cubic curve from tail to head. An end with an angle anchor has a handle along its ray, a free end a handle along the chord, so with no anchor the curve is the quadratic of earlier versions; `curve` bends it sideways by `curve` times its length (0 is straight; negative bends the other way). An arrowhead at `to` follows the curve's direction there; the `label` is at the tail (or beside the middle of the curve with `from`), kept inside the slide. `color` defaults to the theme accent.
 - **Steps.** With `steps:` the block has one position per entry and is a track (section 6.1): position `i` points at entry `i`. On a single-step move the arrow glides from its previous geometry (`info.animate`, section 10.1); any other move places it directly.
-- **Placement.** The runtime moves the block's wrapper out of the body to the slide section as an overlay covering the whole slide, above the content and ignoring pointer events, so the block's position in the Markdown does not matter and it takes no space. A `{.reveal}` attribute line before the block hides it until its fragment is shown, as for any block. The arrow is re-measured when the slide is entered, on every step, when the window is resized and when the slide body changes size. The presenter preview and the PDF export draw it like any component.
+- **Placement.** The runtime moves the block's wrapper out of the body to the slide section as an overlay covering the whole slide, above the content and ignoring pointer events, so the block's position in the Markdown does not matter and it takes no space. A `{.reveal}` attribute line before the block hides it until its fragment is shown, as for any block. The arrow is re-measured when the slide is entered, on every step, when the window is resized, when the slide body changes size and when a component of the slide announces that its content moved (the `lt-relayout` event, section 10.4); it glides to the new geometry when that move is animated. The presenter preview and the PDF export draw it like any component.
 
 ### 8.10 Named segments in code
 
-A **segment** names a stretch of code shown by `code` or `code-steps`, so that an arrow can say `to: i-init` and a highlight `i-init` instead of a line number and a token position. Segments are written in the source itself, in comments, so the file stays the single source of truth and keeps running.
+A **segment** names a stretch of code shown by `code`, `code-steps` or `code-morph` (section 8.11), so that an arrow can say `to: i-init` and a highlight `i-init` instead of a line number and a token position. Segments are written in the source itself, in comments, so the file stays the single source of truth and keeps running.
 
 ````text
 (let loop (#|@i-init|# (i 0) #|@end|#        ; inline form, block comments
@@ -775,7 +776,52 @@ while lo < hi:
 - **Highlights.** `highlight`, the entries of `code-steps` `steps:` and the lines a follower reads from its leader's `meta` accept segment names beside line numbers and ranges (`"3, i-init"`, `[i-init, 4-5]`). A highlighted segment is marked itself (the highlight background with an underline in `--lt-hl`), and the lines holding it are not dimmed. A name that is not a segment of the block is LT022.
 - **Errors.** An unclosed segment, an `@end` with no open segment or naming another one, a name defined twice in one text, or an empty segment is error LT022, its message giving the file and line of the marker.
 - **Ids on a slide.** Segment names are element ids: on a slide, the ids written by the author (attribute lines, placed badges, raw HTML in the body), explicit component ids and segment names MUST be distinct (LT058; two components with one id are LT007). Two blocks showing the same annotated file on one slide therefore collide; give one of them `markers=false`, which shows the text as written, markers included. Ids MAY repeat on different slides: arrows resolve them inside their slide.
-- `diff-steps` removes markers from its versions (unless `markers=false`) and defines no segments.
+- `diff-steps` removes markers from its versions (unless `markers=false`) and defines no segments. `code-morph` reads them in every version and in its file, and its segments follow the text from one position to the next (section 8.11).
+
+### 8.11 Code that changes: `code-morph`
+
+A `code-morph` block shows one piece of code whose text changes from one position to the next, for example a bug and its fix. The audience watches the old text turn into the new one: tokens that survive keep their identity and glide to their new place, removed tokens fade out and new tokens fade in. `diff-steps` remains the static, marked-up view of the same versions.
+
+**Two forms.** The body holds either `versions:` or, with the option `file`, `steps:`; one of the two is required and they exclude each other, `file` needs `steps:`, and `lines`, `symbol` and `label` belong to the steps form (all LT021).
+
+````markdown
+```code-morph {#fix lang=python title="the off-by-one"}
+versions:
+  - code: |
+      for i in range(len(xs) - 1):
+          total += xs[i]
+    label: buggy
+  - {file: fixed.py, label: fixed}
+```
+
+```code-morph {#loop lang=scheme file="sum-to-n.scm" label="as written"}
+steps:
+  - bound: "(>= i n)"
+    label: "stop before n"
+  - init: "(i 1)"
+```
+````
+
+- **Versions.** `versions:` is read as by `diff-steps` (section 8.8): file paths, or mappings with `file` or `code` and an optional `label`. A mapping MAY also set `lang`, which replaces the block's `lang` for that version, so a version can be written in another language. At least two versions are needed (LT022). Position `i` shows version `i`. The default label is the file path as written or `version N`; in a block whose versions do not all have the same language, it is the name of the version's lexer (`Python`, `Scheme`).
+- **Steps.** With `file`, the file holds the code once, with segment markers (section 8.10), and `lines` and `symbol` select part of it as for `code`. Position 0 shows the selection as written; each entry of `steps:` is one more position and maps segment names to the text that replaces their contents. Steps are cumulative: a step applies on top of the position before it, and a name set to `null` returns its segment to the text of the file. Setting a segment drops the replacements of the segments nested in it; when it returns to the file's text, they show the file's text too. The keys `label` (the label of that position) and `lang` (the language cannot change in this form) are reserved; `lang`, a name that is not a segment of the selection, and a step that sets both a segment and one nested in it are LT022. A replaced segment keeps its name and covers its replacement text, so arrows and the title follow it; segments nested in a replaced one do not exist while it is replaced, and naming one in a step is LT022. The replacement is the text as written (markers in it are not read, and show as written), with its trailing line breaks removed; when the segment starts within the indentation of its first line, that indentation stays in front of the replacement and every further line of the replacement is indented by it as well. An empty replacement of a segment that fills whole lines removes those lines. The option `label` is the label of position 0. The default labels are `as written` for position 0 and `step K` for step `K`.
+- **Options.** `lang`, `title`, `markers` (default `true`; `false` reads no segment markers), `linenos`, `duration` (milliseconds of one animated step, default 600; 0 never animates), `room` (`max`, the default, or `fit`, below), `mark` (default `false`: tokens that arrive are briefly tinted with the background of added lines, `--lt-add-bg`).
+- **Positions and meta.** The block has one position per version and is a track like `code-steps` (section 6.1). `meta[i]` is `{"label": LABEL, "version": i}`; it holds no line numbers, since lines change between positions, so a `code` follower that reads `lines` or `line` highlights nothing.
+
+**Alignment, at build time.** All matching is done in Python; the runtime places what it is given.
+
+1. Each version is highlighted with the lexer of its language (`lexer_for`, section 3.13, with the Scheme correction). Tabs are expanded to columns of 8, the width the browser gives them in a `code` block. Tokens spanning lines are cut at line ends, then every token is split into units: a run of word characters, a run of spaces, or one other character, each keeping the token's class. Units of spaces are not drawn: a token sits at an absolute row and column, so indentation is a gap, and code that is re-indented moves instead of being recreated.
+2. Consecutive versions are aligned by lines with `difflib.SequenceMatcher` (`autojunk=False`), comparing each line's units without its spaces. A line that is deleted on one side and inserted on the other, with the same units, at least six characters long (not counting spaces) and unique among the unmatched lines of both sides, is a move. Equal lines and moves pair their units in order. In each other changed region, the units of all its old and new lines are aligned by a second `SequenceMatcher`, on class and text when both versions have the same language and on text alone otherwise; units of equal runs survive, possibly on another line (a line rewritten into several, or several into one).
+3. A unit that survives from one version to the next keeps its identity (and its element in the page); every other unit is new. A unit's class is recorded per version, so a surviving unit whose class changes (another language, or a lexer that reads it differently) changes colour.
+
+**Rendering.** At rest the block looks like a `code` block of its current version: the same background, title bar, font, size, line height and padding. Every drawn unit is an absolutely positioned element at `col` character widths (`ch`) and `row` line heights from the origin of the text, so no layout is measured. A transparent plain-text copy of the current version lies over the units at the same origin: it carries the native text selection and the segments of the current version (`<span class="lt-seg" data-lt-seg="NAME">`, one piece per line, the first with `id="NAME"`, as in section 8.10), which arrows measure. Changing position replaces that copy at once. The title bar shows `title` and the label of the current version; it is shown when `title` is set, when any label was written, or when the language changes. With `linenos`, the rows of the current version are numbered from 1, beside the text, and the numbers do not move. A character that does not take one column of a monospace font (a wide character of East Asian scripts or an emoji, a combining mark, a control character) misplaces the units after it on its line: warning LT060. Two consecutive versions with the same text and language: warning LT059.
+
+**Room.** With `room=max` the text area keeps the height of the tallest version and the width of the widest at every position, so the rest of the slide never moves. With `room=fit` its height is that of the current version and changes with it (animated on a single step), moving what follows; its width stays that of the widest version. Long lines scroll horizontally, and a block taller than its space scrolls, as a `code` block does; when the text area overflows, the first row of the shown version that differs from the version before it (in the order of the versions) is scrolled into view.
+
+**Motion.** On a single-step move (`info.animate`, section 10.1) the change takes `duration` milliseconds in three overlapping phases: units that leave fade out during the first 40 %, units that survive glide to their new place (and change colour) from 20 % to 80 %, units that arrive fade in during the last 40 %. Every other move, the presenter preview, print mode, `duration=0` and a browser that asks for reduced motion (`prefers-reduced-motion`) place the units directly. With `mark`, arriving units are tinted only in such a phased change. A step that arrives while a change is still playing (skip playback, a quick second NEXT) continues from where the units are, in one short glide without phases. The final geometry does not depend on how a position was reached. After each `show` the block dispatches `lt-relayout` (section 10.4), and again when an animated change of height ends.
+
+**Segments.** In the versions form each version MAY define segments with markers; a name MAY be defined in several versions, and is then one target across them. In the steps form the segments are those of the file, replaced or not. The segment names of all positions are the block's anchors (LT058, section 8.10); at a position where a segment does not exist, an arrow at it is hidden.
+
+**Print.** In the PDF a morph is printed at the step of each page, like any component (section 11.5).
 
 ---
 
@@ -958,6 +1004,7 @@ Requirements:
 - Reveal: elements carry `data-lt-reveal="k"`; the core shows fragment `k` when the reveal position is at least `k`, using `visibility: hidden` so layout does not shift.
 - Badges that wait for their step (section 3.9): the badge carries `data-lt-badge="step"` or `data-lt-badge="next"`; at every step the core looks up the detour steps of its `data-lt-detour` in the slide's `stepDetours` and hides the badge the same way as a fragment. Each badge is handled on its own, so the placed badges of one detour may differ. The presenter preview and print mode render positions through the same path, so they follow.
 - Branch menus, detour badges, wiki links, transitions, overview, go-to, presenter view (with its preview and scrubber) and print mode (section 11.5) are implemented by the core.
+- A runtime that moves content of the slide without changing its own box (the text of a `code-morph`, section 8.11) dispatches a bubbling `CustomEvent` named `lt-relayout` on its element after it has placed its new state, with `detail.animate` true when the move is animated and, optionally, `detail.timing = {delay, duration}` in milliseconds, when the content glides. Runtimes that measure the slide (`arrow`, section 8.9) listen for it on their slide section and glide with that timing.
 - The core exports helpers for runtimes: `Lattice.frames(store)`, `Lattice.applyDelta`, `Lattice.renderPanel(el, panel, keys)` (the variable panel of the animation components) and `Lattice.esc` (HTML escaping).
 
 ---
@@ -971,7 +1018,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.11.0">
+  <meta name="generator" content="lattice 0.12.0">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -1147,6 +1194,8 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT056 | error | Invalid placed badge (`::detour-badge`): missing or unknown `ref`, a detour of another slide, without an explicit id or with `badge=false`, an unknown attribute or value, an attribute line with `reveal` or key-value attributes, or a badge in speaker notes or in a branch |
 | LT057 | error | `.reveal-with` with no fragment before it on the slide, or together with `.reveal` |
 | LT058 | error | An id used twice on a slide: element ids written by the author, explicit component ids and code segment names (section 8.10) |
+| LT059 | warning | Two consecutive versions of a `code-morph` are identical (section 8.11) |
+| LT060 | warning | A character of a `code-morph` that does not take one column of a monospace font: wide, combining or control (section 8.11) |
 
 Diagnostics are printed as `file:line:col: severity LTnnn: message`. `lattice check` exits with status 1 if any error is reported, 0 otherwise (`--strict` also fails on warnings).
 
@@ -1332,3 +1381,6 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.10 | `.reveal-with`: a block revealed on the same step as the previous fragment; LT057 | 3.12, 12 |
 | 0.11 | Named segments in code (markers in comments, `markers` option, segment highlights), `RenderResult.anchors`, LT058 for ids used twice on a slide | 3.13, 8.4, 8.8, 8.10, 12 |
 | 0.11 | Arrow anchors (`from_anchor`, `to_anchor`) and cubic arrow curves; arrows at code segments | 8.8, 8.9 |
+| 0.12 | `code-morph`: code whose text changes between positions, with versions (a language per version) or segment replacements; LT059, LT060 | 3.13, 8.8, 8.10, 8.11, 12 |
+| 0.12 | The `lt-relayout` event; arrows re-measure when a component moves content | 8.9, 10.4 |
+| 0.12 | Cached render results keep their anchors and warnings (LT058 and component warnings on cached builds) | 8.6 |
