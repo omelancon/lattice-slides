@@ -1,0 +1,36 @@
+; Thesis appendix D, figures 6 and 7: find on a vector, with the bound checks of vector-ref and the
+; overflow check of the index written out as the compiler expands them.
+function findv(p, x)
+A:  if vector?(x) goto B else goto Z
+Z:  call find(p, x) -> R
+R:  return #res
+B:  len = ##vector-length(x)
+    goto L(i=0)
+L:  if fx<(i, len) goto C else goto N
+N:  return #f
+C:  if fx>=(i, 0) goto C1 else goto K
+C1: len2 = ##vector-length(x)
+    if fx<(i, len2) goto C2 else goto K
+K:  fail
+C2: e = ##vector-ref(x, i)
+    if procedure?(p) goto D else goto K
+D:  call p(e) -> E
+E:  if #res goto F else goto G
+F:  return e
+G:  i2 = fx+?(i, 1)
+    if i2 goto G2 else goto O
+O:  i3 = ##+(i, 1)
+    goto L(i=i3)
+G2: goto L(i=i2)
+
+function find(p, lst) hidden
+A:  if pair?(lst) goto B else goto L
+L:  return #f
+B:  if procedure?(p) goto D else goto E
+E:  fail
+D:  tmp = ##car(lst)
+    call p(tmp) -> G
+G:  if #res goto H else goto J
+H:  return ##car(lst)
+J:  lst = ##cdr(lst)
+    goto A

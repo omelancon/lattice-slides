@@ -7,7 +7,7 @@ from __future__ import annotations
 from collections import deque
 from typing import Callable
 
-from .intervals import Bound, thresholds_named
+from .intervals import Bound, thresholds_named, using_fixnum_bits
 from .ir import RESULT, Assign, Block, Call, Const, Fail, Function, Goto, If, Move, Program, Return, Var
 from .rich import SEP, binding, code, context, join, ty, ver
 from .sbbv import Specializer
@@ -26,8 +26,8 @@ def value_text(t: Type) -> str:
 
 
 class AbstractInterpreter:
-    def __init__(self, program: Program, function: str | None = None, *, thresholds="thesis",
-                 narrowing: bool = True, fixnum_bits: int = 62, max_steps: int = 2000, emit: Emit | None = None):
+    def __init__(self, program: Program, function: str | None = None, *, thresholds="machine",
+                 narrowing: bool = True, fixnum_bits: int = 61, max_steps: int = 2000, emit: Emit | None = None):
         self.program = program
         self.function: Function = program.function(function) if function else next(iter(program.functions.values()))
         self.thresholds: list[Bound] | None = thresholds_named(thresholds) if isinstance(thresholds, str) else (
@@ -36,8 +36,7 @@ class AbstractInterpreter:
         self.fixnum_bits = fixnum_bits
         self.max_steps = max_steps
         self.emit = emit or (lambda kind, **info: None)
-        self.helper = Specializer(program)  # transfer functions of the instructions
-        self.helper.intervals = True
+        self.helper = Specializer(program, intervals=True, fixnum_bits=fixnum_bits)  # transfer functions
         self.contexts: dict[str, Context | None] = {b.name: None for b in self.function.blocks.values()}  # entry contexts
         self.after: dict[str, Context | None] = {b.name: None for b in self.function.blocks.values()}  # exit contexts
         self.worklist: deque[str] = deque()
@@ -68,6 +67,10 @@ class AbstractInterpreter:
 
     # ------------------------------------------------------------ the algorithm
     def run(self) -> None:
+        with using_fixnum_bits(self.fixnum_bits):
+            self._run()
+
+    def _run(self) -> None:
         fn = self.function
         entry = fn.entry
         ctx = Context({p: fn.param_types.get(p, ANY) for p in fn.params}).restrict(entry.params)
@@ -110,7 +113,7 @@ class AbstractInterpreter:
                               context=ctx)
                     self.after[block.name] = ctx
                     return []
-                t = p.result_type([self.helper.type_of(ctx, a) for a in instr.args]).refined(self.fixnum_bits)
+                t = self.helper.result_of(ctx, p, instr.args)
                 ctx = ctx.set(instr.target, t)
                 note = binding(instr.target, t)
                 kind = "assign"
@@ -155,7 +158,7 @@ class AbstractInterpreter:
                     for a, req in zip(instr.args, p.args or []):
                         if isinstance(a, Var):
                             ctx = ctx.narrow(a.name, req)
-                    t = p.result_type([self.helper.type_of(ctx, a) for a in instr.args]).refined(self.fixnum_bits)
+                    t = self.helper.result_of(ctx, p, instr.args)
                 else:
                     t = self.helper.type_of(ctx, instr.value)
                 ctx = ctx.set(RESULT, t)

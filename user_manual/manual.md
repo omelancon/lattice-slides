@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.12.1
+author: Lattice 0.13.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1038,8 +1038,8 @@ Programs are written in a small CFG language, next.
 {.reveal}
 - `function NAME(params)` then blocks: `LABEL:` and instructions; `;` starts a comment
 - Instructions: `x = prim(args)`, `x = y`, `if TEST goto A else goto B`, `goto A(x=y)`, `call f(args) -> K`, `return x`, `fail`
-- Tests are type tests (`pair?`, `fixnum?`, ...) or comparisons; `##car` and friends skip their checks
-- `n: fx | bg` annotates a parameter; a block's parameters are its live variables, or an explicit list
+- Tests are type tests (`pair?`, `fixnum?`, `vector?`, ...) or comparisons; `##car`, `##vector-length` and friends skip their checks
+- `n: fx | bg` or `i: fx [0, ⟦v⟧-1]` annotates a parameter; a block's parameters are its live variables, or an explicit list
 :::
 ::::
 
@@ -1085,6 +1085,7 @@ panel: [queue, checks]
 | `events`, `granularity=instruction`, `until` | Event kinds kept as frames; one frame per instruction; stop after that many frames |
 | `panel: [queue, versions, checks, merges, limit]`, `caption=none` | Panel entries; no captions |
 | `colors=none`, `direction=LR`, `wrap=4`, `call_edges`, `height`, `prims` | Fills off; block bands direction; versions per line; dotted call edges; drawing height; extra primitives |
+| `intervals=true`, `thresholds`, `fixnum_bits=61` | Track integer intervals and vector lengths (merges widen with the thresholds of the abstract interpreter); the fixnum width |
 
 # Instruction by instruction, with the algorithm's listing {#bbv-instructions}
 
@@ -1129,7 +1130,7 @@ Left, `algorithm=lv`: entry points, exit sites and indexed return points (dashed
 # Abstract interpretation options {#absint-options .dense}
 
 ````markdown
-```abstract-interp-anim {#ai program="programs/sum-to-n.bbv" thresholds=thesis}
+```abstract-interp-anim {#ai program="programs/sum-to-n.bbv" thresholds=machine}
 panel: [worklist, history]
 history: [B.i]
 ```
@@ -1138,12 +1139,22 @@ history: [B.i]
 | Option | Meaning |
 |---|---|
 | `entry` | The function analysed (default: the first) |
-| `thresholds` | `thesis` (sign, 8, 32 and 64 bits), `sign`, `none` (plain union), or a list of integers |
+| `thresholds` | `machine` (the sign and the 8, 32 and 64-bit limits), `sign`, `none` (plain union), or a list of integers |
 | `narrowing=false` | Keep the outcomes of tests but learn nothing from them |
-| `fixnum_bits` | Where an integer stops being a fixnum (default 62) |
+| `fixnum_bits` | Where an integer stops being a fixnum (default 61) |
 | `history: [B.i]` | Variables whose chain of entry values the panel shows, with `∪` and `∇` steps |
 | `panel: [worklist, iterations, history]` | Panel entries |
 | `show`, `events`, `granularity`, `until`, `caption`, `height` | As for `bbv-anim`; events are `start`, `dequeue`, `instruction`, `propagate`, `done` |
+
+# Intervals and vector lengths {#bbv-intervals .dense}
+
+- `intervals=true` keeps the intervals of annotations, constants and arithmetic; comparisons narrow them, merges widen them (`thresholds`, `fixnum_bits`)
+- `len = ##vector-length(x)` is `fx {⟦x⟧}`, the length of the vector held by `x` (type `vec`); a bound may be `⟦x⟧-1`, and it follows its vector through assignments, `goto` and calls
+- `fx<(i, len)` bounds `i` by `⟦x⟧-1`: the checks guarding `vector-ref` and the overflow test of `fx+?` are decided and removed (paper figure 7)
+
+```bbv-anim {#vec program="programs/findv.bbv" algorithm=sbbv limit=2 intervals=true direction=LR height=230}
+show: [label, context]
+```
 
 # Reading the drawing {#reading-the-drawing .dense}
 

@@ -136,8 +136,9 @@ def test_sbbv_find_matches_figure_6():
     b2 = next(v for v in loop_versions(spec, "B") if v.label == "B2")
     assert [ln.text for ln in b2.body if not ln.removed] == ["goto D"]
     assert b2.body[0].removed and "procedure?" in b2.body[0].text
-    # every redundant pair? test disappeared, the entry test and procedure? in B1 remain
-    assert spec.tests_remaining() == 3 and spec.merges == 0
+    # every redundant pair? test disappeared; the entry test, procedure? in B1 and the truthiness test
+    # of the call's result remain (tests_remaining counts every if left, not only type tests)
+    assert spec.tests_remaining() == 4 and spec.merges == 0
     assert not any(v.block.name in ("K", "I", "M") for v in spec.final_versions())
 
 
@@ -412,3 +413,259 @@ def test_rich_markup_round_trips():
     removed = next(f for f, m in zip(t.frames, t.meta) if m["event"] == "instruction" and "`rm:" in f["caption"])
     assert plain(removed["caption"]).startswith("test removed ")
     assert all("`" not in c["text"] for v in t.tables["versions"].values() for c in v["code"])
+
+
+# ------------------------------------------------------------ intervals in SBBV and ΛV (paper section 3.2)
+
+def test_sbbv_intervals_converge_by_widening_at_merges():
+    spec = Specializer(program("sum-to-n.bbv"), limit=2, intervals=True)
+    spec.run()
+    assert not spec.truncated and spec.merges > 0
+    b = sorted(loop_versions(spec, "B"), key=lambda v: v.id)
+    assert str(b[0].context.get("i")) == "fx [0, 1]"  # {0} ∪ {1}, the first step of the figure 2 chain
+    assert all(v.context.get("i").range is not None for v in b)
+    # the second loop version was widened all the way: a plain union would never converge
+    assert str(b[-1].context.get("i")).endswith("∞)")
+    # the same program converges under ΛV too, and intervals stay off by default
+    lv = LambdaVersioning(program("sum-to-n.bbv"), limit=2, intervals=True)
+    lv.run()
+    assert not lv.truncated
+    off = Specializer(program("sum-to-n.bbv"), limit=2)
+    off.run()
+    assert all(v.context.get("i").range is None for v in loop_versions(off, "C") if v.label == "C2")
+
+
+def test_sbbv_intervals_keep_annotations_and_decide_overflow_checks():
+    prog = parse("function f(n: fx [0, 100])\nA:  m = fx+?(n, 1)\n    if m goto B else goto C\nB:  return m\nC:  return #f\n")
+    spec = Specializer(prog, limit=2, intervals=True)
+    spec.run()
+    entry = next(v for v in spec.final_versions() if v.is_entry)
+    assert str(entry.context) == "n: fx [0, 100]"
+    assert entry.body[1].removed and entry.body[2].text == "goto B"  # m is fx [1, 101]: no overflow possible
+    assert not any(v.block.name == "C" for v in spec.final_versions())
+    b = next(v for v in spec.final_versions() if v.block.name == "B")
+    assert str(b.context.get("m")) == "fx [1, 101]"
+    big = parse("function g(n: fx)\nA:  m = fx+?(n, 1)\n    if m goto B else goto C\nB:  return m\nC:  return #f\n")
+    spec = Specializer(big, limit=2, intervals=True)
+    spec.run()
+    assert any(v.block.name == "C" for v in spec.final_versions())  # n is any fixnum: the overflow check stays
+
+
+def test_merge_caption_names_widened_variables():
+    t = VersioningTrace(program("sum-to-n.bbv"), limit=2, intervals=True)
+    merges = [f["caption"] for f in t.frames if "`op:merge`" in f["caption"]]
+    assert any("`tag:widened`" in c for c in merges)
+    assert plain(merges[0]).startswith("merge B")
+
+
+# ------------------------------------------------------------ vector lengths as symbolic bounds (paper section 3.3)
+
+def test_symbolic_bound_rules_of_the_paper():
+    from math import inf
+
+    from lattice.bbv.intervals import Interval, Sym, join_hi, join_lo, max_lo, maxfix, min_hi
+
+    v, w = Sym("v"), Sym("w")
+    v1 = Sym("v", 1)
+    assert str(v1) == "⟦v⟧-1" and str(Interval(v, v)) == "{⟦v⟧}" and str(Interval(0, v1)) == "[0, ⟦v⟧-1]"
+    # lower bounds drop the symbol under addition, upper bounds keep it while the offset stays nonnegative
+    assert Interval(v1, v1) + Interval(3, 3) == Interval(2, maxfix() + 2)  # (⟦v⟧-1) + 3: lower 2, upper overflows
+    assert Interval(v1, v1) + Interval(1, 1) == Interval(0, v)
+    assert Interval(0, v1) + Interval(2, 2) == Interval(2, maxfix() + 1)  # upper bound: overflow, not a fixnum
+    assert Interval(v, v) - Interval(1, 1) == Interval(-1, v1)
+    assert Interval(v1, v1) + Interval(Sym("w", 2), Sym("w", 2)) == Interval(-3, 2 * maxfix() - 3)
+    assert (-Interval(0, v1)) == Interval(-(maxfix() - 1), 0)
+    # comparisons are decided only when the numeric range of the symbol settles them
+    assert Interval(0, v1).lt(Interval(v, v)) == (Interval(0, v1), Interval(1, v))  # ⟦v⟧-1 < ⟦v⟧ always holds
+    assert Interval(v, v).lt(Interval(0, v1)) is None
+    with pytest.raises(ValueError):
+        Interval(v, v1)  # ⟦v⟧ > ⟦v⟧-1: empty
+    assert Interval(v, 0) == Interval(v, 0)  # ⟦v⟧ may be 0: not empty
+    # narrowing of x < y: upper bounds prefer the symbolic candidate, lower bounds the numeric one
+    assert min_hi(0, v1) == v1 and min_hi(-5, v1) == -5 and min_hi(v, v1) == v1
+    assert max_lo(1, v) == 1 and max_lo(v, 1) == 1 and max_lo(-2, v) == v
+    assert Interval(0, 0).lt(Interval(v, v)) == (Interval(0, v1), Interval(1, v))
+    # a join keeps a symbol only when it bounds both sides
+    assert join_hi(0, v) == v and join_hi(5, v1) == maxfix() - 1 and join_hi(v1, Sym("v", 3)) == v1
+    assert join_lo(0, v) == 0 and join_lo(v1, Sym("v", 3)) == Sym("v", 3) and join_lo(v, w) == 0
+    # widening: a symbolic upper bound that grew goes to ⟦v⟧, a symbol that became a number stops at its value
+    from lattice.bbv.intervals import MACHINE_THRESHOLDS as T
+    assert Interval(0, Sym("v", 3)).widen(Interval(0, Sym("v", 2)), T) == Interval(0, v)
+    assert Interval(0, 0).widen(Interval(0, v), T) == Interval(0, v)  # 0 <= ⟦v⟧ always: the symbol bounds both
+    assert Interval(0, v1).widen(Interval(0, 5), T) == Interval(0, maxfix() - 1)
+    assert Interval(v1, v1).widen(Interval(Sym("v", 2), v1), T) == Interval(-2, v1)
+    assert Interval(0, 0).widen(Interval(0, 1), T) == Interval(0, 1)
+    assert Interval(0, inf).union(Interval(v, v)) == Interval(0, inf)
+
+
+def test_vec_type_and_symbolic_annotations():
+    assert str(Type.parse("vector")) == "vec" and Type.of("vec").subset(Type.any())
+    assert str(Type.parse("fx [0, ⟦v⟧-1]")) == "fx [0, ⟦v⟧-1]" and str(Type.parse("fx {⟦v⟧}")) == "fx {⟦v⟧}"
+    assert str(Type.parse("!vec")) == "!vec"
+    assert Type.parse("fx | bg {⟦v⟧}").refined() == Type.parse("fx {⟦v⟧}")  # a length is a fixnum
+    assert Type.parse("fx [0, ⟦v⟧-1]").symbols() == {"v"}
+
+
+def test_symbols_follow_the_class_of_their_vector():
+    c = Context({"v": Type.of("vec"), "i": Type.parse("fx [0, ⟦v⟧-1]")})
+    assert str(c) == "v: vec, i: fx [0, ⟦v⟧-1]"
+    # the vector leaves the context: the bound becomes its numeric value
+    assert str(c.restrict(["i"])) == "i: fx [0, maxfix-1]"
+    # renamed through a goto or a call: the symbol follows
+    assert str(c.rename({"w": "v"}, ["w", "i"])) == "w: vec, i: fx [0, ⟦w⟧-1]"
+    # an alias keeps the symbol alive when the vector variable is reassigned
+    c2 = c.equate("w", "v")
+    assert str(c2) == "v/w: vec, i: fx [0, ⟦v⟧-1]"
+    assert str(c2.set("v", Type.of("fx"))) == "v: fx, i: fx [0, ⟦w⟧-1], w: vec"
+    assert str(c.set("v", Type.of("pair"))) == "v: pair, i: fx [0, maxfix-1]"
+    # a class that is no longer exactly a vector loses its symbols
+    assert str(c.union(Context({"v": Type.of("pair"), "i": Type.parse("fx [0, ⟦v⟧-1]")}))) == "v: pair | vec, i: fx [0, maxfix-1]"
+    # a union keeps a symbol that bounds both sides, drops one of a different vector
+    d = Context({"v": Type.of("vec"), "i": Type.parse("fx [1, ⟦v⟧-1]")})
+    assert str(c.union(d)) == "v: vec, i: fx [0, ⟦v⟧-1]"
+    e = Context({"v": Type.of("vec"), "u": Type.of("vec"), "i": Type.parse("fx [0, ⟦u⟧-1]")})
+    assert str(c.union(e).get("i")) == "fx [0, maxfix-1]"
+    # an annotation naming a variable that is not a vector is widened at once
+    assert str(Context({"i": Type.parse("fx [0, ⟦v⟧-1]")})) == "i: fx [0, maxfix-1]"
+    assert str(Context({"v": Type.of("vec"), "i": Type.parse("fx [⟦v⟧-2, ⟦v⟧]")}).restrict(["i"])) == "i: fx [-2, maxfix]"
+
+
+def test_contexts_of_the_same_shape_are_one_version():
+    # two paths bind the vector under different names before reaching D: the symbols are named after
+    # the class representative, so both reach the same version of D
+    prog = parse("""
+function f(p: proc)
+A:  call p() -> A2
+A2: if #res goto B else goto C
+B:  call p() -> B2
+B2: u = #res
+    n = ##vector-length(u)
+    goto D(v=u, m=n)
+C:  call p() -> C2
+C2: w = #res
+    n2 = ##vector-length(w)
+    goto D(v=w, m=n2)
+D(v, m):  return m
+""")
+    spec = Specializer(prog, limit=4, intervals=True)
+    spec.run()
+    d = [v for v in spec.final_versions() if v.block.name == "D"]
+    assert len(d) == 1 and str(d[0].context) == "p: proc, v: vec, m: fx {⟦v⟧}"
+    b2 = next(v for v in spec.final_versions() if v.block.name == "B2")
+    assert str(b2.context_after.get("n")) == "fx {⟦#res⟧}"  # named after the class representative
+    # and a symbol of another vector is a different shape
+    assert Context({"v": Type.of("vec"), "i": Type.parse("fx [0, ⟦v⟧-1]")}) != Context({"v": Type.of("vec"), "i": Type.of("fx")})
+
+
+def test_vector_length_and_bound_checks():
+    prog = parse("""
+function get(v: vec, i: fx)
+A:  n = ##vector-length(v)
+    if fx>=(i, 0) goto B else goto K
+B:  if fx<(i, n) goto C else goto K
+C:  m = vector-length(v)
+    if fx<(i, m) goto D else goto K
+D:  return ##vector-ref(v, i)
+K:  fail
+""")
+    spec = Specializer(prog, limit=2, intervals=True)
+    spec.run()
+    a = next(v for v in spec.final_versions() if v.block.name == "A")
+    assert str(a.context_after.get("n")) == "fx {⟦v⟧}"
+    b = next(v for v in spec.final_versions() if v.block.name == "B")
+    assert str(b.context.get("i")) == "fx [0, ⟦v⟧-1]" or str(b.context.get("i")) == "fx [0, maxfix]"
+    c = next(v for v in spec.final_versions() if v.block.name == "C")
+    assert str(c.context.get("i")) == "fx [0, ⟦v⟧-1]"
+    assert c.body[1].removed and c.body[2].text == "goto D"  # the second length is the same symbol: decided
+    # the vector is gone (reassigned by the return): the length becomes a fixnum in 0..maxfix
+    anon = parse("function h(p: proc)\nA:  call p() -> B\nB:  n = ##vector-length(#res)\n    return n\n")
+    s2 = Specializer(anon, limit=2, intervals=True)
+    s2.run()
+    exit_ = next(v for v in s2.final_versions() if v.is_exit)
+    assert str(exit_.context_after.get("n")) == "fx [0, maxfix]"
+
+
+def test_findv_matches_figure_7():
+    """Thesis appendix D, figure 7: all bound checks and overflow checks disappear, procedure? is
+    tested once, in the first iteration."""
+    for cls in (Specializer, LambdaVersioning):
+        spec = cls(program("findv.bbv"), limit=2, intervals=True)
+        spec.run()
+        assert not spec.truncated
+        findv = [v for v in spec.final_versions() if v.function == "findv"]
+        kept = [(v.label, ln.text) for v in findv for ln in v.body or [] if ln.text.startswith("if ") and not ln.removed]
+        tests = {t.split(" goto")[0] for _, t in kept}
+        assert tests == {"if vector?(x)", "if fx<(i, len)", "if procedure?(p)", "if #res"}, kept
+        assert sum(1 for _, t in kept if "procedure?" in t) == 1
+        assert not any(v.block.name == "O" for v in findv)  # the overflow path is gone, K stays for procedure?
+        heads = sorted(str(v.context.get("i")) for v in findv if v.block.name == "L")
+        assert heads == ["fx [1, ⟦x⟧]", "fx {0}"]
+        body = next(v for v in findv if v.block.name == "C2" and str(v.context.get("i")) == "fx [0, ⟦x⟧-1]")
+        assert str(body.context.get("len")) == "fx [1, ⟦x⟧]"
+        inc = next(v for v in findv if v.block.name == "G2")
+        assert str(inc.context.get("i2")) == "fx [1, ⟦x⟧]"  # ⟦x⟧-1 + 1 cannot overflow
+
+
+def test_absint_findv_fixed_point_with_symbols():
+    from lattice.bbv.absint import AbstractInterpreter
+
+    ai = AbstractInterpreter(program("findv.bbv"), "findv")
+    ai.run()
+    assert not ai.truncated
+    assert str(ai.contexts["C2"].get("i")) == "fx [0, ⟦x⟧-1]" and str(ai.contexts["L"].get("i")) == "fx [0, ⟦x⟧]"
+    assert ai.contexts["K"] is not None and ai.contexts["O"] is None  # only the procedure? failure remains
+
+
+def test_lv_return_points_translate_symbols_to_the_caller():
+    prog = parse("""
+function last(v: vec)
+A:  n = ##vector-length(v)
+    j = fx-(n, 1)
+    if fx>=(j, 0) goto B else goto C
+B:  return j
+C:  return -1
+
+function user(x: vec, y: vec)
+A:  call last(x) -> B
+B:  k = #res
+    call last(y) -> C
+C:  return #res
+""")
+    spec = LambdaVersioning(prog, limit=3, entry="user", intervals=True)
+    spec.run()
+    b = [v for v in spec.final_versions() if v.function == "user" and v.block.name == "B"]
+    assert sorted(str(v.context.get("#res")) for v in b) == ["fx [0, ⟦x⟧-1]", "fx {-1}"]
+    c = [v for v in spec.final_versions() if v.function == "user" and v.block.name == "C"]
+    assert {str(v.context.get("#res")) for v in c} == {"fx [0, ⟦y⟧-1]", "fx {-1}"}
+    # the callee's local variable has no name in the caller: its exit contract names the parameter
+    exits = {str(v.context_after.restrict(["v", "#res"])) for v in spec.final_versions() if v.function == "last" and v.is_exit}
+    assert "v: vec, #res: fx [0, ⟦v⟧-1]" in exits
+
+
+def test_intervals_break_ties_in_the_heuristics():
+    from lattice.bbv.heuristics import arithmetic, range_distance, similarity
+
+    fx, v = Type.of("fx"), Type.of("vec")
+    a = Context({"v": v, "i": Type.parse("fx [0, ⟦v⟧-1]")})
+    b = Context({"v": v, "i": Type.parse("fx [1, ⟦v⟧-1]")})
+    c = Context({"v": v, "i": Type.parse("fx [0, 10]")})
+    d = Context({"v": v, "i": fx})
+    e = Context({"v": v, "i": Type.of("fx", "bg")})
+    assert range_distance(a.get("i"), a.get("i")) == 0 and range_distance(a.get("i"), b.get("i")) == 0.25
+    assert range_distance(a.get("i"), c.get("i")) == 0.75 and range_distance(a.get("i"), d.get("i")) == 0.5
+    for dist in (similarity, arithmetic):
+        assert dist(a, a) < dist(a, b) < dist(a, c) < dist(a, e)  # a type difference outweighs any interval difference
+
+
+def test_bbv_anim_accepts_the_interval_options(deck):
+    prog = (PROGRAMS / "findv.bbv").read_text(encoding="utf-8")
+    root = deck({"talk.md": """# Vectors
+
+```bbv-anim {#t program="findv.bbv" algorithm=sbbv limit=2 intervals=true thresholds=machine fixnum_bits=61}
+panel: [queue, checks]
+```
+""", "findv.bbv": prog})
+    d = build_deck(root, use_cache=False)
+    data = d.instances["vectors/t"]["data"]
+    assert any("⟦x⟧" in line for v in data["tables"]["versions"].values() for line in v["context"])
+    assert data["frames"]["count"] > 20

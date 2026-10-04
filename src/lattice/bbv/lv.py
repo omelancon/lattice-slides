@@ -79,12 +79,17 @@ class LambdaVersioning(Specializer):
 
     # ------------------------------------------------------------ return points (algorithms 2.8, 2.9)
     def return_context(self, cs: Version, exit: Version) -> Context:
+        """``callContext ∩ exitSite.contextAfter`` (algorithm 2.8). A symbolic bound of the callee
+        names a callee variable: it is translated to the caller's argument when the variable is a
+        parameter bound to a variable, and widened otherwise."""
         ctx = cs.call.context
         after = exit.context_after
+        names = {after.rep(p): ctx.rep(a.name) for p, a in cs.call.binds.items() if isinstance(a, Var) and p in after}
+        back = {v: names.get(v) for v in after.vars()}
         for p, a in cs.call.binds.items():
             if isinstance(a, Var):
-                ctx = ctx.narrow(a.name, after.get(p))
-        ctx = ctx.set(RESULT, after.get(RESULT))
+                ctx = ctx.narrow(a.name, after.get(p).remap_symbols(back))
+        ctx = ctx.set(RESULT, after.get(RESULT).remap_symbols(back))
         for p, a in cs.call.binds.items():
             if isinstance(a, Var) and after.same(RESULT, p):
                 ctx = ctx.equate(RESULT, a.name)

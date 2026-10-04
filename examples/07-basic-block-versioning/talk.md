@@ -166,6 +166,26 @@ Without interprocedural propagation every call returns an unknown value, so noth
 :::
 :::::
 
+# Vectors: the bound checks disappear {#findv-sbbv}
+
+```bbv-anim {#fv program="programs/findv.bbv" algorithm=sbbv limit=2 intervals=true direction=LR height=460}
+show: [label, context]
+```
+
+::: notes
+Paper figures 6 and 7 (thesis appendix D), with `intervals=true`. `len = ##vector-length(x)` is the symbol `⟦x⟧`, the length of the vector held by `x`. The loop test `fx<(i, len)` bounds `i` by `⟦x⟧-1`, so the two bound checks of `vector-ref` and the overflow test of `fx+?` are decided: no bound check and no overflow check remain, and `procedure?` is tested once, in the first iteration. The loop head keeps two versions, `i: {0}` and `i: [1, ⟦x⟧]`; the third one merges into the second without widening, since its intervals are contained.
+:::
+
+# `findv` under ΛV {#findv-lv}
+
+```bbv-anim {#fvl program="programs/findv.bbv" algorithm=lv limit=2 intervals=true direction=LR height=460}
+show: [label, context]
+```
+
+::: notes
+The same program under Lambda Versioning: the list case calls `find`, a hidden function of the program, whose entry points and return points come and go while `findv` is specialized exactly as before. A symbol crosses a call boundary with its vector: a callee returning an index into its parameter hands the caller `#res: fx [0, ⟦x⟧-1]` with the caller's name for the vector.
+:::
+
 # Thanks {#thanks .center}
 
 Programs are written in a small CFG language; the algorithms run at build time. Press `o` for the overview.

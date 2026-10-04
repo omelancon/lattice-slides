@@ -6,10 +6,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
-from .intervals import Interval
+from .intervals import Interval, Sym, maxfix, minfix
 from .types import Type
 
-Result = Type | Callable[[list[Type]], Type]
+Result = Type | Callable[[list[Type]], Type]  # or, with ``names``, Callable[[list[Type], list[str | None]], Type]
 # narrow(arg types) -> (types when the test holds, types when it fails); None marks an impossible outcome
 Narrow = Callable[[list[Type]], tuple[list[Type] | None, list[Type] | None]]
 
@@ -21,9 +21,12 @@ class Prim:
     result: Result = Type.any()
     test: Type | None = None  # for type predicates: the type of the argument when the test holds
     narrow: Narrow | None = None  # for predicates usable in ``if``
+    names: bool = False  # the result rule also receives the class representative of each variable argument
 
-    def result_type(self, arg_types: list[Type]) -> Type:
+    def result_type(self, arg_types: list[Type], arg_names: list[str | None] | None = None) -> Type:
         if callable(self.result):
+            if self.names:
+                return self.result(arg_types, arg_names or [None] * len(arg_types))
             return self.result(arg_types)
         return self.result
 
@@ -31,6 +34,7 @@ class Prim:
 FX, FL, NUM, BOOL, PAIR, ANY = (Type.of("fx"), Type.of("fl"), Type.of("num"), Type.of("bool"), Type.of("pair"),
                                 Type.any())
 INT = Type.of("fx", "bg")
+VEC = Type.of("vec")
 
 
 def _integers(types: list[Type]) -> bool:
@@ -54,6 +58,34 @@ def _int_op(op: Callable[[Interval, Interval], Interval], bits: Type):
         return bits
 
     return result
+
+
+def _checked_op(op: Callable[[Interval, Interval], Interval]):
+    """An overflow-checking fixnum operation (``fx+?``): ``fx`` with the interval of the result
+    when it fits the fixnum range (no overflow is possible), ``fx | #f`` otherwise."""
+    maybe = Type.of("fx", "#f")
+
+    def result(types: list[Type]) -> Type:
+        if len(types) == 2 and _integers(types) and any(t.range is not None for t in types):
+            a, b = _ranges(types)
+            try:
+                rng = op(a, b)
+            except ValueError:
+                return maybe
+            if Interval(minfix(), maxfix()).contains(rng):
+                return FX.with_range(rng)
+            return maybe.with_range(rng)
+        return maybe
+
+    return result
+
+
+def _vector_length(types: list[Type], names: list[str | None]) -> Type:
+    """The length of a vector: the symbol ``⟦v⟧`` of the variable's class, or a fixnum in
+    ``0..maxfix`` for a value with no name."""
+    if names and names[0] is not None:
+        return FX.with_range(Interval.of(Sym(names[0])))
+    return FX.with_range(Interval(0, maxfix()))
 
 
 def _arith(op: Callable[[Interval, Interval], Interval]):
@@ -128,12 +160,12 @@ def _minmax(pick):
 def _table() -> dict[str, Prim]:
     prims: list[Prim] = []
 
-    def add(name, args=None, result=ANY, test=None, narrow=None):
-        prims.append(Prim(name, tuple(args) if args is not None else None, result, test, narrow))
+    def add(name, args=None, result=ANY, test=None, narrow=None, names=False):
+        prims.append(Prim(name, tuple(args) if args is not None else None, result, test, narrow, names))
 
     for name, t in [("fixnum?", "fx"), ("flonum?", "fl"), ("bignum?", "bg"), ("number?", "num"),
                     ("pair?", "pair"), ("null?", "nil"), ("procedure?", "proc"), ("boolean?", "bool"),
-                    ("string?", "str"), ("integer?", "fx | bg")]:
+                    ("string?", "str"), ("integer?", "fx | bg"), ("vector?", "vec")]:
         hold = Type.parse(t)
         add(name, [ANY], BOOL, hold, _type_test(hold))
     for name, op in [("fx+", lambda a, b: a + b), ("fx-", lambda a, b: a - b), ("fx*", lambda a, b: a * b),
@@ -142,7 +174,7 @@ def _table() -> dict[str, Prim]:
     for name in ["fxremainder", "fxmodulo"]:
         add(name, [FX, FX], FX)
     for name, op in [("fx+?", lambda a, b: a + b), ("fx-?", lambda a, b: a - b), ("fx*?", lambda a, b: a * b)]:
-        add(name, [FX, FX], _int_op(op, Type.of("fx", "#f")))
+        add(name, [FX, FX], _checked_op(op))
     for name, cmp in [("fx<", "<"), ("fx>", ">"), ("fx=", "="), ("fx<=", "<="), ("fx>=", ">=")]:
         add(name, [FX, FX], BOOL, narrow=_compare(cmp))
     add("fxzero?", [FX], BOOL, narrow=lambda ts: _compare("=")([ts[0], Type.integer(0, 0)]))
@@ -171,6 +203,13 @@ def _table() -> dict[str, Prim]:
     add("##car", [ANY], ANY)
     add("##cdr", [ANY], ANY)
     add("cons", [ANY, ANY], PAIR)
+    for name in ["vector-length", "##vector-length"]:
+        add(name, [VEC], _vector_length, names=True)
+    add("vector-ref", [VEC, FX], ANY)
+    add("##vector-ref", [ANY, ANY], ANY)
+    add("vector-set!", [VEC, FX, ANY], Type.of("other"))
+    add("##vector-set!", [ANY, ANY, ANY], Type.of("other"))
+    add("make-vector", [FX, ANY], VEC)
     for name in ["eq?", "eqv?", "equal?", "not"]:
         add(name, [ANY] * (1 if name == "not" else 2), BOOL)
     add("display", [ANY], Type.of("other"))

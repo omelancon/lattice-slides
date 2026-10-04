@@ -40,13 +40,14 @@ class VersioningTrace(Trace):
     def __init__(self, program: Program, *, algorithm: str = "sbbv", limit: int = 2, heuristic: str = "similarity",
                  entry: str | None = None, limits: dict | None = None, seed: int = 0, functions: list[str] | None = None,
                  events: list[str] | None = None, caption: str = "auto", until: int | None = None,
-                 max_steps: int = 5000, granularity: str = "block"):
+                 max_steps: int = 5000, granularity: str = "block", intervals: bool = False,
+                 thresholds="machine", fixnum_bits: int = 61):
         super().__init__({})
         self.program = program
         self.algorithm = algorithm
         cls = LambdaVersioning if algorithm == "lv" else Specializer
         self.spec = cls(program, limit, heuristic, entry=entry, limits=limits, seed=seed, max_steps=max_steps,
-                        emit=self._on_event)
+                        emit=self._on_event, intervals=intervals, thresholds=thresholds, fixnum_bits=fixnum_bits)
         self.visible = [f for f in program.functions if not program.functions[f].hidden] if functions is None else list(functions)
         for f in self.visible:
             program.function(f)
@@ -225,7 +226,7 @@ class VersioningTrace(Trace):
                 continue
             v = self.spec.by_id[int(vid)]
             for line in v.body or []:
-                if not line.removed and line.text.startswith("if ") and "?(" in line.text:
+                if not line.removed and line.text.startswith("if "):
                     n += 1
         return n
 
@@ -265,6 +266,9 @@ class VersioningTrace(Trace):
             olds = [i for i in info["merged"] if i != into]
             parts = [f"{op('merge')} {self._chips(olds)} → {self._chip(into)}"]
             parts.append("new version, the union of their contexts" if len(olds) == len(info["merged"]) else "its context is their union")
+            widened = info.get("widened") or []
+            if widened:
+                parts.append(f"{tag('widened')} {', '.join(var(w) for w in widened)}")
             parts.append(context(v(into).context))
             if info.get("queued"):
                 parts.append(tag("queued"))
@@ -307,7 +311,7 @@ class VersioningTrace(Trace):
             n = sum(1 for x in spec.final_versions() if self._visible(x.id))
             where = " in the functions drawn" if len(self.visible) < len(self.program.functions) else ""
             parts = [f"{op('done')} {n} version{'s' if n != 1 else ''}", f"{spec.merges} merge{'s' if spec.merges != 1 else ''}",
-                     f"{self._tests(self.prev_nodes)} type test{'s' if self._tests(self.prev_nodes) != 1 else ''} left{where}"]
+                     f"{self._tests(self.prev_nodes)} test{'s' if self._tests(self.prev_nodes) != 1 else ''} left{where}"]
             if spec.truncated:
                 parts.insert(0, f"{tag('stopped')} after the maximum number of steps")
         if gone and kind in ("merge", "specialize", "return-points"):
@@ -418,8 +422,8 @@ def context_lines(ctx) -> list[str]:
 class AbstractTrace(Trace):
     """Frames of an abstract interpretation run (thesis 1.1): the CFG stays, its annotations change."""
 
-    def __init__(self, program: Program, *, function: str | None = None, thresholds="thesis", narrowing: bool = True,
-                 fixnum_bits: int = 62, events: list[str] | None = None, granularity: str = "block",
+    def __init__(self, program: Program, *, function: str | None = None, thresholds="machine", narrowing: bool = True,
+                 fixnum_bits: int = 61, events: list[str] | None = None, granularity: str = "block",
                  history: list[str] | None = None, caption: str = "auto", until: int | None = None,
                  max_steps: int = 2000):
         from .absint import AbstractInterpreter

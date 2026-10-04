@@ -11,4 +11,5 @@ Documents kept as they were written, for the history behind features. They are n
 | `todo.md` | Status and todo of those phases; its open items were carried over to `../todo.md` |
 | `implementation-report-2026-10-01.md` | Lattice 0.6.0: backward navigation without history, skip keys, detour steps, the `arrow` component |
 | `implementation-report-2026-10-02.md` | Lattice 0.7.0 to 0.11.0: rich captions of the versioning animations, Scheme highlighting, the user manual, badges that wait for their detour step, placed badges, `.reveal-with`, named code segments and arrow anchors |
+| `implementation-report-2026-10-03.md` | Lattice 0.12.0 and 0.12.1: `code-morph`, code whose text changes in place between positions |
 | `thesis.pdf` | The thesis on basic block versioning that the 0.4.0 and 0.5.0 work follows |

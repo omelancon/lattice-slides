@@ -28,9 +28,9 @@
     return (text || "").replace(SPAN, (m, kind, body) => kind === "v" ? body.split("|")[0] : body);
   }
 
-  // "fx | bg [0, 127]" -> [["ty", "fx | bg "], ["range", "[0, 127]"]]
+  // "fx | bg [0, 127]" -> [["ty", "fx | bg "], ["range", "[0, 127]"]]; a bound may be a vector length, "⟦x⟧-1", or "maxfix-1"
   function typeParts(text) {
-    const m = /^(.*?)([\[({][-−0-9∞^, ]*[\])}])$/.exec(text);
+    const m = /^(.*?)([\[({](?:[-−0-9∞^, ]|⟦[^⟧]*⟧|maxfix|minfix)*[\])}])$/.exec(text);
     if (!m) return [["ty", text]];
     return m[1] ? [["ty", m[1]], ["range", m[2]]] : [["range", m[2]]];
   }

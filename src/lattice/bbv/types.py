@@ -11,9 +11,9 @@ from dataclasses import dataclass
 from math import inf
 from typing import Iterable
 
-from .intervals import Interval
+from .intervals import Interval, Sym, hi_value, lo_value, maxfix, minfix
 
-PRIMITIVE_TYPES = ["fx", "bg", "fl", "#t", "#f", "nil", "pair", "str", "proc", "other"]
+PRIMITIVE_TYPES = ["fx", "bg", "fl", "#t", "#f", "nil", "pair", "str", "vec", "proc", "other"]
 _BIT = {name: 1 << i for i, name in enumerate(PRIMITIVE_TYPES)}
 ALL_BITS = (1 << len(PRIMITIVE_TYPES)) - 1
 _ALIASES = {
@@ -24,21 +24,28 @@ _ALIASES = {
     "null": ("nil",),
     "procedure": ("proc",),
     "string": ("str",),
+    "vector": ("vec",),
 }
 
 
 _INT_BITS = (1 << PRIMITIVE_TYPES.index("fx")) | (1 << PRIMITIVE_TYPES.index("bg"))
 _FX_BIT = 1 << PRIMITIVE_TYPES.index("fx")
 _BG_BIT = 1 << PRIMITIVE_TYPES.index("bg")
-_INTERVAL = re.compile(r"^(.*?)\s*(\{\s*(-?\d+)\s*\}|[\[(]\s*(-?\d+|-?∞|-?inf)\s*,\s*(-?\d+|-?∞|\+?inf)\s*[\])])\s*$")
+_BOUND = r"-?\d+|-?∞|[-+]?inf|⟦[^⟧\s]+⟧(?:\s*-\s*\d+)?"
+_INTERVAL = re.compile(r"^(.*?)\s*(\{\s*(" + _BOUND + r")\s*\}|[\[(]\s*(" + _BOUND + r")\s*,\s*(" + _BOUND + r")\s*[\])])\s*$")
+_VEC_BIT = 1 << PRIMITIVE_TYPES.index("vec")
 
 
 def _bound(text: str):
+    """``5``, ``-∞``, ``inf``, ``⟦v⟧``, ``⟦v⟧-1``."""
     text = text.strip()
     if text in ("∞", "+inf", "inf"):
         return inf
     if text in ("-∞", "-inf"):
         return -inf
+    if text.startswith("⟦"):
+        name, _, off = text[1:].partition("⟧")
+        return Sym(name, int(off.replace("-", "").strip() or 0))
     return int(text)
 
 
@@ -92,7 +99,7 @@ class Type:
         m = _INTERVAL.match(text)
         if m:
             base = Type.parse(m.group(1)) if m.group(1).strip() else Type.of("fx", "bg")
-            rng = Interval.of(int(m.group(3))) if m.group(3) is not None else Interval(_bound(m.group(4)), _bound(m.group(5)))
+            rng = Interval.of(_bound(m.group(3))) if m.group(3) is not None else Interval(_bound(m.group(4)), _bound(m.group(5)))
             return Type(base.bits, base.procs, rng)
         if text in ("any", "⊤", "top"):
             return Type.any()
@@ -197,12 +204,12 @@ class Type:
     def without_range(self) -> "Type":
         return Type(self.bits, self.procs, None)
 
-    def refined(self, fixnum_bits: int = 62) -> "Type":
-        """Let the interval decide between ``fx`` and ``bg`` (and a ``fx``-only type bound its interval)."""
+    def refined(self, fixnum_bits: int | None = None) -> "Type":
+        """Let the interval decide between ``fx`` and ``bg`` (and a ``fx``-only type bound its
+        interval); the fixnum width is the one in effect (``intervals.fixnum_bits``) unless given."""
         if not self.bits & _INT_BITS:
             return self
-        lo, hi = -(1 << (fixnum_bits - 1)), (1 << (fixnum_bits - 1)) - 1
-        fixnums = Interval(lo, hi)
+        fixnums = Interval(minfix(fixnum_bits), maxfix(fixnum_bits))
         bits, rng = self.bits, self.range
         if rng is not None:
             if fixnums.contains(rng):
@@ -217,6 +224,17 @@ class Type:
 
     def count(self) -> int:
         return bin(self.bits).count("1")
+
+    # -- symbolic bounds
+    def symbols(self) -> set[str]:
+        """The vectors named by the symbolic bounds of the interval."""
+        return self.range.symbols() if self.range is not None else set()
+
+    def remap_symbols(self, mapping: dict[str, str | None]) -> "Type":
+        """Rename the vectors of the symbolic bounds (``None`` widens the bound to its value)."""
+        if self.range is None or not self.range.symbols():
+            return self
+        return self.with_range(self.range.remap(mapping))
 
     def hamming(self, other: "Type") -> int:
         return bin(self.bits ^ other.bits).count("1")
@@ -258,6 +276,12 @@ class Context:
 
     Immutable: every operation returns a new context. Variable order is kept for printing.
     ``rep[v]`` is the representative of ``v``'s class (the earliest variable of the class).
+
+    A symbolic bound ``⟦x⟧`` names the class holding the vector by its representative, so that
+    two contexts of the same shape carry the same symbols and compare equal structurally. Every
+    operation that changes classes ends with :meth:`_remap`, which renames the symbols of the
+    classes that changed representative and widens those whose vector left the context or whose
+    class is no longer exactly a vector.
     """
 
     __slots__ = ("_types", "_rep", "_key")
@@ -266,6 +290,7 @@ class Context:
         self._types = dict(types or {})
         self._rep = {v: (rep or {}).get(v, v) for v in self._types}
         self._key = None
+        self._remap()
 
     # -- basic access
     def vars(self) -> list[str]:
@@ -306,6 +331,28 @@ class Context:
     def is_bottom(self) -> bool:
         return any(t.is_bottom() for t in self._types.values())
 
+    # -- symbolic bounds
+    def _remap(self, mapping: dict[str, str | None] | None = None) -> None:
+        """In place, on a fresh context: apply ``mapping`` (old representative to new one, or
+        ``None`` when the vector is gone) to the symbols of every range, then widen any symbol
+        whose class is not exactly a vector any more."""
+        for v, t in self._types.items():
+            syms = t.symbols()
+            if not syms:
+                continue
+            m: dict[str, str | None] = {}
+            for s in syms:
+                n = mapping.get(s, None) if mapping is not None else s
+                if n is not None:
+                    n = self._rep.get(n)
+                if n is not None and not self._types[n].is_exactly("vec"):
+                    n = None
+                m[s] = n
+            self._types[v] = t.remap_symbols(m)
+
+    def _identity(self) -> dict[str, str | None]:
+        return {v: v for v in self._types}
+
     # -- updates
     def _copy(self) -> "Context":
         c = Context.__new__(Context)
@@ -317,12 +364,14 @@ class Context:
     def set(self, v: str, t: Type) -> "Context":
         """Assign a new value to ``v``: its type becomes ``t`` and it leaves its class."""
         c = self._copy()
-        c._detach(v)
+        mapping = c._identity()
+        c._detach(v, mapping)
         c._types[v] = t
         c._rep[v] = v
+        c._remap(mapping)
         return c
 
-    def _detach(self, v: str) -> None:
+    def _detach(self, v: str, mapping: dict[str, str | None]) -> None:
         if v not in self._types:
             return
         mates = [w for w in self._types if self._rep[w] == self._rep[v] and w != v]
@@ -330,6 +379,9 @@ class Context:
             new_rep = mates[0]
             for w in mates:
                 self._rep[w] = new_rep
+            mapping[v] = new_rep
+        else:
+            mapping[v] = None
 
     def narrow(self, v: str, t: Type) -> "Context":
         """Intersect the type of ``v`` (and of its whole class) with ``t``."""
@@ -339,6 +391,7 @@ class Context:
             c._rep[v] = v
         for w in c.classmates(v):
             c._types[w] = c._types[w].intersection(t)
+        c._remap()
         return c
 
     def equate(self, a: str, b: str) -> "Context":
@@ -356,6 +409,9 @@ class Context:
             if c._rep[w] in (ra, rb):
                 c._rep[w] = new_rep
                 c._types[w] = t
+        mapping = c._identity()
+        mapping[ra] = mapping[rb] = new_rep
+        c._remap(mapping)
         return c
 
     def map(self, f) -> "Context":
@@ -363,6 +419,7 @@ class Context:
         c = self._copy()
         for v in c._types:
             c._types[v] = f(c._types[v])
+        c._remap()
         return c
 
     def restrict(self, names: Iterable[str]) -> "Context":
@@ -377,6 +434,7 @@ class Context:
             r = old_rep[n]
             c._rep[n] = first.setdefault(r, n)
         c._key = None
+        c._remap({r: first.get(r) for r in self._rep.values()})
         return c
 
     def rename(self, mapping: dict[str, str | Type], names: Iterable[str]) -> "Context":
@@ -401,6 +459,7 @@ class Context:
             else:
                 c._rep[n] = n
         c._key = None
+        c._remap({r: first.get(r) for r in self._rep.values()})
         return c
 
     def union(self, other: "Context", thresholds=None, widen: bool = False) -> "Context":
@@ -408,22 +467,26 @@ class Context:
         (thesis 1.1.1). Classes are kept where both agree."""
         names = list(self._types) + [v for v in other._types if v not in self._types]
         c = Context.__new__(Context)
-        if widen:
-            c._types = {n: self.get(n).widen(other.get(n), thresholds) for n in names}
-        else:
-            c._types = {n: self.get(n).union(other.get(n)) for n in names}
         c._rep = {}
         first: dict[tuple, str] = {}
         for n in names:
             pair = (self.rep(n), other.rep(n))
             c._rep[n] = first.setdefault(pair, n) if n in self._types and n in other._types else n
+        map_self = {v: (c._rep[v] if v in other._types else None) for v in self._types}
+        map_other = {v: (c._rep[v] if v in self._types else None) for v in other._types}
+        c._types = {}
+        for n in names:
+            a = self.get(n).remap_symbols(map_self)
+            b = other.get(n).remap_symbols(map_other)
+            c._types[n] = a.widen(b, thresholds) if widen else a.union(b)
         c._key = None
+        c._remap()
         return c
 
     def intersection(self, other: "Context") -> "Context":
         names = list(self._types) + [v for v in other._types if v not in self._types]
         c = Context.__new__(Context)
-        c._types = {n: self.get(n).intersection(other.get(n)) for n in names}
+        c._types = {n: ANY for n in names}
         c._rep = dict(self._rep)
         for n in names:
             c._rep.setdefault(n, other.rep(n) if n in other._types else n)
@@ -436,11 +499,18 @@ class Context:
                         rm, rn = c._rep[m], c._rep[n]
                         order = list(c._types)
                         new_rep = min(rm, rn, key=order.index)
-                        t = c._types[m].intersection(c._types[n])
                         for w in c._types:
                             if c._rep[w] in (rm, rn):
                                 c._rep[w] = new_rep
-                                c._types[w] = t
+        map_self = {v: c._rep[v] for v in self._types}
+        map_other = {v: c._rep[v] for v in other._types}
+        raw = {n: self.get(n).remap_symbols(map_self).intersection(other.get(n).remap_symbols(map_other)) for n in names}
+        by_class: dict[str, Type] = {}
+        for n in names:
+            r = c._rep[n]
+            by_class[r] = raw[n] if r not in by_class else by_class[r].intersection(raw[n])
+        c._types = {n: by_class[c._rep[n]] for n in names}
+        c._remap()
         return c
 
     # -- printing

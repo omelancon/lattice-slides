@@ -5,6 +5,7 @@ from __future__ import annotations
 import random
 from typing import Callable
 
+from .intervals import Sym
 from .types import Context, Type
 
 Distance = Callable[[Context, Context], float]
@@ -19,11 +20,41 @@ def _names(a: Context, b: Context) -> list[str]:
     return a.vars() + [v for v in b.vars() if v not in a]
 
 
+def range_distance(a: Type, b: Type) -> float:
+    """How far two intervals are, in ``[0, 1)``, so that intervals only break ties of the Hamming
+    distance: 0 when equal (both absent included), 0.25 when one contains the other or the bounds
+    differ by numeric offsets only, 0.5 otherwise, plus 0.25 when the symbolic bounds name
+    different vectors."""
+    ra, rb = a.range, b.range
+    if ra == rb:
+        return 0.0
+    if ra is None or rb is None:
+        return 0.5
+    d = 0.25 if ra.contains(rb) or rb.contains(ra) or _same_shape(ra, rb) else 0.5
+    if ra.symbols() != rb.symbols():
+        d += 0.25
+    return d
+
+
+def _same_shape(ra, rb) -> bool:
+    """Bounds of the same kind on both sides (numbers, or symbols of the same vector)."""
+    def kind(x, y):
+        if isinstance(x, Sym) or isinstance(y, Sym):
+            return isinstance(x, Sym) and isinstance(y, Sym) and x.var == y.var
+        return True
+    return kind(ra.lo, rb.lo) and kind(ra.hi, rb.hi)
+
+
+def distance(a: Type, b: Type) -> float:
+    """Hamming distance of the type bits, with the interval distance as a fraction."""
+    return a.hamming(b) + range_distance(a, b)
+
+
 def similarity(a: Context, b: Context) -> float:
     """Hamming distance per variable, with a bias against contexts that are too broad or too
-    specific (``context-distance-similarity*`` in the implementation)."""
+    specific (``context-distance-similarity*`` in the implementation); intervals break ties."""
     names = _names(a, b)
-    bits = sum(a.get(n).hamming(b.get(n)) for n in names)
+    bits = sum(distance(a.get(n), b.get(n)) for n in names)
     if not names:
         return 0.0
     spec_a = sum(a.get(n).count() for n in names) / len(names)
@@ -44,7 +75,7 @@ def arithmetic(a: Context, b: Context) -> float:
     loss = False
     for n in names:
         ts = [a.get(n), b.get(n)]
-        bits += ts[0].hamming(ts[1])
+        bits += distance(ts[0], ts[1])
         for i, t in enumerate(ts):
             if not t.is_any() and not t.intersection(_UNLIKELY).is_bottom():
                 unlikely[i] = True

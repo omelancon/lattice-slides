@@ -41,6 +41,9 @@ class BbvAnimOptions(BbvCommonOptions):
     panel: list[str] | None = None
     caption: Literal["auto", "none"] = "auto"
     max_steps: int = 5000
+    intervals: bool = False
+    thresholds: str | list[int] = "machine"
+    fixnum_bits: int = 61
 
 
 class BbvCfgOptions(BbvCommonOptions):
@@ -49,9 +52,9 @@ class BbvCfgOptions(BbvCommonOptions):
 
 class AbstractInterpOptions(BbvCommonOptions):
     entry: str | None = None  # the function analysed
-    thresholds: str | list[int] = "thesis"
+    thresholds: str | list[int] = "machine"
     narrowing: bool = True
-    fixnum_bits: int = 62
+    fixnum_bits: int = 61
     events: list[str] | None = None
     granularity: Literal["block", "instruction"] = "block"
     until: int | None = None
@@ -63,7 +66,7 @@ class AbstractInterpOptions(BbvCommonOptions):
 
 _KNOWN = {"program", "source", "functions", "show", "colors", "direction", "height", "prims", "algorithm", "limit", "limits",
           "heuristic", "entry", "events", "granularity", "until", "call_edges", "panel", "caption", "max_steps", "wrap",
-          "thresholds", "narrowing", "fixnum_bits", "history"}
+          "thresholds", "narrowing", "fixnum_bits", "history", "intervals"}
 
 
 def load_program(opts: BbvCommonOptions, ctx) -> Program:
@@ -142,7 +145,8 @@ class BbvAnim(Component):
             trace = VersioningTrace(prog, algorithm=opts.algorithm, limit=opts.limit, heuristic=opts.heuristic,
                                     entry=opts.entry, limits=opts.limits, seed=ctx.seed, functions=opts.functions,
                                     events=opts.events, caption=opts.caption, until=opts.until,
-                                    max_steps=opts.max_steps, granularity=opts.granularity)
+                                    max_steps=opts.max_steps, granularity=opts.granularity,
+                                    intervals=opts.intervals, thresholds=opts.thresholds, fixnum_bits=opts.fixnum_bits)
         except (ProgramError, ValueError) as e:
             raise ComponentError(str(e)) from None
         if trace.spec.truncated:

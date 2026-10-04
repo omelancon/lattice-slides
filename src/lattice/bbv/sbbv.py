@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from .heuristics import HEURISTICS
+from .intervals import Bound, thresholds_named, using_fixnum_bits
 from .ir import RESULT, Arg, Assign, Block, Call, Const, Fail, Function, Goto, If, Move, Program, Return, Var
 from .rich import SEP, binding, code, context, join, struck, ver
 from .types import ANY, Context, Type
@@ -94,9 +95,14 @@ class Specializer:
 
     def __init__(self, program: Program, limit: int = 2, heuristic: str = "similarity", *,
                  entry: str | None = None, limits: dict | None = None, seed: int = 0,
-                 max_steps: int = 5000, emit: Emit | None = None):
+                 max_steps: int = 5000, emit: Emit | None = None, intervals: bool = False,
+                 thresholds="machine", fixnum_bits: int = 61):
         self.program = program
         self.limit = limit
+        self.intervals = intervals
+        self.thresholds: list[Bound] | None = thresholds_named(thresholds) if isinstance(thresholds, str) else (
+            sorted(set(thresholds)) if thresholds is not None else None)
+        self.fixnum_bits = fixnum_bits
         self.limits = dict(limits or {})
         if heuristic not in HEURISTICS:
             raise ValueError(f"unknown merge heuristic {heuristic!r}")
@@ -215,6 +221,8 @@ class Specializer:
         ctx = Context({p: fn.param_types.get(p, ANY) for p in fn.params})
         if not self.intervals:
             ctx = Context({p: t.without_range() for p, t in ctx.types().items()})
+        else:
+            ctx = ctx.map(lambda t: t.refined())
         v = self.get_or_create(fn.entry, ctx)
         v.is_entry = True
         v.generic = True
@@ -224,6 +232,10 @@ class Specializer:
         return v
 
     def run(self) -> None:
+        with using_fixnum_bits(self.fixnum_bits):
+            self._run()
+
+    def _run(self) -> None:
         self.start()
         while self.queue:
             if self.steps >= self.max_steps:
@@ -269,7 +281,7 @@ class Specializer:
             by_ctx = {v.context: v for v in versions}
             c1, c2 = self.heuristic(list(by_ctx), self.rng)
             pair = [by_ctx[c1], by_ctx[c2]]
-            merged_ctx = c1.union(c2)
+            merged_ctx, widened = self.merge_contexts(pair)
             new = self.get_or_create(block, merged_ctx)
             olds = [v for v in pair if v is not new]
             for v in olds:
@@ -285,17 +297,37 @@ class Specializer:
             self.merges += 1
             self.after_merge(block, olds, new)
             self.emit("merge", block=block.key, merged=[v.id for v in pair], into=new.id,
-                      queued=not new.done, edges=[(e.key, old) for e, old in changed])
+                      queued=not new.done, edges=[(e.key, old) for e, old in changed], widened=widened)
+
+    def merge_contexts(self, pair: list[Version]) -> tuple[Context, list[str]]:
+        """The context of a merge: the union of the two contexts, with intervals widened against
+        the older version (the ∪∇ of the paper's algorithm 4). Returns it with the variables whose
+        interval was widened."""
+        older, newer = sorted(pair, key=lambda v: v.id)
+        if not self.intervals:
+            return older.context.union(newer.context), []
+        plain = older.context.union(newer.context).map(lambda t: t.refined())
+        merged = older.context.union(newer.context, self.thresholds, widen=True).map(lambda t: t.refined())
+        widened = [v for v in merged.vars() if merged.get(v).range != plain.get(v).range]
+        return merged, widened
 
     def after_merge(self, block: Block, olds: list[Version], new: Version) -> None:
         pass
 
     # ------------------------------------------------------------ specialization (algorithms 1.4 to 1.6)
-    intervals = False  # SBBV and ΛV track types only; the abstract interpreter tracks intervals too
+    # ``self.intervals``: SBBV and ΛV track types only by default (paper section 3.2 adds intervals);
+    # the abstract interpreter always tracks intervals.
 
     def type_of(self, ctx: Context, a: Arg) -> Type:
         t = a.type if isinstance(a, Const) else ctx.get(a.name)
         return t if self.intervals else t.without_range()
+
+    def result_of(self, ctx: Context, p, args: list[Arg]) -> Type:
+        """The result type of a primitive applied to ``args`` in ``ctx`` (a symbolic bound names the
+        class of the argument); with intervals, the interval decides ``fx`` against ``bg``."""
+        names = [ctx.rep(a.name) if isinstance(a, Var) else None for a in args]
+        t = p.result_type([self.type_of(ctx, a) for a in args], names)
+        return t.refined() if self.intervals else t
 
     def branch_contexts(self, ctx: Context, instr: If) -> tuple[Context | None, Context | None, str]:
         """The contexts of the two outcomes of a test (``None`` when an outcome is impossible), and the
@@ -325,6 +357,8 @@ class Specializer:
                 for a, t in zip(args, narrowed):
                     if isinstance(a, Var):
                         c = c.narrow(a.name, t if self.intervals else t.without_range())
+                if self.intervals:
+                    c = c.map(lambda t: t.refined())
                 outs.append(None if c.is_bottom() else c)
             what = f"{instr.prim}({', '.join(str(a) for a in args)})"
             return outs[0], outs[1], what
@@ -360,7 +394,7 @@ class Specializer:
                     body.append(Line("fail", instr.line))
                     kind, note, halted = "fail", f"{code(instr.prim)} cannot accept these types: the block fails here", True
                 else:
-                    ctx = ctx.set(instr.target, p.result_type([self.type_of(ctx, a) for a in instr.args]))
+                    ctx = ctx.set(instr.target, self.result_of(ctx, p, instr.args))
                     body.append(Line(instr.text, instr.line))
                     kind, note = "assign", binding(instr.target, ctx.get(instr.target))
             elif isinstance(instr, Move):
@@ -424,7 +458,7 @@ class Specializer:
                         body.append(Line(instr.text, instr.line))
                         body.append(Line("fail", instr.line))
                         break
-                    t = p.result_type([self.type_of(ctx, a) for a in instr.args])
+                    t = self.result_of(ctx, p, instr.args)
                     ctx = ctx.set(RESULT, t)
                 else:
                     t = self.type_of(ctx, instr.value)
@@ -471,10 +505,11 @@ class Specializer:
         return [v for v in self.by_id.values() if v.merged is None and v.id in r]
 
     def tests_remaining(self) -> int:
-        """Type tests left in reachable, specialized code (the thesis' primary metric)."""
+        """Tests left in reachable, specialized code: type tests, comparisons (bound checks),
+        overflow and truthiness tests alike."""
         n = 0
         for v in self.final_versions():
             for line in v.body or []:
-                if not line.removed and line.text.startswith("if ") and "?(" in line.text:
+                if not line.removed and line.text.startswith("if "):
                     n += 1
         return n

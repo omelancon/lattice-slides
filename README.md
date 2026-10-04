@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.12.1. This README covers usage in brief. The rest:
+This is version 0.13.0. This README covers usage in brief. The rest:
 
 - [`user_manual/manual.md`](user_manual/manual.md) is the user manual, itself a Lattice deck (open
   [`user_manual/manual.html`](user_manual/manual.html)): every feature, with a live example of each.
@@ -107,7 +107,7 @@ code language.
 | ` ```array-anim {source="sorts.py:bubble"} ` + `values: [...]` | Animated array from an `ArrayTrace` |
 | ` ```tree-anim {source="avl.py:avl_trace"} ` + `values: [...]` | Animated tree from a `TreeTrace`: insertions, deletions and rotations, nodes glide to their new places |
 | ` ```grid-anim {source="grids.py:lcs_trace"} ` | Animated grid from a `GridTrace`: mazes, dynamic programming tables with headers and arrows |
-| ` ```bbv-anim {program="find.bbv" algorithm=sbbv limit=2} ` + `show: [label, context]` | Basic block versioning step by step: the specialized CFG of a small program grows, merges and settles (`algorithm=lv` for Lambda Versioning with entry and return points); `show` picks what the nodes draw (default: label, context and code), captions name the operation, the versions and the types of each step |
+| ` ```bbv-anim {program="find.bbv" algorithm=sbbv limit=2} ` + `show: [label, context]` | Basic block versioning step by step: the specialized CFG of a small program grows, merges and settles (`algorithm=lv` for Lambda Versioning with entry and return points; `intervals=true` tracks integer intervals and vector lengths, so bound checks and overflow checks disappear); `show` picks what the nodes draw (default: label, context and code), captions name the operation, the versions and the types of each step |
 | ` ```bbv-cfg {program="find.bbv" follow=trace} ` | The source CFG of that program; following an animation, it highlights the block being specialized |
 | ` ```abstract-interp-anim {program="sum-to-n.bbv"} ` + `history: [B.i]` | Abstract interpretation over the fixed CFG: contexts with types and intervals grow by union with widening and are narrowed at conditionals, until a fixed point; the panel can show the widening chain of a variable |
 | ` ```plot {data="bench.csv" x=n y=ms group=algo logy=true} ` | Chart from a CSV with matplotlib (static SVG), or `backend=vega` / `backend=plotly` for interactive charts; also `source="file.py:fn"` or a raw `spec:` |
@@ -150,7 +150,8 @@ A `code` block can follow the animation through the program (`follow=trace`) or 
 bundled pseudo-code of the algorithm (`file="lattice:bbv/pseudocode/sbbv.txt" meta=algo`). The same
 programs serve `abstract-interp-anim`, the classical analysis that SBBV extends: one context per
 block, integer intervals widened at joins (`{0}`, `[0, 1]`, `[0, 2]`, `[0, 127]`, ...) and narrowed by
-comparisons.
+comparisons. With `intervals=true` the versioning algorithms track them too, with vector lengths as
+symbolic bounds (`i: fx [0, ⟦x⟧-1]`): the paper's `findv` loses every bound check and overflow check.
 Every option of every component is listed in spec section 8.8; the trace classes and the states
 the themes style are in spec section 9.1, and the program syntax in spec section 9.5.
 
@@ -226,7 +227,7 @@ Rebuild them all, and the user manual, with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.12.1 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.13.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing
