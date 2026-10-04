@@ -33,7 +33,12 @@ def context_width(lines: list[str]) -> int:
     return 3 + max(names, default=0) + 2 + max(types, default=0) if lines else 0
 
 
+AFTER_HEAD = ";; after:"  # the line above the exit context of an enlarged block (bbv.js draws the same text)
+
+
 def node_size(version: dict, show: list[str]) -> tuple[float, float]:
+    """Size of a node drawing ``show`` (among ``label``, ``context``, ``code`` and, for an enlarged
+    block, ``after``: the exit context under a heading line). The label is always drawn."""
     widths = [len(version["label"]) + 2]
     count = 0
     if "context" in show:
@@ -43,6 +48,10 @@ def node_size(version: dict, show: list[str]) -> tuple[float, float]:
         code = [c["text"] for c in version["code"]] or ["…"]
         widths += [len(t) for t in code]
         count += len(code)
+    after = version.get("after") or []
+    if "after" in show and after:
+        widths += [len(AFTER_HEAD), context_width(after)]
+        count += 1 + len(after)
     width = max(widths) * CHAR_W + 2 * PAD_X
     height = LABEL_H + count * LINE_H + 2 * PAD_Y
     return round(width, 1), round(height, 1)

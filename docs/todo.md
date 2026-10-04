@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-04, after 0.14.0 (`implementation-report-2026-10-04.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-04, after 0.15.0 (`implementation-report-2026-10-04.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
@@ -22,9 +22,11 @@ Updated 2026-10-04, after 0.14.0 (`implementation-report-2026-10-04.md`). Items 
 - [ ] 0.12.0: `mark=true` tints arriving tokens with `--lt-add-bg` for 1.6 s; it is off by default, as you asked. Look at it once in the manual ("Morphing named segments").
 - [ ] 0.12.1: the manual's "Extending Lattice: a plugin file" now shows each highlighted range (steps 1 and 2 used to show dimmed code only); look at it once, and at a PDF of a deck of yours with a long `code-steps`.
 - [ ] 0.13.0: with `intervals` off (the default), constants bound through `goto B(i=0)` and call arguments still enter the target context with their singleton (`b: fx {0}` in the operator entries of example 07's `fact`), while every other interval is stripped. Fixing it is one `without_range()` in `Goto` (`sbbv.py`) and in `specialize_call` (`lv.py`); it was left as is so that example 07 stays byte-identical. Say if you prefer the fix.
-- [ ] 0.13.0: the two `findv` slides of example 07 and the manual's "Intervals and vector lengths" were sized in Chromium at 1280x720; the `⟦x⟧` brackets come from the fallback font of the build machine, check them on yours (an ASCII `|x|` is a one-line change in `intervals.py` if they look wrong). The `findv` drawing is dense (24 versions of five context lines); `show: [label]` with the tooltips is the alternative.
+- [ ] 0.13.0: the two `findv` slides of example 07 and the manual's "Intervals and vector lengths" were sized in Chromium at 1280x720; the `⟦x⟧` brackets come from the fallback font of the build machine, check them on yours (an ASCII `|x|` is a one-line change in `intervals.py` if they look wrong). The `findv` drawing is dense (24 versions of five context lines); since 0.15.0, `show: [label]` plus a click on a block (enlarged with its context, code and exit context) is the alternative.
 - [ ] 0.13.0: `checks` now counts every `if` left (the loop test, `if #res` and the overflow tests included), as agreed; the captions say "tests left". Say if you want the type tests counted apart.
 - [ ] 0.14.0: the examples and most of the manual still write containers with decreasing colon counts (`:::::` around `::::` around `:::`), which parse as before; only the manual's "Containers" slide and its new "Closing fences" detour use `:::` throughout and `::: /NAME`. Say if you want the examples and the manual rewritten in one style.
+- [ ] 0.15.0: click a few blocks in example 07 and the manual's "Enlarging a block" on your screen, in Chromium and Firefox (only Chromium was available here), alone and with the presenter view open: judge the opening and closing (350 ms and 280 ms, `ZOOM_MS` in `lattice.js`), the blur (6 px) and dimming, and the size (80% of the slide, magnification capped at 4.5, `ZOOM_FILL` and `ZOOM_MAX`).
+- [ ] 0.15.0: in an enlarged block, a removed test keeps its line-through, which scales with the card and gets thick; a thinner strike (an SVG line instead of `text-decoration`) is possible if it bothers you.
 - [ ] 0.14.0: `docs/implementation-report-2026-10-03.md` is still in `docs/` beside its identical copy in `docs/archive/` (SKILL.md, documentation step 7); `git rm` the one in `docs/`.
 
 ## Later, if wanted
@@ -38,6 +40,7 @@ Navigation and presenter view:
 - [ ] Ids on list items and inline spans (`[text]{#id}`, the attrs plugin of mdit-py-plugins), so that an arrow can leave a bullet without a selector.
 - [ ] The manual's samples of `arrow` blocks ("Arrows that move", "Arrow anchors") show red error boxes: Pygments has an `arrow` lexer, which the Markdown lexer uses inside the sample fence.
 - [ ] Segments in `bbv-cfg` and `bbv-anim` drawings (a block or an instruction as an arrow target).
+- [ ] Enlarged elements (0.15) for other components: graph and tree nodes, grid cells, code blocks, plots. The core layer and the `zoom(inst, key)` hook are generic; each runtime needs a click handler and a hook.
 - [ ] Detour steps inside a tour: a detour step enters its detour as anywhere else and the tour successor applies only at the last step; decide whether a tour should be able to turn detour steps off.
 
 Output:

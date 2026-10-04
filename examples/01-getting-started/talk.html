@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.14.0">
+<meta name="generator" content="lattice 0.15.0">
 <title>Getting started with Lattice</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -285,6 +285,16 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-bbv-node.st-dead{opacity:.4}
 .lt-bbv-node.st-dead rect{stroke-dasharray:6 4}
 .lt-bbv-node.lt-gone{opacity:0;pointer-events:none}
+/* clickable blocks (spec 9.5), except in the passive windows (preview, print) */
+html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone):not(.mk-gone){cursor:pointer}
+html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone):not(.mk-gone):hover rect{
+  filter:drop-shadow(0 0 4px color-mix(in srgb,var(--lt-accent) 70%,transparent))}
+/* an enlarged block keeps outlines a few pixels wide however much it is magnified */
+.lt-bbv-zoom .lt-bbv-node rect{vector-effect:non-scaling-stroke;stroke-width:2.5}
+.lt-bbv-zoom .lt-bbv-node:not(.mk-none) rect{stroke-width:5}
+.lt-bbv-zoom .lt-bbv-node.st-dead{opacity:1}
+.lt-bbv-zoom .lt-bbv-node.st-dead text{opacity:.55}
+.lt-bbv-after-head{font-style:normal;font-weight:600}
 .lt-bbv-label{font-family:var(--lt-font-head);font-weight:650;font-size:15px;fill:var(--lt-ink)}
 .lt-bbv-star{fill:var(--lt-accent);font-weight:700}
 .lt-bbv-ctx{font-family:var(--lt-font-code);font-size:12px;font-style:italic;fill:var(--lt-muted);white-space:pre}
@@ -351,6 +361,17 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 #lt-flash{position:absolute;left:50%;bottom:66px;transform:translate(-50%,8px);background:var(--lt-ink);color:var(--lt-bg);
   padding:8px 18px;border-radius:8px;font-size:18px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
 #lt-flash.on{opacity:1;transform:translate(-50%,0)}
+
+/* enlarged elements (spec 7.7): a card over the slide pane, the slide blurred behind it */
+#lt-viewport{transition:filter .35s}
+#lt-stage.lt-zoomed #lt-viewport{filter:blur(6px)}
+#lt-zoom{position:absolute;inset:0;z-index:5;pointer-events:none}
+#lt-zoom::before{content:"";position:absolute;inset:0;background:var(--lt-scrim);opacity:0;transition:opacity .35s}
+#lt-zoom.lt-on{pointer-events:auto}
+#lt-zoom.lt-on::before{opacity:.55}
+.lt-zoom-card{position:absolute;transform-origin:0 0;filter:drop-shadow(0 18px 40px rgba(0,0,0,.28))}
+.lt-zoom-card.lt-closing{pointer-events:none}
+.lt-zoom-card > svg{display:block;width:100%;height:100%;overflow:visible}
 
 /* overlays */
 #lt-overlay{position:fixed;inset:0;background:var(--lt-scrim);display:flex;align-items:flex-start;justify-content:center;
@@ -699,7 +720,7 @@ and every index from <code>hi</code> on holds a value at least <code>target</cod
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.14.0","meta":{"title":"Getting started with Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"welcome","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["welcome","markdown","talk-3","code","the-graph","the-loop-invariant","termination","diagram","thanks","proof"],"slides":{"welcome":{"title":"Getting started with Lattice","label":"Getting started with Lattice","scope":"root","next":{"slide":"markdown"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":8},"notes":"<p>Press <code>p<\/code> to open this presenter view in another window. Both windows stay in sync.<\/p>\n"},"markdown":{"title":"Every # heading is a slide","label":"Every # heading is a slide","scope":"root","next":{"slide":"talk-3"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"talk.md","line":16},"notes":"<p>The next slide has no title at all: it was written as a bare <code>#<\/code>.<\/p>\n"},"talk-3":{"title":"","label":"talk-3","scope":"root","next":{"slide":"code"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":28}},"code":{"title":"Code, highlighted at build time","label":"Code, highlighted at build time","scope":"root","next":{"slide":"the-graph"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"arrows","kind":"component","instance":"code/arrows"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":43}},"the-graph":{"title":"Nothing here is linear","label":"Nothing here is linear","scope":"root","next":{"slide":"diagram"},"branches":[],"detours":["invariant-detour"],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":82},"stepDetours":{"2":{"id":"invariant-detour","blocking":false}},"notes":"<p>The detour is also a step of this slide (<code>at=1<\/code>): the Right after the first bullet enters it,\nand the Right after returning reveals the second bullet. Press <code>w<\/code> to enter it at any time.<\/p>\n"},"the-loop-invariant":{"title":"The loop invariant","label":"The loop invariant","scope":"invariant-detour","next":{"slide":"termination"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":92}},"termination":{"title":"Termination","label":"Termination","scope":"invariant-detour","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":98}},"diagram":{"title":"Diagrams from Graphviz","label":"Diagrams from Graphviz","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":111}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":124}},"proof":{"title":"Proof of correctness","label":"Proof of correctness","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"talk.md","line":128}}},"detours":{"invariant-detour":{"origin":"the-graph","entry":"the-loop-invariant","label":"Why binary search terminates","key":"w","slides":["the-loop-invariant","termination"]}},"instances":{"code/c1":{"component":"code","slide":"code","data":null},"code/arrows":{"component":"arrow","slide":"code","data":"lt-data-code/arrows"},"diagram/c1":{"component":"dot","slide":"diagram","data":null}},"tours":{"quick":["welcome","markdown","code","the-graph","thanks"]},"mainPath":["welcome","markdown","talk-3","code","the-graph","diagram","thanks"],"overview":{"nodes":{"welcome":{"x":94.0,"y":63.0,"w":172.0,"h":26.0,"label":"Getting started with Latt…"},"markdown":{"x":293.0,"y":63.0,"w":166.0,"h":26.0,"label":"Every # heading is a slide"},"talk-3":{"x":433.0,"y":63.0,"w":54.0,"h":26.0,"label":"talk-3"},"code":{"x":574.5,"y":63.0,"w":169.0,"h":26.0,"label":"Code, highlighted at buil…"},"the-graph":{"x":760.5,"y":63.0,"w":143.0,"h":26.0,"label":"Nothing here is linear"},"the-loop-invariant":{"x":940.5,"y":21.0,"w":121.0,"h":26.0,"label":"The loop invariant"},"termination":{"x":1092.5,"y":21.0,"w":87.0,"h":26.0,"label":"Termination"},"diagram":{"x":940.5,"y":63.0,"w":157.0,"h":26.0,"label":"Diagrams from Graphviz"},"thanks":{"x":1092.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"},"proof":{"x":1232.5,"y":82.0,"w":133.0,"h":26.0,"label":"Proof of correctness"}},"edges":[{"from":"welcome","to":"markdown","kind":"next","path":"M180.3,63.0 C187.9,63.0 195.6,63.0 203.3,63.0 L209.7,63.0"},{"from":"markdown","to":"talk-3","kind":"next","path":"M376.3,63.0 C384.4,63.0 392.3,63.0 399.4,63.0 L405.8,63.0"},{"from":"talk-3","to":"code","kind":"next","path":"M460.2,63.0 C467.2,63.0 475.0,63.0 483.3,63.0 L489.7,63.0"},{"from":"code","to":"the-graph","kind":"next","path":"M659.1,63.0 C666.9,63.0 674.8,63.0 682.5,63.0 L689.0,63.0"},{"from":"the-graph","to":"the-loop-invariant","kind":"detour","path":"M816.8,49.9 C836.4,45.3 858.4,40.1 878.3,35.4 L884.2,34.1"},{"from":"the-graph","to":"diagram","kind":"next","path":"M832.1,63.0 C839.9,63.0 847.9,63.0 855.9,63.0 L862.0,63.0"},{"from":"the-graph","to":"proof","kind":"link","path":"M813.6,76.0 C829.1,79.3 846.1,82.4 862.0,84.0 C965.0,94.6 1085.1,91.1 1159.7,87.0 L1165.9,86.6"},{"from":"the-loop-invariant","to":"termination","kind":"next","path":"M1001.2,21.0 C1014.8,21.0 1029.2,21.0 1042.3,21.0 L1048.6,21.0"},{"from":"diagram","to":"thanks","kind":"next","path":"M1019.1,63.0 C1032.3,63.0 1045.3,63.0 1056.6,63.0 L1062.7,63.0"}],"width":1307.0,"height":103.0},"hash":"993e3ddc2b5a15b4"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.15.0","meta":{"title":"Getting started with Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"welcome","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["welcome","markdown","talk-3","code","the-graph","the-loop-invariant","termination","diagram","thanks","proof"],"slides":{"welcome":{"title":"Getting started with Lattice","label":"Getting started with Lattice","scope":"root","next":{"slide":"markdown"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":8},"notes":"<p>Press <code>p<\/code> to open this presenter view in another window. Both windows stay in sync.<\/p>\n"},"markdown":{"title":"Every # heading is a slide","label":"Every # heading is a slide","scope":"root","next":{"slide":"talk-3"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"talk.md","line":16},"notes":"<p>The next slide has no title at all: it was written as a bare <code>#<\/code>.<\/p>\n"},"talk-3":{"title":"","label":"talk-3","scope":"root","next":{"slide":"code"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":28}},"code":{"title":"Code, highlighted at build time","label":"Code, highlighted at build time","scope":"root","next":{"slide":"the-graph"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"arrows","kind":"component","instance":"code/arrows"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":43}},"the-graph":{"title":"Nothing here is linear","label":"Nothing here is linear","scope":"root","next":{"slide":"diagram"},"branches":[],"detours":["invariant-detour"],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":82},"stepDetours":{"2":{"id":"invariant-detour","blocking":false}},"notes":"<p>The detour is also a step of this slide (<code>at=1<\/code>): the Right after the first bullet enters it,\nand the Right after returning reveals the second bullet. Press <code>w<\/code> to enter it at any time.<\/p>\n"},"the-loop-invariant":{"title":"The loop invariant","label":"The loop invariant","scope":"invariant-detour","next":{"slide":"termination"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":92}},"termination":{"title":"Termination","label":"Termination","scope":"invariant-detour","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":98}},"diagram":{"title":"Diagrams from Graphviz","label":"Diagrams from Graphviz","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":111}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":124}},"proof":{"title":"Proof of correctness","label":"Proof of correctness","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"talk.md","line":128}}},"detours":{"invariant-detour":{"origin":"the-graph","entry":"the-loop-invariant","label":"Why binary search terminates","key":"w","slides":["the-loop-invariant","termination"]}},"instances":{"code/c1":{"component":"code","slide":"code","data":null},"code/arrows":{"component":"arrow","slide":"code","data":"lt-data-code/arrows"},"diagram/c1":{"component":"dot","slide":"diagram","data":null}},"tours":{"quick":["welcome","markdown","code","the-graph","thanks"]},"mainPath":["welcome","markdown","talk-3","code","the-graph","diagram","thanks"],"overview":{"nodes":{"welcome":{"x":94.0,"y":63.0,"w":172.0,"h":26.0,"label":"Getting started with Latt…"},"markdown":{"x":293.0,"y":63.0,"w":166.0,"h":26.0,"label":"Every # heading is a slide"},"talk-3":{"x":433.0,"y":63.0,"w":54.0,"h":26.0,"label":"talk-3"},"code":{"x":574.5,"y":63.0,"w":169.0,"h":26.0,"label":"Code, highlighted at buil…"},"the-graph":{"x":760.5,"y":63.0,"w":143.0,"h":26.0,"label":"Nothing here is linear"},"the-loop-invariant":{"x":940.5,"y":21.0,"w":121.0,"h":26.0,"label":"The loop invariant"},"termination":{"x":1092.5,"y":21.0,"w":87.0,"h":26.0,"label":"Termination"},"diagram":{"x":940.5,"y":63.0,"w":157.0,"h":26.0,"label":"Diagrams from Graphviz"},"thanks":{"x":1092.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"},"proof":{"x":1232.5,"y":82.0,"w":133.0,"h":26.0,"label":"Proof of correctness"}},"edges":[{"from":"welcome","to":"markdown","kind":"next","path":"M180.3,63.0 C187.9,63.0 195.6,63.0 203.3,63.0 L209.7,63.0"},{"from":"markdown","to":"talk-3","kind":"next","path":"M376.3,63.0 C384.4,63.0 392.3,63.0 399.4,63.0 L405.8,63.0"},{"from":"talk-3","to":"code","kind":"next","path":"M460.2,63.0 C467.2,63.0 475.0,63.0 483.3,63.0 L489.7,63.0"},{"from":"code","to":"the-graph","kind":"next","path":"M659.1,63.0 C666.9,63.0 674.8,63.0 682.5,63.0 L689.0,63.0"},{"from":"the-graph","to":"the-loop-invariant","kind":"detour","path":"M816.8,49.9 C836.4,45.3 858.4,40.1 878.3,35.4 L884.2,34.1"},{"from":"the-graph","to":"diagram","kind":"next","path":"M832.1,63.0 C839.9,63.0 847.9,63.0 855.9,63.0 L862.0,63.0"},{"from":"the-graph","to":"proof","kind":"link","path":"M813.6,76.0 C829.1,79.3 846.1,82.4 862.0,84.0 C965.0,94.6 1085.1,91.1 1159.7,87.0 L1165.9,86.6"},{"from":"the-loop-invariant","to":"termination","kind":"next","path":"M1001.2,21.0 C1014.8,21.0 1029.2,21.0 1042.3,21.0 L1048.6,21.0"},{"from":"diagram","to":"thanks","kind":"next","path":"M1019.1,63.0 C1032.3,63.0 1045.3,63.0 1056.6,63.0 L1062.7,63.0"}],"width":1307.0,"height":103.0},"hash":"ca2be86d2d053933"}</script>
 <script type="application/json" id="lt-data-code/arrows">{"steps":[{"to":".lt-line[data-line=\"3\"]","from":"emphasis","angle":null,"length":120,"label":"the loop"},{"to":".lt-line[data-line=\"4\"]","from":"emphasis","angle":null,"length":120,"label":"the midpoint"},{"to":".lt-line[data-line=\"9\"]","from":null,"angle":315.0,"length":120,"label":"the answer"}],"color":"var(--lt-detour)","width":4,"curve":0.2}</script>
 <script type="module">
 // Lattice runtime: navigation state machine (spec section 7) and component host (spec section 10).
@@ -726,6 +747,7 @@ const Lattice = (() => {
   let storageKey = "";
   let hudTimer = null;
   let timerStart = Date.now();
+  let zoomed = null; // the enlarged element (spec 7.7): { instance, key, card, source, size }
 
   // ------------------------------------------------------------------ registry
   function component(name, controller) {
@@ -1007,6 +1029,7 @@ const Lattice = (() => {
         presenter,
         onResize: (cb) => resizeCallbacks.push(cb),
         palette: getComputedStyle(document.documentElement),
+        zoom: (key) => openZoom(instId, String(key)),
       };
       try {
         mounted[instId] = { ctl, inst: ctl.mount(el, data, api), el };
@@ -1051,6 +1074,7 @@ const Lattice = (() => {
   }
 
   function render(prev, how) {
+    closeZoom({ instant: true, quiet: true }); // a position change, from anywhere, closes an enlarged element
     const id = nav.cur.slide;
     const sameSlide = prev && prev.slide === id;
     if (!sameSlide) {
@@ -1165,10 +1189,134 @@ const Lattice = (() => {
     if (channel) channel.postMessage({ nav: JSON.parse(JSON.stringify(nav)) });
   }
   function onRemote(msg) {
+    if (msg && "zoom" in msg) {
+      if (msg.zoom) openZoom(msg.zoom.instance, msg.zoom.key, { remote: true });
+      else closeZoom({ remote: true });
+      return;
+    }
     if (!msg || !msg.nav || !deck.slides[msg.nav.cur.slide]) return;
     const prev = Object.assign({}, nav.cur);
     nav = msg.nav;
     render(prev, { kind: "sync", dir: 0 });
+  }
+
+
+  // ------------------------------------------------------------------ enlarged elements (spec 7.7)
+  // A component's controller may define zoom(inst, key) -> { el, width, height, source } | null; the
+  // core shows `el` in a card over the slide pane, blurs the slide, and grows the card out of `source`.
+  // The layer is not a position: it is never saved, hashed or recorded, and any render closes it.
+  const ZOOM_FILL = 0.8;     // the card fits in 80% of the slide's width and height
+  const ZOOM_MAX = 4.5;      // ... magnifying the element's own units at most this much
+  const ZOOM_MS = 350;
+  const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "AltGraph", "CapsLock", "OS", "Hyper", "Super"]);
+  let swallowClick = false;
+  const reducedMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function zoomLayer() {
+    let layer = $("#lt-zoom");
+    if (!layer) {
+      layer = document.createElement("div");
+      layer.id = "lt-zoom";
+      $("#lt-stage").appendChild(layer);
+    }
+    return layer;
+  }
+
+  // The card's box in pixels relative to the stage: the element's size magnified to fill 80% of the
+  // slide (capped), centred on the slide as it is shown.
+  function zoomBox(size) {
+    const stage = $("#lt-stage").getBoundingClientRect();
+    const vp = $("#lt-viewport").getBoundingClientRect();
+    const W = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-w"));
+    const H = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-h"));
+    const scale = vp.width / W;
+    const m = Math.min(ZOOM_FILL * W / size.width, ZOOM_FILL * H / size.height, ZOOM_MAX);
+    const w = size.width * m * scale, h = size.height * m * scale;
+    return { left: vp.left - stage.left + (vp.width - w) / 2, top: vp.top - stage.top + (vp.height - h) / 2, width: w, height: h };
+  }
+
+  function placeCard(card, box) {
+    Object.assign(card.style, { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px` });
+  }
+
+  // The transform that puts the card over its source element: same left edge and width, same top
+  // (extra rows of the card unfold below as it grows).
+  function sourceTransform(source, box) {
+    if (!source || !source.isConnected) return null;
+    const r = source.getBoundingClientRect();
+    if (!r.width || !r.height || getComputedStyle(source).opacity === "0") return null;
+    const stage = $("#lt-stage").getBoundingClientRect();
+    const k = r.width / box.width;
+    return `translate(${r.left - stage.left - box.left}px, ${r.top - stage.top - box.top}px) scale(${k})`;
+  }
+
+  function openZoom(instId, key, opts = {}) {
+    if (passive || !nav) return;
+    const m = mounted[instId];
+    if (!m || !m.ctl.zoom || deck.instances[instId].slide !== nav.cur.slide) return;
+    let r = null;
+    try { r = m.ctl.zoom(m.inst, key); } catch (err) { console.error(`lattice: zoom failed for ${instId}`, err); }
+    if (!r || !r.el) return;
+    stopPlaying();
+    closeZoom({ instant: true, quiet: true });
+    const layer = zoomLayer();
+    const card = document.createElement("div");
+    card.className = "lt-zoom-card";
+    card.appendChild(r.el);
+    layer.appendChild(card);
+    const size = { width: r.width, height: r.height };
+    const box = zoomBox(size);
+    placeCard(card, box);
+    zoomed = { instance: instId, key, card, source: r.source, size };
+    layer.classList.add("lt-on");
+    $("#lt-stage").classList.add("lt-zoomed");
+    const from = reducedMotion() ? null : sourceTransform(r.source, box);
+    if (from && card.animate) card.animate([{ transform: from }, { transform: "none" }], { duration: ZOOM_MS, easing: "cubic-bezier(.2,.8,.25,1)" });
+    if (!opts.remote) broadcastZoom({ instance: instId, key });
+  }
+
+  function closeZoom(opts = {}) {
+    if (!zoomed) return;
+    const z = zoomed;
+    zoomed = null; // input is back to normal at once, while the card shrinks
+    const layer = zoomLayer();
+    layer.classList.remove("lt-on");
+    $("#lt-stage").classList.remove("lt-zoomed");
+    const to = opts.instant || reducedMotion() ? null : sourceTransform(z.source, zoomBox(z.size));
+    if (to && z.card.animate) {
+      z.card.classList.add("lt-closing");
+      const a = z.card.animate([{ transform: "none" }, { transform: to, opacity: 0.6 }], { duration: ZOOM_MS * 0.8, easing: "cubic-bezier(.4,0,.6,1)", fill: "forwards" });
+      a.onfinish = () => z.card.remove();
+    } else {
+      z.card.remove();
+    }
+    if (!opts.remote && !opts.quiet) broadcastZoom(null);
+  }
+
+  function broadcastZoom(zoom) {
+    if (channel) channel.postMessage({ zoom });
+  }
+
+  // While an element is enlarged, a press anywhere outside its card closes it and does nothing else:
+  // no link, badge or branch option, no timer reset, no scrubber move (capture phase, before them).
+  function onZoomPointer(e) {
+    if (e.type === "pointerdown") {
+      swallowClick = false;
+      if (!zoomed || zoomed.card.contains(e.target)) return;
+      swallowClick = true; // the mousedown and click of this press are swallowed too
+      e.preventDefault();
+      e.stopPropagation();
+      closeZoom();
+    } else if (swallowClick) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+  function onZoomClick(e) {
+    if (!swallowClick) return;
+    swallowClick = false;
+    e.preventDefault();
+    e.stopPropagation();
   }
 
   // ------------------------------------------------------------------ overlays
@@ -1325,6 +1473,9 @@ const Lattice = (() => {
       `<li><span class="lt-pp-kbd">${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("")}</span>` +
       `<span>${esc(ACTION_LABELS[action] || action)}</span></li>`);
     rows.push(`<li><span class="lt-pp-kbd"><kbd>1</kbd>…<kbd>9</kbd></span><span>choose a branch option or a detour (slide keys)</span></li>`);
+    if (Object.values(deck.instances).some((i) => registry[i.component] && registry[i.component].zoom)) {
+      rows.push(`<li><span class="lt-pp-kbd"><kbd>click</kbd></span><span>enlarge a block; any key or click closes it</span></li>`);
+    }
     return rows.join("");
   }
 
@@ -1526,6 +1677,10 @@ const Lattice = (() => {
 
   function onKey(e) {
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (zoomed) { // any key closes an enlarged element instead of acting (spec 7.7)
+      if (!MODIFIERS.has(e.key)) { closeZoom(); e.preventDefault(); }
+      return;
+    }
     if (e.target && e.target.closest && e.target.closest("input, textarea, select")) return;
     if (overlayOpen()) {
       if (e.key === "Escape" || (e.key === "o" && $(".lt-overview"))) { closeOverlay(); e.preventDefault(); }
@@ -1563,6 +1718,7 @@ const Lattice = (() => {
     const r = stage.getBoundingClientRect();
     const scale = Math.min(r.width / W, r.height / H);
     vp.style.transform = `translate(${(r.width - W * scale) / 2}px, ${(r.height - H * scale) / 2}px) scale(${scale})`;
+    if (zoomed) placeCard(zoomed.card, zoomBox(zoomed.size));
     for (const cb of resizeCallbacks) try { cb(scale); } catch (e) { console.error(e); }
   }
 
@@ -1626,6 +1782,9 @@ const Lattice = (() => {
     }
     nav = restore();
     document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onZoomPointer, true);
+    document.addEventListener("mousedown", onZoomPointer, true);
+    document.addEventListener("click", onZoomClick, true);
     document.addEventListener("click", onClick);
     window.addEventListener("hashchange", () => {
       const h = parseHash();
@@ -1643,7 +1802,8 @@ const Lattice = (() => {
     document.documentElement.classList.add("lt-ready");
   }
 
-  return { component, boot, frames, applyDelta, renderPanel, esc, print, actions: () => actions, state: () => nav };
+  return { component, boot, frames, applyDelta, renderPanel, esc, print, actions: () => actions, state: () => nav,
+    zoomed: () => (zoomed ? { instance: zoomed.instance, key: zoomed.key } : null) };
 })();
 window.Lattice = Lattice;
 

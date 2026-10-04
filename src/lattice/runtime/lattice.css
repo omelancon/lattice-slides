@@ -277,6 +277,16 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-bbv-node.st-dead{opacity:.4}
 .lt-bbv-node.st-dead rect{stroke-dasharray:6 4}
 .lt-bbv-node.lt-gone{opacity:0;pointer-events:none}
+/* clickable blocks (spec 9.5), except in the passive windows (preview, print) */
+html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone):not(.mk-gone){cursor:pointer}
+html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone):not(.mk-gone):hover rect{
+  filter:drop-shadow(0 0 4px color-mix(in srgb,var(--lt-accent) 70%,transparent))}
+/* an enlarged block keeps outlines a few pixels wide however much it is magnified */
+.lt-bbv-zoom .lt-bbv-node rect{vector-effect:non-scaling-stroke;stroke-width:2.5}
+.lt-bbv-zoom .lt-bbv-node:not(.mk-none) rect{stroke-width:5}
+.lt-bbv-zoom .lt-bbv-node.st-dead{opacity:1}
+.lt-bbv-zoom .lt-bbv-node.st-dead text{opacity:.55}
+.lt-bbv-after-head{font-style:normal;font-weight:600}
 .lt-bbv-label{font-family:var(--lt-font-head);font-weight:650;font-size:15px;fill:var(--lt-ink)}
 .lt-bbv-star{fill:var(--lt-accent);font-weight:700}
 .lt-bbv-ctx{font-family:var(--lt-font-code);font-size:12px;font-style:italic;fill:var(--lt-muted);white-space:pre}
@@ -343,6 +353,17 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 #lt-flash{position:absolute;left:50%;bottom:66px;transform:translate(-50%,8px);background:var(--lt-ink);color:var(--lt-bg);
   padding:8px 18px;border-radius:8px;font-size:18px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
 #lt-flash.on{opacity:1;transform:translate(-50%,0)}
+
+/* enlarged elements (spec 7.7): a card over the slide pane, the slide blurred behind it */
+#lt-viewport{transition:filter .35s}
+#lt-stage.lt-zoomed #lt-viewport{filter:blur(6px)}
+#lt-zoom{position:absolute;inset:0;z-index:5;pointer-events:none}
+#lt-zoom::before{content:"";position:absolute;inset:0;background:var(--lt-scrim);opacity:0;transition:opacity .35s}
+#lt-zoom.lt-on{pointer-events:auto}
+#lt-zoom.lt-on::before{opacity:.55}
+.lt-zoom-card{position:absolute;transform-origin:0 0;filter:drop-shadow(0 18px 40px rgba(0,0,0,.28))}
+.lt-zoom-card.lt-closing{pointer-events:none}
+.lt-zoom-card > svg{display:block;width:100%;height:100%;overflow:visible}
 
 /* overlays */
 #lt-overlay{position:fixed;inset:0;background:var(--lt-scrim);display:flex;align-items:flex-start;justify-content:center;

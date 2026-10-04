@@ -669,3 +669,76 @@ panel: [queue, checks]
     data = d.instances["vectors/t"]["data"]
     assert any("⟦x⟧" in line for v in data["tables"]["versions"].values() for line in v["context"])
     assert data["frames"]["count"] > 20
+
+
+# ------------------------------------------------------------ enlarging a block (spec 9.5)
+
+def test_blocks_are_clickable_by_default_with_everything_shown(deck):
+    from lattice.bbv.layout import node_size
+
+    root = deck({"talk.md": DECK + """
+# Absint {#ai}
+```abstract-interp-anim {#ai program="find.bbv"}
+```
+""", "find.bbv": (PROGRAMS / "find.bbv").read_text(),
+                 "fact.bbv": (PROGRAMS / "fact.bbv").read_text()})
+    d = build_deck(root, use_cache=False)
+    for inst in ("find/trace", "find/src", "fact/lv", "ai/ai"):
+        data = d.instances[inst]["data"]
+        zoom = data["zoom"]
+        assert zoom["show"] == ["label", "context", "code", "after"]
+        assert set(zoom["sizes"]) == set(data["tables"]["versions"])
+        for vid, v in data["tables"]["versions"].items():
+            # the enlarged block holds at least what the drawing shows, and its exit context
+            w, h = zoom["sizes"][vid]
+            dw, dh = data["box"]["sizes"][vid]
+            assert w >= dw and h >= dh
+            assert [w, h] >= list(node_size(v, zoom["show"]))
+    lv = d.instances["fact/lv"]["data"]
+    with_after = [vid for vid, v in lv["tables"]["versions"].items() if v["after"]]
+    assert with_after
+    vid = with_after[0]
+    assert lv["zoom"]["sizes"][vid][1] > list(node_size(lv["tables"]["versions"][vid], ["label", "context", "code"]))[1]
+    # abstract interpretation: sized on the largest entry and exit contexts over the frames
+    ai = d.instances["ai/ai"]["data"]
+    frames = ai["frames"]["frames"]
+    for vid in ai["tables"]["versions"]:
+        longest_after = max(len(f["nodes"][vid].get("after", [])) for f in frames)
+        assert ai["zoom"]["sizes"][vid][1] >= 22 + 12 + 16 * (len(ai["tables"]["versions"][vid]["code"]) + longest_after)
+
+
+def test_clickable_off_and_clickable_show(deck):
+    find = (PROGRAMS / "find.bbv").read_text()
+    root = deck({"talk.md": """
+# Off {#off}
+```bbv-anim {#a program="find.bbv" clickable=off}
+```
+
+# Body {#body}
+```bbv-cfg {#c program="find.bbv"}
+clickable: off
+```
+
+# Some {#some}
+```bbv-anim {#b program="find.bbv"}
+show: [label]
+clickable_show: [label, code]
+```
+""", "find.bbv": find})
+    d = build_deck(root, use_cache=False)
+    assert "zoom" not in d.instances["off/a"]["data"] and "zoom" not in d.instances["body/c"]["data"]
+    zoom = d.instances["some/b"]["data"]["zoom"]
+    assert zoom["show"] == ["label", "code"]
+    root = deck({"talk.md": '# A\n```bbv-anim {program="find.bbv"}\nclickable_show: [label, tooltip]\n```\n', "find.bbv": find})
+    diags = check_deck(root, use_cache=False)
+    assert any(x.code == "LT022" and "clickable_show" in x.message for x in diags.items)
+    # `after` is for the enlarged block only
+    root = deck({"talk.md": '# A\n```bbv-anim {program="find.bbv"}\nshow: [label, after]\n```\n', "find.bbv": find})
+    assert any(x.code == "LT022" and "show" in x.message for x in check_deck(root, use_cache=False).items)
+
+
+def test_clickable_options_are_not_passed_to_program_functions(deck):
+    root = deck({"talk.md": '# A\n```bbv-anim {#a program="prog.py:make" clickable=off}\nclickable_show: [code]\n```\n',
+                 "prog.py": "def make():\n    return 'function f(x)\\nA:  return x\\n'\n"})
+    d = build_deck(root, use_cache=False)
+    assert "zoom" not in d.instances["a/a"]["data"]

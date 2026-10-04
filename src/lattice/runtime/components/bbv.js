@@ -5,6 +5,8 @@
   const NS = "http://www.w3.org/2000/svg";
   const DURATION = 380;
   const PAD_X = 10, PAD_Y = 6, LABEL_H = 22, LINE_H = 16;
+  const AFTER_HEAD = ";; after:";  // as layout.AFTER_HEAD, which sizes the enlarged block
+  const ZOOM_PAD = 6;  // room around an enlarged block for its outline
   const STATES = ["default", "new", "gone", "active"];
   let uid = 0;
 
@@ -82,15 +84,19 @@
     tspans(textEl, [["", ";; "], ["var", name + ":" + " ".repeat(Math.max(1, pad - name.length + 1))], ...typeParts(type)]);
   }
 
-  function setContextLines(n, lines) {
+  function setLines(els, lines) {
     const pad = Math.max(0, ...lines.map((l) => { const i = l.indexOf(": "); return i < 0 ? 0 : i; }));
-    n.ctxEls.forEach((t, i) => { if (i < lines.length) setContextLine(t, lines[i], pad); else t.textContent = ""; });
+    els.forEach((t, i) => { if (i < lines.length) setContextLine(t, lines[i], pad); else t.textContent = ""; });
   }
 
-  function node(inst, vid) {
-    if (inst.nodes[vid]) return inst.nodes[vid];
-    const v = inst.T.versions[vid];
-    const [w, h] = inst.box.sizes[vid];
+  function setContextLines(n, lines) {
+    setLines(n.ctxEls, lines);
+  }
+
+  // Draws a node: its box, label, context lines (`show` has "context"), code lines ("code") and, in an
+  // enlarged block, its exit context under a heading ("after"; spec 9.5). `ctx` and `after` are the
+  // lines to make room for: the slots of the drawing, or the lines of the current frame in a zoom.
+  function drawNode(inst, v, show, [w, h], ctx, after, tooltip) {
     const g = svg("g", { class: "lt-bbv-node" });
     const color = inst.colors[v.block];
     if (color) g.style.setProperty("--origin", color);
@@ -102,8 +108,9 @@
     let y = PAD_Y + LABEL_H + 12;
     const codeEls = [];
     const ctxEls = [];
-    if (inst.show.includes("context")) {
-      for (const line of v.context) {
+    const afterEls = [];
+    if (show.includes("context")) {
+      for (let i = 0; i < ctx.length; i++) {
         const t = svg("text", { class: "lt-bbv-ctx", x: PAD_X, y, "xml:space": "preserve" });
         g.appendChild(t);
         ctxEls.push(t);
@@ -111,7 +118,7 @@
       }
     }
     let ellipsis = null;
-    if (inst.show.includes("code")) {
+    if (show.includes("code")) {
       ellipsis = svg("text", { class: "lt-bbv-code lt-bbv-ellipsis", x: PAD_X, y }, "…");
       g.appendChild(ellipsis);
       for (const c of v.code) {
@@ -122,16 +129,64 @@
         y += LINE_H;
       }
     }
-    const tip = [v.context.length ? `;; ${v.context.join("\n;; ")}` : "", ...v.code.map((c) => c.text)];
-    if (v.after && v.after.length) tip.push("", `after: ${v.after.join(", ")}`);
-    const title = svg("title", {}, tip.filter((s, i) => s !== "" || i > 0).join("\n"));
-    g.appendChild(title);
-    inst.gNodes.appendChild(g);
+    if (show.includes("after") && after.length) {
+      const head = svg("text", { class: "lt-bbv-ctx lt-bbv-after-head", x: PAD_X, y, "xml:space": "preserve" }, AFTER_HEAD);
+      g.appendChild(head);
+      afterEls.push(head);
+      y += LINE_H;
+      for (let i = 0; i < after.length; i++) {
+        const t = svg("text", { class: "lt-bbv-ctx lt-bbv-after", x: PAD_X, y, "xml:space": "preserve" });
+        g.appendChild(t);
+        afterEls.push(t);
+        y += LINE_H;
+      }
+    }
+    let title = null;
+    if (tooltip) {
+      const tip = [v.context.length ? `;; ${v.context.join("\n;; ")}` : "", ...v.code.map((c) => c.text)];
+      if (v.after && v.after.length) tip.push("", `after: ${v.after.join(", ")}`);
+      title = svg("title", {}, tip.filter((s, i) => s !== "" || i > 0).join("\n"));
+      g.appendChild(title);
+    }
     // `origin` is remembered here: the class attribute is rewritten at every frame, including when
     // the node is hidden, so the colour must not depend on the classes the element currently has
-    const n = (inst.nodes[vid] = { g, star, codeEls, ctxEls, ellipsis, title, w, h, v, origin: color ? " has-origin" : "" });
-    setContextLines(n, v.context);
+    const n = { g, star, codeEls, ctxEls, afterEls, ellipsis, title, w, h, v, origin: color ? " has-origin" : "" };
+    setContextLines(n, ctx);
+    if (afterEls.length) setLines(afterEls.slice(1), after);
     return n;
+  }
+
+  function node(inst, vid) {
+    if (inst.nodes[vid]) return inst.nodes[vid];
+    const v = inst.T.versions[vid];
+    const n = drawNode(inst, v, inst.show, inst.box.sizes[vid], v.context, [], true);
+    n.g.dataset.vid = vid;
+    inst.gNodes.appendChild(n.g);
+    return (inst.nodes[vid] = n);
+  }
+
+  // The state of a node in a frame: classes, entry star, the context of the frame (abstract
+  // interpretation), the code specialized so far, and the exit context once the block is done.
+  function nodeState(inst, n, vid, st, position) {
+    const hl = inst.highlight ? inst.highlight[position] : null;
+    const mark = hl != null ? (vid === hl ? "active" : "none") : (st.mark || "none");
+    n.g.setAttribute("class", `lt-bbv-node st-${st.state || "done"} mk-${mark}${n.origin}`);
+    n.star.textContent = st.entry ? " ∗" : "";
+    if (st.lines) {  // the context changes with the frame (abstract interpretation)
+      setContextLines(n, st.lines);
+      if (n.title) {
+        const tip = [`;; ${st.lines.join("\n;; ")}`, ...n.v.code.map((c) => c.text)];
+        if (st.after && st.after.length) tip.push("", `after: ${st.after.join(", ")}`);
+        n.title.textContent = tip.join("\n");
+      }
+    }
+    const queued = st.state === "queued";
+    const shown = st.shown != null ? st.shown : n.codeEls.length;
+    if (n.ellipsis) n.ellipsis.style.display = (queued || shown === 0) && n.codeEls.length ? "" : "none";
+    n.codeEls.forEach((t, i) => { t.style.display = queued || i >= shown ? "none" : ""; });
+    // the exit context is known once the version is specialized to its end
+    const finished = !queued && shown >= n.v.code.length;
+    n.afterEls.forEach((t) => { t.style.display = finished ? "" : "none"; });
   }
 
   function edge(inst, key) {
@@ -247,7 +302,15 @@
     if (typeof ResizeObserver !== "undefined") new ResizeObserver(() => fitCaption(caption)).observe(caption);
     const byLabel = {};
     for (const v of Object.values(data.tables.versions)) if (!(v.label in byLabel)) byLabel[v.label] = v.block;
-    return { id, root, box, T: data.tables, show: data.show, colors: data.colors || {}, byLabel, callEdges: !!data.callEdges,
+    if (data.zoom) {  // clickable (spec 9.5): a click on a live block asks the core to enlarge it
+      s.classList.add("lt-bbv-clickable");
+      gNodes.addEventListener("click", (e) => {
+        const g = e.target.closest(".lt-bbv-node");
+        if (!g || g.classList.contains("lt-gone") || g.classList.contains("mk-gone")) return;
+        api.zoom(g.dataset.vid);
+      });
+    }
+    return { id, root, box, zoom: data.zoom || null, frame: null, position: 0, T: data.tables, show: data.show, colors: data.colors || {}, byLabel, callEdges: !!data.callEdges,
       store: api.frames(data.frames), gEdges, gNodes, nodes: {}, edges: {}, at: {}, raf: 0, keys: data.panel || [],
       panel: root.querySelector(".lt-ga-panel"), caption, highlight: data.highlight };
   }
@@ -255,26 +318,12 @@
   function show(inst, position, info) {
     cancelAnimationFrame(inst.raf);
     const f = inst.store.at(position) || {};
+    inst.frame = f;
+    inst.position = position;
     const pos = f.pos || {};
     const nodes = f.nodes || {};
     inst.root.classList.toggle("lt-animate", !!info.animate);
-    const hl = inst.highlight ? inst.highlight[position] : null;
-    for (const [vid, st] of Object.entries(nodes)) {
-      const n = node(inst, vid);
-      const mark = hl != null ? (vid === hl ? "active" : "none") : (st.mark || "none");
-      n.g.setAttribute("class", `lt-bbv-node st-${st.state || "done"} mk-${mark}${n.origin}`);
-      n.star.textContent = st.entry ? " ∗" : "";
-      if (st.lines) {  // the context changes with the frame (abstract interpretation)
-        setContextLines(n, st.lines);
-        const tip = [`;; ${st.lines.join("\n;; ")}`, ...n.v.code.map((c) => c.text)];
-        if (st.after && st.after.length) tip.push("", `after: ${st.after.join(", ")}`);
-        n.title.textContent = tip.join("\n");
-      }
-      const queued = st.state === "queued";
-      const shown = st.shown != null ? st.shown : n.codeEls.length;
-      if (n.ellipsis) n.ellipsis.style.display = (queued || shown === 0) && n.codeEls.length ? "" : "none";
-      n.codeEls.forEach((t, i) => { t.style.display = queued || i >= shown ? "none" : ""; });
-    }
+    for (const [vid, st] of Object.entries(nodes)) nodeState(inst, node(inst, vid), vid, st, position);
     for (const [vid, n] of Object.entries(inst.nodes)) if (!(vid in nodes)) n.g.setAttribute("class", `lt-bbv-node lt-gone${n.origin}`);
     const live = new Set();
     for (const [key, st] of Object.entries(f.edges || {})) {
@@ -336,12 +385,29 @@
     }).join("");
   }
 
+  // The enlarged copy of a block (spec 7.7, 9.5): drawn with `clickable_show` at the size computed at
+  // build time, in the state of the current frame, so it shows what the step shows, in more detail.
+  function zoom(inst, vid) {
+    const st = inst.zoom && inst.frame && (inst.frame.nodes || {})[vid];
+    const v = inst.T.versions[vid];
+    if (!st || !v || st.mark === "gone") return null;
+    const [w, h] = inst.zoom.sizes[vid];
+    const ctx = st.lines || v.context;
+    const after = st.after || v.after || [];
+    const n = drawNode(inst, v, inst.zoom.show, [w, h], ctx, after, false);
+    nodeState(inst, n, vid, st, inst.position);
+    const p = ZOOM_PAD;
+    const el = svg("svg", { viewBox: `${-p} ${-p} ${w + 2 * p} ${h + 2 * p}`, class: "lt-bbv-zoom", preserveAspectRatio: "xMidYMid meet" });
+    el.appendChild(n.g);
+    return { el, width: w + 2 * p, height: h + 2 * p, source: inst.nodes[vid] ? inst.nodes[vid].g : null };
+  }
+
   function leave(inst) {
     cancelAnimationFrame(inst.raf);
     place(inst, inst.at);
   }
 
-  Lattice.component("bbv-anim", { mount, show, leave });
-  Lattice.component("bbv-cfg", { mount, show, leave });
-  Lattice.component("abstract-interp-anim", { mount, show, leave });
+  Lattice.component("bbv-anim", { mount, show, leave, zoom });
+  Lattice.component("bbv-cfg", { mount, show, leave, zoom });
+  Lattice.component("abstract-interp-anim", { mount, show, leave, zoom });
 })();

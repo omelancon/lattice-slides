@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.14.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.15.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -628,10 +628,10 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 
 ### 7.5 Presenter view
 
-- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, a scrubber, a preview of what comes next, the available moves (what NEXT does, branch options, detours and the return target, each with its key), a **Keybindings** section listing every global action of section 7.6 with its keys (as bound by the deck, in smaller type than the moves, plus the digit keys of branch options and detours) and the notes.
+- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, a scrubber, a preview of what comes next, the available moves (what NEXT does, branch options, detours and the return target, each with its key), a **Keybindings** section listing every global action of section 7.6 with its keys (as bound by the deck, in smaller type than the moves, plus the digit keys of branch options and detours, and the click that enlarges an element when the deck has components that offer it, section 7.7) and the notes.
 - The **scrubber** is a slider over the steps of the current slide, shown when the slide has more than one step. Moving it sets `cur.step` directly: it is not an event of section 7.2 and leaves `H` unchanged, and runtimes receive `animate: false` (section 10.1).
 - The **preview** shows what NEXT would show: the next step of the current slide (the entry slide of the detour when that step is a detour step, which the moves list names as "detour: label", marked "(blocking)" when it is, followed by the `skip-detour` key); at the last step, the slide NEXT moves to (tour successor, `next` slide at step 0, or the return target at the step it restores). At a branch point or at the end of the path it shows a label instead. The preview is a second copy of the document opened with `?preview`: a passive window that ignores keys and clicks, keeps no history or storage, does not join the `BroadcastChannel`, never animates, and renders the position the presenter window sends it with `postMessage`.
-- Audience and presenter windows share state over a `BroadcastChannel` named `lattice:<deck-hash>`. After every event, the window that handled it broadcasts `{cur, H, tour}`; the other window adopts it without re-running the event. Either window may drive.
+- Audience and presenter windows share state over a `BroadcastChannel` named `lattice:<deck-hash>`. After every event, the window that handled it broadcasts `{cur, H, tour}`; the other window adopts it without re-running the event. Either window may drive. An enlarged element (section 7.7) is shared the same way: opening one broadcasts `{zoom: {instance, key}}` and closing one `{zoom: null}`, and the other window opens or closes its own copy.
 
 ### 7.6 Default bindings
 
@@ -653,6 +653,16 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 | `home` | `Home` |
 
 Bindings are overridable in front matter under `keys`. A key is a `KeyboardEvent.key` value, optionally prefixed with `Shift+`; with Shift held, the `Shift+` binding is tried first, then the plain key (letters already arrive shifted, so `A` binds Shift+a). Slide-level keys (branch options and detours) never override global bindings: a collision is an error (LT018).
+
+
+### 7.7 Enlarged elements
+
+A component MAY let the viewer enlarge one of its elements (a basic block of the versioning drawings, section 9.5): a click asks the core to show a copy of the element in a **card** over the slide (`api.zoom`, section 10.3).
+
+- **Layout.** The card keeps the aspect ratio of the element's natural size and fits in 80% of the slide's width and height, whichever limits first, magnifying the element's own units at most 4.5 times; it is centred on the slide as shown, which in presenter view is the slide pane (the panel stays uncovered). The slide and the HUD are blurred and dimmed behind it. The card grows out of the element's place on the slide and shrinks back into it when it closes, unless the viewer prefers reduced motion.
+- **Input.** While a card is open, any key closes it and performs no action, except a bare modifier (`Shift`, `Control`, `Alt`, `Meta`) and a combination with `Ctrl`, `Meta` or `Alt`, which are left to the browser. A press of the pointer outside the card closes it and does nothing else (no link, badge, branch option, timer reset or scrubber move); a click inside the card does nothing.
+- **Not a position.** Opening or closing a card is not an event of section 7.2: `cur`, `H` and `tour` do not change, the URL hash and `sessionStorage` are not written, and a reload never reopens a card. Any render of a position (a sync from the other window, a change of the URL hash, the scrubber) closes it at once. After it closes, keys and clicks act as before it opened.
+- **Windows.** The presenter and audience windows show the same card (section 7.5). Passive windows (the preview and print mode) never open one.
 
 ---
 
@@ -751,9 +761,9 @@ A `ComponentError` raised by `render` becomes error LT022 at the block's locatio
 | `array-anim` | yaml | number of frames | `source`, `values`, `panel`; other keys are passed to the trace function |
 | `tree-anim` | yaml | number of frames | `source` (returns a `TreeTrace`), `values` (passed as the first argument), `layout` (`auto`, `binary`, `tidy`; `auto` is `binary` when every node has zero or two child slots), `panel`, `height`; other keys are passed to the trace function |
 | `grid-anim` | yaml | number of frames | `source` (returns a `GridTrace`), `values` (passed as the first argument), `cell` (cell size in drawing units, default 48, relative to the text), `panel`, `height`; other keys are passed to the trace function |
-| `bbv-anim` | yaml | number of frames | `program` (a `.bbv` file, or `file.py:function` returning a `Program` or its text) or `source` (the program text), `algorithm` (`sbbv` or `lv`), `limit` (default 2), `limits` (per function, `none` for no limit), `heuristic` (`similarity`, `arithmetic`, `random`), `entry` (the function traversed first; default the first one), `functions` (drawn, in that order; hidden functions are analysed but not drawn), `events` (kinds kept as frames), `granularity` (`block`, or `instruction` for one frame per specialized instruction), `until` (stop after that many frames), `show` (node contents among `label`, `context`, `code`; default all three), `colors` (`origin` or `none`), `direction` (`TB` or `LR`), `wrap` (versions per line of a rank before it wraps, default 4), `call_edges`, `panel` (keys among `queue`, `versions`, `checks`, `merges`, `limit`), `caption` (`auto` or `none`), `prims` (extra primitives), `height`, `max_steps`, `intervals` (track integer intervals and vector lengths, default `false`), `thresholds` (widening thresholds of the merges, as `abstract-interp-anim`), `fixnum_bits` (default 61); other keys are passed to the program function (section 9.5) |
-| `bbv-cfg` | yaml | 1, or leader's count when following | `program` or `source`, `functions`, `show` (default `label` and `code`), `colors`, `direction`, `prims`, `height`; as a follower of a `bbv-anim`, highlights the block named by `meta[i]["block"]` |
-| `abstract-interp-anim` | yaml | number of frames | `program` or `source`, `entry` (the function analysed; default the first), `thresholds` (`machine`, `sign`, `none` or a list of integers), `narrowing` (default `true`), `fixnum_bits` (default 61), `events` (among `start`, `dequeue`, `instruction`, `propagate`, `done`), `granularity` (`block` or `instruction`), `until`, `history` (`BLOCK.VAR` entries whose chain of entry values the panel shows), `panel` (keys among `worklist`, `iterations`, `history`), `show`, `colors`, `direction`, `wrap`, `caption`, `prims`, `height`, `max_steps` (section 9.6) |
+| `bbv-anim` | yaml | number of frames | `program` (a `.bbv` file, or `file.py:function` returning a `Program` or its text) or `source` (the program text), `algorithm` (`sbbv` or `lv`), `limit` (default 2), `limits` (per function, `none` for no limit), `heuristic` (`similarity`, `arithmetic`, `random`), `entry` (the function traversed first; default the first one), `functions` (drawn, in that order; hidden functions are analysed but not drawn), `events` (kinds kept as frames), `granularity` (`block`, or `instruction` for one frame per specialized instruction), `until` (stop after that many frames), `show` (node contents among `label`, `context`, `code`; default all three), `colors` (`origin` or `none`), `direction` (`TB` or `LR`), `wrap` (versions per line of a rank before it wraps, default 4), `call_edges`, `panel` (keys among `queue`, `versions`, `checks`, `merges`, `limit`), `caption` (`auto` or `none`), `prims` (extra primitives), `height`, `clickable`, `clickable_show` (section 9.5), `max_steps`, `intervals` (track integer intervals and vector lengths, default `false`), `thresholds` (widening thresholds of the merges, as `abstract-interp-anim`), `fixnum_bits` (default 61); other keys are passed to the program function (section 9.5) |
+| `bbv-cfg` | yaml | 1, or leader's count when following | `program` or `source`, `functions`, `show` (default `label` and `code`), `colors`, `direction`, `prims`, `height`, `clickable`, `clickable_show`; as a follower of a `bbv-anim`, highlights the block named by `meta[i]["block"]` |
+| `abstract-interp-anim` | yaml | number of frames | `program` or `source`, `entry` (the function analysed; default the first), `thresholds` (`machine`, `sign`, `none` or a list of integers), `narrowing` (default `true`), `fixnum_bits` (default 61), `events` (among `start`, `dequeue`, `instruction`, `propagate`, `done`), `granularity` (`block` or `instruction`), `until`, `history` (`BLOCK.VAR` entries whose chain of entry values the panel shows), `panel` (keys among `worklist`, `iterations`, `history`), `show`, `colors`, `direction`, `wrap`, `caption`, `prims`, `height`, `clickable`, `clickable_show`, `max_steps` (section 9.6) |
 | `math` | text | 1 | display math block |
 | `arrow` | yaml | 1, or `len(steps)` | `to` (an element id, or a CSS selector, resolved inside the slide), `from` (another element), `angle` (degrees), `length` (default 120), `label`, `color` (a CSS color or a theme token: `accent`, `detour`, `muted`, `ink`), `width` (default 4), `curve` (bend as a fraction of the length, default 0), `from_anchor` and `to_anchor` (`left`, `right`, `top`, `bottom`, `center` or an angle in degrees); body `steps:` a list of targets (a string, or a mapping with the same `to`, `from`, `angle`, `length`, `label`, `from_anchor`, `to_anchor` keys, defaulting to the block's options; `from: ""` drops the block's `from`), one position each (section 8.9) |
 | `code-morph` | yaml | number of versions, or `len(steps) + 1` | `lang`, `title`, `markers`, `linenos`, `duration` (ms, default 600), `room` (`max` or `fit`), `mark` (default `false`); body either `versions:` (as `diff-steps`, and a version MAY set its own `lang`) or `file` with `steps:` (replacement texts of named segments, cumulative), with `lines`, `symbol` and `label`; the text of the block changes between positions and unchanged tokens glide (section 8.11) |
@@ -963,6 +973,8 @@ arg         = VAR | INT | FLOAT | STRING | "#t" | "#f" | "nil" ;
 
 **Layout** (block bands). The source CFG of each function is laid out once with Graphviz when available (ranks and left-to-right order; without Graphviz, longest paths and declaration order). Per frame, the live versions of a rank are packed along it, sorted by their block's order and creation id, in lines of at most `wrap` versions, and centred in the function's column (`TB`) or band (`LR`); functions sit side by side in the order of `functions`. Node sizes come from the text shown, so a version never resizes; the drawing box is the union over all frames. Back edges travel along a lane beside the function. On a single step the runtime glides nodes between their two known positions; any other move places them directly. The drawing keeps its size across frames: the panel has a fixed width, and the caption fits in the space left below the drawing, shrinking its text when a long caption would not fit. In a column narrower than 760 px the panel moves under the drawing, which keeps the `height` given; a panel with nothing to show takes no space.
 
+**Enlarging a block.** In `bbv-anim`, `bbv-cfg` and `abstract-interp-anim`, `clickable` (default `true`; `on` and `off` are accepted) lets the viewer click a block of the drawing to enlarge it (section 7.7). The enlarged block shows the items of `clickable_show`, among `label`, `context`, `code` and `after` (default all four; `after` is the exit context, under a line `;; after:`, and is not an item of `show`), in the state of the current step: its marks and colour, the entry context of the frame in abstract interpretation, `…` for a queued version, only the lines specialized so far with `granularity: instruction`, and the exit context once the version is specialized to its end (a `bbv-cfg` block has none; its context is its parameters). Its size is computed at build time from the text of `clickable_show` (the largest over the frames when the context changes with the frame) and emitted in the instance data as `zoom: {show, sizes}`; with `clickable` off the data has no `zoom` and blocks do not react to clicks. Faded versions (mark `gone`) are not clickable. `clickable_show` with an unknown item is a component error, like `show`.
+
 ### 9.6 Abstract interpretation
 
 `abstract-interp-anim` runs the classical analysis of thesis chapter 1.1 on one function of a program written as in section 9.5: the CFG is fixed, every block has one entry context, and a FIFO worklist re-interprets a block whenever its entry context grows, until a fixed point. The package `lattice.bbv` holds the interval lattice (`intervals`), the interpreter (`absint`) and its frames (`AbstractTrace` in `trace`).
@@ -973,7 +985,7 @@ arg         = VAR | INT | FLOAT | STRING | "#t" | "#f" | "nil" ;
 
 **Join.** The context sent along an edge is joined into the successor's entry context by union with widening: types are joined; an interval bound that grew moves to the next threshold at or beyond it. The `machine` thresholds (the sign and the 8, 32 and 64-bit limits: `0, 1, 2, 127, 128, 2^31-1, 2^31, 2^63-1, 2^63, ∞` and their negatives; `thesis` is accepted as an alias) reproduce figure 2 step for step; `sign` keeps `-1, 0, 1`; `none` is plain union (the run then stops at `max_steps` if it does not converge, with warning LT046). A successor whose context changed is queued once. An edge whose outgoing context is `⊥` is dead; a block never reached stays `⊥`.
 
-**Frames.** One frame per event: `start`, `dequeue`, `instruction` (with `granularity: instruction`), `propagate` (one per outgoing edge, with result `first`, `union`, `widened`, `unchanged` or `dead`) and `done`. Nodes are the blocks (`state` `done` or `dead`; `mark` `active`, `new`, `changed`, `widened`), each carrying `lines` (its entry context for that frame; an integer with no known interval shows `(-∞, ∞)` as in the figures) and `after` (its exit context, shown in the tooltip); the propagated edge is `new` (changed), `active` (unchanged) or `gone` (dead). Node sizes are computed over all frames. The panel offers `worklist`, `iterations` and, for each `history` entry `BLOCK.VAR`, the chain of entry values of that variable prefixed with `∪` (union) or `∇` (widening), the red path of figure 2. Captions use the rich text of section 9.5 with the operations `start`, `interpret`, `assign`, `test`, `goto`, `call`, `exit`, `fail`, `reached`, `union`, `widen`, `unchanged`, `dead edge` and `fixed point`. `meta[i]` holds `event`, `block`, `function`, `lines`, `line` and `algo` (lines of `lattice:bbv/pseudocode/absint.txt`). The drawing is the block bands layout of `bbv-cfg`.
+**Frames.** One frame per event: `start`, `dequeue`, `instruction` (with `granularity: instruction`), `propagate` (one per outgoing edge, with result `first`, `union`, `widened`, `unchanged` or `dead`) and `done`. Nodes are the blocks (`state` `done` or `dead`; `mark` `active`, `new`, `changed`, `widened`), each carrying `lines` (its entry context for that frame; an integer with no known interval shows `(-∞, ∞)` as in the figures) and `after` (its exit context, shown in the tooltip and in the enlarged block, section 9.5); the propagated edge is `new` (changed), `active` (unchanged) or `gone` (dead). Node sizes are computed over all frames. The panel offers `worklist`, `iterations` and, for each `history` entry `BLOCK.VAR`, the chain of entry values of that variable prefixed with `∪` (union) or `∇` (widening), the red path of figure 2. Captions use the rich text of section 9.5 with the operations `start`, `interpret`, `assign`, `test`, `goto`, `call`, `exit`, `fail`, `reached`, `union`, `widen`, `unchanged`, `dead edge` and `fixed point`. `meta[i]` holds `event`, `block`, `function`, `lines`, `line` and `algo` (lines of `lattice:bbv/pseudocode/absint.txt`). The drawing is the block bands layout of `bbv-cfg`.
 
 ---
 
@@ -990,10 +1002,13 @@ Lattice.component("graph-anim", {
   enter(inst) {},
   leave(inst) {},
   destroy(inst) {},
+  zoom(inst, key) { /* optional: an element to enlarge (section 7.7), or null */ },
 });
 ```
 
 `info = { from: number | null, direction: -1 | 0 | 1, animate: boolean }`. `animate` is true only for single-step moves (NEXT or PREV within the slide); jumps, restores and scrubbing use `false`.
+
+`zoom(inst, key)` is called by the core when `api.zoom(key)` asks for an element, or when the other window opened it (section 7.5). It returns `{ el, width, height, source }`: a new element to show in the card, its natural size in its own units, and the element of the slide it grows from; or `null` when `key` names nothing to show at the current position. `el` MUST depend only on `key` and the position last shown.
 
 ### 10.2 Lifecycle
 
@@ -1018,12 +1033,13 @@ Requirements:
 | `api.palette` | Computed style of the root element; read tokens with `api.palette.getPropertyValue("--lt-accent")` |
 | `api.presenter` | `true` in presenter view |
 | `api.onResize(cb)` | Called when the slide scale changes |
+| `api.zoom(key)` | Asks the core to enlarge element `key` of this instance through the controller's `zoom` (section 7.7); a no-op in passive windows |
 
 ### 10.4 Core-managed features
 
 - Reveal: elements carry `data-lt-reveal="k"`; the core shows fragment `k` when the reveal position is at least `k`, using `visibility: hidden` so layout does not shift.
 - Badges that wait for their step (section 3.9): the badge carries `data-lt-badge="step"` or `data-lt-badge="next"`; at every step the core looks up the detour steps of its `data-lt-detour` in the slide's `stepDetours` and hides the badge the same way as a fragment. Each badge is handled on its own, so the placed badges of one detour may differ. The presenter preview and print mode render positions through the same path, so they follow.
-- Branch menus, detour badges, wiki links, transitions, overview, go-to, presenter view (with its preview and scrubber) and print mode (section 11.5) are implemented by the core.
+- Branch menus, detour badges, wiki links, transitions, overview, go-to, presenter view (with its preview and scrubber), enlarged elements (section 7.7) and print mode (section 11.5) are implemented by the core.
 - A runtime that moves content of the slide without changing its own box (the text of a `code-morph`, section 8.11) dispatches a bubbling `CustomEvent` named `lt-relayout` on its element after it has placed its new state, with `detail.animate` true when the move is animated and, optionally, `detail.timing = {delay, duration}` in milliseconds, when the content glides. Runtimes that measure the slide (`arrow`, section 8.9) listen for it on their slide section and glide with that timing.
 - The core exports helpers for runtimes: `Lattice.frames(store)`, `Lattice.applyDelta`, `Lattice.renderPanel(el, panel, keys)` (the variable panel of the animation components) and `Lattice.esc` (HTML escaping).
 
@@ -1038,7 +1054,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.14.0">
+  <meta name="generator" content="lattice 0.15.0">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -1058,7 +1074,7 @@ Requirements:
       </section>
       <!-- one section per slide, detour slides included, document order -->
       <div id="lt-hud"><div id="lt-crumbs"></div><div id="lt-progress"></div></div>
-    </div></main>
+    </div><!-- #lt-zoom, the layer of enlarged elements (section 7.7), is added here at run time --></main>
     <aside id="lt-presenter-panel" hidden></aside>
   </div>
   <div id="lt-overlay" hidden></div>
@@ -1408,4 +1424,5 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.12 | Cached render results keep their anchors and warnings (LT058 and component warnings on cached builds) | 8.6 |
 | 0.12.1 | A scrolled code block brings its highlight into view (stated, and fixed: it scrolled too far); the PDF keeps scroll positions | 8.8, 11.5 |
 | 0.13 | Intervals in SBBV and ΛV (`intervals`, `thresholds`, `fixnum_bits`; merges widen), the `vec` type, vector lengths as symbolic bounds, the vector primitives, overflow-checking operators decided by intervals, intervals as tie-breakers of the heuristics, `checks` counts every test left; the `thesis` thresholds are now `machine` | 8.8, 9.5, 9.6 |
+| 0.15 | Enlarged elements: `clickable` and `clickable_show` on the versioning drawings, the controller hook `zoom` and `api.zoom`, a card shared by the presenter and audience windows | 7.5, 7.7, 8.8, 9.5, 10.1, 10.3, 10.4 |
 | 0.14 | Container fences: a bare closing fence closes the innermost container, whatever the colons (nested containers may all use `:::`); fences in code blocks are skipped; named closing fences `::: /NAME`; LT061, LT062 | 3.2, 12 |

@@ -1100,3 +1100,254 @@ def test_scrolled_code_shows_its_highlight_on_screen_and_in_print(tmp_path):
             pytest.skip("Chromium for Playwright is not installed")
         raise
     assert not errors
+
+
+# ------------------------------------------------------------ enlarged blocks (spec 7.7, 9.5)
+
+def _bbv_example(tmp_path):
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parent.parent / "examples" / "07-basic-block-versioning" / "talk.md"
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    return out
+
+
+ZOOMED = "Lattice.zoomed()"
+CARD_TEXT = "Array.from(document.querySelectorAll('.lt-zoom-card:not(.lt-closing) %s')).filter(t => t.style.display !== 'none').map(t => t.textContent)"
+
+
+def _wait_closed(page):
+    page.wait_for_timeout(400)  # the card shrinks back, then leaves the layer
+    assert page.evaluate("document.querySelectorAll('.lt-zoom-card').length") == 0
+
+
+def test_bbv_blocks_enlarge_and_any_key_or_outside_click_closes(tmp_path):
+    out = _bbv_example(tmp_path)
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+            page.goto(out.as_uri() + "#/find-sbbv/12")
+            page.wait_for_timeout(300)
+            state = page.evaluate("JSON.stringify(Lattice.state())")
+            anim = page.locator("#s-find-sbbv .lt-c-bbv-anim .lt-bbv-node:not(.lt-gone)")
+            assert page.evaluate("document.querySelector('#s-find-sbbv .lt-c-bbv-anim svg').classList.contains('lt-bbv-clickable')")
+            # the drawing shows label and context; the enlarged block adds the code and the exit context
+            first = anim.first
+            drawn = first.locator(".lt-bbv-code").count()
+            first.click()
+            page.wait_for_timeout(450)
+            z = page.evaluate(ZOOMED)
+            assert z and z["instance"] == "find-sbbv/trace"
+            assert drawn == 0 and len(page.evaluate(CARD_TEXT % ".lt-bbv-code:not(.lt-bbv-ellipsis)")) > 0
+            assert page.evaluate("document.getElementById('lt-stage').classList.contains('lt-zoomed')")
+            assert page.evaluate("getComputedStyle(document.getElementById('lt-viewport')).filter").startswith("blur")
+            # about 80% of the slide in its limiting dimension, centred, or capped for a small block
+            box = page.evaluate("JSON.parse(JSON.stringify(document.querySelector('.lt-zoom-card').getBoundingClientRect()))")
+            assert max(box["width"] / 1280, box["height"] / 720) <= 0.81
+            assert abs(box["x"] + box["width"] / 2 - 640) < 2 and abs(box["y"] + box["height"] / 2 - 360) < 2
+            # a bare modifier keeps it open; a click inside the card too
+            page.keyboard.press("Shift")
+            page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+            assert page.evaluate(ZOOMED)
+            # any other key closes it and does nothing else
+            page.keyboard.press("ArrowRight")
+            assert page.evaluate(ZOOMED) is None
+            assert page.evaluate("JSON.stringify(Lattice.state())") == state and page.evaluate("location.hash") == "#/find-sbbv/12"
+            _wait_closed(page)
+            page.keyboard.press("ArrowRight")  # navigation resumes where it was
+            assert page.evaluate("Lattice.state().cur") == {"slide": "find-sbbv", "step": 13}
+            for key in ("Escape", " ", "o", "ArrowDown"):
+                anim.first.click()
+                assert page.evaluate(ZOOMED)
+                page.keyboard.press(key)
+                assert page.evaluate(ZOOMED) is None and page.evaluate("Lattice.state().cur") == {"slide": "find-sbbv", "step": 13}
+                assert page.is_hidden("#lt-overlay")
+            # a click outside closes it and does nothing else, even on a detour badge under the scrim
+            badge = page.locator("#s-find-sbbv .lt-detour-badge").bounding_box()
+            anim.first.click()
+            page.mouse.click(badge["x"] + badge["width"] / 2, badge["y"] + badge["height"] / 2)
+            assert page.evaluate(ZOOMED) is None and page.evaluate("Lattice.state().cur") == {"slide": "find-sbbv", "step": 13}
+            _wait_closed(page)
+            page.mouse.click(badge["x"] + badge["width"] / 2, badge["y"] + badge["height"] / 2)  # now it acts again
+            assert page.evaluate("Lattice.state().cur")["slide"] == "one-block-steps"
+            page.keyboard.press("ArrowUp")
+            # the source CFG following the run is clickable too, with its code and parameters
+            cfg = page.locator("#s-find-sbbv .lt-c-bbv-cfg .lt-bbv-node:not(.lt-gone)").first
+            assert cfg.locator(".lt-bbv-code").count() == 0
+            cfg.click()
+            assert page.evaluate(ZOOMED)["instance"] == "find-sbbv/src"
+            assert page.evaluate(CARD_TEXT % ".lt-bbv-code:not(.lt-bbv-ellipsis)")
+            # a position change from elsewhere (the URL) closes it at once
+            page.evaluate("location.hash = '#/find-sbbv/2'")
+            page.wait_for_timeout(100)
+            assert page.evaluate(ZOOMED) is None and page.evaluate("document.querySelectorAll('.lt-zoom-card').length") == 0
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
+def test_enlarged_blocks_show_the_current_step(tmp_path):
+    out = _bbv_example(tmp_path)
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            # abstract interpretation: the context of the current frame, and the exit context
+            page.goto(out.as_uri() + "#/sum-to-n-ai/6")
+            page.wait_for_timeout(300)
+            node = page.locator("#s-sum-to-n-ai .lt-bbv-node").nth(1)
+            drawn = node.locator(".lt-bbv-ctx").evaluate_all("ts => ts.map(t => t.textContent).filter(Boolean)")
+            node.click()
+            card = page.evaluate(CARD_TEXT % ".lt-bbv-ctx:not(.lt-bbv-after):not(.lt-bbv-after-head)")
+            assert card == drawn
+            assert page.evaluate(CARD_TEXT % ".lt-bbv-after-head") == [";; after:"]
+            page.keyboard.press("Escape")
+            _wait_closed(page)
+            # instruction granularity: only the lines specialized so far, no exit context yet
+            page.goto(out.as_uri() + "#/one-block-steps/0")
+            page.wait_for_timeout(200)
+            partial = None
+            for step in range(1, 40):
+                page.evaluate(f"location.hash = '#/one-block-steps/{step}'")
+                page.wait_for_timeout(30)
+                partial = page.evaluate("""(() => {
+                  const nodes = Array.from(document.querySelectorAll('#s-one-block-steps .lt-c-bbv-anim .lt-bbv-node.st-done:not(.lt-gone)'));
+                  return nodes.findIndex(n => Array.from(n.querySelectorAll('.lt-bbv-code:not(.lt-bbv-ellipsis)')).some(t => t.style.display === 'none')
+                    && Array.from(n.querySelectorAll('.lt-bbv-code:not(.lt-bbv-ellipsis)')).some(t => t.style.display !== 'none'));
+                })()""")
+                if partial >= 0:
+                    break
+            assert partial >= 0
+            node = page.locator("#s-one-block-steps .lt-c-bbv-anim .lt-bbv-node.st-done:not(.lt-gone)").nth(partial)
+            drawn = node.locator(".lt-bbv-code:not(.lt-bbv-ellipsis)").evaluate_all(
+                "ts => ts.filter(t => t.style.display !== 'none').map(t => t.textContent)")
+            node.click()
+            assert page.evaluate(CARD_TEXT % ".lt-bbv-code:not(.lt-bbv-ellipsis)") == drawn
+            assert page.evaluate(CARD_TEXT % ".lt-bbv-after-head") == []
+            page.keyboard.press("Escape")
+            # a queued version shows its ellipsis
+            queued = page.locator("#s-one-block-steps .lt-c-bbv-anim .lt-bbv-node.st-queued:not(.lt-gone)")
+            if queued.count():
+                queued.first.click()
+                assert page.evaluate(CARD_TEXT % ".lt-bbv-code:not(.lt-bbv-ellipsis)") == []
+                assert page.evaluate(CARD_TEXT % ".lt-bbv-ellipsis") == ["…"]
+                page.keyboard.press("Escape")
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
+ZOOM_DECK = """
+# Off {#off}
+```bbv-anim {#a clickable=off}
+source: |
+  function f(x)
+  A:  if fixnum?(x) goto B else goto C
+  B:  return fx+(x, 1)
+  C:  return x
+```
+
+# On {#on}
+```bbv-anim {#b}
+show: [label]
+clickable_show: [label, code]
+source: |
+  function f(x)
+  A:  if fixnum?(x) goto B else goto C
+  B:  return fx+(x, 1)
+  C:  return x
+```
+"""
+
+
+def test_clickable_off_passive_windows_and_presenter_sync(tmp_path):
+    src = tmp_path / "talk.md"
+    src.write_text(ZOOM_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            context = browser.new_context(viewport={"width": 1280, "height": 720})
+            page = context.new_page()
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(out.as_uri() + "#/off/999")
+            page.wait_for_timeout(200)
+            page.locator("#s-off .lt-bbv-node:not(.lt-gone)").first.click()
+            assert page.evaluate(ZOOMED) is None
+            assert not page.evaluate("document.querySelector('#s-off svg').classList.contains('lt-bbv-clickable')")
+            # clickable_show picks what the enlarged block shows: here the code, not the context
+            page.evaluate("location.hash = '#/on/999'")
+            page.wait_for_timeout(200)
+            page.locator("#s-on .lt-bbv-node:not(.lt-gone)").first.click()
+            assert page.evaluate(CARD_TEXT % ".lt-bbv-code:not(.lt-bbv-ellipsis)")
+            assert page.evaluate(CARD_TEXT % ".lt-bbv-ctx") == []
+            page.keyboard.press("Escape")
+            # passive windows never enlarge
+            for mode in ("?preview", "?print"):
+                passive = context.new_page()
+                passive.goto(out.as_uri() + mode)
+                passive.wait_for_timeout(300)
+                if mode == "?preview":
+                    passive.evaluate("window.postMessage({lattice: 'preview', slide: 'on', step: 0}, '*')")
+                    passive.wait_for_timeout(100)
+                    passive.locator("#s-on .lt-bbv-node:not(.lt-gone)").first.click(force=True)
+                    assert passive.evaluate(ZOOMED) is None and passive.evaluate("document.getElementById('lt-zoom')") is None
+                    assert passive.evaluate("getComputedStyle(document.querySelector('#s-on .lt-bbv-node')).cursor") == "auto"
+                passive.close()
+            # the presenter view: the card stays over the slide pane, and the audience window mirrors it
+            pres = context.new_page()
+            pres.set_viewport_size({"width": 1600, "height": 800})
+            pres.goto(out.as_uri() + "?presenter#/on/0")
+            pres.wait_for_timeout(400)
+            page.wait_for_timeout(200)
+            assert "enlarge a block" in pres.inner_text(".lt-pp-keys")
+            pres.locator("#s-on .lt-bbv-node:not(.lt-gone)").first.click()
+            pres.wait_for_timeout(450)
+            assert pres.evaluate(ZOOMED) == {"instance": "on/b", "key": "1"}
+            stage = pres.locator("#lt-stage").bounding_box()
+            panel = pres.locator("#lt-presenter-panel").bounding_box()
+            card = pres.locator(".lt-zoom-card").bounding_box()
+            assert card["x"] >= stage["x"] and card["x"] + card["width"] <= panel["x"]
+            page.wait_for_timeout(200)
+            assert page.evaluate(ZOOMED) == {"instance": "on/b", "key": "1"}
+            # a click on the presenter panel closes it without resetting the timer or moving anything,
+            # in both windows
+            pres.mouse.click(panel["x"] + panel["width"] / 2, panel["y"] + panel["height"] - 20)
+            pres.wait_for_timeout(200)
+            assert pres.evaluate(ZOOMED) is None and page.evaluate(ZOOMED) is None
+            # nor does a press on the scrubber move the step
+            scrub = pres.locator(".lt-pp-scrub input").bounding_box()
+            pres.locator("#s-on .lt-bbv-node:not(.lt-gone)").first.click()
+            pres.mouse.click(scrub["x"] + scrub["width"] - 4, scrub["y"] + scrub["height"] / 2)
+            pres.wait_for_timeout(200)
+            assert pres.evaluate(ZOOMED) is None and pres.evaluate("Lattice.state().cur") == {"slide": "on", "step": 0}
+            pres.wait_for_timeout(300)
+            # closing in the audience window closes the presenter's card too
+            pres.locator("#s-on .lt-bbv-node:not(.lt-gone)").first.click()
+            page.wait_for_timeout(200)
+            assert page.evaluate(ZOOMED)
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(200)
+            assert page.evaluate(ZOOMED) is None and pres.evaluate(ZOOMED) is None
+            assert pres.evaluate("Lattice.state().cur") == {"slide": "on", "step": 0}
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors

@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.14.0
+author: Lattice 0.15.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1112,6 +1112,23 @@ panel: [queue, checks]
 
 `show` picks what a node draws among `label`, `context` and `code` (the default is all three; `bbv-cfg` draws label and code). A queued version shows `…` in place of its code until it is specialized; removed tests are struck through.
 
+# Enlarging a block {#bbv-zoom .dense}
+
+:::: columns
+::: column {width=2fr}
+```bbv-cfg {#zcfg program="programs/find.bbv" height=380}
+show: [label]
+```
+:::
+::: column {width=3fr}
+- Click a block of a versioning or abstract interpretation drawing (try the one on the left): it fills most of the slide, which blurs behind it
+- It shows the block **at the current step** with everything it holds, even what `show` leaves out: label, context, code and exit context
+- Any key, or a click outside it, closes it without moving
+- In presenter view it opens over the slide pane, and in the audience window too
+- `clickable=off` turns clicks off; `clickable_show: [label, code]` picks among `label`, `context`, `code` and `after` (the exit context)
+:::
+::::
+
 # Versioning options {#bbv-options .dense}
 
 | Option | Meaning |
@@ -1120,10 +1137,11 @@ panel: [queue, checks]
 | `algorithm`, `limit`, `limits: {f: 3, g: none}` | `sbbv` or `lv`; the version limit, overall or per function |
 | `heuristic` | The merge heuristic: `similarity`, `arithmetic` or `random` |
 | `entry`, `functions: [f, g]` | The function traversed first; the functions drawn, in that order (hidden ones are analysed, not drawn) |
-| `events`, `granularity=instruction`, `until` | Event kinds kept as frames; one frame per instruction; stop after that many frames |
+| `events`, `granularity=instruction`, `until` | Event kinds kept as frames; a frame per instruction; stop after N frames |
 | `panel: [queue, versions, checks, merges, limit]`, `caption=none` | Panel entries; no captions |
 | `colors=none`, `direction=LR`, `wrap=4`, `call_edges`, `height`, `prims` | Fills off; block bands direction; versions per line; dotted call edges; drawing height; extra primitives |
 | `intervals=true`, `thresholds`, `fixnum_bits=61` | Track integer intervals and vector lengths (merges widen with the thresholds of the abstract interpreter); the fixnum width |
+| `clickable=off`, `clickable_show` | No enlarging on click; what an enlarged block shows |
 
 # Instruction by instruction, with the algorithm's listing {#bbv-instructions}
 
@@ -1182,7 +1200,7 @@ history: [B.i]
 | `fixnum_bits` | Where an integer stops being a fixnum (default 61) |
 | `history: [B.i]` | Variables whose chain of entry values the panel shows, with `∪` and `∇` steps |
 | `panel: [worklist, iterations, history]` | Panel entries |
-| `show`, `events`, `granularity`, `until`, `caption`, `height` | As for `bbv-anim`; events are `start`, `dequeue`, `instruction`, `propagate`, `done` |
+| `show`, `events`, `granularity`, `until`, `caption`, `height`, `clickable`, `clickable_show` | As for `bbv-anim`; events are `start`, `dequeue`, `instruction`, `propagate`, `done` |
 
 # Intervals and vector lengths {#bbv-intervals .dense}
 
@@ -1205,7 +1223,7 @@ show: [label, context]
 ::: column {width=1fr}
 - The caption reads badge, versions, details: the operation (`SPECIALIZE`, `TEST REMOVED`, `MERGE`, `WIDEN`, ...), chips in the colour of the block, then contexts and effects
 - The panel lists the queue or worklist as chips, counters as numbers, a widening chain as `∪` and `∇` steps
-- Hover a node for its full context, code and exit context; `colors=none` turns the fills off
+- Hover a node for its full context, code and exit context, or click it to enlarge it; `colors=none` turns the fills off
 :::
 ::::
 
@@ -1223,6 +1241,7 @@ show: [label, context]
 | 1 to 9, the slide's keys | Choose a branch option or a detour (`choose`) |
 | `o`, `g`, `p`, `t` | Overview, go to a slide, presenter view, next tour (`overview`, `goto`, `presenter`, `tour`) |
 | Home | Back to the start, clearing the history (`home`) |
+| Click a block | Enlarge a block of a versioning drawing; any key or a click outside closes it |
 
 Rebind any action in the front matter, `keys: {next: [ArrowRight, n], presenter: P}`; a key is a `KeyboardEvent.key` name, optionally prefixed with `Shift+`.
 
@@ -1248,7 +1267,7 @@ Rebind any action in the front matter, `keys: {next: [ArrowRight, n], presenter:
 :::: column {width=1fr}
 {.reveal}
 - `p` opens a second window with `?presenter`: the slide, a timer (click to reset), the step counters, a scrubber over the steps, a preview of **what Right will show**, the moves with their keys, every key binding, and the notes
-- Both windows stay in sync: either one can drive
+- Both windows stay in sync, an enlarged block included: either one can drive
 - The scrubber sets the step directly, without touching the history
 - The preview is a passive copy of the deck, so animations show their real next position
 ::::

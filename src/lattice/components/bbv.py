@@ -8,11 +8,12 @@ from pydantic import BaseModel, ConfigDict
 
 from ..anim import frame_store
 from ..bbv.ir import Program, ProgramError, parse
-from ..bbv.layout import layout_frames
+from ..bbv.layout import layout_frames, node_size
 from ..bbv.trace import ABSINT_EVENTS, EVENTS, AbstractTrace, VersioningTrace
 from .base import Component, ComponentError, RenderResult, register
 
 SHOW = ["label", "context", "code"]
+CLICKABLE_SHOW = SHOW + ["after"]  # an enlarged block may also show its exit context
 
 
 class BbvCommonOptions(BaseModel):
@@ -26,6 +27,8 @@ class BbvCommonOptions(BaseModel):
     wrap: int = 4  # versions per line of a rank before wrapping
     height: int | None = None
     prims: dict | None = None
+    clickable: bool = True  # a click on a block enlarges it (spec 9.5)
+    clickable_show: list[str] | None = None  # what the enlarged block shows; default everything
 
 
 class BbvAnimOptions(BbvCommonOptions):
@@ -66,7 +69,7 @@ class AbstractInterpOptions(BbvCommonOptions):
 
 _KNOWN = {"program", "source", "functions", "show", "colors", "direction", "height", "prims", "algorithm", "limit", "limits",
           "heuristic", "entry", "events", "granularity", "until", "call_edges", "panel", "caption", "max_steps", "wrap",
-          "thresholds", "narrowing", "fixnum_bits", "history", "intervals"}
+          "thresholds", "narrowing", "fixnum_bits", "history", "intervals", "clickable", "clickable_show"}
 
 
 def load_program(opts: BbvCommonOptions, ctx) -> Program:
@@ -104,6 +107,27 @@ def _show(opts: BbvCommonOptions, default: list[str]) -> list[str]:
     if bad:
         raise ComponentError(f"show: unknown item(s) {bad}; use {SHOW}")
     return show
+
+
+def _zoom(opts: BbvCommonOptions, versions: dict, frames: list[dict]) -> dict | None:
+    """What an enlarged block shows and its size per version, or ``None`` when blocks are not
+    clickable. A node whose context changes with the frame (abstract interpretation) is sized on
+    the largest of its frames, as the drawing is."""
+    if not opts.clickable:
+        return None
+    show = opts.clickable_show if opts.clickable_show is not None else CLICKABLE_SHOW
+    bad = [s for s in show if s not in CLICKABLE_SHOW]
+    if bad:
+        raise ComponentError(f"clickable_show: unknown item(s) {bad}; use {CLICKABLE_SHOW}")
+    sizes = {vid: node_size(v, show) for vid, v in versions.items()}
+    for f in frames:
+        for vid, st in f["nodes"].items():
+            if "lines" not in st and "after" not in st:
+                continue
+            v = versions[vid]
+            w, h = node_size({**v, "context": st.get("lines", v["context"]), "after": st.get("after", v["after"])}, show)
+            sizes[vid] = (max(sizes[vid][0], w), max(sizes[vid][1], h))
+    return {"show": show, "sizes": {vid: list(s) for vid, s in sizes.items()}}
 
 
 def _layout_fn(ctx):
@@ -157,6 +181,9 @@ class BbvAnim(Component):
         data = {"box": box, "tables": trace.tables, "frames": frame_store(frames, cfg.max_full_bytes, cfg.keyframe_interval),
                 "show": show, "colors": _colors(trace.tables, ctx, opts.colors), "callEdges": opts.call_edges,
                 "panel": opts.panel, "height": opts.height, "algorithm": opts.algorithm}
+        zoom = _zoom(opts, trace.tables["versions"], trace.frames)
+        if zoom:
+            data["zoom"] = zoom
         return RenderResult('<div class="lt-bbv-anim"></div>', data=data, positions=len(frames), meta=trace.meta)
 
 
@@ -209,6 +236,9 @@ class BbvCfg(Component):
         data = {"box": box, "tables": {"program": program_table, "versions": versions},
                 "frames": frame_store(frames), "show": show, "colors": _colors({"program": program_table}, ctx, opts.colors),
                 "callEdges": False, "panel": None, "height": opts.height, "highlight": highlight, "static": True}
+        zoom = _zoom(opts, versions, [frame])
+        if zoom:
+            data["zoom"] = zoom
         return RenderResult('<div class="lt-bbv-anim lt-bbv-cfg"></div>', data=data, positions=count)
 
 
@@ -247,5 +277,8 @@ class AbstractInterpAnim(Component):
         data = {"box": box, "tables": trace.tables, "frames": frame_store(frames, cfg.max_full_bytes, cfg.keyframe_interval),
                 "show": show, "colors": _colors(trace.tables, ctx, opts.colors), "callEdges": False,
                 "panel": panel, "height": opts.height, "algorithm": "absint", "static": True}
+        zoom = _zoom(opts, trace.tables["versions"], trace.frames)
+        if zoom:
+            data["zoom"] = zoom
         return RenderResult('<div class="lt-bbv-anim lt-bbv-absint"></div>', data=data, positions=len(frames),
                             meta=trace.meta)

@@ -22,6 +22,7 @@ const Lattice = (() => {
   let storageKey = "";
   let hudTimer = null;
   let timerStart = Date.now();
+  let zoomed = null; // the enlarged element (spec 7.7): { instance, key, card, source, size }
 
   // ------------------------------------------------------------------ registry
   function component(name, controller) {
@@ -303,6 +304,7 @@ const Lattice = (() => {
         presenter,
         onResize: (cb) => resizeCallbacks.push(cb),
         palette: getComputedStyle(document.documentElement),
+        zoom: (key) => openZoom(instId, String(key)),
       };
       try {
         mounted[instId] = { ctl, inst: ctl.mount(el, data, api), el };
@@ -347,6 +349,7 @@ const Lattice = (() => {
   }
 
   function render(prev, how) {
+    closeZoom({ instant: true, quiet: true }); // a position change, from anywhere, closes an enlarged element
     const id = nav.cur.slide;
     const sameSlide = prev && prev.slide === id;
     if (!sameSlide) {
@@ -461,10 +464,134 @@ const Lattice = (() => {
     if (channel) channel.postMessage({ nav: JSON.parse(JSON.stringify(nav)) });
   }
   function onRemote(msg) {
+    if (msg && "zoom" in msg) {
+      if (msg.zoom) openZoom(msg.zoom.instance, msg.zoom.key, { remote: true });
+      else closeZoom({ remote: true });
+      return;
+    }
     if (!msg || !msg.nav || !deck.slides[msg.nav.cur.slide]) return;
     const prev = Object.assign({}, nav.cur);
     nav = msg.nav;
     render(prev, { kind: "sync", dir: 0 });
+  }
+
+
+  // ------------------------------------------------------------------ enlarged elements (spec 7.7)
+  // A component's controller may define zoom(inst, key) -> { el, width, height, source } | null; the
+  // core shows `el` in a card over the slide pane, blurs the slide, and grows the card out of `source`.
+  // The layer is not a position: it is never saved, hashed or recorded, and any render closes it.
+  const ZOOM_FILL = 0.8;     // the card fits in 80% of the slide's width and height
+  const ZOOM_MAX = 4.5;      // ... magnifying the element's own units at most this much
+  const ZOOM_MS = 350;
+  const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "AltGraph", "CapsLock", "OS", "Hyper", "Super"]);
+  let swallowClick = false;
+  const reducedMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function zoomLayer() {
+    let layer = $("#lt-zoom");
+    if (!layer) {
+      layer = document.createElement("div");
+      layer.id = "lt-zoom";
+      $("#lt-stage").appendChild(layer);
+    }
+    return layer;
+  }
+
+  // The card's box in pixels relative to the stage: the element's size magnified to fill 80% of the
+  // slide (capped), centred on the slide as it is shown.
+  function zoomBox(size) {
+    const stage = $("#lt-stage").getBoundingClientRect();
+    const vp = $("#lt-viewport").getBoundingClientRect();
+    const W = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-w"));
+    const H = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-h"));
+    const scale = vp.width / W;
+    const m = Math.min(ZOOM_FILL * W / size.width, ZOOM_FILL * H / size.height, ZOOM_MAX);
+    const w = size.width * m * scale, h = size.height * m * scale;
+    return { left: vp.left - stage.left + (vp.width - w) / 2, top: vp.top - stage.top + (vp.height - h) / 2, width: w, height: h };
+  }
+
+  function placeCard(card, box) {
+    Object.assign(card.style, { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px` });
+  }
+
+  // The transform that puts the card over its source element: same left edge and width, same top
+  // (extra rows of the card unfold below as it grows).
+  function sourceTransform(source, box) {
+    if (!source || !source.isConnected) return null;
+    const r = source.getBoundingClientRect();
+    if (!r.width || !r.height || getComputedStyle(source).opacity === "0") return null;
+    const stage = $("#lt-stage").getBoundingClientRect();
+    const k = r.width / box.width;
+    return `translate(${r.left - stage.left - box.left}px, ${r.top - stage.top - box.top}px) scale(${k})`;
+  }
+
+  function openZoom(instId, key, opts = {}) {
+    if (passive || !nav) return;
+    const m = mounted[instId];
+    if (!m || !m.ctl.zoom || deck.instances[instId].slide !== nav.cur.slide) return;
+    let r = null;
+    try { r = m.ctl.zoom(m.inst, key); } catch (err) { console.error(`lattice: zoom failed for ${instId}`, err); }
+    if (!r || !r.el) return;
+    stopPlaying();
+    closeZoom({ instant: true, quiet: true });
+    const layer = zoomLayer();
+    const card = document.createElement("div");
+    card.className = "lt-zoom-card";
+    card.appendChild(r.el);
+    layer.appendChild(card);
+    const size = { width: r.width, height: r.height };
+    const box = zoomBox(size);
+    placeCard(card, box);
+    zoomed = { instance: instId, key, card, source: r.source, size };
+    layer.classList.add("lt-on");
+    $("#lt-stage").classList.add("lt-zoomed");
+    const from = reducedMotion() ? null : sourceTransform(r.source, box);
+    if (from && card.animate) card.animate([{ transform: from }, { transform: "none" }], { duration: ZOOM_MS, easing: "cubic-bezier(.2,.8,.25,1)" });
+    if (!opts.remote) broadcastZoom({ instance: instId, key });
+  }
+
+  function closeZoom(opts = {}) {
+    if (!zoomed) return;
+    const z = zoomed;
+    zoomed = null; // input is back to normal at once, while the card shrinks
+    const layer = zoomLayer();
+    layer.classList.remove("lt-on");
+    $("#lt-stage").classList.remove("lt-zoomed");
+    const to = opts.instant || reducedMotion() ? null : sourceTransform(z.source, zoomBox(z.size));
+    if (to && z.card.animate) {
+      z.card.classList.add("lt-closing");
+      const a = z.card.animate([{ transform: "none" }, { transform: to, opacity: 0.6 }], { duration: ZOOM_MS * 0.8, easing: "cubic-bezier(.4,0,.6,1)", fill: "forwards" });
+      a.onfinish = () => z.card.remove();
+    } else {
+      z.card.remove();
+    }
+    if (!opts.remote && !opts.quiet) broadcastZoom(null);
+  }
+
+  function broadcastZoom(zoom) {
+    if (channel) channel.postMessage({ zoom });
+  }
+
+  // While an element is enlarged, a press anywhere outside its card closes it and does nothing else:
+  // no link, badge or branch option, no timer reset, no scrubber move (capture phase, before them).
+  function onZoomPointer(e) {
+    if (e.type === "pointerdown") {
+      swallowClick = false;
+      if (!zoomed || zoomed.card.contains(e.target)) return;
+      swallowClick = true; // the mousedown and click of this press are swallowed too
+      e.preventDefault();
+      e.stopPropagation();
+      closeZoom();
+    } else if (swallowClick) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+  function onZoomClick(e) {
+    if (!swallowClick) return;
+    swallowClick = false;
+    e.preventDefault();
+    e.stopPropagation();
   }
 
   // ------------------------------------------------------------------ overlays
@@ -621,6 +748,9 @@ const Lattice = (() => {
       `<li><span class="lt-pp-kbd">${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("")}</span>` +
       `<span>${esc(ACTION_LABELS[action] || action)}</span></li>`);
     rows.push(`<li><span class="lt-pp-kbd"><kbd>1</kbd>…<kbd>9</kbd></span><span>choose a branch option or a detour (slide keys)</span></li>`);
+    if (Object.values(deck.instances).some((i) => registry[i.component] && registry[i.component].zoom)) {
+      rows.push(`<li><span class="lt-pp-kbd"><kbd>click</kbd></span><span>enlarge a block; any key or click closes it</span></li>`);
+    }
     return rows.join("");
   }
 
@@ -822,6 +952,10 @@ const Lattice = (() => {
 
   function onKey(e) {
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (zoomed) { // any key closes an enlarged element instead of acting (spec 7.7)
+      if (!MODIFIERS.has(e.key)) { closeZoom(); e.preventDefault(); }
+      return;
+    }
     if (e.target && e.target.closest && e.target.closest("input, textarea, select")) return;
     if (overlayOpen()) {
       if (e.key === "Escape" || (e.key === "o" && $(".lt-overview"))) { closeOverlay(); e.preventDefault(); }
@@ -859,6 +993,7 @@ const Lattice = (() => {
     const r = stage.getBoundingClientRect();
     const scale = Math.min(r.width / W, r.height / H);
     vp.style.transform = `translate(${(r.width - W * scale) / 2}px, ${(r.height - H * scale) / 2}px) scale(${scale})`;
+    if (zoomed) placeCard(zoomed.card, zoomBox(zoomed.size));
     for (const cb of resizeCallbacks) try { cb(scale); } catch (e) { console.error(e); }
   }
 
@@ -922,6 +1057,9 @@ const Lattice = (() => {
     }
     nav = restore();
     document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onZoomPointer, true);
+    document.addEventListener("mousedown", onZoomPointer, true);
+    document.addEventListener("click", onZoomClick, true);
     document.addEventListener("click", onClick);
     window.addEventListener("hashchange", () => {
       const h = parseHash();
@@ -939,6 +1077,7 @@ const Lattice = (() => {
     document.documentElement.classList.add("lt-ready");
   }
 
-  return { component, boot, frames, applyDelta, renderPanel, esc, print, actions: () => actions, state: () => nav };
+  return { component, boot, frames, applyDelta, renderPanel, esc, print, actions: () => actions, state: () => nav,
+    zoomed: () => (zoomed ? { instance: zoomed.instance, key: zoomed.key } : null) };
 })();
 window.Lattice = Lattice;

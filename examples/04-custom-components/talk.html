@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.14.0">
+<meta name="generator" content="lattice 0.15.0">
 <title>Extending Lattice</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -285,6 +285,16 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-bbv-node.st-dead{opacity:.4}
 .lt-bbv-node.st-dead rect{stroke-dasharray:6 4}
 .lt-bbv-node.lt-gone{opacity:0;pointer-events:none}
+/* clickable blocks (spec 9.5), except in the passive windows (preview, print) */
+html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone):not(.mk-gone){cursor:pointer}
+html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone):not(.mk-gone):hover rect{
+  filter:drop-shadow(0 0 4px color-mix(in srgb,var(--lt-accent) 70%,transparent))}
+/* an enlarged block keeps outlines a few pixels wide however much it is magnified */
+.lt-bbv-zoom .lt-bbv-node rect{vector-effect:non-scaling-stroke;stroke-width:2.5}
+.lt-bbv-zoom .lt-bbv-node:not(.mk-none) rect{stroke-width:5}
+.lt-bbv-zoom .lt-bbv-node.st-dead{opacity:1}
+.lt-bbv-zoom .lt-bbv-node.st-dead text{opacity:.55}
+.lt-bbv-after-head{font-style:normal;font-weight:600}
 .lt-bbv-label{font-family:var(--lt-font-head);font-weight:650;font-size:15px;fill:var(--lt-ink)}
 .lt-bbv-star{fill:var(--lt-accent);font-weight:700}
 .lt-bbv-ctx{font-family:var(--lt-font-code);font-size:12px;font-style:italic;fill:var(--lt-muted);white-space:pre}
@@ -351,6 +361,17 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 #lt-flash{position:absolute;left:50%;bottom:66px;transform:translate(-50%,8px);background:var(--lt-ink);color:var(--lt-bg);
   padding:8px 18px;border-radius:8px;font-size:18px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
 #lt-flash.on{opacity:1;transform:translate(-50%,0)}
+
+/* enlarged elements (spec 7.7): a card over the slide pane, the slide blurred behind it */
+#lt-viewport{transition:filter .35s}
+#lt-stage.lt-zoomed #lt-viewport{filter:blur(6px)}
+#lt-zoom{position:absolute;inset:0;z-index:5;pointer-events:none}
+#lt-zoom::before{content:"";position:absolute;inset:0;background:var(--lt-scrim);opacity:0;transition:opacity .35s}
+#lt-zoom.lt-on{pointer-events:auto}
+#lt-zoom.lt-on::before{opacity:.55}
+.lt-zoom-card{position:absolute;transform-origin:0 0;filter:drop-shadow(0 18px 40px rgba(0,0,0,.28))}
+.lt-zoom-card.lt-closing{pointer-events:none}
+.lt-zoom-card > svg{display:block;width:100%;height:100%;overflow:visible}
 
 /* overlays */
 #lt-overlay{position:fixed;inset:0;background:var(--lt-scrim);display:flex;align-items:flex-start;justify-content:center;
@@ -584,7 +605,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.14.0","meta":{"title":"Extending Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"extending-lattice","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"slides":{"extending-lattice":{"title":"Extending Lattice","label":"Extending Lattice","scope":"root","next":{"slide":"plugin-file"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"plugin-file":{"title":"A plugin is a Python file","label":"A plugin is a Python file","scope":"root","next":{"slide":"truth"},"branches":[],"detours":[],"steps":7,"tracks":[{"id":"c1","kind":"component","instance":"plugin-file/c1"}],"positions":[[0],[1],[2],[3],[4],[5],[6]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>Lattice imports <code>lattice_plugins.py<\/code> automatically; installed packages are enabled with <code>plugins:<\/code> in the front matter.<\/p>\n"},"truth":{"title":"Truth tables, computed at build time","label":"Truth tables, computed at build time","scope":"root","next":{"slide":"stack"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":26}},"stack":{"title":"The call stack of fib(4)","label":"The call stack of fib(4)","scope":"root","next":{"slide":"runtime"},"branches":[],"detours":[],"steps":19,"tracks":[{"id":"src","kind":"component","instance":"stack/src","follow":"calls"},{"id":"calls","kind":"component","instance":"stack/calls"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18]],"offpath":false,"source":{"file":"talk.md","line":44}},"runtime":{"title":"Its runtime, in a few lines","label":"Its runtime, in a few lines","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"runtime/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":58}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":66}}},"detours":{},"instances":{"plugin-file/c1":{"component":"code-steps","slide":"plugin-file","data":"lt-data-plugin-file/c1"},"truth/c1":{"component":"truth-table","slide":"truth","data":null},"stack/src":{"component":"code","slide":"stack","data":"lt-data-stack/src"},"stack/calls":{"component":"call-stack","slide":"stack","data":"lt-data-stack/calls"},"runtime/c1":{"component":"code-steps","slide":"runtime","data":"lt-data-runtime/c1"}},"tours":{},"mainPath":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"overview":{"nodes":{"extending-lattice":{"x":67.0,"y":21.0,"w":118.0,"h":26.0,"label":"Extending Lattice"},"plugin-file":{"x":232.5,"y":21.0,"w":153.0,"h":26.0,"label":"A plugin is a Python file"},"truth":{"x":427.0,"y":21.0,"w":176.0,"h":26.0,"label":"Truth tables, computed at…"},"stack":{"x":617.5,"y":21.0,"w":145.0,"h":26.0,"label":"The call stack of fib(4)"},"runtime":{"x":801.5,"y":21.0,"w":163.0,"h":26.0,"label":"Its runtime, in a few lin…"},"thanks":{"x":942.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"extending-lattice","to":"plugin-file","kind":"next","path":"M126.1,21.0 C133.8,21.0 141.8,21.0 149.8,21.0 L155.8,21.0"},{"from":"plugin-file","to":"truth","kind":"next","path":"M309.0,21.0 C316.8,21.0 324.8,21.0 332.8,21.0 L338.9,21.0"},{"from":"truth","to":"stack","kind":"next","path":"M515.1,21.0 C522.8,21.0 530.7,21.0 538.4,21.0 L544.8,21.0"},{"from":"stack","to":"runtime","kind":"next","path":"M690.2,21.0 C697.9,21.0 705.9,21.0 713.8,21.0 L719.9,21.0"},{"from":"runtime","to":"thanks","kind":"next","path":"M883.4,21.0 C891.4,21.0 899.2,21.0 906.4,21.0 L912.8,21.0"}],"width":980.0,"height":42.0},"hash":"8cdf4e9f0196a540"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.15.0","meta":{"title":"Extending Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"extending-lattice","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"slides":{"extending-lattice":{"title":"Extending Lattice","label":"Extending Lattice","scope":"root","next":{"slide":"plugin-file"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"plugin-file":{"title":"A plugin is a Python file","label":"A plugin is a Python file","scope":"root","next":{"slide":"truth"},"branches":[],"detours":[],"steps":7,"tracks":[{"id":"c1","kind":"component","instance":"plugin-file/c1"}],"positions":[[0],[1],[2],[3],[4],[5],[6]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>Lattice imports <code>lattice_plugins.py<\/code> automatically; installed packages are enabled with <code>plugins:<\/code> in the front matter.<\/p>\n"},"truth":{"title":"Truth tables, computed at build time","label":"Truth tables, computed at build time","scope":"root","next":{"slide":"stack"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":26}},"stack":{"title":"The call stack of fib(4)","label":"The call stack of fib(4)","scope":"root","next":{"slide":"runtime"},"branches":[],"detours":[],"steps":19,"tracks":[{"id":"src","kind":"component","instance":"stack/src","follow":"calls"},{"id":"calls","kind":"component","instance":"stack/calls"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18]],"offpath":false,"source":{"file":"talk.md","line":44}},"runtime":{"title":"Its runtime, in a few lines","label":"Its runtime, in a few lines","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"runtime/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":58}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":66}}},"detours":{},"instances":{"plugin-file/c1":{"component":"code-steps","slide":"plugin-file","data":"lt-data-plugin-file/c1"},"truth/c1":{"component":"truth-table","slide":"truth","data":null},"stack/src":{"component":"code","slide":"stack","data":"lt-data-stack/src"},"stack/calls":{"component":"call-stack","slide":"stack","data":"lt-data-stack/calls"},"runtime/c1":{"component":"code-steps","slide":"runtime","data":"lt-data-runtime/c1"}},"tours":{},"mainPath":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"overview":{"nodes":{"extending-lattice":{"x":67.0,"y":21.0,"w":118.0,"h":26.0,"label":"Extending Lattice"},"plugin-file":{"x":232.5,"y":21.0,"w":153.0,"h":26.0,"label":"A plugin is a Python file"},"truth":{"x":427.0,"y":21.0,"w":176.0,"h":26.0,"label":"Truth tables, computed at…"},"stack":{"x":617.5,"y":21.0,"w":145.0,"h":26.0,"label":"The call stack of fib(4)"},"runtime":{"x":801.5,"y":21.0,"w":163.0,"h":26.0,"label":"Its runtime, in a few lin…"},"thanks":{"x":942.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"extending-lattice","to":"plugin-file","kind":"next","path":"M126.1,21.0 C133.8,21.0 141.8,21.0 149.8,21.0 L155.8,21.0"},{"from":"plugin-file","to":"truth","kind":"next","path":"M309.0,21.0 C316.8,21.0 324.8,21.0 332.8,21.0 L338.9,21.0"},{"from":"truth","to":"stack","kind":"next","path":"M515.1,21.0 C522.8,21.0 530.7,21.0 538.4,21.0 L544.8,21.0"},{"from":"stack","to":"runtime","kind":"next","path":"M690.2,21.0 C697.9,21.0 705.9,21.0 713.8,21.0 L719.9,21.0"},{"from":"runtime","to":"thanks","kind":"next","path":"M883.4,21.0 C891.4,21.0 899.2,21.0 906.4,21.0 L912.8,21.0"}],"width":980.0,"height":42.0},"hash":"b30a8a6b74af61b2"}</script>
 <script type="application/json" id="lt-data-plugin-file/c1">{"steps":[[],[16,17,18,19,20,21],[23,24,25,26,27,28],[29,30,31,32,33,34,35,36,37],[38],[46,47,48,49,50,51,52],[54,55,56,57,58,59,60]]}</script>
 <script type="application/json" id="lt-data-stack/src">{"steps":[[2],[2],[2],[2],[3],[2],[3],[4],[2],[3],[4],[2],[2],[3],[2],[3],[4],[4],[1]]}</script>
 <script type="application/json" id="lt-data-stack/calls">{"frames":{"format":"full","count":19,"frames":[{"stack":[{"call":"fib(4)","note":"running"}],"caption":"Call fib(4)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"running"}],"caption":"Call fib(3)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"running"}],"caption":"Call fib(2)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running"}],"caption":"Call fib(0)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running","ret":0}],"caption":"Base case: fib(0) = 0"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)","ret":1}],"caption":"fib(2) = 1 + 0"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)","ret":2}],"caption":"fib(3) = 1 + 1"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"running"}],"caption":"Call fib(2)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running"}],"caption":"Call fib(0)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running","ret":0}],"caption":"Base case: fib(0) = 0"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)","ret":1}],"caption":"fib(2) = 1 + 0"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)","ret":3}],"caption":"fib(4) = 2 + 1"},{"stack":[],"caption":"fib(4) = 3 after 18 steps"}]}}</script>
@@ -614,6 +635,7 @@ const Lattice = (() => {
   let storageKey = "";
   let hudTimer = null;
   let timerStart = Date.now();
+  let zoomed = null; // the enlarged element (spec 7.7): { instance, key, card, source, size }
 
   // ------------------------------------------------------------------ registry
   function component(name, controller) {
@@ -895,6 +917,7 @@ const Lattice = (() => {
         presenter,
         onResize: (cb) => resizeCallbacks.push(cb),
         palette: getComputedStyle(document.documentElement),
+        zoom: (key) => openZoom(instId, String(key)),
       };
       try {
         mounted[instId] = { ctl, inst: ctl.mount(el, data, api), el };
@@ -939,6 +962,7 @@ const Lattice = (() => {
   }
 
   function render(prev, how) {
+    closeZoom({ instant: true, quiet: true }); // a position change, from anywhere, closes an enlarged element
     const id = nav.cur.slide;
     const sameSlide = prev && prev.slide === id;
     if (!sameSlide) {
@@ -1053,10 +1077,134 @@ const Lattice = (() => {
     if (channel) channel.postMessage({ nav: JSON.parse(JSON.stringify(nav)) });
   }
   function onRemote(msg) {
+    if (msg && "zoom" in msg) {
+      if (msg.zoom) openZoom(msg.zoom.instance, msg.zoom.key, { remote: true });
+      else closeZoom({ remote: true });
+      return;
+    }
     if (!msg || !msg.nav || !deck.slides[msg.nav.cur.slide]) return;
     const prev = Object.assign({}, nav.cur);
     nav = msg.nav;
     render(prev, { kind: "sync", dir: 0 });
+  }
+
+
+  // ------------------------------------------------------------------ enlarged elements (spec 7.7)
+  // A component's controller may define zoom(inst, key) -> { el, width, height, source } | null; the
+  // core shows `el` in a card over the slide pane, blurs the slide, and grows the card out of `source`.
+  // The layer is not a position: it is never saved, hashed or recorded, and any render closes it.
+  const ZOOM_FILL = 0.8;     // the card fits in 80% of the slide's width and height
+  const ZOOM_MAX = 4.5;      // ... magnifying the element's own units at most this much
+  const ZOOM_MS = 350;
+  const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "AltGraph", "CapsLock", "OS", "Hyper", "Super"]);
+  let swallowClick = false;
+  const reducedMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function zoomLayer() {
+    let layer = $("#lt-zoom");
+    if (!layer) {
+      layer = document.createElement("div");
+      layer.id = "lt-zoom";
+      $("#lt-stage").appendChild(layer);
+    }
+    return layer;
+  }
+
+  // The card's box in pixels relative to the stage: the element's size magnified to fill 80% of the
+  // slide (capped), centred on the slide as it is shown.
+  function zoomBox(size) {
+    const stage = $("#lt-stage").getBoundingClientRect();
+    const vp = $("#lt-viewport").getBoundingClientRect();
+    const W = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-w"));
+    const H = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-h"));
+    const scale = vp.width / W;
+    const m = Math.min(ZOOM_FILL * W / size.width, ZOOM_FILL * H / size.height, ZOOM_MAX);
+    const w = size.width * m * scale, h = size.height * m * scale;
+    return { left: vp.left - stage.left + (vp.width - w) / 2, top: vp.top - stage.top + (vp.height - h) / 2, width: w, height: h };
+  }
+
+  function placeCard(card, box) {
+    Object.assign(card.style, { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px` });
+  }
+
+  // The transform that puts the card over its source element: same left edge and width, same top
+  // (extra rows of the card unfold below as it grows).
+  function sourceTransform(source, box) {
+    if (!source || !source.isConnected) return null;
+    const r = source.getBoundingClientRect();
+    if (!r.width || !r.height || getComputedStyle(source).opacity === "0") return null;
+    const stage = $("#lt-stage").getBoundingClientRect();
+    const k = r.width / box.width;
+    return `translate(${r.left - stage.left - box.left}px, ${r.top - stage.top - box.top}px) scale(${k})`;
+  }
+
+  function openZoom(instId, key, opts = {}) {
+    if (passive || !nav) return;
+    const m = mounted[instId];
+    if (!m || !m.ctl.zoom || deck.instances[instId].slide !== nav.cur.slide) return;
+    let r = null;
+    try { r = m.ctl.zoom(m.inst, key); } catch (err) { console.error(`lattice: zoom failed for ${instId}`, err); }
+    if (!r || !r.el) return;
+    stopPlaying();
+    closeZoom({ instant: true, quiet: true });
+    const layer = zoomLayer();
+    const card = document.createElement("div");
+    card.className = "lt-zoom-card";
+    card.appendChild(r.el);
+    layer.appendChild(card);
+    const size = { width: r.width, height: r.height };
+    const box = zoomBox(size);
+    placeCard(card, box);
+    zoomed = { instance: instId, key, card, source: r.source, size };
+    layer.classList.add("lt-on");
+    $("#lt-stage").classList.add("lt-zoomed");
+    const from = reducedMotion() ? null : sourceTransform(r.source, box);
+    if (from && card.animate) card.animate([{ transform: from }, { transform: "none" }], { duration: ZOOM_MS, easing: "cubic-bezier(.2,.8,.25,1)" });
+    if (!opts.remote) broadcastZoom({ instance: instId, key });
+  }
+
+  function closeZoom(opts = {}) {
+    if (!zoomed) return;
+    const z = zoomed;
+    zoomed = null; // input is back to normal at once, while the card shrinks
+    const layer = zoomLayer();
+    layer.classList.remove("lt-on");
+    $("#lt-stage").classList.remove("lt-zoomed");
+    const to = opts.instant || reducedMotion() ? null : sourceTransform(z.source, zoomBox(z.size));
+    if (to && z.card.animate) {
+      z.card.classList.add("lt-closing");
+      const a = z.card.animate([{ transform: "none" }, { transform: to, opacity: 0.6 }], { duration: ZOOM_MS * 0.8, easing: "cubic-bezier(.4,0,.6,1)", fill: "forwards" });
+      a.onfinish = () => z.card.remove();
+    } else {
+      z.card.remove();
+    }
+    if (!opts.remote && !opts.quiet) broadcastZoom(null);
+  }
+
+  function broadcastZoom(zoom) {
+    if (channel) channel.postMessage({ zoom });
+  }
+
+  // While an element is enlarged, a press anywhere outside its card closes it and does nothing else:
+  // no link, badge or branch option, no timer reset, no scrubber move (capture phase, before them).
+  function onZoomPointer(e) {
+    if (e.type === "pointerdown") {
+      swallowClick = false;
+      if (!zoomed || zoomed.card.contains(e.target)) return;
+      swallowClick = true; // the mousedown and click of this press are swallowed too
+      e.preventDefault();
+      e.stopPropagation();
+      closeZoom();
+    } else if (swallowClick) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+  function onZoomClick(e) {
+    if (!swallowClick) return;
+    swallowClick = false;
+    e.preventDefault();
+    e.stopPropagation();
   }
 
   // ------------------------------------------------------------------ overlays
@@ -1213,6 +1361,9 @@ const Lattice = (() => {
       `<li><span class="lt-pp-kbd">${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("")}</span>` +
       `<span>${esc(ACTION_LABELS[action] || action)}</span></li>`);
     rows.push(`<li><span class="lt-pp-kbd"><kbd>1</kbd>…<kbd>9</kbd></span><span>choose a branch option or a detour (slide keys)</span></li>`);
+    if (Object.values(deck.instances).some((i) => registry[i.component] && registry[i.component].zoom)) {
+      rows.push(`<li><span class="lt-pp-kbd"><kbd>click</kbd></span><span>enlarge a block; any key or click closes it</span></li>`);
+    }
     return rows.join("");
   }
 
@@ -1414,6 +1565,10 @@ const Lattice = (() => {
 
   function onKey(e) {
     if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (zoomed) { // any key closes an enlarged element instead of acting (spec 7.7)
+      if (!MODIFIERS.has(e.key)) { closeZoom(); e.preventDefault(); }
+      return;
+    }
     if (e.target && e.target.closest && e.target.closest("input, textarea, select")) return;
     if (overlayOpen()) {
       if (e.key === "Escape" || (e.key === "o" && $(".lt-overview"))) { closeOverlay(); e.preventDefault(); }
@@ -1451,6 +1606,7 @@ const Lattice = (() => {
     const r = stage.getBoundingClientRect();
     const scale = Math.min(r.width / W, r.height / H);
     vp.style.transform = `translate(${(r.width - W * scale) / 2}px, ${(r.height - H * scale) / 2}px) scale(${scale})`;
+    if (zoomed) placeCard(zoomed.card, zoomBox(zoomed.size));
     for (const cb of resizeCallbacks) try { cb(scale); } catch (e) { console.error(e); }
   }
 
@@ -1514,6 +1670,9 @@ const Lattice = (() => {
     }
     nav = restore();
     document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onZoomPointer, true);
+    document.addEventListener("mousedown", onZoomPointer, true);
+    document.addEventListener("click", onZoomClick, true);
     document.addEventListener("click", onClick);
     window.addEventListener("hashchange", () => {
       const h = parseHash();
@@ -1531,7 +1690,8 @@ const Lattice = (() => {
     document.documentElement.classList.add("lt-ready");
   }
 
-  return { component, boot, frames, applyDelta, renderPanel, esc, print, actions: () => actions, state: () => nav };
+  return { component, boot, frames, applyDelta, renderPanel, esc, print, actions: () => actions, state: () => nav,
+    zoomed: () => (zoomed ? { instance: zoomed.instance, key: zoomed.key } : null) };
 })();
 window.Lattice = Lattice;
 
