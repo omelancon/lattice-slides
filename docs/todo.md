@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-04, after 0.13.0 (`implementation-report-2026-10-04.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-04, after 0.14.0 (`implementation-report-2026-10-04.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
@@ -24,11 +24,13 @@ Updated 2026-10-04, after 0.13.0 (`implementation-report-2026-10-04.md`). Items 
 - [ ] 0.13.0: with `intervals` off (the default), constants bound through `goto B(i=0)` and call arguments still enter the target context with their singleton (`b: fx {0}` in the operator entries of example 07's `fact`), while every other interval is stripped. Fixing it is one `without_range()` in `Goto` (`sbbv.py`) and in `specialize_call` (`lv.py`); it was left as is so that example 07 stays byte-identical. Say if you prefer the fix.
 - [ ] 0.13.0: the two `findv` slides of example 07 and the manual's "Intervals and vector lengths" were sized in Chromium at 1280x720; the `⟦x⟧` brackets come from the fallback font of the build machine, check them on yours (an ASCII `|x|` is a one-line change in `intervals.py` if they look wrong). The `findv` drawing is dense (24 versions of five context lines); `show: [label]` with the tooltips is the alternative.
 - [ ] 0.13.0: `checks` now counts every `if` left (the loop test, `if #res` and the overflow tests included), as agreed; the captions say "tests left". Say if you want the type tests counted apart.
+- [ ] 0.14.0: the examples and most of the manual still write containers with decreasing colon counts (`:::::` around `::::` around `:::`), which parse as before; only the manual's "Containers" slide and its new "Closing fences" detour use `:::` throughout and `::: /NAME`. Say if you want the examples and the manual rewritten in one style.
+- [ ] 0.14.0: `docs/implementation-report-2026-10-03.md` is still in `docs/` beside its identical copy in `docs/archive/` (SKILL.md, documentation step 7); `git rm` the one in `docs/`.
 
 ## Later, if wanted
 
 Authoring and parsing:
-- [ ] A `:::` line quoted inside a fenced block closes an enclosing `:::` container (SKILL.md, Pitfalls); the container rule of `markdown.py` could skip fenced blocks when it looks for its closing marker.
+- [ ] Container fences (0.14): a container opened in a list item ends with the item, as before, and its closing fence must be indented with the item: written at the left margin, it reports the container as never closed (LT062) and the fence as closing nothing (LT061). Accepting the margin fence would mean letting a fence end a list item, which CommonMark lists do not allow.
 - [ ] A `{.reveal}` line before a `::: detour` container is still ignored without a word (the badge is not a fragment). Either make the badge a fragment of the reveal track (a step-table change) or warn; `badge=step` covers the case that motivated it.
 
 Navigation and presenter view:

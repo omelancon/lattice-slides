@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.13.0
+author: Lattice 0.14.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -216,38 +216,76 @@ A remark, on the same step.
 
 # Containers: columns, callouts, your own {#containers .dense}
 
-:::::: columns
-::::: column {width=1fr}
+::: columns
+::: column {width=1fr}
 ```markdown
-:::: columns
+::: columns
 ::: column {width=2fr}
 left
 :::
 ::: column {width=1fr}
 right
 :::
-::::
+:::
 
 ::: callout {kind=warn}
-Mind the colons.
+Mind the closing fences.
 :::
 
 ::: aside
 A styling hook: <div class="aside">
 :::
 ```
-:::::
-::::: column {width=1fr}
+:::
+::: column {width=1fr}
 - `columns` holds `column` containers; `width` is a fraction (`2fr`) or a CSS length, `gap` spaces them
 - `callout` with `kind` `info`, `tip` or `warn`
 - `notes`, `detour` and `branch` have their own slides
 - Any other name becomes `<div class="NAME">` for your CSS (warning LT019 near a built-in name)
 
-::: callout {kind=warn}
-An outer container needs more colons than the ones inside it: `::::` around `:::`.
+::: callout {kind=tip}
+Containers nest with `:::` at every level: a bare `:::` closes the innermost open one. The colons are not counted, so `::::` around `:::` still works.
 :::
-:::::
-::::::
+:::
+:::
+
+::: detour {#fences-demo label="Closing fences" key=f}
+# Closing fences {#closing-fences .dense}
+
+::: columns
+::: column {width=1fr}
+````markdown
+::: detour {#more key=m}
+# Inside the detour
+
+::: columns
+::: column
+```markdown
+::: callout
+quoted, closes nothing
+:::
+```
+::: /column
+::: column
+right
+:::
+::: /columns
+
+# Its second slide
+::::: /detour
+````
+::: /column
+::: column {width=1fr}
+{.reveal}
+- `::: /NAME` closes the innermost container, like a bare `:::`, and checks that it is a `NAME`: error LT061 otherwise
+- Named and bare fences mix freely, with any number of colons; name the fences that close long containers, such as detours
+- Fences inside code blocks are skipped, so a slide can quote container syntax
+- A closing fence with nothing to close is error LT061; a container left open at the end of its file is warning LT062
+
+This slide closes its own columns with `::: /column` and `::: /columns`, and its detour with `::: /detour`.
+::: /column
+::: /columns
+::: /detour
 
 # Links and notes {#links-and-notes}
 
@@ -519,7 +557,7 @@ Each value is computed once: about $2n$ calls instead of $1.6^n$. Press Right to
 # Why not a detour inside the column? {#why-not-inside}
 
 - A detour's slides would sit in the middle of the column, far from the rest of the slide's text
-- The column's fences would need more colons than the detour's, and more again if the detour's slides use columns
+- The column would hold whole slides, headings and all, and its closing fence would sit after the last of them
 - So the detour stays at the top level and only its badge moves: the slide's source stays readable
 :::
 

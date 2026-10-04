@@ -69,7 +69,11 @@ class Loader:
     def parse_file(self, path: Path, scope, offpath: bool, stack: list[Path], is_root=False) -> list[Slide]:
         self.files.append(path)
         text = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
-        tokens = self.md.parse(text, new_env(self.md))
+        env = new_env(self.md)
+        tokens = self.md.parse(text, env)
+        for (code, line), message in sorted(env.get("fence_problems", {}).items(), key=lambda kv: kv[0][1]):
+            report = self.d.error if code == "LT061" else self.d.warn
+            report(code, message, self.loc(path, line=line + 1))
         if tokens and tokens[0].type == "front_matter":
             loc = self.loc(path, line=1)
             if not is_root:

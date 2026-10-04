@@ -220,3 +220,183 @@ def test_detour_badge_directive_is_a_leaf_block_anywhere():
     badges = [t.info for t in md.parse(src, {}) if t.type == "lt_badge"]
     assert badges == ["{ref=a}", '{ref=b label="B"}', "{ref=c}"]  # not inline, and braces are required
     assert [t.type for t in md.parse("::include{file=x.md}\n", {})] == ["lt_include"]
+
+
+# ---------------------------------------------------------------- container fences (spec 3.2)
+
+
+def container_tree(src: str) -> list:
+    """The containers of a Markdown source as nested ``(name, [children])`` pairs."""
+    from lattice.markdown import container_name, create_markdown
+
+    root: list = []
+    stack = [root]
+    for t in create_markdown().parse(src, {}):
+        if t.type == "container_lt_open":
+            node = (container_name(t)[0], [])
+            stack[-1].append(node)
+            stack.append(node[1])
+        elif t.type == "container_lt_close":
+            stack.pop()
+    return root
+
+
+def fence_problems(src: str) -> dict:
+    from lattice.markdown import create_markdown
+
+    env: dict = {}
+    create_markdown().parse(src, env)
+    return {line + 1: code for (code, line) in env.get("fence_problems", {})}
+
+
+COLUMNS_TREE = [("columns", [("column", []), ("column", [("callout", [])])])]
+
+
+def test_bare_closing_fence_closes_the_innermost_container():
+    """A: fences of three colons nest; each bare fence closes the innermost open container."""
+    src = ("::: columns\n::: column {width=1fr}\nleft\n:::\n::: column\n::: callout {kind=info}\nnote\n:::\n"
+           "right\n:::\n:::\n\nafter\n")
+    assert container_tree(src) == COLUMNS_TREE
+    assert fence_problems(src) == {}
+
+
+def test_colon_counts_are_cosmetic():
+    """A: any count of three or more colons, in any order; the earlier decreasing style still parses the same."""
+    legacy = ("::::: columns\n:::: column\nleft\n::::\n:::: column\n::: callout\nnote\n:::\nright\n::::\n"
+              ":::::\n")
+    inverted = ("::: columns\n:::: column\nleft\n::::::\n::::: column\n:::::::: callout\nnote\n:::\n"
+                "right\n:::\n:::\n")
+    assert container_tree(legacy) == container_tree(inverted) == COLUMNS_TREE
+
+
+def test_closing_fence_ends_a_lazy_paragraph():
+    """A: a closing fence right after a paragraph line closes the container, it is not paragraph text."""
+    from lattice.markdown import create_markdown
+
+    tokens = create_markdown().parse("::: callout\nsome text\n:::\nafter\n", {})
+    inline = [t.content for t in tokens if t.type == "inline"]
+    assert inline == ["some text", "after"]
+    assert [t.type for t in tokens][-4:] == ["container_lt_close", "paragraph_open", "inline", "paragraph_close"]
+
+
+@pytest.mark.parametrize("quoted", [
+    "```markdown\n::: callout\nquoted\n:::\n```\n",
+    "~~~~\n:::\n~~~~\n",
+    "````markdown\n```\n:::\n```\n````\n",
+    "- item\n\n  ```\n  :::\n  ```\n",
+    "> ```\n> :::\n> ```\n",
+    "    ::: indented code\n    :::\n",
+])
+def test_fences_in_code_blocks_are_not_container_fences(quoted):
+    """A: the lines of a code block are skipped when looking for the closing fence (the old pitfall)."""
+    src = f"::: columns\n::: column\n{quoted}:::\n::: column\nright\n:::\n:::\n"
+    assert container_tree(src) == [("columns", [("column", []), ("column", [])])]
+    assert fence_problems(src) == {}
+
+
+def test_containers_in_list_items_and_quotes():
+    src = "::: column\n- item\n\n  ::: callout\n  inside\n  :::\n- next\n\n> ::: callout\n> quoted\n> :::\n:::\n"
+    assert container_tree(src) == [("column", [("callout", []), ("callout", [])])]
+    assert fence_problems(src) == {}
+    # a code block in a quote ends with the quote, so the fence after it closes the column
+    assert container_tree("::: column\n> ```\n> code\n:::\nafter\n") == [("column", [])]
+    # a container opened in a list item ends with the item: the fence at the margin has nothing to close
+    assert fence_problems("::: column\n- item\n\n  ::: callout\n  x\n:::\n:::\n") == {4: "LT062", 6: "LT061"}
+
+
+def test_stray_and_unclosed_fences():
+    """A: a closing fence with no open container is LT061; a container never closed is LT062."""
+    assert fence_problems("text\n\n:::\n") == {3: "LT061"}
+    assert fence_problems("::: callout\nx\n:::\n:::\n") == {4: "LT061"}
+    assert fence_problems("::: columns\n::: column\nx\n:::\n") == {1: "LT062"}
+
+
+def test_named_closing_fences():
+    """B: `::: /NAME` closes the innermost container and checks its name, whatever its colons."""
+    src = ("::: columns\n::: column\nleft\n::: /column\n::: column\n::: callout\nnote\n::: /callout\n"
+           "right\n::::: /column\n:::/columns\n")
+    assert container_tree(src) == COLUMNS_TREE
+    assert fence_problems(src) == {}
+
+
+@pytest.mark.parametrize("src, line", [
+    ("::: columns\n::: column\nx\n::: /columns\n:::\n", 4),         # names the parent, not the innermost
+    ("::: columns\n::: column\nx\n:::\n::: /column\n", 5),           # the column is already closed
+    ("::: callout\nx\n::: /callout {kind=info}\n", 3),               # malformed: attributes
+    ("::: callout\nx\n::: /\n", 3),                                  # malformed: no name
+    ("# A\n\n::: /callout\n", 3),                                    # no open container
+])
+def test_named_closing_fence_errors(src, line):
+    assert fence_problems(src) == {line: "LT061"}
+
+
+def test_bare_and_named_closing_fences_mix():
+    """A and B together: named and bare fences, of any colon count, in one file give one structure."""
+    bare = ("::: detour {#d}\n# In\n::: columns\n::: column\nleft\n:::\n::: column\n::: callout\nnote\n:::\n"
+            ":::\n:::\n:::\n")
+    mixed = ("::: detour {#d}\n# In\n:::: columns\n::: column\nleft\n::: /column\n::: column\n"
+             "::: callout\nnote\n:::\n:::::\n::: /columns\n:::::: /detour\n")
+    tree = [("detour", COLUMNS_TREE)]
+    assert container_tree(bare) == container_tree(mixed) == tree
+    assert fence_problems(mixed) == {}
+    # a bare fence closes the innermost container: the named fence after it closes the columns (and
+    # reports the name), so the last fence has nothing left to close
+    wrong = "::: columns\n::: column\nx\n:::\n::: /column\n:::\n"
+    assert fence_problems(wrong) == {5: "LT061", 6: "LT061"}
+
+
+def test_same_count_fences_in_a_deck(deck):
+    """A and B in a whole deck: a detour of slides with columns, all with three colons."""
+    root = deck({"talk.md": """
+        # Origin
+        ::: columns
+        ::: column {width=2fr}
+        ::detour-badge{ref=d}
+        :::
+        ::: column {width=3fr}
+        ::: callout {kind=info}
+        Note
+        :::
+        :::
+        :::
+
+        ::: detour {#d label="More"}
+        # Inside
+        ::: columns
+        ::: column
+        ```markdown
+        ::: callout
+        quoted
+        :::
+        ```
+        ::: /column
+        ::: column
+        right
+        ::: /column
+        ::: /columns
+
+        # Second inside
+        text
+        ::: /detour
+
+        # After
+        end
+    """})
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items
+    assert list(d.slides) == ["origin", "inside", "second-inside", "after"]
+    assert [s.id for s in d.detours["d"].slides] == ["inside", "second-inside"]
+    origin = d.slides["origin"].body_html
+    assert origin.count('class="lt-column"') == 2 and "lt-callout-info" in origin and "lt-detour-badge" in origin
+    inside = d.slides["inside"].body_html
+    assert inside.count('class="lt-column"') == 2 and "lt-callout" not in inside
+
+
+def test_fence_diagnostics_have_locations(deck):
+    root = deck({"talk.md": "# A\n::: columns\n::: column\nx\n::: /columns\n:::\n\n# B\n:::\n"})
+    found = [(x.code, x.severity, x.loc.line) for x in check_deck(root, use_cache=False).items
+             if x.code in ("LT061", "LT062")]
+    assert found == [("LT061", "error", 5), ("LT061", "error", 9)]
+    root.write_text("# A\n::: callout\nx\n")
+    found = [(x.code, x.severity, x.loc.line) for x in check_deck(root, use_cache=False).items]
+    assert ("LT062", "warning", 2) in found

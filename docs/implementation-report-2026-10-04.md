@@ -1,4 +1,4 @@
-# Implementation report: vector bound checks in SBBV and ΛV (Lattice 0.13.0, 2026-10-04)
+# Implementation report: vector bound checks in SBBV and ΛV, container fences (Lattice 0.13.0 and 0.14.0, 2026-10-04)
 
 Sections 3.2 (intervals in SBBV) and 3.3 (vector support) of the SBBV paper (thesis appendix D, pages 127 to 131) are now implemented in `lattice.bbv`, for `sbbv`, `lv` and, since the three share their transfer functions, `absint`. The paper's `findv` (figure 6) specializes to its figure 7: every bound check and overflow check disappears, `procedure?` is tested once. The rules are in spec 9.5 (with 8.8, 9.6 and 15); the rationale is report decision 22. The design was proposed and agreed before implementation (project doc `claude/v0.13-design.md`), with Olivier's answers recorded there.
 
@@ -30,3 +30,22 @@ Sections 3.2 (intervals in SBBV) and 3.3 (vector support) of the SBBV paper (the
 
 - Firefox was not available (the `⟦ ⟧` glyphs and the node widths come from the fallback font of the build machine); see the todo.
 - The constant leak with `intervals` off, the `make-vector` length, two bounds per side and the thesis's interval-aware `similarity` are in the todo as choices for Olivier.
+
+## 5. Addendum, 0.14.0: container fences that nest without counting colons
+
+Olivier's talk (`phd_defense/src/background.md`) showed the cost of the markdown-it-container rule: an outer fence needed more colons than every fence inside it, so a detour holding a slide with columns holding a callout needed `:::::::`, `:::::`, `::::` and `:::`, and adding a level meant recounting every enclosing fence. Two syntaxes were proposed and agreed in conversation: (A) a bare closing fence closes the innermost open container, as in Pandoc, and (B) an optional named closing fence, `::: /NAME`, that checks the container it closes. The rules are in spec 3.2 (with 3.8, 12 and 15); the rationale is report 3.1 and decision 23.
+
+**Built.**
+- `markdown.py`: `_container_rule` replaces the container plugin of mdit-py-plugins (same token types, `container_lt_open` and `container_lt_close`, so the loader and the body builder are unchanged). An opening fence is three or more colons and a name; a closing fence is three or more colons alone, or followed by `/NAME`. The end of a container is found by counting the fences that follow it, skipping the lines of code blocks: fenced with backticks or tildes (also behind list or quote markers, and a quoted code block ends with its quote) and indented. As before, a line outdented out of an enclosing list item ends the scan, and `lineMax` keeps lazy continuation lines from running past the closing fence. A closing fence interrupts a paragraph.
+- Diagnostics, recorded by the rule in `env["fence_problems"]` and reported by `Loader.parse_file` with the file's line: LT061 (error) for a closing fence with no open container, a named fence whose name is not the container's, and a malformed named fence (`::: /` alone, or with attributes); LT062 (warning) for a container never closed (it ends with its file or its enclosing block, as before).
+- The old pitfall "a `:::` quoted in a code block closes a real container" (SKILL.md, todo) is gone with it.
+- User manual: the "Containers" slide uses `:::` at every level and says so; a new detour, "Closing fences", shows `::: /NAME`, mixed fences and quoted fences, and closes its own containers with named fences. The detour "Why not a detour inside the column?" no longer argues from colon counts. README syntax table, spec 3.2, 3.8, 12 and 15, the report (3.1, 3.12, roadmap, decision 23), SKILL.md (structure, suites, pitfalls, highest code) and the todo are updated; version 0.14.0.
+
+**Found on the way.** The manual's "Text and math" slide had a callout inside a `:::` column inside a `::::` columns. Under the old rule the callout's closing fence closed the column, and the column's own closing fence opened an empty container, so the page held an empty `<div class="">`. Under the new rule the slide renders as written.
+
+**Verification.**
+- `pytest -rs`: 213 passed, no skips, in Chromium. New in `tests/test_parsing.py`: nesting with `:::` only; colon counts in any order and the earlier decreasing style giving one structure; a closing fence ending a paragraph; six kinds of quoted fences skipped (backticks, tildes, a longer fence around a shorter one, in a list item, in a quote, indented code); containers in list items and quotes; stray and unclosed fences; named fences of any colon count; five LT061 cases; bare and named fences mixed in one detour; a whole deck with a detour, columns, a callout and a placed badge written with three colons; locations and severities of LT061 and LT062.
+- **Regression of the existing decks**: every example and the manual were rebuilt before and after the change and their HTML compared. The only differences were matplotlib's random SVG ids (todo, Output) and the manual's empty `<div>` above, until the manual's own slides were changed. `lattice check --strict` passes on every example and on the manual; `check_docs.py` passes.
+- **Looked at** (Chromium, 1280x720): the manual's "Containers" slide and the "Closing fences" detour at their first and last steps, and "Text and math".
+
+**Not verified, and left open.** The examples and most of the manual still use decreasing colon counts (they parse the same); whether to rewrite them in one style is in the todo, as is the case of a closing fence written at the left margin after a container opened in a list item.

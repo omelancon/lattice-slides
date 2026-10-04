@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.13.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.14.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -98,13 +98,14 @@ slide_block    = markdown_block | attr_line | container | detour
                | branch | fenced_block | detour_badge ;
 detour         = ":::" { ":" } SP "detour" [ SP attr_block ] NL
                  { detour_item }
-                 ":::" { ":" } NL ;
+                 close_fence ;
 detour_item    = slide | include ;
 include        = "::include" attr_block NL ;
 detour_badge   = "::detour-badge" attr_block NL ;   (* section 3.9 *)
 container      = ":::" { ":" } SP NAME [ SP attr_block ] NL
                  { slide_block }
-                 ":::" { ":" } NL ;
+                 close_fence ;
+close_fence    = ":::" { ":" } [ { SP } "/" { SP } NAME ] { SP } NL ;   (* bare, or naming the container *)
 fenced_block   = FENCE NAME [ SP attr_block ] NL BODY FENCE ;
 ```
 
@@ -113,7 +114,8 @@ Notes:
 - A `slide_heading` is recognized only at the top level of a file or at the top level of a detour container. Everywhere else, `#` headings are ordinary content and produce warning LT041 (a level-1 heading inside a container is almost always a mistake).
 - Non-blank content before the first slide heading of a file (or of a detour) is an error (LT002).
 - Setext level-1 headings (a line underlined with `=`) are an error (LT001).
-- Containers nest in the markdown-it-container way: an outer fence uses more colons than the fences it contains.
+- **Container fences.** A line of three or more colons followed by a name (and attributes) opens a container; a line of three or more colons alone closes the innermost open container. The number of colons carries no meaning: nested containers MAY all use `:::`, and an author MAY vary the counts for readability, in any order. To find where a container ends, the opening and closing fences that follow it are counted, skipping the lines of code blocks (fenced with backticks or tildes, also inside a list item or a block quote, or indented), so a fence quoted in code closes nothing.
+- **Named closing fences.** A closing fence MAY name the container it closes, `::: /NAME`, with any number of colons. It closes the innermost open container like a bare fence, and that container's name MUST be `NAME`. Bare and named fences MAY be mixed in one file. A named fence that does not match its container, a malformed one (`::: /` with no name, or with attributes) and a closing fence with no open container are errors (LT061). A container still open at the end of the file or of its enclosing block (a list item, a block quote) is closed there, with warning LT062.
 - `include` and `detour_badge` are **leaf directives**: alone on their line, with their attribute block required. A `detour_badge` is also recognized inside list items and block quotes; in the middle of a line the text is literal.
 
 ### 3.3 Slide headings and titles
@@ -194,6 +196,21 @@ wiki_link = "[[" IDENT [ "|" label ] "]]" ;
 | any other name | Rendered as `<div class="NAME">`, a styling hook for themes | any |
 
 An unknown container name within edit distance 2 of a built-in name produces warning LT019 (likely typo).
+
+Containers nest with fences of three colons; a bare `:::` closes the innermost one and `::: /NAME` closes it and checks its name (section 3.2):
+
+````markdown
+::: columns
+::: column {width=2fr}
+left
+:::
+::: column
+::: callout {kind=tip}
+right
+:::
+::: /column
+::: /columns
+````
 
 Content never paints outside its column: a table wider than its column scrolls horizontally inside it.
 
@@ -1021,7 +1038,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="lattice 0.13.0">
+  <meta name="generator" content="lattice 0.14.0">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
   <style id="lt-theme">/* base, theme, Pygments, KaTeX if used, component CSS */</style>
@@ -1199,6 +1216,8 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT058 | error | An id used twice on a slide: element ids written by the author, explicit component ids and code segment names (section 8.10) |
 | LT059 | warning | Two consecutive versions of a `code-morph` are identical (section 8.11) |
 | LT060 | warning | A character of a `code-morph` that does not take one column of a monospace font: wide, combining or control (section 8.11) |
+| LT061 | error | A closing container fence with no open container, a named closing fence (`::: /NAME`) whose name is not that of the container it closes, or a malformed one (section 3.2) |
+| LT062 | warning | A container never closed: it ends with its file or its enclosing block (section 3.2) |
 
 Diagnostics are printed as `file:line:col: severity LTnnn: message`. `lattice check` exits with status 1 if any error is reported, 0 otherwise (`--strict` also fails on warnings).
 
@@ -1389,3 +1408,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.12 | Cached render results keep their anchors and warnings (LT058 and component warnings on cached builds) | 8.6 |
 | 0.12.1 | A scrolled code block brings its highlight into view (stated, and fixed: it scrolled too far); the PDF keeps scroll positions | 8.8, 11.5 |
 | 0.13 | Intervals in SBBV and ΛV (`intervals`, `thresholds`, `fixnum_bits`; merges widen), the `vec` type, vector lengths as symbolic bounds, the vector primitives, overflow-checking operators decided by intervals, intervals as tie-breakers of the heuristics, `checks` counts every test left; the `thesis` thresholds are now `machine` | 8.8, 9.5, 9.6 |
+| 0.14 | Container fences: a bare closing fence closes the innermost container, whatever the colons (nested containers may all use `:::`); fences in code blocks are skipped; named closing fences `::: /NAME`; LT061, LT062 | 3.2, 12 |

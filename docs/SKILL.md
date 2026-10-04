@@ -41,7 +41,8 @@ Python 3.10 or newer. Without Graphviz, animated graphs fall back to a NetworkX 
 src/lattice/
   cli.py          commands: new, build (--dir), check, serve, graph, pdf
   build.py        pipeline orchestration and plugin loading
-  markdown.py     markdown-it setup: containers, leaf directives (::include, ::detour-badge), [[links]], $math$
+  markdown.py     markdown-it setup: containers (fences counted, code blocks skipped, `::: /NAME`), leaf
+                  directives (::include, ::detour-badge), [[links]], $math$
   parser.py       Loader: files, includes, h1 segmentation, detours, ids, slide attributes
   attrs.py, ids.py  attribute blocks and slug ids
   body.py         BodyBuilder: blocks, reveal, containers, detour badges (default and placed), branch
@@ -95,7 +96,7 @@ Each of these was decided deliberately; the reasoning is in the report (sections
 - **Registered components take precedence over Pygments lexers** (spec 3.13). Never register a component under a common language name; that is why the diff component is `diff-steps`.
 - **Output is self-contained.** Images, fonts, data and libraries are embedded in single-file mode. Heavy libraries are embedded only when an instance requires them (`RenderResult.requires`).
 - **Columns contain their content.** Nothing may paint outside its column or below the slide body; `tests/test_layout.py` checks every example slide at its first and last step. A component option such as `height` must be honoured in every layout mode (the animation panels switch to a column under 760 px of container width).
-- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT060. New code, new row in spec section 12.
+- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT062. New code, new row in spec section 12.
 
 ## Common tasks
 
@@ -115,7 +116,7 @@ Run `pytest` after every change; it takes about a minute and a half, most of it 
 
 | File | Covers |
 |---|---|
-| `test_parsing.py` | attributes, ids, includes, links, reveal and `.reveal-with`, containers, leaf directives |
+| `test_parsing.py` | attributes, ids, includes, links, reveal and `.reveal-with`, containers and their fences (bare and named closing fences, mixed, code blocks skipped, LT061, LT062), leaf directives |
 | `test_graph.py` | next resolution, detours, branches, keys, tours |
 | `test_steps.py` | tracks, timelines, detour steps and the badges of their detours (modes, placed badges, LT055 and LT056), followers, deltas, frame stores, tree and grid traces, tree layouts |
 | `test_bbv.py` | the type lattice and intervals, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), abstract interpretation against figures 1, 2 and 4, intervals in SBBV and ΛV, the symbolic bound rules of the paper and `findv` against its figure 7, frames, layout, the components |
@@ -139,7 +140,7 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 ## Pitfalls
 
 - **Stale renders.** The cache key includes a hash of the Lattice sources, so library changes invalidate it; `--no-cache` or deleting `.lattice-cache/` forces a clean render when you doubt it.
-- **Container nesting.** An outer container needs more colons than its children (`::::` around `:::`). With equal counts, the first `:::` closes the outer container and the rest of the file parses oddly. A detour holding slides that use `::::` columns therefore needs `:::::` fences (see `examples/07-basic-block-versioning`).
+- **Container fences are counted, not compared.** `_container_rule` in `markdown.py` replaces mdit-py-plugins' container plugin: a bare closing fence closes the innermost container whatever its colons, and the end of a container is found by counting the fences after it while skipping code blocks (`_code_fence` also looks behind list and quote markers). The loader reports the problems the rule records in `env["fence_problems"]` (LT061, LT062), so a new caller of `md.parse` on deck sources must report them too. The examples and most of the manual still use decreasing counts, which parse the same; keep both styles working.
 - **Attribute values are strings.** Lists and mappings go in the YAML body of a block, not in `{...}`. Extra options of animation components are read as YAML scalars (spec 8.2).
 - **DOT keywords.** `graph`, `node`, `edge`, `digraph`, `subgraph` and `strict` cannot be bare node names in `dot` blocks.
 - **Line-based references.** `code-steps` steps, `lines=` ranges and `meta["line"]` in traces point at line numbers. Editing a referenced file (for example `examples/04-custom-components/lattice_plugins.py`) can silently shift highlights; recheck those slides, or name the code with segment markers (spec 8.10), which move with the code.
@@ -152,7 +153,6 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 - **Intervals are off by default in SBBV and ΛV.** `Specializer.type_of` strips them unless `intervals` is on, so a change to `prims.py` result rules must keep working without intervals; constants bound through `goto` and call arguments do keep their singleton (example 07 shows `b: fx {0}`), a known leak kept for the examples. With intervals on, every assignment goes through `result_of` (which passes the argument names for `vector-length` and applies `refined`), and `merge_contexts` widens the older version against the newer: a loop that does not converge is a merge that joined without widening.
 - **A symbolic bound names a class representative.** `⟦x⟧` in a range is the representative of the class holding the vector, in that very context. Every `Context` operation that changes classes or names (`set`, `equate`, `restrict`, `rename`, `union`, `intersection`, and ΛV's `return_context` across a call) must end with `_remap`, or symbols point at variables that no longer exist; `test_symbols_follow_the_class_of_their_vector` pins the cases. The fixnum width of symbols comes from `intervals.fixnum_bits()`, set by `using_fixnum_bits` around a run: code outside a run sees the default (61).
 - **The drawing of `bbv.js` must never rescale between frames.** Its SVG keeps its aspect ratio, so anything that changes the canvas size (a panel growing with the queue, a caption wrapping to a second line) rescales the whole drawing. The panel has a fixed width, `.lt-ga-main` does not shrink, and the caption shrinks its text to fit the space left (`fitCaption`). Check both Chromium and Firefox after touching that layout; Firefox resolves these flex sizes differently.
-- **Quoted containers close real ones.** A `:::` line inside a fenced code block still closes an enclosing container of three colons: the container rule does not see the fence. A slide that shows container syntax inside a column needs `::::` columns and `:::::` around them (the manual's "Detours" and "Badges that wait for their turn" slides). The symptom is a later container reported out of place (LT034) or a column whose fragments vanish.
 - **Node elements are reused across frames.** `bbv.js` rewrites the class attribute of a node at every frame, including when it hides it; anything the node must keep (its origin colour) lives in the node record, never in the current classes. A colour that survives forward playback and vanishes after stepping back is this bug.
 - **Captions are marked up, not HTML.** The versioning and abstract interpretation captions carry the backtick spans of `bbv/rich.py` (spec 9.5); tests compare them through `rich.plain` or on the markup itself, and a note written in `sbbv.py`, `lv.py` or `absint.py` uses the helpers rather than f-strings of raw names and types.
 - **Arrow targets are measured, not styled.** `arrow.js` reads `getBoundingClientRect` of the target's contents and draws in slide units; a change to `.lt-slide` positioning or to how the viewport is scaled (`fit`) must keep `test_arrow_runtime_points_at_its_targets` green. The classes of its SVG are `lt-arrow-box`, `lt-arrow-line` and `lt-arrow-text`: `.lt-arrow` already belongs to the graph animation's arrowheads.
