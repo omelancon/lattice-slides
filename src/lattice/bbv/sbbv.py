@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from .heuristics import HEURISTICS
-from .intervals import Bound, thresholds_named, using_fixnum_bits
+from .intervals import Bound, thresholds_from, using_fixnum_bits
 from .ir import RESULT, Arg, Assign, Block, Call, Const, Fail, Function, Goto, If, Move, Program, Return, Var
 from .rich import SEP, binding, code, context, join, struck, ver
 from .types import ANY, Context, Type
@@ -100,8 +100,7 @@ class Specializer:
         self.program = program
         self.limit = limit
         self.intervals = intervals
-        self.thresholds: list[Bound] | None = thresholds_named(thresholds) if isinstance(thresholds, str) else (
-            sorted(set(thresholds)) if thresholds is not None else None)
+        self.thresholds: list[Bound] | None = thresholds_from(thresholds, fixnum_bits)
         self.fixnum_bits = fixnum_bits
         self.limits = dict(limits or {})
         if heuristic not in HEURISTICS:

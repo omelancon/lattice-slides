@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.19.0
+author: Lattice 0.20.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1268,7 +1268,7 @@ show: [label]
 | `entry`, `functions: [f, g]` | The function traversed first; the functions drawn, in that order (hidden ones are analysed, not drawn) |
 | `events`, `granularity=instruction`, `until` | Event kinds kept as frames; a frame per instruction; stop after N frames |
 | `panel: [queue, versions, checks, merges, limit]`, `caption=none` | Panel entries; no captions |
-| `colors=none`, `direction=LR`, `wrap=4`, `call_edges`, `height`, `prims` | Fills off; block bands direction; versions per line; dotted call edges; drawing height; extra primitives |
+| `colors=none`, `direction=LR`, `wrap=4`, `call_edges`, `height`, `prims` | Fills off; block bands direction; versions per line; dotted call edges; drawing height; extra primitives (a predicate declared there can be tested in an `if`) |
 | `intervals=true`, `thresholds`, `fixnum_bits=61` | Track integer intervals and vector lengths (merges widen with the thresholds of the abstract interpreter); the fixnum width |
 | `clickable=off`, `clickable_show` | No enlarging on click; what an enlarged block shows |
 
@@ -1324,7 +1324,7 @@ history: [B.i]
 | Option | Meaning |
 |---|---|
 | `entry` | The function analysed (default: the first) |
-| `thresholds` | `machine` (the sign and the 8, 32 and 64-bit limits), `sign`, `none` (plain union), or a list of integers |
+| `thresholds` | `machine` (the sign and the 8, 32 and 64-bit limits), `sign`, `none` (plain union), or a list of integers and names (`[sign, maxfix]`: stop at the largest fixnum) |
 | `narrowing=false` | Keep the outcomes of tests but learn nothing from them |
 | `fixnum_bits` | Where an integer stops being a fixnum (default 61) |
 | `history: [B.i]` | Variables whose chain of entry values the panel shows, with `∪` and `∇` steps |

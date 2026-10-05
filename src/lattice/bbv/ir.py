@@ -289,8 +289,12 @@ _CALL = re.compile(r"^call\s+([^\s(]+)\((.*)\)\s*->\s*([^\s(]+)\s*(\((.*)\))?$")
 _RETURN = re.compile(r"^return\s+(.+)$")
 
 
-def parse(text: str) -> Program:
+def parse(text: str, prims: dict | None = None) -> Program:
+    """Read a program; ``prims`` (the ``prims`` option of the components) is added before the program is
+    checked, so that its predicates may be tested in an ``if``."""
     prog = Program(source=text.split("\n"))
+    if prims:
+        prog.add_prims(prims)
     fn: Function | None = None
     block: Block | None = None
     for no, raw in enumerate(prog.source, 1):

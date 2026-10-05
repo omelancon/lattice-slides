@@ -45,7 +45,7 @@ class BbvAnimOptions(BbvCommonOptions):
     caption: Literal["auto", "none"] = "auto"
     max_steps: int = 5000
     intervals: bool = False
-    thresholds: str | list[int] = "machine"
+    thresholds: str | list[int | str] = "machine"
     fixnum_bits: int = 61
 
 
@@ -55,7 +55,7 @@ class BbvCfgOptions(BbvCommonOptions):
 
 class AbstractInterpOptions(BbvCommonOptions):
     entry: str | None = None  # the function analysed
-    thresholds: str | list[int] = "machine"
+    thresholds: str | list[int | str] = "machine"
     narrowing: bool = True
     fixnum_bits: int = 61
     events: list[str] | None = None
@@ -79,23 +79,23 @@ def load_program(opts: BbvCommonOptions, ctx) -> Program:
         raise ComponentError("give either 'program' or 'source', not both")
     try:
         if opts.source is not None:
-            prog = parse(opts.source)
+            prog = parse(opts.source, opts.prims)
         elif opts.program is None:
             raise ComponentError("'program' (a .bbv file or file.py:function) or 'source' is required")
         elif ":" in opts.program:
             extras = {k: v for k, v in _extras(opts).items() if k not in _KNOWN}
             result = ctx.call(opts.program, **extras)
             if isinstance(result, str):
-                prog = parse(result)
+                prog = parse(result, opts.prims)
             elif isinstance(result, Program):
                 prog = result
+                if opts.prims:  # a Program built in Python: its prims are added here
+                    prog.add_prims(opts.prims)
+                    prog.finalize()
             else:
                 raise ComponentError(f"{opts.program} must return a Program or its text")
         else:
-            prog = parse(ctx.path(opts.program).read_text(encoding="utf-8"))
-        if opts.prims:
-            prog.add_prims(opts.prims)
-            prog.finalize()
+            prog = parse(ctx.path(opts.program).read_text(encoding="utf-8"), opts.prims)
     except ProgramError as e:
         raise ComponentError(f"program: {e}") from None
     return prog

@@ -82,6 +82,31 @@ def thresholds_named(name: str) -> list[Bound] | None:
     raise ValueError(f"unknown thresholds {name!r}; use machine, sign, none or a list")
 
 
+def thresholds_from(spec, bits: int | None = None) -> list[Bound] | None:
+    """The widening thresholds of a ``thresholds`` option: a name (``machine``, ``sign``, ``none``) or a list
+    of integers and names, where ``machine`` and ``sign`` add their thresholds and ``maxfix`` and ``minfix``
+    the bounds of the fixnum range (of ``bits``, the ``fixnum_bits`` option)."""
+    if spec is None:
+        return None
+    if isinstance(spec, str):
+        return thresholds_named(spec)
+    out: set = set()
+    for t in spec:
+        if isinstance(t, bool) or not isinstance(t, (int, str)):
+            raise ValueError(f"thresholds: {t!r} is neither an integer nor a name")
+        if isinstance(t, int):
+            out.add(t)
+        elif t.strip() in ("machine", "thesis", "sign"):
+            out.update(thresholds_named(t.strip()))
+        elif t.strip() == "maxfix":
+            out.add(maxfix(bits))
+        elif t.strip() == "minfix":
+            out.add(minfix(bits))
+        else:
+            raise ValueError(f"thresholds: unknown name {t!r}; a list holds integers, machine, sign, maxfix and minfix")
+    return sorted(out)
+
+
 # ------------------------------------------------------------------ bounds
 
 def is_sym(b: Bound) -> bool:

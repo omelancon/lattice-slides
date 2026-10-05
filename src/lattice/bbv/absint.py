@@ -7,7 +7,7 @@ from __future__ import annotations
 from collections import deque
 from typing import Callable
 
-from .intervals import Bound, thresholds_named, using_fixnum_bits
+from .intervals import Bound, thresholds_from, using_fixnum_bits
 from .ir import RESULT, Assign, Block, Call, Const, Fail, Function, Goto, If, Move, Program, Return, Var
 from .rich import SEP, binding, code, context, join, ty, ver
 from .sbbv import Specializer
@@ -30,8 +30,7 @@ class AbstractInterpreter:
                  narrowing: bool = True, fixnum_bits: int = 61, max_steps: int = 2000, emit: Emit | None = None):
         self.program = program
         self.function: Function = program.function(function) if function else next(iter(program.functions.values()))
-        self.thresholds: list[Bound] | None = thresholds_named(thresholds) if isinstance(thresholds, str) else (
-            sorted(set(thresholds)) if thresholds is not None else None)
+        self.thresholds: list[Bound] | None = thresholds_from(thresholds, fixnum_bits)
         self.narrowing = narrowing
         self.fixnum_bits = fixnum_bits
         self.max_steps = max_steps

@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.19.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.20.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -226,6 +226,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.19 (done).** Sub-bullets revealed one by one (`{.reveal}` on the line after an item's text), and LT059 quiet for morph positions that differ only by their highlights; both came from preparing a defense slide.
 
+**v0.20 (done).** Widening thresholds that name the fixnum range (`[sign, maxfix]`), and predicates of a `prims` option usable in an `if`; for the defense slide that analyses `findv`.
+
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
 - Plugin hooks beyond components (new syntax, generated slides, custom checks).
@@ -270,3 +272,4 @@ Decisions taken while writing the specification, and since.
 | 26 | Timeline ranges | A range MAY omit its start, `..STOP`: it starts from the track's current position (known at build time, since positions are resolved line by line) and leaves it out, so `reveal ..end` reveals the rest and `t ..+N` plays `N` positions in `N` steps where `t +N` jumps them in one. A relative stop exists only for open ranges: after an explicit start (`2..+3`) it would be ambiguous (LT049), and relative starts (`+1..end`) were left out as a second way to write the same thing. `end-N` wherever `end` is accepted. `by K` keeps every `K`-th position and always ends on the stop. Several ranges on one line advance in lockstep and must have the same length (LT031, which used to forbid a second range). An empty open range is a warning (LT030) and adds no step unless its line sets other tracks; a value out of range is LT025 once per line. |
 | 27 | Highlights in a morph | `highlight` takes the targets of `code` (lines, ranges, segments) per version or per step, for that position only (a `code-steps` list, not cumulative like the replacements), with the option as the default of every position; line numbers count the rows of the version shown. `changed` lights the rows holding units that did not survive from the position before, which is what the audience just watched arrive. A position's own targets are checked against its version (LT022); the default's lines must exist wherever it applies, its segments somewhere. Bands and segment marks are a layer per position, built in Python and painted under the units in two slots that cross-fade with the units' phases; units and line numbers outside the lit rows are dimmed by a class. A block without highlights renders as before. `highlight` in a `diff-steps` version is LT022 rather than ignored. |
 | 28 | Attribute lines inside list items | An attribute line inside an item applies to the next block of that item, so a nested list can be revealed item by item. Written on the line after the item's text, where CommonMark reads it as the last line of the item's paragraph (so the list stays tight), or as a paragraph of its own; one followed by text applies to that paragraph, as at the top level. Fragments keep the document order (an item before the items nested in it). A line not followed by a block of the item stays text, as before. LT059 compares highlights too, since a morph that repeats its text to move a highlight is now a normal use. |
+| 29 | Thresholds that name the fixnum range | A list of thresholds MAY name `machine`, `sign`, `maxfix` and `minfix`, resolved with `fixnum_bits`. The `machine` thresholds stay the thesis's (sign, 8, 32 and 64 bits), which figure 2 depends on; an index bounded by a vector length (at most maxfix) would otherwise widen past maxfix to `2^63-1` at a join and read `fx \| bg`. The `prims` option is applied before the program is checked, since a declared predicate could not be tested in an `if` before. |

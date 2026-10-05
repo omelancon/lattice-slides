@@ -742,3 +742,57 @@ def test_clickable_options_are_not_passed_to_program_functions(deck):
                  "prog.py": "def make():\n    return 'function f(x)\\nA:  return x\\n'\n"})
     d = build_deck(root, use_cache=False)
     assert "zoom" not in d.instances["a/a"]["data"]
+
+
+# ------------------------------------------------------------------ thresholds by name, predicates of prims
+
+FINDV_AI = """function findv(v)
+A:  goto L(i=0)
+L:  if vector?(v) goto M else goto K
+K:  fail
+M:  len = ##vector-length(v)
+    if >=(i, len) goto N else goto P
+N:  return #f
+P:  if pred(v, i) goto R else goto S
+R:  return i
+S:  if fixnum?(i) goto T else goto X
+T:  i2 = fx+(i, 1)
+    goto L(i=i2)
+X:  i3 = ##+(i, 1)
+    goto L(i=i3)
+"""
+
+
+def test_thresholds_may_name_the_fixnum_range():
+    """Spec 9.6: a list of thresholds names `machine`, `sign`, `maxfix` and `minfix`; with `maxfix` the
+    index of findv stays a fixnum in every block, where the machine thresholds widen past it."""
+    from lattice.bbv.absint import AbstractInterpreter
+    from lattice.bbv.intervals import thresholds_from
+
+    assert thresholds_from(["sign", "maxfix", 5], 61) == [float("-inf"), -1, 0, 1, 5, 2**60 - 1, float("inf")]
+    assert thresholds_from(["minfix"], 8) == [-128] and thresholds_from(["machine"]) == thresholds_from("machine")
+    with pytest.raises(ValueError, match="unknown name 'maxint'"):
+        thresholds_from(["maxint"])
+    prog = parse(FINDV_AI, {"pred": {"args": ["any", "any"], "result": "bool"}})
+    ai = AbstractInterpreter(prog, thresholds=["sign", "maxfix"])
+    ai.run()
+    assert str(ai.contexts["L"].get("i")) == "fx [0, maxfix]" and str(ai.contexts["M"].get("i")) == "fx [0, maxfix]"
+    assert ai.contexts["X"] is None and ("S", "X") in ai.dead  # the generic addition is never reached
+    ai = AbstractInterpreter(prog, thresholds="machine")
+    ai.run()
+    assert "bg" in str(ai.contexts["M"].get("i"))  # 2^63-1 is the next machine threshold after maxfix
+
+
+def test_prims_predicates_may_be_tested(deck):
+    """Spec 9.5: the predicates of a `prims` option are known when the program is checked."""
+    body = "prims: {pred: {args: [any, any], result: bool}}\nthresholds: [sign, maxfix]\nsource: |\n" + "".join(
+        "  " + line + "\n" for line in FINDV_AI.splitlines())
+    root = deck({"talk.md": f"# A\n```abstract-interp-anim {{#ai}}\n{body}```\n"})
+    assert not check_deck(root, use_cache=False).items
+    text = root.read_text()
+    root.write_text(text.replace("[sign, maxfix]", "[sign, maxint]"))
+    items = check_deck(root, use_cache=False).items
+    assert [x.code for x in items] == ["LT022"] and "unknown name 'maxint'" in items[0].message
+    root.write_text(text.replace("prims: {pred: {args: [any, any], result: bool}}\n", ""))
+    items = check_deck(root, use_cache=False).items
+    assert [x.code for x in items] == ["LT022"] and "'pred' is not a predicate" in items[0].message
