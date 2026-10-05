@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.17.0
+author: Lattice 0.18.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -953,6 +953,7 @@ The text changes in place: tokens that survive glide to their new place, the oth
 | `mark=true` | Tint arriving tokens for a moment |
 | `linenos`, `title` | Numbers for the rows shown; a caption bar with the version's label |
 | `lang` in a version | That version in another language |
+| `highlight` | Lines and segments to highlight: [[morph-highlights]] |
 :::
 ::::
 
@@ -1005,6 +1006,41 @@ loop 1, reveal 1
 loop 2, reveal 2
 tr 1, reveal 3
 ```
+
+# Highlights in a morph {#morph-highlights .dense}
+
+:::: columns
+::: column {width=1fr}
+```code-morph {#hlm lang=scheme file="programs/sum-to-n.scm" lines=2-9 linenos=true highlight=changed}
+steps:
+  - bound: "(>= i n)"
+  - i-init: "(i 1)"
+    highlight: "bound, i-init"
+  - bound: null
+    i-init: null
+    highlight: ""
+```
+
+````markdown
+```code-morph {#hlm lang=scheme
+     file="programs/sum-to-n.scm"
+     highlight=changed}
+steps:
+  - bound: "(>= i n)"
+  - i-init: "(i 1)"
+    highlight: "bound, i-init"
+  - {bound: null, i-init: null,
+     highlight: ""}
+```
+````
+:::
+::: column {width=1fr}
+- `highlight` takes lines and segment names, as in a `code` block; the rows around them are dimmed
+- In a version or a step it holds for that position only; the option is the default of every position
+- `changed` lights the rows where new tokens arrived; `highlight: ""` turns it off for one position
+- Line numbers count the rows of the version shown; highlights fade with the tokens
+:::
+::::
 
 # Graph animations {#graph-anim}
 

@@ -3,6 +3,8 @@
 // setting two numbers per unit. On a single step CSS transitions make the change visible: leaving units
 // fade out, surviving ones glide, arriving ones fade in. Every other move places the units directly.
 // A transparent copy of the current text lies on top, for selection and for arrows (its segments).
+// Highlights (built per position) are painted under the units by two layer slots that cross-fade, and
+// units outside the highlighted rows are dimmed.
 (() => {
   const QUICK = 140; // ms of the unphased glide used when a step arrives during a change
 
@@ -23,6 +25,7 @@
   function place(inst, v, mode) {
     const { d, toks, lns, prev } = inst;
     const playing = mode !== "still";
+    const bright = d.hl && d.hl[v] ? new Set(d.hl[v]) : null; // rows left undimmed, or null: nothing dims
     toks.forEach((t, i) => {
       const p = d.pos[i][v];
       const q = d.pos[i][prev];
@@ -34,14 +37,27 @@
       } else {
         role = playing && q ? " lt-mt-off lt-mt-out" : " lt-mt-off";
       }
+      if (p && bright && bright.has(p[0])) role += " lt-mt-lit";
       t.className = unitClass(inst, i, v, role);
     });
     lns.forEach((n, r) => {
       const on = r < d.rows[v];
       const was = r < d.rows[prev];
-      n.className = `lt-morph-ln${on ? (playing && !was ? " lt-mt-in" : "") : (playing && was ? " lt-mt-off lt-mt-out" : " lt-mt-off")}`;
+      const lit = on && bright && bright.has(r) ? " lt-mt-lit" : "";
+      n.className = `lt-morph-ln${on ? (playing && !was ? " lt-mt-in" : "") : (playing && was ? " lt-mt-off lt-mt-out" : " lt-mt-off")}${lit}`;
     });
     if (d.room === "fit") inst.stage.style.setProperty("--h", Math.max(1, d.rows[v]));
+    if (inst.slots) {
+      inst.box.classList.toggle("lt-morph-dim", !!bright);
+      if (v !== prev || !inst.slots[inst.cur].classList.contains("lt-morph-hl-cur")) {
+        // the other slot takes the new layer and fades in; the current one fades out
+        const next = v === prev ? inst.cur : 1 - inst.cur;
+        inst.slots[next].innerHTML = d.under[v];
+        inst.slots[1 - next].classList.remove("lt-morph-hl-cur");
+        inst.slots[next].classList.add("lt-morph-hl-cur");
+        inst.cur = next;
+      }
+    }
   }
 
   // Bring the first changed row into view when the code overflows its box (as code-steps does).
@@ -52,7 +68,8 @@
     const box = pre.getBoundingClientRect();
     const scale = box.height / pre.offsetHeight || 1; // the slide may be scaled to the window
     const origin = (inst.stage.getBoundingClientRect().top - box.top) / scale + pre.scrollTop;
-    const top = origin + inst.d.changed[v] * lh - pre.clientHeight / 3;
+    const row = inst.d.hl && inst.d.hl[v] && inst.d.hl[v].length ? inst.d.hl[v][0] : inst.d.changed[v];
+    const top = origin + row * lh - pre.clientHeight / 3;
     pre.scrollTo({ top: Math.max(0, top), behavior: animate ? "smooth" : "auto" });
   }
 
@@ -65,7 +82,8 @@
       const inst = { el, box, stage, toks, d: data, v: 0, prev: 0, until: 0,
         lns: Array.from(el.querySelectorAll(".lt-morph-ln")),
         cls: toks.map((t, i) => { const p = data.pos[i].find((x) => x); return p ? data.classes[p[2]] : ""; }),
-        text: el.querySelector(".lt-morph-text"), label: el.querySelector(".lt-morph-label"), pre: el.querySelector("pre") };
+        text: el.querySelector(".lt-morph-text"), label: el.querySelector(".lt-morph-label"), pre: el.querySelector("pre"),
+        slots: data.hl ? Array.from(el.querySelectorAll(".lt-morph-hl")) : null, cur: 0 };
       stage.addEventListener("transitionend", (e) => { // room=fit: arrows follow the content below
         if (e.target === stage && e.propertyName === "height") relayout(inst, true);
       });

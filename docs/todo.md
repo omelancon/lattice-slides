@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-05, after 0.17.0 (`implementation-report-2026-10-05-b.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-05, after 0.18.0 (`implementation-report-2026-10-05-c.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
@@ -30,7 +30,8 @@ Updated 2026-10-05, after 0.17.0 (`implementation-report-2026-10-05-b.md`). Item
 - [ ] 0.16.0: look at the bullets of a few slides on your screen. They are now text (`•`, `◦`, `▪` and an en space) instead of the browser's discs, so that arrows can find them exactly; on the build machine they sit where the discs were (the text did not move on any slide of the examples or the manual), but their size comes from your body font, and the nested `◦` is smaller than the old circle. The characters are three rules in `lattice.css` (`:where(.lt-body) ul`).
 - [ ] 0.16.0: try `from_anchor: bullet` on your own slides (the manual's "Arrows at bullets"). The end leaves to the left; say if you want `bullet` combined with another direction (say, leaving downward from the marker).
 - [ ] 0.17.0: try the timeline ranges on one of your slides (the manual's "Timeline ranges"): `reveal ..end`, `trace ..+2`, `end-1`, `by 2` and ranges in lockstep. The examples and the rest of the manual were left as written (their decks are unchanged apart from the version); say if you want them rewritten with the new forms where they would be shorter.
-- [ ] 0.14.0, 0.16.0 and 0.17.0: `docs/implementation-report-2026-10-03.md`, `docs/implementation-report-2026-10-04.md` and `docs/implementation-report-2026-10-05.md` are still in `docs/` beside their identical copies in `docs/archive/` (SKILL.md, documentation step 7); `git rm` the three in `docs/`.
+- [ ] 0.18.0: watch the bug-fix slide of example 05 (`highlight=changed`) and the manual's "Highlights in a morph" on your screen. `changed` lights rows holding new tokens only, so at the last step of example 05 the line `self.order.remove(key)`, which survives from the old code, stays dimmed in the middle of the four-line band; `highlight: refresh` on that step would light the whole segment instead. Judge the timing too: old highlights fade out with the leaving tokens, the new ones in with the arriving tokens.
+- [ ] 0.17.0 and 0.18.0: `docs/implementation-report-2026-10-05-b.md` is copied to `docs/archive/`; `git rm` it in `docs/`.
 
 ## Later, if wanted
 
@@ -50,7 +51,7 @@ Output:
 - [ ] matplotlib plots get random SVG ids at every build (`clip-path="url(#p...)"`), so rebuilding an unchanged deck changes its HTML (seen in examples 02 and 03 during the 0.12 cleanup). Setting matplotlib's `svg.hashsalt` in the plot component would make rebuilds byte-identical (report section 2, goal 6).
 
 Code (0.12):
-- [ ] Highlights per position in a `code-morph` (a `steps:`-like list of lines or segments per version); today a `code` follower of a morph highlights nothing.
+- [ ] A `code` following a `code-morph` still highlights nothing: the morph's `meta` could carry the rows it highlights (0.18.0, left out as only useful with a static copy beside the morph).
 - [ ] `diff-steps` could honour the per-version `lang` that `code-morph` reads (it ignores the key, as before).
 - [ ] Characters wider than one column (LT060): count East Asian wide characters as two columns instead of warning, if a deck ever needs them.
 - [ ] Character-level alignment of identifiers (`xs` to `xs2`): whole tokens are replaced today, by design.

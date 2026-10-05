@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.17.0. This README covers usage in brief. The rest:
+This is version 0.18.0. This README covers usage in brief. The rest:
 
 - [`user_manual/manual.md`](user_manual/manual.md) is the user manual, itself a Lattice deck (open
   [`user_manual/manual.html`](user_manual/manual.html)): every feature, with a live example of each.
@@ -113,7 +113,7 @@ code language.
 | ` ```abstract-interp-anim {program="sum-to-n.bbv"} ` + `history: [B.i]` | Abstract interpretation over the fixed CFG: contexts with types and intervals grow by union with widening and are narrowed at conditionals, until a fixed point; the panel can show the widening chain of a variable |
 | ` ```plot {data="bench.csv" x=n y=ms group=algo logy=true} ` | Chart from a CSV with matplotlib (static SVG), or `backend=vega` / `backend=plotly` for interactive charts; also `source="file.py:fn"` or a raw `spec:` |
 | ` ```diff-steps {lang=python context=3} ` + `versions: [...]` | Step through versions of a file; each step marks added and removed lines |
-| ` ```code-morph {lang=python} ` + `versions: [...]`, or `file=...` + `steps:` | The code changes in place from one version to the next: unchanged tokens glide, removed ones fade out, new ones fade in. Versions as for `diff-steps` (each may have its own `lang`), or one file whose named segments get new text at each step (spec 8.11) |
+| ` ```code-morph {lang=python} ` + `versions: [...]`, or `file=...` + `steps:` | The code changes in place from one version to the next: unchanged tokens glide, removed ones fade out, new ones fade in. Versions as for `diff-steps` (each may have its own `lang`), or one file whose named segments get new text at each step (spec 8.11); `highlight` per version or step (lines, segments, or `changed` for the rows where new tokens arrived), and as the default of every position |
 | ` ```dot ` | Graphviz diagram, themed |
 | ` ```timeline ` | Orders the steps of several stepping elements on one slide: a line per step (`reveal 2`, `trace +1`, `trace end-1`), a range for one step per position (`trace 1..end`, `reveal ..end` for the rest, `trace ..+2` for the next two, `by 2` for every other one), several ranges on one line in lockstep (spec sections 3.15 and 6.3) |
 | ` ```arrow {to=proof label="here" angle=315} ` | An arrow drawn over the slide, pointing at an element (an id, an item of a list as `facts[2]`, or a CSS selector), from a direction or from another element (`from=`), leaving and entering at a chosen side or angle (`from_anchor=left`, `to_anchor=bottom`) or at the bullet of a list item (`from_anchor=bullet`); with `steps:` it moves from one element to the next |
@@ -229,7 +229,7 @@ Rebuild them all, and the user manual, with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.17.0 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.18.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

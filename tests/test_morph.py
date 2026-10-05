@@ -340,3 +340,103 @@ def test_plain_text_without_markers(deck):
     m = morph_of(["a /*@x*/b/*@end*/", "a b"], ["c", "c"])
     assert rebuild(m, 0) == "a /*@x*/b/*@end*/"
     assert plain("a").lines == ["a"]
+
+
+# ------------------------------------------------------------------ highlights (spec 8.11)
+
+
+def hl_of(deck, attrs, body, files=None):
+    root = deck({"talk.md": f"# A\n```code-morph {{#m lang=python {attrs}}}\n{body}\n```\n", **(files or {})})
+    d = build_deck(root, use_cache=False)
+    from lattice.emit import emit_html
+
+    return d, data_of(emit_html(d), "a/m")
+
+
+HL_VERSIONS = """versions:
+  - code: |
+      total = 0
+      for i in range(len(xs) - 1):
+          total += xs[i]
+  - code: |
+      total = 0
+      for x in xs:
+          total += x
+    highlight: "2, 3"
+  - code: |
+      total = #|@sum|#sum(xs)#|@end|#
+    highlight: sum
+  - code: |
+      total = sum(xs)
+      print(total)
+    highlight: ""
+"""
+HL_PLAIN = "\n".join(line for line in HL_VERSIONS.split("\n") if "highlight:" not in line)
+HL_NOSEG = HL_VERSIONS.replace("#|@sum|#", "").replace("#|@end|#", "")
+
+
+def test_highlights_per_version_and_default(deck):
+    d, data = hl_of(deck, "highlight=1", HL_VERSIONS)
+    assert not d.diagnostics.items
+    # the default at 0; its own at 1 and 2 (the row holding the segment); "" clears the default at 3
+    assert data["hl"] == [[0], [1, 2], [0], None]
+
+
+def test_highlight_layers_paint_rows_and_segments_without_ids(deck):
+    files = {"x.py": "total = 0\n#|@loop|#for i in xs:\n    total += i#|@end|#\nprint(total)\n"}
+    body = "steps:\n  - loop: 'for x in xs: total += x'\n    highlight: loop\n  - loop: null\n"
+    d, data = hl_of(deck, 'file="x.py" highlight="4, loop"', body, files)
+    assert not d.diagnostics.items
+    # 0: line 4 and the rows holding the segment; 1: its own (the segment, one row now); 2: the default again
+    assert data["hl"] == [[1, 2, 3], [1], [1, 2, 3]]
+    assert '<span class="lt-line lt-hl" style="--r:3">' in data["under"][0]
+    assert '<span class="lt-line" style="--r:1">' in data["under"][0]  # a row holding the segment: no band
+    assert '<span class="lt-seg lt-hl">' in data["under"][1]
+    assert all("data-lt-seg" not in u and " id=" not in u for u in data["under"])  # arrows never see the layer
+    html_ = d.slides["a"].body_html
+    assert "lt-morph-hl-on lt-morph-dim" in html_ and html_.count('class="lt-morph-hl') == 2
+    assert html_.count("lt-mt-lit") > 0
+
+
+def test_steps_highlights_are_not_cumulative_and_reserved(deck):
+    files = {"x.py": "#|@a|#a = 1#|@end|#\n#|@b|#b = 2#|@end|#\n"}
+    body = "steps:\n  - a: 'a = 10'\n    highlight: a\n  - b: 'b = 20'\n"
+    d, data = hl_of(deck, 'file="x.py"', body, files)
+    assert not d.diagnostics.items
+    assert data["hl"] == [None, [0], None]  # no default: step 2 highlights nothing
+    assert data["layers"][2].count('class="lt-seg"') == 2  # `highlight` was not read as a segment to replace
+
+
+def test_highlight_changed(deck):
+    d, data = hl_of(deck, "highlight=changed", HL_PLAIN.replace("      print(total)\n", "      print(total)\n    highlight: changed, 1\n"))
+    assert not d.diagnostics.items
+    # 0: nothing changed yet; 1: rows 2-3 (new units); 2: the one row; 3: the new print line, and line 1
+    assert data["hl"] == [None, [1, 2], [0], [0, 1]]
+
+
+def test_no_highlight_renders_as_before(deck):
+    d, data = hl_of(deck, "", HL_PLAIN)
+    assert "hl" not in data and "under" not in data
+    assert "lt-morph-under" not in d.slides["a"].body_html and "lt-mt-lit" not in d.slides["a"].body_html
+    # a default whose segment exists only in some versions: nothing there, no error
+    d, data = hl_of(deck, "highlight=sum", HL_PLAIN)
+    assert not d.diagnostics.items and data["hl"] == [None, None, [0], None]
+
+
+@pytest.mark.parametrize("attrs, body, message", [
+    ("", HL_VERSIONS.replace('"2, 3"', '"2, 9"'), "position 1 (version 2): highlight line 9, but this version has 3 lines"),
+    ("", HL_NOSEG, "position 2 (version 3): no segment named 'sum' at this position"),
+    ("highlight=3", HL_PLAIN, "highlight line 3 (the default of every position): position 2 (version 3) has 1 line"),
+    ("highlight=nope", HL_VERSIONS, "highlight: no segment named 'nope' at any position"),
+    ("", HL_VERSIONS.replace('"2, 3"', '"2-x"'), "invalid line range '2-x'"),
+])
+def test_highlight_errors(deck, attrs, body, message):
+    root = deck({"talk.md": f"# A\n```code-morph {{#m lang=python {attrs}}}\n{body}\n```\n"})
+    items = check_deck(root, use_cache=False).items
+    assert [x.code for x in items] == ["LT022"] and message in items[0].message, items
+
+
+def test_diff_steps_rejects_highlight(deck):
+    root = deck({"talk.md": "# A\n```diff-steps\nversions: [{code: a}, {code: b, highlight: 1}]\n```\n"})
+    items = check_deck(root, use_cache=False).items
+    assert [x.code for x in items] == ["LT022"] and "a diff does not highlight" in items[0].message

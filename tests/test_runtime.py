@@ -831,6 +831,27 @@ versions:
 ```
 
 Text under the fitted code.
+
+# Highlighted {#hl}
+
+```code-morph {#h lang=python linenos=true highlight=changed}
+versions:
+  - code: |
+      total = 0
+      for i in #|@rng|#range(len(xs) - 1)#|@end|#:
+          total += xs[i]
+      print(total)
+    highlight: rng
+  - code: |
+      total = 0
+      for x in xs:
+          total += x
+      print(total)
+  - code: |
+      total = sum(xs)
+      print(total)
+    highlight: "2"
+```
 """
 
 MORPH_SCM = """\
@@ -864,7 +885,10 @@ MORPH_GEOMETRY = """(sid) => {
           height: r1(stage.getBoundingClientRect().height),
           overflow: Math.max(0, sec.querySelector('pre').scrollHeight - sec.querySelector('pre').clientHeight),
           below: below ? r1(below.getBoundingClientRect().top) : null,
-          head: head ? [r1(head.x), r1(head.y)] : null};
+          head: head ? [r1(head.x), r1(head.y)] : null,
+          dim: sec.querySelector('.lt-morph-box').classList.contains('lt-morph-dim'),
+          hl: Array.from(sec.querySelectorAll('.lt-morph-hl')).filter(e => getComputedStyle(e).opacity !== '0')
+                .map(e => [e.innerHTML, getComputedStyle(e).opacity])};
 }"""
 
 
@@ -898,7 +922,7 @@ def test_code_morph_runtime_renders_positions_alike(tmp_path):
             page.on("console", lambda m: errors.append(m.text) if m.type in ("error", "warning") else None)
 
             fresh = {}
-            for sid, n in (("fix", 4), ("bound", 4), ("fit", 2)):
+            for sid, n in (("fix", 4), ("bound", 4), ("fit", 2), ("hl", 3)):
                 for k in range(n):
                     page.goto(f"{out.as_uri()}#/{sid}/{k}")
                     page.reload()
@@ -913,6 +937,16 @@ def test_code_morph_runtime_renders_positions_alike(tmp_path):
             assert all(g["overflow"] == 0 for g in fresh.values())  # hidden units take no room
             assert fresh["fit", 0]["below"] < fresh["fit", 1]["below"]  # room=fit moves what follows
             assert fresh["bound", 0]["head"] != fresh["bound", 1]["head"]  # the arrow follows its segment
+            # highlights (spec 8.11): one visible layer per position, units outside its rows dimmed
+            assert not fresh["fix", 0]["dim"] and fresh["fix", 0]["hl"] == []
+            assert [g["dim"] for g in (fresh["hl", k] for k in range(3))] == [True, True, True]
+            assert all(len(fresh["hl", k]["hl"]) == 1 and fresh["hl", k]["hl"][0][1] == "1" for k in range(3))
+            assert 'class="lt-seg lt-hl"' in fresh["hl", 0]["hl"][0][0]
+            assert 'class="lt-line lt-hl" style="--r:1"' in fresh["hl", 2]["hl"][0][0]
+            seen = sorted((u[0], u[3]) for u in fresh["hl", 2]["units"] if u[4] == "visible")
+            assert seen == sorted([("total", "0.38"), ("=", "0.38"), ("sum", "0.38"), ("(", "0.38"), ("xs", "0.38"),
+                                   (")", "0.38"), ("print", "1"), ("(", "1"), ("total", "1"), (")", "1")])
+            assert [u[3] for u in fresh["hl", 2]["lines"][:2]] == ["0.23", "0.6"]  # line numbers dim with their row
 
             def settle(ms=450):
                 page.evaluate("document.getAnimations().forEach(a => a.finish())")
@@ -923,7 +957,7 @@ def test_code_morph_runtime_renders_positions_alike(tmp_path):
 
             # jumps in a random order (no animation)
             rnd = random.Random(7)
-            order = [(sid, k) for sid, n in (("fix", 4), ("bound", 4)) for k in range(n)]
+            order = [(sid, k) for sid, n in (("fix", 4), ("bound", 4), ("hl", 3)) for k in range(n)]
             rnd.shuffle(order)
             last = None
             for sid, k in order:
@@ -936,7 +970,7 @@ def test_code_morph_runtime_renders_positions_alike(tmp_path):
                 assert now(sid) == fresh[sid, k], (sid, k)
 
             # single steps forward and backward, animated, then finished
-            for sid, n in (("fix", 4), ("bound", 4), ("fit", 2)):
+            for sid, n in (("fix", 4), ("bound", 4), ("fit", 2), ("hl", 3)):
                 page.evaluate("(h) => { location.hash = h; }", f"#/{sid}/0")
                 page.wait_for_timeout(150)
                 for k in range(1, n):
@@ -1014,6 +1048,113 @@ def test_code_morph_in_preview_and_print(tmp_path):
             hidden = page.evaluate("""() => Array.from(document.querySelectorAll('#lt-page-2 .lt-mt'))
                                       .filter(e => getComputedStyle(e).visibility === 'hidden').length""")
             assert hidden == sum(1 for u in want["units"] if u[4] == "hidden")
+            # a highlighted morph prints its position's layer and dimming (spec 8.11)
+            plan = {"title": "t", "pageOf": {}, "sections": [], "pages": [{"slide": "hl", "step": 2, "n": 1}]}
+            assert page.evaluate("plan => Lattice.print(plan)", plan) == 1
+            printed = page.evaluate("""() => { const pg = document.querySelector('#s-hl-p1');
+                const cur = Array.from(pg.querySelectorAll('.lt-morph-hl')).filter(e => getComputedStyle(e).opacity === '1');
+                return [cur.length, cur.length ? cur[0].innerHTML : '', pg.querySelectorAll('.lt-morph-dim').length]; }""")
+            assert printed[0] == 1 and 'class="lt-line lt-hl" style="--r:1"' in printed[1] and printed[2] == 1
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
+HL_LOOK_DECK = """
+# Morph {#mm}
+
+```code-morph {#m lang=python}
+versions:
+  - code: "a = 1"
+  - code: |
+      total = 0
+      for x in #|@it|#xs#|@end|#:
+          total += x
+      print(total)
+    highlight: "3, it"
+```
+
+# Code {#cc}
+
+```code {lang=python highlight="3, it"}
+total = 0
+for x in #|@it|#xs#|@end|#:
+    total += x
+print(total)
+```
+
+# Long {#lm}
+
+```code-morph {#l lang=python}
+versions:
+  - long.py
+  - {file: long2.py, highlight: 40}
+```
+"""
+
+HL_LOOK = """(sid) => {
+  const sec = document.querySelector(`#s-${sid}`), box = sec.querySelector('.lt-code').getBoundingClientRect();
+  const rel = (e) => { const r = e.getBoundingClientRect();
+    return [Math.round(r.left - box.left), Math.round(r.top - box.top), Math.round(r.width), Math.round(r.height)]; };
+  const layer = sec.querySelector('.lt-morph-hl-cur') || sec;
+  return {band: rel(layer.querySelector('.lt-line.lt-hl')), seg: rel(layer.querySelector('.lt-seg.lt-hl')),
+          box: [Math.round(box.width), Math.round(box.height)]};
+}"""
+
+
+def test_code_morph_highlights_look_like_code(tmp_path):
+    """Spec 8.11: at rest a highlighted morph looks like a `code` block of the same text with the same
+    `highlight`: the band and the segment mark at the same place, with the same pixels, the other rows
+    dimmed alike; an overflowing morph scrolls its first highlighted row a third of the way down."""
+    import io
+
+    from PIL import Image
+
+    src = tmp_path / "talk.md"
+    src.write_text(HL_LOOK_DECK)
+    lines = [f"x{i} = {i}  # line {i}" for i in range(1, 81)]
+    (tmp_path / "long.py").write_text("\n".join(lines) + "\n")
+    lines[69] = "x70 = 70 + changed  # line 70"
+    (tmp_path / "long2.py").write_text("\n".join(lines) + "\n")
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            shots, looks = {}, {}
+            for sid, step in (("mm", 1), ("cc", 0)):
+                page.goto(f"{out.as_uri()}#/{sid}/{step}")
+                page.reload()
+                page.wait_for_timeout(400)
+                looks[sid] = page.evaluate(HL_LOOK, sid)
+                looks[sid]["opacity"] = page.evaluate("""(sid) => Array.from(document.querySelectorAll(
+                    `#s-${sid} .lt-mt, #s-${sid} .lt-line`)).filter(e => getComputedStyle(e).visibility !== 'hidden'
+                    && !e.closest('.lt-morph-hl')).map(e => getComputedStyle(e).opacity).sort()""", sid)
+                shots[sid] = Image.open(io.BytesIO(page.locator(f"#s-{sid} .lt-code").screenshot())).convert("RGB")
+            # rows of a morph sit on whole pixels (spec 8.11), a code line may not: one pixel of slack
+            assert all(abs(a - b) <= 1 for k in ("band", "seg", "box") for a, b in zip(looks["mm"][k], looks["cc"][k])), looks
+            band, seg = looks["cc"]["band"], looks["cc"]["seg"]
+            for x, y in [(band[0] + 1, band[1] + band[3] // 2), (band[0] + band[2] - 3, band[1] + 3),
+                         (seg[0] + seg[2] // 2, seg[1] + seg[3] - 1)]:  # border, band, underline
+                a, b = shots["mm"].getpixel((x, y)), shots["cc"].getpixel((x, y))
+                assert sum(abs(i - j) for i, j in zip(a, b)) < 12, ((x, y), a, b)
+            # the rows 1 and 4 are dimmed (units in the morph, lines in the code block), the others are not
+            assert sorted(set(looks["mm"]["opacity"])) == sorted(set(looks["cc"]["opacity"])) == ["0.38", "1"]
+            assert looks["mm"]["opacity"].count("0.38") == 7 and looks["cc"]["opacity"].count("0.38") == 2
+            page.goto(f"{out.as_uri()}#/lm/1")
+            page.reload()
+            page.wait_for_timeout(400)
+            at = page.evaluate("""() => { const pre = document.querySelector('#s-lm pre');
+                const band = pre.querySelector('.lt-morph-hl-cur .lt-line.lt-hl');
+                const p = pre.getBoundingClientRect(), r = band.getBoundingClientRect(), k = p.height / pre.offsetHeight;
+                return [Math.round((r.top - p.top) / k), Math.round(pre.clientHeight / 3)]; }""")
+            assert abs(at[0] - at[1]) <= 2, at  # line 40, not the changed line 70
             browser.close()
     except Exception as e:
         if "Executable doesn't exist" in str(e):

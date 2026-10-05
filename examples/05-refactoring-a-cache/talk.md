@@ -19,7 +19,7 @@ The image is embedded in the HTML at build time, like everything else.
 
 # A bug, fixed in place {#bug}
 
-```code-morph {#fix lang=python file="versions/v0-bug.py" symbol=Cache.put label="v0: one item too many" title="put"}
+```code-morph {#fix lang=python file="versions/v0-bug.py" symbol=Cache.put label="v0: one item too many" title="put" highlight=changed}
 steps:
   - full: "elif len(self.items) == self.capacity:"
     label: "fix: evict when full"

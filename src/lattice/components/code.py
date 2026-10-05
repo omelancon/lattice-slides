@@ -235,11 +235,13 @@ class Version:
     explicit: bool       # whether the label was given
     lang: str | None     # a language of its own (``code-morph`` only), else None
     where: str           # prefix of marker error messages: "FILE" or "version N, line"
+    highlight: object = None  # its own highlight targets (``code-morph`` only), when ``has_highlight``
+    has_highlight: bool = False
 
 
 def read_versions(versions: list, ctx) -> list[Version]:
     """Read a ``versions:`` list: file paths, or mappings with ``file`` or ``code`` and an optional
-    ``label`` (and ``lang``, which only ``code-morph`` uses)."""
+    ``label`` (and ``lang`` and ``highlight``, which only ``code-morph`` uses)."""
     out = []
     for i, v in enumerate(versions):
         if isinstance(v, str):
@@ -254,6 +256,7 @@ def read_versions(versions: list, ctx) -> list[Version]:
                                f"version {i + 1}, line"))
         else:
             raise ComponentError("each version is a file path, or a mapping with 'file' or 'code'")
+        out[-1].highlight, out[-1].has_highlight = v.get("highlight"), "highlight" in v
     return out
 
 
@@ -271,6 +274,9 @@ class Diff(Component):
         if len(opts.versions) < 2:
             raise ComponentError("diff needs at least two versions")
         loaded = read_versions(opts.versions, ctx)
+        for i, v in enumerate(loaded, start=1):
+            if v.has_highlight:
+                raise ComponentError(f"version {i}: a diff does not highlight ('highlight' belongs to code-morph)")
         texts = [self._clean(v.text, opts, v.where) for v in loaded]
         labels = [v.label for v in loaded]
         lines = [t.split("\n") if t else [] for t in texts]

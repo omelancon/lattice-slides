@@ -22,14 +22,15 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pygments.formatters import HtmlFormatter
 
 from .base import Component, ComponentError, RenderResult, register
-from .code import CodeOptions, _marked, load_source, read_versions
+from .code import CodeOptions, _marked, load_source, parse_targets, read_versions
 from .scheme import lexer_for
 from .segments import Marked, Segment, pieces, trim, wrap_line
 
 UNIT_RE = re.compile(r"\w+|\s+|[^\w\s]")
 TAB = 8            # the width the browser gives a tab in a `code` block (CSS default `tab-size`)
 MOVE_MIN = 6       # a line moved elsewhere glides only if it holds at least this many characters
-RESERVED = ("label", "lang")
+RESERVED = ("label", "lang", "highlight")
+CHANGED = "changed"  # the highlight keyword: the rows holding units new at that position
 _FORMATTER = HtmlFormatter()
 
 
@@ -48,6 +49,7 @@ class MorphOptions(BaseModel):
     duration: int = Field(600, ge=0, le=10000)
     room: Literal["max", "fit"] = "max"
     mark: bool = False
+    highlight: str | int | list[str | int] | None = None  # the default highlight of every position
 
     @model_validator(mode="after")
     def _one_form(self):
@@ -348,7 +350,8 @@ def replace_segments(base: Marked, repl: dict[str, str]) -> Marked:
 
 
 def step_versions(base: Marked, steps: list[dict[str, Any]], label0: str | None) -> list[tuple[Marked, str, bool]]:
-    """The versions of the steps form: ``(text, label, label given)`` for position 0 and each step."""
+    """The versions of the steps form: ``(text, label, label given)`` for position 0 and each step.
+    The reserved key ``highlight`` of a step is read by the caller."""
     by_name = {g.name: g for g in base.segments}
     out = [(base, label0 or "as written", label0 is not None)]
     state: dict[str, str] = {}
@@ -380,6 +383,96 @@ def step_versions(base: Marked, steps: list[dict[str, Any]], label0: str | None)
     return out
 
 
+# ------------------------------------------------------------------ highlights
+
+
+def _split_changed(spec) -> tuple[list, bool]:
+    """The targets of a highlight without the keyword ``changed``, and whether it was named."""
+    if spec is None:
+        return [], False
+    parts = spec if isinstance(spec, (list, tuple)) else str(spec).split(",")
+    rest = [p for p in parts if not (isinstance(p, str) and p.strip() == CHANGED)]
+    return rest, len(rest) != len(parts)
+
+
+def _targets(spec, where: str) -> tuple[list[int], list[str], bool]:
+    rest, changed = _split_changed(spec)
+    try:
+        lines, names = parse_targets(rest)
+    except ComponentError as e:
+        raise ComponentError(f"{where}: {e}") from None
+    return lines, names, changed
+
+
+def _lines(n: int) -> str:
+    return f"{n} line" if n == 1 else f"{n} lines"
+
+
+def changed_rows(m: Morph, v: int) -> set[int]:
+    """The rows of version ``v`` holding a unit that did not survive from version ``v - 1``."""
+    if v == 0:
+        return set()
+    return {p[v][0] for p in m.pos if p[v] is not None and p[v - 1] is None}
+
+
+def resolve_highlights(texts: list[Marked], labels: list[str], m: Morph, own: list[tuple[bool, Any]],
+                       default) -> list[tuple[set[int], set[str]]]:
+    """Per position, the highlighted rows (0-based) and segment names (spec 8.11, Highlights): the
+    position's own targets if it has some, else the default."""
+    d_lines, d_names, d_changed = _targets(default, "highlight")
+    known = {g.name for t in texts for g in t.segments}
+    for n in d_names:
+        if n not in known:
+            raise ComponentError(f"highlight: no segment named {n!r} at any position"
+                                 + (f" (segments: {', '.join(sorted(known))})" if known else ""))
+    out = []
+    for v, t in enumerate(texts):
+        here = {g.name for g in t.segments}
+        rows = m.rows[v]
+        where = f"position {v} ({labels[v]})"
+        has, spec = own[v]
+        if has:
+            lines, names, changed = _targets(spec, f"{where}, highlight")
+            for n in lines:
+                if not 1 <= n <= rows:
+                    raise ComponentError(f"{where}: highlight line {n}, but this version has {_lines(rows)}")
+            for n in names:
+                if n not in here:
+                    raise ComponentError(f"{where}: no segment named {n!r} at this position"
+                                         + (f" (segments: {', '.join(sorted(here))})" if here else ""))
+        else:
+            lines, names, changed = d_lines, [n for n in d_names if n in here], d_changed
+            for n in lines:
+                if not 1 <= n <= rows:
+                    raise ComponentError(f"highlight line {n} (the default of every position): {where} "
+                                         f"has {_lines(rows)}")
+        lit = {n - 1 for n in lines} | (changed_rows(m, v) if changed else set())
+        out.append((lit, set(names)))
+    return out
+
+
+_SEG_DATA = re.compile(r' data-lt-seg="[^"]*"')
+
+
+def highlight_layer(marked: Marked, rows: set[int], names: set[str]) -> tuple[str, set[int]]:
+    """The layer painted under the units at one position: a row element for each highlighted row and
+    each row holding a highlighted segment (shaped like a ``code`` line, its text transparent), and the
+    rows that stay undimmed. Its segment marks carry no id and no ``data-lt-seg``: arrows measure the
+    text copy on top, never this layer."""
+    lit = {i: [(a, b, g, False) for a, b, g, _ in ps if g.name in names] for i, ps in pieces(marked).items()}
+    held = {i for i, ps in lit.items() if ps}
+    out = []
+    for i in sorted(rows | held):
+        if i >= len(marked.lines):
+            continue
+        h = _esc(marked.lines[i])
+        if lit.get(i):
+            h = _SEG_DATA.sub("", wrap_line(h, lit[i], names))
+        cls = "lt-line lt-hl" if i in rows else "lt-line"
+        out.append(f'<span class="{cls}" style="--r:{i}">{h or " "}</span>')
+    return "".join(out), rows | held
+
+
 # ------------------------------------------------------------------ the component
 
 
@@ -408,7 +501,7 @@ class CodeMorph(Component):
     runtime = "code-morph.js"
 
     def render(self, block, opts: MorphOptions, ctx) -> RenderResult:
-        texts, labels, given, langs = self._versions(opts, ctx)
+        texts, labels, given, langs, own = self._versions(opts, ctx)
         texts = [expand_tabs(t) for t in texts]
         for v in range(1, len(texts)):
             if texts[v].lines == texts[v - 1].lines and langs[v] == langs[v - 1]:
@@ -424,20 +517,38 @@ class CodeMorph(Component):
         anchors = sorted({g.name for t in texts for g in t.segments})
         layers = [_layer(t) for t in texts]
 
+        # highlights (spec 8.11): per position the rows left undimmed (None: nothing dims) and a layer
+        hl: list[list[int] | None] = []
+        under: list[str] = []
+        for t, (rows, names) in zip(texts, resolve_highlights(texts, labels, m, own, opts.highlight)):
+            layer, bright = highlight_layer(t, rows, names)
+            under.append(layer)
+            hl.append(sorted(bright) if rows or names else None)
+        lit0 = set(hl[0] or ())
+        has_hl = any(h is not None for h in hl)
+
         toks = []
         for text, p in zip(m.texts, m.pos):
             at = p[0] or next(q for q in p if q is not None)
             off = "" if p[0] else " lt-mt-off"
+            lit = " lt-mt-lit" if p[0] and at[0] in lit0 else ""
             cls = m.classes[at[2]]
-            toks.append(f'<span class="lt-mt{" " + cls if cls else ""}{off}" style="--r:{at[0]};--c:{at[1]}">'
+            toks.append(f'<span class="lt-mt{" " + cls if cls else ""}{off}{lit}" style="--r:{at[0]};--c:{at[1]}">'
                         f'{_esc(text)}</span>')
         gutter = ""
         if opts.linenos:
-            gutter = "".join(f'<span class="lt-morph-ln{"" if r < m.rows[0] else " lt-mt-off"}" style="--r:{r}">{r + 1}</span>'
+            gutter = "".join(f'<span class="lt-morph-ln{"" if r < m.rows[0] else " lt-mt-off"}'
+                             f'{" lt-mt-lit" if r in lit0 else ""}" style="--r:{r}">{r + 1}</span>'
                              for r in range(height))
         h0 = height if opts.room == "max" else max(1, m.rows[0])
         box_cls = "lt-morph-box" + (" lt-morph-ln-on" if opts.linenos else "")
-        stage = (f'<span class="lt-morph-stage" style="--h:{h0};--cols:{m.cols}">{gutter}'
+        under_html = ""
+        if has_hl:
+            box_cls += " lt-morph-hl-on" + (" lt-morph-dim" if hl[0] is not None else "")
+            under_html = (f'<span class="lt-morph-under" aria-hidden="true">'
+                          f'<span class="lt-morph-hl lt-morph-hl-cur">{under[0]}</span>'
+                          f'<span class="lt-morph-hl"></span></span>')
+        stage = (f'<span class="lt-morph-stage" style="--h:{h0};--cols:{m.cols}">{under_html}{gutter}'
                  f'<span class="lt-morph-toks" aria-hidden="true">{"".join(toks)}</span>'
                  f'<span class="lt-morph-text">{layers[0]}</span></span>')
         head = ""
@@ -449,11 +560,16 @@ class CodeMorph(Component):
         data = {"pos": m.pos, "classes": m.classes, "rows": m.rows, "height": height, "labels": labels,
                 "layers": layers, "changed": m.changed, "duration": opts.duration, "room": opts.room,
                 "mark": opts.mark, "linenos": opts.linenos}
+        if has_hl:
+            data["hl"] = hl
+            data["under"] = under
         meta = [{"label": lab, "version": i} for i, lab in enumerate(labels)]
         return RenderResult(html_, data=data, positions=len(texts), meta=meta, anchors=anchors)
 
     @staticmethod
-    def _versions(opts: MorphOptions, ctx) -> tuple[list[Marked], list[str], list[bool], list[str]]:
+    def _versions(opts: MorphOptions, ctx) -> tuple[list[Marked], list[str], list[bool], list[str], list[tuple[bool, Any]]]:
+        """Texts, labels, whether each label was given, languages, and each position's own highlight
+        ``(given, targets)``."""
         if opts.versions:
             if len(opts.versions) < 2:
                 raise ComponentError("code-morph needs at least two versions")
@@ -468,9 +584,10 @@ class CodeMorph(Component):
                 else:
                     labels.append(str(v.label))
                 given.append(v.explicit)
-            return texts, labels, given, langs
+            return texts, labels, given, langs, [(v.has_highlight, v.highlight) for v in loaded]
         code_opts = CodeOptions(lang=opts.lang, file=opts.file, lines=opts.lines, symbol=opts.symbol,
                                 markers=opts.markers)
         base = load_source(code_opts, "", ctx)
         vs = step_versions(base, opts.steps, opts.label)
-        return [t for t, _, _ in vs], [lab for _, lab, _ in vs], [g for _, _, g in vs], [opts.lang] * len(vs)
+        own = [(False, None)] + [("highlight" in step, step.get("highlight")) for step in opts.steps]
+        return [t for t, _, _ in vs], [lab for _, lab, _ in vs], [g for _, _, g in vs], [opts.lang] * len(vs), own

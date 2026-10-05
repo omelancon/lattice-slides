@@ -130,17 +130,31 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-morph-ln-on .lt-morph-stage{padding-left:calc(26px + 2.2em)}
 .lt-mt,.lt-morph-ln,.lt-morph-text{position:absolute;top:0;left:26px;white-space:pre}
 .lt-morph-ln-on .lt-mt,.lt-morph-ln-on .lt-morph-text{left:calc(26px + 2.2em)}
-.lt-mt,.lt-morph-ln{transform:translate(calc(var(--c, 0) * 1ch),calc(var(--r) * 1.5em))}
+.lt-mt,.lt-morph-ln,.lt-morph-hl .lt-line{transform:translate(calc(var(--c, 0) * 1ch),calc(var(--r) * 1.5em))}
 @supports (transform:translateY(round(down, 1.5px, 1px))){ /* rows on whole pixels, as lines of text are */
-  .lt-mt,.lt-morph-ln{transform:translate(calc(var(--c, 0) * 1ch),round(down, calc(var(--r) * 1.5em), 1px))}}
+  .lt-mt,.lt-morph-ln,.lt-morph-hl .lt-line{transform:translate(calc(var(--c, 0) * 1ch),round(down, calc(var(--r) * 1.5em), 1px))}}
 .lt-morph-ln{left:calc(26px - .4em);color:var(--lt-muted);opacity:.6;user-select:none}
 .lt-morph-toks{user-select:none}
 .lt-morph-text{color:transparent}
 .lt-mt.lt-mt-off,.lt-morph-ln.lt-mt-off{opacity:0;visibility:hidden}
+/* highlights (spec 8.11): rows shaped like `code` lines, painted under the units; two slots cross-fade */
+.lt-morph-hl-on .lt-morph-stage{min-width:calc(100% - 48px)}
+.lt-morph-hl-on.lt-morph-ln-on .lt-morph-stage{min-width:calc(100% - 48px - 2.2em)}
+.lt-morph-under,.lt-morph-hl{position:absolute;inset:0;user-select:none;pointer-events:none}
+.lt-morph-hl{opacity:0}
+.lt-morph-hl.lt-morph-hl-cur{opacity:1}
+.lt-morph-hl .lt-line{position:absolute;top:0;left:0;right:0;color:transparent;transition:none}
+.lt-morph-ln-on .lt-morph-hl .lt-line{padding-left:calc(22px + 2.2em)}
+.lt-morph-dim .lt-mt:not(.lt-mt-lit):not(.lt-mt-off){opacity:.38}
+.lt-morph-dim .lt-morph-ln:not(.lt-mt-lit):not(.lt-mt-off){opacity:.23}
 .lt-morph-label{float:right;margin-left:20px}
 .lt-morph-label-solo{float:none;margin-left:0}
 .lt-morph-play .lt-mt-stay{transition:transform calc(var(--lt-md) * .6) ease-in-out calc(var(--lt-md) * .2),
-  color calc(var(--lt-md) * .6) ease calc(var(--lt-md) * .2)}
+  color calc(var(--lt-md) * .6) ease calc(var(--lt-md) * .2),opacity calc(var(--lt-md) * .6) ease calc(var(--lt-md) * .2)}
+.lt-morph-play .lt-morph-ln{transition:opacity calc(var(--lt-md) * .6) ease calc(var(--lt-md) * .2)}
+.lt-morph-play .lt-morph-hl{transition:opacity calc(var(--lt-md) * .4) ease-out}
+.lt-morph-play .lt-morph-hl.lt-morph-hl-cur{transition:opacity calc(var(--lt-md) * .4) ease-in calc(var(--lt-md) * .6)}
+.lt-morph-quick .lt-morph-hl{transition:opacity var(--lt-mq)}
 .lt-morph-play .lt-mt-out{transition:opacity calc(var(--lt-md) * .4) ease-out,visibility calc(var(--lt-md) * .4) linear}
 .lt-morph-play .lt-mt-in{transition:opacity calc(var(--lt-md) * .4) ease-in calc(var(--lt-md) * .6),
   visibility calc(var(--lt-md) * .4) linear calc(var(--lt-md) * .6)}
@@ -149,7 +163,7 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
   opacity var(--lt-mq),visibility var(--lt-mq) linear}
 .lt-morph-quick .lt-morph-stage{transition:height var(--lt-mq) ease-out}
 .lt-morph-quick .lt-mt-in{transition:opacity var(--lt-mq),visibility var(--lt-mq) linear}
-.lt-morph-still .lt-mt,.lt-morph-still .lt-morph-ln,.lt-morph-still .lt-morph-stage{transition:none !important;animation:none !important}
+.lt-morph-still .lt-mt,.lt-morph-still .lt-morph-ln,.lt-morph-still .lt-morph-stage,.lt-morph-still .lt-morph-hl{transition:none !important;animation:none !important}
 .lt-mt-new{border-radius:3px;animation:lt-morph-mark 1.6s ease-out calc(var(--lt-md) * .6) both}
 @keyframes lt-morph-mark{from{background:var(--lt-add-bg);box-shadow:0 0 0 2px var(--lt-add-bg)}
   to{background:transparent;box-shadow:0 0 0 2px transparent}}
