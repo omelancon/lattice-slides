@@ -335,15 +335,15 @@ ANCHOR_ANGLES = {"right": 0.0, "top": 90.0, "left": 180.0, "bottom": 270.0}
 
 
 def _anchor(v):
-    """A side, `center`, or an angle in degrees (a number, or a string holding one)."""
-    if isinstance(v, str) and (v in ANCHOR_ANGLES or v == "center"):
+    """A side, `center`, `bullet`, or an angle in degrees (a number, or a string holding one)."""
+    if isinstance(v, str) and (v in ANCHOR_ANGLES or v in ("center", "bullet")):
         return v
     try:
         if isinstance(v, bool):
             raise ValueError
         return float(v)
     except (TypeError, ValueError):
-        raise ValueError("an anchor is left, right, top, bottom, center or an angle in degrees") from None
+        raise ValueError("an anchor is left, right, top, bottom, center, bullet or an angle in degrees") from None
 
 
 Anchor = Annotated[Union[str, float], BeforeValidator(_anchor)]
@@ -378,12 +378,15 @@ class ArrowOptions(BaseModel):
 
 ARROW_DEFAULT_ANGLE = 315.0
 _ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
+# an item of a list: `facts[2]`, `facts[-1]`, `facts[2][1]` (spec 8.9); not a CSS selector
+_ITEM_RE = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*)((?:\[-?\d+\])+)$")
 _THEME_COLORS = {"accent", "detour", "muted", "ink"}
 
 
 def anchor_value(a: Anchor | None) -> float | str | None:
-    """A side becomes its angle (counterclockwise, 0 is right); `center` stays; degrees are taken mod 360."""
-    if a is None or a == "center":
+    """A side becomes its angle (counterclockwise, 0 is right); `center` and `bullet` stay; degrees are
+    taken mod 360."""
+    if a is None or a in ("center", "bullet"):
         return a
     if isinstance(a, str):
         return ANCHOR_ANGLES[a]
@@ -410,8 +413,10 @@ class Arrow(Component):
             frm = (e.from_ or None) if e.from_ is not None else opts.from_  # "" drops the block's `from`
             if e.from_anchor is not None and frm is None:
                 raise ComponentError(f"arrow: step {i + 1} has `from_anchor` but no `from`")
+            to, to_item = split_item(e.to, i)
+            frm, from_item = split_item(frm, i) if frm is not None else (None, None)
             step = {
-                "to": e.to,
+                "to": to,
                 "from": frm,
                 "angle": e.angle if e.angle is not None else opts.angle,
                 "length": e.length if e.length is not None else opts.length,
@@ -423,13 +428,18 @@ class Arrow(Component):
                 step["from_anchor"] = fa
             if ta is not None:
                 step["to_anchor"] = ta
+            if to_item:
+                step["to_item"] = to_item
+            if from_item:
+                step["from_item"] = from_item
             steps.append(step)
         if opts.from_anchor is not None and not any(s["from"] for s in steps):
             raise ComponentError("arrow: `from_anchor` needs `from`")
         for s in steps:
             if s["from"] is None and s["angle"] is None:
                 ta = s.get("to_anchor")
-                s["angle"] = ta if isinstance(ta, float) else ARROW_DEFAULT_ANGLE  # a side gives the direction
+                # a side gives the direction, and `bullet` the left one
+                s["angle"] = ta if isinstance(ta, float) else 180.0 if ta == "bullet" else ARROW_DEFAULT_ANGLE
         color = opts.color
         if color in _THEME_COLORS:
             color = f"var(--lt-{color})"
@@ -437,11 +447,37 @@ class Arrow(Component):
         return RenderResult('<div class="lt-arrow-box" aria-hidden="true"></div>', data=data, positions=len(steps))
 
 
+def split_item(ref: str, i: int) -> tuple[str, list[int] | None]:
+    """`facts[2][1]` gives ("facts", [2, 1]); any other reference is returned as it is (spec 8.9)."""
+    m = _ITEM_RE.match(ref)
+    if not m:
+        return ref, None
+    path = [int(n) for n in re.findall(r"-?\d+", m.group(2))]
+    if 0 in path:
+        raise ComponentError(f"arrow: step {i + 1}: {ref!r}: list items are counted from 1 (or from -1, the last)")
+    return m.group(1), path
+
+
 def arrow_targets(data: dict) -> list[str]:
-    """Bare element ids an arrow refers to (for the build-time check of render.py)."""
+    """Bare element ids an arrow refers to (for the build-time check of render.py); the list of an item
+    path is checked with the path (`arrow_ends`)."""
     out = []
     for s in data.get("steps", []):
-        for ref in (s.get("to"), s.get("from")):
-            if ref and _ID_RE.match(ref):
+        for end in ("to", "from"):
+            ref = s.get(end)
+            if ref and _ID_RE.match(ref) and not s.get(f"{end}_item"):
                 out.append(ref)
+    return out
+
+
+def arrow_ends(data: dict) -> list[tuple[int, str, str, list[int] | None, bool]]:
+    """The ends the build checks against the slide's lists (LT063): (step, end, reference, item path,
+    whether its anchor is `bullet`), for every end written as an item path or anchored at a bullet."""
+    out = []
+    for i, s in enumerate(data.get("steps", [])):
+        for end in ("to", "from"):
+            ref, path = s.get(end), s.get(f"{end}_item")
+            bullet = s.get(f"{end}_anchor") == "bullet"
+            if ref and (path or bullet):
+                out.append((i, end, ref, path, bullet))
     return out

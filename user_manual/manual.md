@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.15.0
+author: Lattice 0.16.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -735,7 +735,7 @@ steps:
 ````
 
 {#arrow-code-note}
-`to` and `from` name an element id or a CSS selector. `angle` is measured from the target toward the tail (0 right, 90 above, 315 lower right), `length` in slide pixels; `curve` bends, `color` is a CSS colour or a theme token (`accent`, `detour`, `muted`, `ink`). With `steps:` the arrow is a track, gliding from target to target.
+`to` and `from` name an element id, an item of a list (`facts[2]`, next slides) or a CSS selector. `angle` is measured from the target toward the tail (0 right, 90 above, 315 lower right), `length` in slide pixels; `curve` bends, `color` is a CSS colour or a theme token (`accent`, `detour`, `muted`, `ink`). With `steps:` the arrow is a track, gliding from target to target.
 :::
 ::::
 
@@ -802,7 +802,7 @@ steps:
 
 ````markdown
 ```arrow {to=i-init}
-from: "#anchor-points > li:nth-child(1)"
+from: anchor-points[1]
 from_anchor: left
 to_anchor: bottom
 ```
@@ -817,16 +817,66 @@ to_anchor: bottom
 :::
 ::::
 
-```arrow {#anchor-walk from="#anchor-points > li:nth-child(1)" from_anchor=left to_anchor=bottom}
+```arrow {#anchor-walk from=anchor-points[1] from_anchor=left to_anchor=bottom}
 steps:
   - i-init
   - to: body
-    from: "#anchor-points > li:nth-child(2)"
+    from: anchor-points[2]
     to_anchor: right
   - to: i-init
     from: ""
     to_anchor: 30
     label: "to_anchor: 30"
+```
+
+# Arrows at bullets {#arrow-bullets .dense}
+
+:::: columns
+::: column {width=1fr}
+```code {lang=scheme file="programs/sum-to-n.scm" lines=2-9}
+```
+
+````markdown
+```arrow {from_anchor=bullet to_anchor=right}
+steps:
+  - from: loop-facts[1]
+    to: i-init
+  - from: loop-facts[2]
+    to: bound
+  - from: loop-facts[2][1]
+    to: body
+  - from: loop-result[-1]
+    to: bound
+```
+````
+:::
+::: column {width=1fr}
+{#loop-facts}
+- `i` starts at zero
+- the loop stops once `i` passes `n`
+  - so `acc` sums `0` to `n`
+
+{#loop-result}
+1. `n + 2` tests when `n` ≥ 0
+2. one test, and `0`, when `n` is negative
+
+`LIST[N]` is item `N` of the list with id `LIST`, from 1 (`[-1]` is the last); `loop-facts[2][1]` descends into the list nested in item 2. An arrow at an item points at its own lines, without its nested list. `bullet` puts an end at the item's marker, leaving or entering to the left. The build checks both (error LT063).
+:::
+::::
+
+```arrow {#bullet-walk color=detour curve=-0.15 from_anchor=bullet to_anchor=right}
+steps:
+  - from: loop-facts[1]
+    to: i-init
+  - from: loop-facts[2]
+    to: bound
+  - from: loop-facts[2][1]
+    to: body
+  - from: loop-result[-1]
+    to: bound
+  - to: loop-result[1]
+    to_anchor: bullet
+    length: 40
 ```
 
 # Code that changes {#code-morph .dense}

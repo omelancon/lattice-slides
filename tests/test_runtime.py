@@ -1351,3 +1351,138 @@ def test_clickable_off_passive_windows_and_presenter_sync(tmp_path):
             pytest.skip("Chromium for Playwright is not installed")
         raise
     assert not errors
+
+
+LIST_DECK = """
+# Bullets
+
+:::: columns
+::: column
+{#p}
+A paragraph on the left.
+:::
+::: column
+{#facts}
+- `vector-ref` fails if `v` is empty
+- the loop guard makes `i` a valid index
+  - nested one
+  - nested two
+
+{#nums}
+
+9. nine
+10. ten
+
+<ul id="bare" style="list-style:none"><li>no marker</li></ul>
+:::
+::::
+
+```arrow {#a color=red from_anchor=bullet to_anchor=right}
+steps:
+  - from: facts[1]
+    to: p
+  - from: facts[2][-1]
+    to: p
+  - from: nums[2]
+    to: p
+  - from: bare[1]
+    to: p
+  - to: facts[2]
+    from: p
+    from_anchor: right
+    to_anchor: left
+  - to: nums[-2]
+    to_anchor: bullet
+```
+"""
+
+
+def test_arrow_at_bullets(tmp_path):
+    """Spec 8.9: `LIST[N]` names an item, `bullet` puts the end just left of the item's marker (measured
+    against the pixels of the marker), leaving to the left; an item's box leaves out its nested list."""
+    src = tmp_path / "talk.md"
+    src.write_text(LIST_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type in ("error", "warning") else None)
+            page.goto(out.as_uri())
+            page.wait_for_timeout(300)
+
+            def ends():
+                return page.evaluate("""() => {
+                    const sec = document.querySelector('.lt-slide:not([hidden])');
+                    const path = sec.querySelector('.lt-arrow-line');
+                    const n = path.getTotalLength();
+                    const s = sec.getBoundingClientRect(), scale = s.width / sec.offsetWidth;
+                    const page = (q) => ({x: s.left + q.x * scale, y: s.top + q.y * scale});
+                    return {tail: page(path.getPointAtLength(0)), nearTail: page(path.getPointAtLength(4)),
+                            head: page(path.getPointAtLength(n)), nearHead: page(path.getPointAtLength(n - 4)), scale};
+                }""")
+
+            def rect(sel, own=False):
+                return page.evaluate("""([sel, own]) => {
+                    const e = document.querySelector(sel);
+                    const r = document.createRange(); r.selectNodeContents(e);
+                    if (own) { const k = Array.from(e.childNodes).findIndex(c => c.tagName === 'UL'); if (k >= 0) r.setEnd(e, k); }
+                    const q = r.getBoundingClientRect();
+                    return {x: q.left, y: q.top, w: q.width, h: q.height};
+                }""", [sel, own])
+
+            def marker_ink(item):
+                """The marker of an item as drawn: accent pixels left of the item's text, on its first line."""
+                import io
+
+                from PIL import Image
+
+                r = rect(item)
+                clip = {"x": r["x"] - 80, "y": r["y"], "width": 80, "height": 40}
+                png = Image.open(io.BytesIO(page.screenshot(clip=clip))).convert("RGB")
+                accent = page.evaluate("getComputedStyle(document.querySelector('.lt-slide')).getPropertyValue('--lt-accent')")
+                ar, ag, ab = (int(accent.strip()[i:i + 2], 16) for i in (1, 3, 5))
+                pts = [(x, y) for x in range(80) for y in range(40)
+                       if sum(abs(a - b) for a, b in zip(png.getpixel((x, y)), (ar, ag, ab))) < 90]
+                xs, ys = [x for x, _ in pts], [y for _, y in pts]
+                return {"l": clip["x"] + min(xs), "r": clip["x"] + max(xs) + 1,
+                        "t": clip["y"] + min(ys), "b": clip["y"] + max(ys) + 1}
+
+            def at_bullet(e, ink, which="tail"):
+                pt, near = e[which], e["nearTail" if which == "tail" else "nearHead"]
+                # a gap left of the marker's ink, at its vertical middle, the curve leaving to the left
+                assert 0 < ink["l"] - pt["x"] < 14, (pt, ink)
+                assert abs(pt["y"] - (ink["t"] + ink["b"]) / 2) < 3, (pt, ink)
+                assert near["x"] < pt["x"] and abs(near["y"] - pt["y"]) < 0.5
+
+            at_bullet(ends(), marker_ink("#facts > li:nth-child(1)"))
+            for i, item in enumerate(["#facts > li:nth-child(2) li:nth-child(2)", "#nums > li:nth-child(2)"]):
+                page.keyboard.press("ArrowRight")
+                page.wait_for_timeout(500)
+                at_bullet(ends(), marker_ink(item))
+
+            page.keyboard.press("ArrowRight")  # no marker: the left of the item's first line
+            page.wait_for_timeout(500)
+            e, r = ends(), rect("#bare > li")
+            assert 0 < r["x"] - e["tail"]["x"] < 14 and r["y"] < e["tail"]["y"] < r["y"] + r["h"]
+
+            page.keyboard.press("ArrowRight")  # an item with a nested list: its own line only
+            page.wait_for_timeout(500)
+            e, own, whole = ends(), rect("#facts > li:nth-child(2)", own=True), rect("#facts > li:nth-child(2)")
+            assert whole["h"] > 2 * own["h"]
+            assert abs(e["head"]["y"] - (own["y"] + own["h"] / 2)) < 1 and 0 < own["x"] - e["head"]["x"] < 14
+
+            page.keyboard.press("ArrowRight")  # `[-2]` and a bullet head without `from`: from the left
+            page.wait_for_timeout(500)
+            e = ends()
+            at_bullet(e, marker_ink("#nums > li:nth-child(1)"), "head")
+            assert e["tail"]["x"] < e["head"]["x"] and abs(e["tail"]["y"] - e["head"]["y"]) < 0.5
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors

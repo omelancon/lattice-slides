@@ -1,5 +1,6 @@
 """Named segments in code (spec 8.10) and arrow anchors (spec 8.9), at build time."""
 import re
+import textwrap
 
 import pytest
 from pygments import highlight
@@ -274,3 +275,91 @@ def test_from_anchor_needs_from(deck, arrow, message):
 def test_bad_anchor_is_lt021(deck):
     root = deck({"talk.md": "# A\n{#p}\nText.\n\n```arrow {to=p to_anchor=middle}\n```\n"})
     assert [x.code for x in check_deck(root, use_cache=False).items] == ["LT021"]
+
+
+# ---------------------------------------------------------------- arrows at list items (spec 8.9)
+LISTS = """\
+# A
+{#p}
+Text.
+
+{#facts}
+- one
+- two
+  1. two.one
+  2. two.two
+- three
+
+"""
+
+
+def test_arrow_at_list_items(deck):
+    root = deck({"talk.md": LISTS + textwrap.dedent("""\
+        ```arrow {#w from_anchor=bullet to_anchor=right}
+        steps:
+          - from: facts[1]
+            to: p
+          - from: facts[-1]
+            to: facts[2][2]
+          - facts[2][-2]
+          - to: facts[3]
+            to_anchor: bullet
+        ```
+
+        ```arrow {to=facts[2] from=p}
+        ```
+    """)})
+    d = build_deck(root, use_cache=False)
+    assert codes(d) == []
+    steps = d.instances["a/w"]["data"]["steps"]
+    # an item path is a list id and a path; the anchor `bullet` is kept for the runtime
+    assert steps[0]["from"] == "facts" and steps[0]["from_item"] == [1] and steps[0]["from_anchor"] == "bullet"
+    assert steps[0]["to"] == "p" and "to_item" not in steps[0] and steps[0]["to_anchor"] == 0.0
+    assert steps[1]["from_item"] == [-1] and steps[1]["to"] == "facts" and steps[1]["to_item"] == [2, 2]
+    assert steps[2]["to_item"] == [2, -2] and steps[2]["from"] is None
+    # without `from`, a bullet end gives the direction of `left`
+    assert steps[3]["to_anchor"] == "bullet" and steps[3]["angle"] == 180.0
+    other = next(v for k, v in d.instances.items() if k != "a/w")  # an item in the attribute block
+    one = other["data"]["steps"][0]
+    assert (one["to"], one["to_item"], one["from"]) == ("facts", [2], "p")
+
+
+@pytest.mark.parametrize("arrow, message", [
+    ("to: facts[4]", "'facts[4]': the list 'facts' has 3 items"),
+    ("to: facts[-4]", "'facts[-4]': the list 'facts' has 3 items"),
+    ("to: facts[2][3]", "'facts[2][3]': the list nested in 'facts[2]' has 2 items"),
+    ("to: facts[1][1]", "'facts[1][1]': item 'facts[1]' has no nested list"),
+    ("to: p[1]", "'p[1]': 'p' is a <p>, not a list"),
+    ("to: nope[1]", "'nope[1]': no list with the id 'nope' on this slide"),
+    ("to: facts\n    to_anchor: bullet", "needs one item of the list 'facts': write facts[N]"),
+    ("to: p\n    to_anchor: bullet", "needs a list item, and 'p' is a <p>"),
+    ("to: '#facts > li'\n    to_anchor: bullet", "written LIST[N], not the selector '#facts > li'"),
+    ("to: p\n    from: '#facts li'\n    from_anchor: bullet", "step 1, `from`: a `bullet` anchor needs a list item"),
+])
+def test_lt063(deck, arrow, message):
+    root = deck({"talk.md": LISTS + f"```arrow\nsteps:\n  - {arrow}\n```\n"})
+    items = check_deck(root, use_cache=False).items
+    assert [x.code for x in items] == ["LT063"] and message in items[0].message, items
+
+
+def test_item_index_zero_is_lt022(deck):
+    root = deck({"talk.md": LISTS + "```arrow {to=facts[0]}\n```\n"})
+    items = check_deck(root, use_cache=False).items
+    assert [x.code for x in items] == ["LT022"] and "counted from 1" in items[0].message
+
+
+def test_bullet_on_an_li_id_and_in_component_html(deck):
+    """A bare id of an <li> (raw HTML) takes a bullet anchor; lists in the HTML of a component count."""
+    root = deck({"talk.md": """
+        # A
+        <ul><li id="raw">raw item</li></ul>
+
+        ```arrow {to=raw to_anchor=bullet}
+        ```
+    """})
+    assert codes(build_deck(root, use_cache=False)) == []
+
+
+def test_unknown_item_list_is_not_lt046(deck):
+    root = deck({"talk.md": LISTS + "```arrow {to=nope[1]}\n```\n"})
+    assert [x.code for x in check_deck(root, use_cache=False).items] == ["LT063"]

@@ -257,8 +257,9 @@ def _check_ids(slide: Slide, blocks, results, diags: Diagnostics) -> None:
 
 
 def _check_arrow_targets(slide: Slide, blocks, results, diags: Diagnostics) -> None:
-    """LT046 when an `arrow` names an element id that no element of the slide carries (spec 8.9)."""
-    from .components.visual import arrow_targets
+    """LT046 when an `arrow` names an element id that no element of the slide carries; LT063 when it
+    names a list item that does not exist, or puts a `bullet` anchor on an end that is not one (spec 8.9)."""
+    from .components.visual import arrow_ends, arrow_targets
 
     arrows = [b for b in blocks if b.name == "arrow" and b.index in results]
     if not arrows:
@@ -266,10 +267,95 @@ def _check_arrow_targets(slide: Slide, blocks, results, diags: Diagnostics) -> N
     ids = set(re.findall(r'\sid="([^"]+)"', slide.body_html + slide.title_html))
     ids |= {b.id for b in blocks if b.id}
     ids |= {a for r in results.values() for a in r.anchors}  # segments of later positions (code-morph)
+    outline = None
     for b in arrows:
-        for ref in arrow_targets(results[b.index].data or {}):
+        data = results[b.index].data or {}
+        for ref in arrow_targets(data):
             if ref not in ids:
                 diags.warn("LT046", f"arrow: no element with id {ref!r} on this slide", b.loc)
+        for i, end, ref, path, bullet in arrow_ends(data):
+            if outline is None:
+                outline = HtmlOutline(slide.title_html + slide.body_html)
+            problem = _list_end_problem(outline, ref, path, bullet)
+            if problem:
+                diags.error("LT063", f"arrow: step {i + 1}, `{end}`: {problem}", b.loc)
+
+
+def _list_end_problem(outline: "HtmlOutline", ref: str, path: list[int] | None, bullet: bool) -> str | None:
+    """Why an arrow end that names a list item, or that has a `bullet` anchor, cannot be resolved."""
+    written = ref + "".join(f"[{n}]" for n in path or [])
+    if not re.match(r"^[A-Za-z][A-Za-z0-9_-]*$", ref):  # a CSS selector: the build cannot see what it names
+        return f"a `bullet` anchor needs a list item written LIST[N], not the selector {ref!r}"
+    el = outline.by_id.get(ref)
+    if path is None:  # a bare id with a bullet anchor
+        if el is None:
+            return f"a `bullet` anchor needs a list item, and no element has the id {ref!r} on this slide"
+        if el.tag in ("ul", "ol"):
+            return f"a `bullet` anchor needs one item of the list {ref!r}: write {ref}[N]"
+        if el.tag != "li":
+            return f"a `bullet` anchor needs a list item, and {ref!r} is a <{el.tag}>"
+        return None
+    if el is None:
+        return f"{written!r}: no list with the id {ref!r} on this slide"
+    for depth, n in enumerate(path):
+        where = ref + "".join(f"[{k}]" for k in path[:depth])
+        if depth and (el := next((c for c in el.children if c.tag in ("ul", "ol")), None)) is None:
+            return f"{written!r}: item {where!r} has no nested list"
+        if el.tag not in ("ul", "ol"):
+            return f"{written!r}: {ref!r} is a <{el.tag}>, not a list"
+        items = [c for c in el.children if c.tag == "li"]
+        if abs(n) > len(items):
+            count = f"{len(items)} item" + ("" if len(items) == 1 else "s")
+            return f"{written!r}: the list {where!r} has {count}" if not depth else \
+                f"{written!r}: the list nested in {where!r} has {count}"
+        el = items[n - 1 if n > 0 else n]
+    return None
+
+
+class _Node:
+    __slots__ = ("tag", "children")
+
+    def __init__(self, tag: str):
+        self.tag = tag
+        self.children: list[_Node] = []
+
+
+class HtmlOutline:
+    """The element tree of a slide's HTML, reduced to tags and children, with its elements by id: enough
+    to check at build time what an arrow points at (spec 8.9)."""
+    VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
+            "track", "wbr"}
+
+    def __init__(self, text: str):
+        from html.parser import HTMLParser
+
+        self.by_id: dict[str, _Node] = {}
+        root = _Node("#root")
+        stack = [root]
+        outline = self
+
+        class Parser(HTMLParser):
+            def handle_starttag(self, tag, attrs, closed=False):
+                node = _Node(tag)
+                stack[-1].children.append(node)
+                ident = dict(attrs).get("id")
+                if ident:
+                    outline.by_id.setdefault(ident, node)
+                if not closed and tag not in HtmlOutline.VOID:
+                    stack.append(node)
+
+            def handle_startendtag(self, tag, attrs):
+                self.handle_starttag(tag, attrs, closed=True)
+
+            def handle_endtag(self, tag):
+                for k in range(len(stack) - 1, 0, -1):  # close up to the matching element, if it is open
+                    if stack[k].tag == tag:
+                        del stack[k:]
+                        break
+
+        p = Parser(convert_charrefs=True)
+        p.feed(text)
+        p.close()
 
 
 def _valid_result(result, block, diags) -> bool:

@@ -2,19 +2,19 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-04, after 0.15.0 (`implementation-report-2026-10-04.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-05, after 0.16.0 (`implementation-report-2026-10-05.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
 - [ ] 0.5: review of the two abstract interpretation slides of example 07 (contexts show every live variable, including `n`; see the 0.5.0 addendum of `archive/implementation-report.md`).
-- [ ] 0.6.0: a look at the arrow and at the Keybindings grid of the presenter view in Firefox (only Chromium was available in the session; the geometry uses `getBoundingClientRect`, `Range.getBoundingClientRect` and `getBBox`, which both engines support).
+- [ ] 0.6.0: a look at the arrow and at the Keybindings grid of the presenter view in Firefox (only Chromium was available in the session; the geometry uses `getBoundingClientRect`, `Range.getBoundingClientRect` and `getBBox`, which both engines support). Since 0.16.0 the arrows at bullets were checked in Firefox 142 (the runtime test and the manual slide).
 - [ ] 0.6.0: try the detour step of example 01 (`at=1` on the invariant detour of "Nothing here is linear") and the skip keys on a long animation (example 06 or 07) to judge the playback interval (30 to 90 ms per step, `playSteps` in `lattice.js`).
 - [ ] 0.7: a look at the rich captions, the aligned contexts and the chips of example 07 on your screen (checked in Chromium and Firefox at 1280x720; fonts fall back on the build machine), and at the dark theme, whose `--lt-type` and `--lt-range` tokens were chosen without a monitor.
 - [ ] 0.7: `one-block-steps` keeps `height=460`: now that a narrow column honours the height, the drawing sits in the middle of its canvas with room above and below; lower the height if you prefer the caption closer to the drawing.
 - [ ] 0.7.2: read the user manual (`user_manual/manual.html`) once as a user would; wording and chapter order are open to change, and every slide was sized at 1280x720 in Chromium.
 - [ ] 0.8.0: try the slide "Badges that wait for their turn" of the manual. A hidden badge keeps its place, like a fragment, so with two `badge=next` detours the second badge appears one row below where the first one was; say if you would rather have waiting badges take no space (then the slide's layout would shift as they come and go).
 - [ ] 0.9.0: try placed badges (`::detour-badge`) on your two-column slide; the manual's slide "Badges where you want them" places one live badge per column.
-- [ ] 0.11.0: replace the `<span class="tail">` of `src/background.md` with `from_anchor: left`, and the `:nth-child` targets with segments in `programs/sum-to-n.scm`. A bullet still has no id of its own, so `from` names it with a selector (`li:nth-child(2)`) or an id on a span; on a two-line bullet `left` is the middle of the whole item, not of its first line.
+- [ ] 0.11.0, updated in 0.16.0: replace the `<span class="tail">` of `src/background.md` and the `#... > li:nth-child(N)` targets with `LIST[N]` and `from_anchor: bullet` (which sits on the first line of a two-line item, where `left` is the middle of the whole item), and the code targets with segments in `programs/sum-to-n.scm`. An ordered list that does not start at 1 needs a blank line after its `{#id}` line (CommonMark: it cannot interrupt the attribute line's paragraph); LT063 says "is a <p>, not a list" otherwise.
 - [ ] 0.11.0: the length of the handles of an anchored end (0.45 of the distance, between 40 and 260 slide pixels, `curveOf` in `arrow.js`) was tuned on two slides; say if the curves bulge too much or too little.
 - [ ] 0.12.0: watch the bug-fix slide of example 05 and the manual's "Code that changes" and "Morphing named segments" on your screen, in Chromium and in Firefox (only Chromium was available here; the morph uses `ch` units, `overflow: clip`, CSS transitions of `transform` driven by custom properties, and `round()` inside `@supports`). Fonts fell back to DejaVu Sans Mono on the build machine.
 - [ ] 0.12.0: judge the timing: 600 ms per step, leaving tokens fade during the first 40 %, survivors glide from 20 to 80 %, arrivals fade in during the last 40 %; skip playback uses one 140 ms glide. Say if the phases should overlap less, or the default be shorter.
@@ -27,7 +27,9 @@ Updated 2026-10-04, after 0.15.0 (`implementation-report-2026-10-04.md`). Items 
 - [ ] 0.14.0: the examples and most of the manual still write containers with decreasing colon counts (`:::::` around `::::` around `:::`), which parse as before; only the manual's "Containers" slide and its new "Closing fences" detour use `:::` throughout and `::: /NAME`. Say if you want the examples and the manual rewritten in one style.
 - [ ] 0.15.0: click a few blocks in example 07 and the manual's "Enlarging a block" on your screen, in Chromium and Firefox (only Chromium was available here), alone and with the presenter view open: judge the opening and closing (350 ms and 280 ms, `ZOOM_MS` in `lattice.js`), the blur (6 px) and dimming, and the size (80% of the slide, magnification capped at 4.5, `ZOOM_FILL` and `ZOOM_MAX`).
 - [ ] 0.15.0: in an enlarged block, a removed test keeps its line-through, which scales with the card and gets thick; a thinner strike (an SVG line instead of `text-decoration`) is possible if it bothers you.
-- [ ] 0.14.0: `docs/implementation-report-2026-10-03.md` is still in `docs/` beside its identical copy in `docs/archive/` (SKILL.md, documentation step 7); `git rm` the one in `docs/`.
+- [ ] 0.16.0: look at the bullets of a few slides on your screen. They are now text (`•`, `◦`, `▪` and an en space) instead of the browser's discs, so that arrows can find them exactly; on the build machine they sit where the discs were (the text did not move on any slide of the examples or the manual), but their size comes from your body font, and the nested `◦` is smaller than the old circle. The characters are three rules in `lattice.css` (`:where(.lt-body) ul`).
+- [ ] 0.16.0: try `from_anchor: bullet` on your own slides (the manual's "Arrows at bullets"). The end leaves to the left; say if you want `bullet` combined with another direction (say, leaving downward from the marker).
+- [ ] 0.14.0 and 0.16.0: `docs/implementation-report-2026-10-03.md` and `docs/implementation-report-2026-10-04.md` are still in `docs/` beside their identical copies in `docs/archive/` (SKILL.md, documentation step 7); `git rm` the two in `docs/`.
 
 ## Later, if wanted
 
@@ -37,7 +39,7 @@ Authoring and parsing:
 
 Navigation and presenter view:
 - [ ] Arrow labels: a `label_at` option (tail, middle, head). A label beside the middle of a `from` arrow can overlap text when the two boxes are close; `curve` moves it for now. A tail label near the slide edge is pushed back inside and then sits over its own line, which shows through the spaces of the label.
-- [ ] Ids on list items and inline spans (`[text]{#id}`, the attrs plugin of mdit-py-plugins), so that an arrow can leave a bullet without a selector.
+- [ ] Ids on inline spans (`[text]{#id}`, the attrs plugin of mdit-py-plugins), so that an arrow can point at a word of a paragraph. List items are covered by `LIST[N]` since 0.16; an id on an item would then also take `bullet`.
 - [ ] The manual's samples of `arrow` blocks ("Arrows that move", "Arrow anchors") show red error boxes: Pygments has an `arrow` lexer, which the Markdown lexer uses inside the sample fence.
 - [ ] Segments in `bbv-cfg` and `bbv-anim` drawings (a block or an instruction as an arrow target).
 - [ ] Enlarged elements (0.15) for other components: graph and tree nodes, grid cells, code blocks, plots. The core layer and the `zoom(inst, key)` hook are generic; each runtime needs a click handler and a hook.

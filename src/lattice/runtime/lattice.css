@@ -21,6 +21,10 @@ html:not(.lt-ready) #lt-viewport{visibility:hidden}
 .lt-body ul,.lt-body ol{margin:0;padding-left:1.1em}
 .lt-body li{margin:.18em 0}
 .lt-body li::marker{color:var(--lt-accent)}
+/* bullets are text, so that an arrow can measure them exactly (spec 8.9); :where keeps any theme or plugin rule stronger */
+:where(.lt-body) ul{list-style-type:"\2022\2002"}
+:where(.lt-body :is(ul,ol)) ul{list-style-type:"\25E6\2002"}
+:where(.lt-body :is(ul,ol) :is(ul,ol)) ul{list-style-type:"\25AA\2002"}
 .lt-body h2{font-family:var(--lt-font-head);font-size:34px;font-weight:600;margin:0}
 .lt-body h3{font-family:var(--lt-font-head);font-size:28px;font-weight:600;margin:0;color:var(--lt-muted)}
 .lt-body a{color:var(--lt-accent);text-decoration-thickness:2px;text-underline-offset:4px}

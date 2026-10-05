@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.15.0. This README covers usage in brief. The rest:
+This is version 0.16.0. This README covers usage in brief. The rest:
 
 - [`user_manual/manual.md`](user_manual/manual.md) is the user manual, itself a Lattice deck (open
   [`user_manual/manual.html`](user_manual/manual.html)): every feature, with a live example of each.
@@ -116,7 +116,7 @@ code language.
 | ` ```code-morph {lang=python} ` + `versions: [...]`, or `file=...` + `steps:` | The code changes in place from one version to the next: unchanged tokens glide, removed ones fade out, new ones fade in. Versions as for `diff-steps` (each may have its own `lang`), or one file whose named segments get new text at each step (spec 8.11) |
 | ` ```dot ` | Graphviz diagram, themed |
 | ` ```timeline ` | Orders the steps of several stepping elements on one slide |
-| ` ```arrow {to=proof label="here" angle=315} ` | An arrow drawn over the slide, pointing at an element (an id or a CSS selector), from a direction or from another element (`from=`), leaving and entering at a chosen side or angle (`from_anchor=left`, `to_anchor=bottom`); with `steps:` it moves from one element to the next |
+| ` ```arrow {to=proof label="here" angle=315} ` | An arrow drawn over the slide, pointing at an element (an id, an item of a list as `facts[2]`, or a CSS selector), from a direction or from another element (`from=`), leaving and entering at a chosen side or angle (`from_anchor=left`, `to_anchor=bottom`) or at the bullet of a list item (`from_anchor=bullet`); with `steps:` it moves from one element to the next |
 
 Animations are computed at build time. A trace function receives the graph (or values) and
 keyword options from the block, and records frames as deltas:
@@ -229,7 +229,7 @@ Rebuild them all, and the user manual, with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.15.0 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.16.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

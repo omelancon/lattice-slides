@@ -6,13 +6,28 @@
   const GAP = 6; // space between the arrow and the boxes it touches
   const TWEEN_MS = 280;
 
-  function find(section, ref, slideId) {
+  function find(section, ref, slideId, path) {
     if (!ref) return null;
     if (/^[A-Za-z][A-Za-z0-9_-]*$/.test(ref)) {
-      return section.querySelector(`#${CSS.escape(ref)}`) ||
+      const el = section.querySelector(`#${CSS.escape(ref)}`) ||
         section.querySelector(`[data-instance="${CSS.escape(`${slideId}/${ref}`)}"]`);
+      return path ? item(el, path) : el;
     }
     try { return section.querySelector(ref); } catch (e) { return null; }
+  }
+  const isList = (e) => !!e && (e.tagName === "UL" || e.tagName === "OL");
+  // An item of a list (spec 8.9): `[2]` is the second `li`, `[-1]` the last; a further index descends into
+  // the first list nested in that item. The build has checked the path (LT063).
+  function item(list, path) {
+    let el = list;
+    for (let k = 0; k < path.length; k++) {
+      if (k > 0) el = Array.from(el.children).find(isList);
+      if (!isList(el)) return null;
+      const items = Array.from(el.children).filter((c) => c.tagName === "LI");
+      el = items[path[k] > 0 ? path[k] - 1 : items.length + path[k]];
+      if (!el) return null;
+    }
+    return el;
   }
 
   // Box of an element in slide units, relative to the slide section: the extent of its contents when it
@@ -26,6 +41,10 @@
       if (e.childNodes.length) {
         const range = document.createRange();
         range.selectNodeContents(e);
+        if (e.tagName === "LI") { // a list item without the lists nested in it: its own lines
+          const sub = Array.from(e.childNodes).findIndex(isList);
+          if (sub >= 0) range.setEnd(e, sub);
+        }
         const c = range.getBoundingClientRect();
         if (c.width > 0 && c.height > 0) r = c;
       }
@@ -42,6 +61,39 @@
       l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom);
     }
     return { x: (l - s.left) / scale, y: (t - s.top) / scale, w: (r - l) / scale, h: (b - t) / scale };
+  }
+  // Box of the marker of a list item, in slide units (spec 8.9). A marker has no box in the page: with the
+  // item's marker set inside for the time of one measurement, its first character moves right by the width
+  // of the marker, which outside ends where the item's content starts. Exact for text markers (the built-in
+  // stylesheet's bullets, and numbers); vertically, the marker is centered on the first character.
+  function markerBox(li, section) {
+    const s = section.getBoundingClientRect();
+    const scale = s.width / section.offsetWidth || 1;
+    const walker = document.createTreeWalker(li, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => (!n.data.trim() ? NodeFilter.FILTER_SKIP
+        : n.parentElement.closest("ul, ol") !== li.parentElement ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    });
+    const text = walker.nextNode();
+    const lr = li.getBoundingClientRect();
+    const cs = getComputedStyle(li);
+    const start = lr.left + li.clientLeft + parseFloat(cs.paddingLeft); // where the item's content starts
+    let top = lr.top, height = parseFloat(cs.lineHeight) || lr.height, width = 0;
+    if (text) {
+      const i = text.data.search(/\S/);
+      const range = document.createRange();
+      range.setStart(text, i);
+      range.setEnd(text, i + 1);
+      const before = range.getBoundingClientRect();
+      const saved = li.style.listStylePosition;
+      li.style.listStylePosition = "inside";
+      const after = range.getBoundingClientRect();
+      li.style.listStylePosition = saved;
+      width = Math.max(0, after.left - before.left);
+      top = before.top;
+      height = before.height;
+    }
+    const left = start - width;
+    return { x: (left - s.left) / scale, y: (top - s.top) / scale, w: width / scale, h: height / scale };
   }
   // The largest length along `u` from `p` that stays inside the slide, with a margin.
   function room(p, u, section, margin) {
@@ -99,17 +151,26 @@
   }
 
   // Geometry of one step: tail, head, control points of the curve and where the label goes.
+  const written = (ref, path) => ref + (path ? path.map((n) => `[${n}]`).join("") : "");
+  // The box an end is measured on, and its anchor: a `bullet` end is the left side of the item's marker.
+  function endBox(el, anchor, section) {
+    if (anchor === "bullet") return el.tagName === "LI" ? [markerBox(el, section), 180] : [box(el, section), 180];
+    return [box(el, section), anchor];
+  }
+
   function geometry(inst, step) {
-    const target = find(inst.section, step.to, inst.slideId);
+    const target = find(inst.section, step.to, inst.slideId, step.to_item);
     if (!target) {
-      console.warn(`lattice: arrow target ${step.to} not found on slide ${inst.slideId}`);
+      console.warn(`lattice: arrow target ${written(step.to, step.to_item)} not found on slide ${inst.slideId}`);
       return null;
     }
-    const tb = box(target, inst.section);
-    const from = step.from ? find(inst.section, step.from, inst.slideId) : null;
+    const [tb, toAnchor] = endBox(target, step.to_anchor, inst.section);
+    step = Object.assign({}, step, { to_anchor: toAnchor });
+    const from = step.from ? find(inst.section, step.from, inst.slideId, step.from_item) : null;
     let g, label;
     if (from) {
-      const fb = box(from, inst.section);
+      const [fb, fromAnchor] = endBox(from, step.from_anchor, inst.section);
+      step.from_anchor = fromAnchor;
       const t = end(fb, step.from_anchor, ref(tb, step.to_anchor));
       const h = end(tb, step.to_anchor, ref(fb, step.from_anchor));
       g = curveOf(t.p, h.p, t.fixed ? t.d : null, h.fixed ? h.d : null, inst.curve);
