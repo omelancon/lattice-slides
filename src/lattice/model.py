@@ -93,12 +93,24 @@ class Branch:
     loc: SourceLoc | None = None
 
 
+@dataclass(frozen=True)
+class TimelinePos:
+    """A position written in a timeline (spec 3.15): ``int`` is ``n``, ``end`` is ``last - n``
+    (``end`` itself when ``n`` is 0), ``rel`` is the current position plus ``n`` (signed)."""
+    kind: Literal["int", "end", "rel"]
+    n: int = 0
+
+
 @dataclass
 class TimelineAssign:
+    """``kind == "pos"``: the track goes to ``stop``. ``kind == "range"``: one cue per value from
+    ``start`` to ``stop`` every ``by`` positions; ``start is None`` is an open range, which starts
+    from the current position (spec 6.3)."""
     track: str
-    kind: Literal["abs", "rel", "range", "end"]
-    a: int = 0
-    b: int | None = None  # range end; None means "end"
+    kind: Literal["pos", "range"]
+    stop: TimelinePos
+    start: TimelinePos | None = None
+    by: int = 1
 
 
 @dataclass

@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-05, after 0.16.0 (`implementation-report-2026-10-05.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-05, after 0.17.0 (`implementation-report-2026-10-05-b.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
@@ -29,7 +29,8 @@ Updated 2026-10-05, after 0.16.0 (`implementation-report-2026-10-05.md`). Items 
 - [ ] 0.15.0: in an enlarged block, a removed test keeps its line-through, which scales with the card and gets thick; a thinner strike (an SVG line instead of `text-decoration`) is possible if it bothers you.
 - [ ] 0.16.0: look at the bullets of a few slides on your screen. They are now text (`•`, `◦`, `▪` and an en space) instead of the browser's discs, so that arrows can find them exactly; on the build machine they sit where the discs were (the text did not move on any slide of the examples or the manual), but their size comes from your body font, and the nested `◦` is smaller than the old circle. The characters are three rules in `lattice.css` (`:where(.lt-body) ul`).
 - [ ] 0.16.0: try `from_anchor: bullet` on your own slides (the manual's "Arrows at bullets"). The end leaves to the left; say if you want `bullet` combined with another direction (say, leaving downward from the marker).
-- [ ] 0.14.0 and 0.16.0: `docs/implementation-report-2026-10-03.md` and `docs/implementation-report-2026-10-04.md` are still in `docs/` beside their identical copies in `docs/archive/` (SKILL.md, documentation step 7); `git rm` the two in `docs/`.
+- [ ] 0.17.0: try the timeline ranges on one of your slides (the manual's "Timeline ranges"): `reveal ..end`, `trace ..+2`, `end-1`, `by 2` and ranges in lockstep. The examples and the rest of the manual were left as written (their decks are unchanged apart from the version); say if you want them rewritten with the new forms where they would be shorter.
+- [ ] 0.14.0, 0.16.0 and 0.17.0: `docs/implementation-report-2026-10-03.md`, `docs/implementation-report-2026-10-04.md` and `docs/implementation-report-2026-10-05.md` are still in `docs/` beside their identical copies in `docs/archive/` (SKILL.md, documentation step 7); `git rm` the three in `docs/`.
 
 ## Later, if wanted
 

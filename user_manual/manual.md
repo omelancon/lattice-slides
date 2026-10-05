@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.16.0
+author: Lattice 0.17.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -467,9 +467,45 @@ reveal +1         # relative move
 ::: column {width=1fr}
 {.reveal}
 - One line per step (several for a range `a..b`); a line sets the tracks it names, the others keep their position
-- Positions: absolute `3`, relative `+1` or `-1`, `end`; `#` starts a comment
+- Positions: absolute `3`, relative `+1` or `-1`, `end` or `end-2`; `#` starts a comment
 - A `detour ID` line is a **detour step**: Right enters that detour there and, after the return, continues the slide; `blocking` also stops the skip keys
 - Without a timeline, `at=2` on a detour inserts a detour step after step 2
+:::
+::::
+
+# Timeline ranges {#timeline-ranges .dense}
+
+:::: columns
+::: column {width=1fr}
+````markdown
+```timeline
+reveal 1                # the first bullet
+sort ..+2               # two frames, two steps
+reveal ..3, sort ..+2   # together
+sort ..end-1 by 2       # every other frame
+reveal ..end, sort end
+```
+````
+
+```array-anim {#sort source="traces.py:bubble_trace"}
+values: [3, 1, 2]
+```
+:::
+::: column {width=1fr}
+{.reveal}
+- `..STOP` starts where the track is: `reveal ..end` reveals the remaining fragments, one per step
+- `..+2` plays the next two positions in two steps, where `+2` jumps them in one
+- Ranges on one line advance together and must have the same length (LT031)
+- `end-1` counts from the last position; `by 2` keeps every other position and always ends on the stop
+- An empty open range is warning LT030; `2..+3` is ambiguous, error LT049
+
+```timeline
+reveal 1
+sort ..+2
+reveal ..3, sort ..+2
+sort ..end-1 by 2
+reveal ..end, sort end
+```
 :::
 ::::
 
@@ -1531,7 +1567,7 @@ Lattice.component("stack-anim", {
 | LT024, LT025 | error | Timeline names an unknown track or a follower; position out of range |
 | LT026 | warning | Independent track never advanced |
 | LT027, LT028 | error | Follower position count differs from its leader; unknown leader or follow cycle |
-| LT029, LT030, LT031 | error, warning, error | Two timelines; a cue changes nothing; two ranges on one line |
+| LT029, LT030, LT031 | error, warning, error | Two timelines; a cue changes nothing or a range is empty; ranges of different lengths on one line |
 | LT033, LT036 | error | Component track needs an `#id`; option given both as attribute and in the body |
 | LT049, LT053, LT054 | error | Timeline syntax; invalid `pdf` attribute; invalid detour step |
 | LT055, LT056, LT057 | error | `badge=step` or `badge=next` without a detour step; invalid `::detour-badge`; `.reveal-with` with no fragment before it |

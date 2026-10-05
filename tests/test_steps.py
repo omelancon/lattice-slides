@@ -1,3 +1,5 @@
+import textwrap
+
 import pytest
 
 from lattice.anim import ArrayTrace, GraphTrace, GridTrace, Trace, TreeTrace, apply_delta, diff
@@ -85,8 +87,118 @@ def test_timeline_errors(deck):
         ```
     """, "algos.py": ALGOS})
     assert {"LT025", "LT024"} <= codes(check_deck(root, use_cache=False))
-    root.write_text("# A\n```timeline\narr 0..1, b 0..1\n```\n")
-    assert "LT031" in codes(check_deck(root, use_cache=False))
+    root.write_text("# A\n{.reveal}\n- x\n- y\n- z\n"
+                    "```array-anim {#arr source=\"algos.py:arr\"}\nvalues: [3, 1]\n```\n"
+                    "```timeline\narr 0..1, reveal 1..3\n```\n")
+    assert "LT031" in codes(check_deck(root, use_cache=False))  # ranges of different lengths on one line
+
+
+def sugar_deck(deck, timeline: str, items: int = 6):
+    """A slide with `items` fragments (reveal positions 0..items), a 5-frame walk `g` and its follower `c`."""
+    bullets = "\n".join(f"- item {k}" for k in range(1, items + 1))
+    body = "\n".join("        " + line for line in timeline.strip().split("\n"))
+    return deck({"talk.md": f"""
+        # A
+        {{.reveal}}
+{textwrap.indent(bullets, "        ")}
+        ```graph-anim {{#g source="algos.py:walk"}}
+        edges: ["A B", "B C", "C D", "D E"]
+        ```
+        ```code {{#c lang=python follow=g}}
+        pass
+        ```
+        ```timeline
+{body}
+        ```
+    """, "algos.py": ALGOS})
+
+
+def columns(root, *tracks):
+    s = build_deck(root, use_cache=False).slides["a"]
+    ids = [t.id for t in s.tracks]
+    return [tuple(row[ids.index(t)] for t in tracks) for row in s.positions]
+
+
+def warnings(root):
+    return [(d.code, d.message) for d in check_deck(root, use_cache=False).items]
+
+
+@pytest.mark.parametrize("timeline, expected", [
+    ("reveal 2\nreveal ..end", [0, 2, 3, 4, 5, 6]),        # the remaining fragments, one per step
+    ("reveal 2\nreveal ..+2", [0, 2, 3, 4]),               # `..+2` is two steps where `+2` is one
+    ("reveal 2\nreveal +2", [0, 2, 4]),
+    ("reveal 5\nreveal ..-2", [0, 5, 4, 3]),               # backward, one position per step
+    ("reveal 2\nreveal ..4\nreveal ..0", [0, 2, 3, 4, 3, 2, 1, 0]),  # absolute stops, both directions
+    ("reveal 3\nreveal 1..end", [0, 3, 1, 2, 3, 4, 5, 6]),  # a closed range still starts at its start
+    ("reveal ..end", [0, 1, 2, 3, 4, 5, 6]),                 # from position 0
+    ("reveal end-2", [0, 4]),
+    ("reveal 1..end-2\nreveal end", [0, 1, 2, 3, 4, 6]),
+    ("reveal ..end - 1", [0, 1, 2, 3, 4, 5]),               # spaces are allowed
+    ("reveal end..end-2", [0, 6, 5, 4]),
+    ("reveal 1..end by 2", [0, 1, 3, 5, 6]),                # the stop is always the last cue
+    ("reveal 1..5 by 2", [0, 1, 3, 5]),
+    ("reveal 2\nreveal ..end by 2", [0, 2, 4, 6]),         # an open range leaves out the current position
+    ("reveal 2\nreveal ..end by 3", [0, 2, 5, 6]),
+    ("reveal 6\nreveal ..0 by 4", [0, 6, 2, 0]),
+    ("reveal 4..4", [0, 4]),
+])
+def test_timeline_ranges(deck, timeline, expected):
+    """Spec 6.3: open ranges, `end-N` and strides on the reveal track."""
+    root = sugar_deck(deck, timeline + "\ng end")
+    assert [r for (r,) in columns(root, "reveal")][:-1] == expected
+    assert warnings(root) == []
+
+
+def test_timeline_open_ranges_on_a_component(deck):
+    root = sugar_deck(deck, "reveal 1\ng ..+2\nreveal ..end, g end\ng ..0 by 2")
+    assert columns(root, "reveal", "g", "c") == [
+        (0, 0, 0), (1, 0, 0), (1, 1, 1), (1, 2, 2), (2, 4, 4), (3, 4, 4), (4, 4, 4), (5, 4, 4), (6, 4, 4),
+        (6, 2, 2), (6, 0, 0)]  # other assignments go in the first cue; the follower copies its leader
+
+
+def test_timeline_lockstep_ranges(deck):
+    root = sugar_deck(deck, "reveal 2\nreveal ..+4, g ..end\ng ..0 by 2, reveal ..4")
+    assert columns(root, "reveal", "g") == [(0, 0), (2, 0), (3, 1), (4, 2), (5, 3), (6, 4), (5, 2), (4, 0)]
+    assert warnings(root) == []
+    root = sugar_deck(deck, "reveal 1..3, g 1..4")
+    assert any(c == "LT031" and "reveal 3, g 4" in m for c, m in warnings(root))
+
+
+def test_timeline_open_range_after_a_detour_step(deck):
+    root = sugar_deck(deck, "reveal 2\ndetour d1\nreveal ..+2\ng end")
+    root.write_text(root.read_text() + "::: detour {#d1}\n# Inside\n:::\n")
+    s = build_deck(root, use_cache=False).slides["a"]
+    assert [row[0] for row in s.positions] == [0, 2, 2, 3, 4, 4] and s.step_detours == {2: {"id": "d1", "blocking": False}}
+
+
+def test_timeline_empty_open_range(deck):
+    """An open range whose track is already at its stop: LT030, and no step unless the line sets other tracks."""
+    root = sugar_deck(deck, "reveal end\nreveal ..end\ng end")
+    assert columns(root, "reveal") == [(0,), (6,), (6,)]
+    assert [c for c, _ in warnings(root)] == ["LT030"]
+    root = sugar_deck(deck, "reveal end\nreveal ..end, g 2\ng end")
+    assert columns(root, "reveal", "g") == [(0, 0), (6, 0), (6, 2), (6, 4)]
+    assert [c for c, _ in warnings(root)] == ["LT030"]
+
+
+@pytest.mark.parametrize("timeline, code", [
+    ("reveal 5\nreveal ..+3", "LT025"),      # two positions left
+    ("reveal 1\nreveal ..-2", "LT025"),
+    ("reveal end-7", "LT025"),
+    ("reveal ..9", "LT025"),
+    ("reveal 2..+3", "LT049"),                # a relative stop after an explicit start is ambiguous
+    ("reveal 2..-1", "LT049"),
+    ("reveal 1..3 by 0", "LT049"),
+    ("reveal 3 by 2", "LT049"),               # a stride needs a range
+    ("reveal +1..end", "LT049"),              # no relative starts
+    ("reveal ..", "LT049"),
+    ("reveal ..end, reveal 1", "LT049"),
+    ("reveal ..+2, g ..+3", "LT031"),
+])
+def test_timeline_range_errors(deck, timeline, code):
+    root = sugar_deck(deck, timeline + "\ng end")
+    found = [c for c, _ in warnings(root)]
+    assert code in found and found.count("LT025") <= 1  # LT025 once per line
 
 
 def test_delta_roundtrip():

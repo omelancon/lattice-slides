@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.16.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.17.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -308,11 +308,14 @@ timeline  = { line } ;
 line      = { SP } ( cue | detour_cue | ) [ comment ] NL ;
 cue       = assign { { SP } "," { SP } assign } ;
 detour_cue = "detour" SP { SP } IDENT [ SP { SP } "blocking" ] ;   (* a detour step, section 6.4; "detour" is not a track name *)
-assign    = TRACK SP { SP } position ;
+assign    = TRACK SP { SP } ( position | range ) ;
 position  = INT
           | ( "+" | "-" ) INT
-          | INT ".." ( INT | "end" )
-          | "end" ;
+          | end ;
+end       = "end" [ { SP } "-" { SP } INT ] ;             (* end-N: N positions before the last *)
+range     = ( INT | end ) { SP } ".." { SP } ( INT | end ) [ stride ]
+          | ".." { SP } ( INT | end | ( "+" | "-" ) INT ) [ stride ] ;   (* open range: from the current position *)
+stride    = SP { SP } "by" SP { SP } INT ;
 TRACK     = IDENT ;          (* "reveal" or a component id on this slide *)
 comment   = "#" { any char } ;
 ```
@@ -325,11 +328,12 @@ reveal 1            # first bullet
 trace 1..4          # four cues, one frame each
 code 2, trace 5     # both change on the same step
 detour heap-refresher   # a detour step: entered on the way, section 6.4
+trace ..end-1       # one cue per frame, from the current one to the one before the last
 trace end
 ```
 ````
 
-Semantics are defined in sections 6.3 and 6.4.
+Positions are absolute (`3`), relative to the track's current position (`+1`, `-1`) or counted from the last one (`end`, `end-2`). A **range** gives one cue per position: `a..b` from `a` to `b`; an **open range** `..b` starts from where the track is, so `reveal ..end` reveals the remaining fragments one per step and `trace ..+2` plays the next two frames in two steps (where `trace +2` jumps them in one). `by K` keeps every `K`-th position of a range (`trace 1..end by 2`). Several ranges on one line advance in lockstep (`reveal ..+3, trace ..+3`). Semantics are defined in sections 6.3 and 6.4.
 
 ---
 
@@ -518,11 +522,10 @@ pos = {t: 0 for t in I}
 table = [dict(pos)]                              # step 0
 
 for line in timeline.lines:
-    ranges = [a for a in line.assigns if a.is_range]
-    if len(ranges) > 1: error("LT031")
-    for cue in expand(line):                     # see below
+    for a in line.assigns:
+        if a.track not in I: error("LT024")      # includes followers
+    for cue in expand(line, pos):                # see below: LT025, LT030, LT031
         for a in cue:
-            if a.track not in I: error("LT024")  # includes followers
             pos[a.track] = resolve(a, pos[a.track], last(a.track))
             if not 0 <= pos[a.track] <= last(a.track): error("LT025")
         if pos == table[-1]: warn("LT030")       # cue changes nothing
@@ -532,8 +535,14 @@ for t in I:
     if all(row[t] == 0 for row in table): warn("LT026")  # never advanced
 ```
 
-- `resolve`: `INT` is absolute; `+N` and `-N` are relative to the current position; `end` is `last(t)`.
-- `expand`: a line without a range is one cue. A line with the range `t a..b` produces one cue per value from `a` to `b` (ascending or descending, `end` meaning `last(t)`); the line's other assignments are applied in the first of these cues only.
+- `resolve`: `INT` is absolute; `+N` and `-N` are relative to the current position; `end` is `last(t)` and `end-N` is `last(t) - N`.
+- `expand`: a line without a range is one cue. A range on track `t` gives a sequence of values, and the line produces one cue per value (each cue assigns that value to `t`); the line's other assignments are applied in the first of these cues only. The values, with `K` the stride (`by K`, default 1, `K >= 1`):
+  - **Range** `a..b` (`a` and `b` are integers, `end` or `end-N`): `a`, `a ± K`, ... in the direction from `a` to `b` (ascending or descending), ending with `b` even when `b` is not a multiple of `K` away from `a`. `a..a` is the single value `a`.
+  - **Open range** `..b`: the same sequence started from the track's current position `c` (the position after the previous lines, which is known when the line is compiled), without `c` itself: `c ± K`, ..., `b`. The stop MAY be relative, `..+N` or `..-N`, meaning `c + N` or `c - N`; so `t ..+N` gives `N` cues where `t +N` gives one. If `b = c` the sequence is empty.
+  - A relative stop after an explicit start (`2..+3`, ambiguous) and a stride of 0 are syntax errors (LT049).
+  - **Lockstep.** A line MAY hold several ranges, on different tracks; they MUST produce the same number of values (LT031). Cue `i` assigns the `i`-th value of every range.
+  - If every range of the line is empty (an open range whose track is already at its stop), the line produces warning LT030; it produces one cue holding its other assignments if it has any, and no cue (no step) otherwise.
+  - A value outside `0..last(t)` is error LT025, reported once per line.
 
 The number of steps is `len(table)`. Follower columns are then added by copying their leader's column. The final table is stored in `Slide.positions` with columns in track order.
 
@@ -1206,8 +1215,8 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT027 | error | Follower position count differs from its leader |
 | LT028 | error | Unknown leader or follow cycle |
 | LT029 | error | More than one timeline on a slide |
-| LT030 | warning | Timeline cue changes nothing |
-| LT031 | error | More than one range on a timeline line |
+| LT030 | warning | Timeline cue changes nothing, or a timeline line whose ranges are all empty |
+| LT031 | error | Ranges of different lengths on one timeline line |
 | LT032 | warning | Single-file output larger than 50 MB |
 | LT033 | error | Component track needs an `#id` |
 | LT034 | error | An include inside a container other than a detour, a list item or a block quote; a detour that is not at the top level of a slide body |
@@ -1222,7 +1231,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT046 | warning | Warning emitted by a component |
 | LT047 | error | Invalid render result |
 | LT048 | error | Invalid front matter (YAML or value) |
-| LT049 | error | Timeline syntax error, or a track twice in one cue |
+| LT049 | error | Timeline syntax error (including a relative stop after an explicit range start, or `by 0`), or a track twice in one cue |
 | LT050 | error | Plugin or `lattice_plugins.py` failed to load |
 | LT051 | warning | Image referenced by a slide not found |
 | LT052 | warning | Unknown theme (the default theme is used) |
@@ -1430,3 +1439,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.15 | Enlarged elements: `clickable` and `clickable_show` on the versioning drawings, the controller hook `zoom` and `api.zoom`, a card shared by the presenter and audience windows | 7.5, 7.7, 8.8, 9.5, 10.1, 10.3, 10.4 |
 | 0.14 | Container fences: a bare closing fence closes the innermost container, whatever the colons (nested containers may all use `:::`); fences in code blocks are skipped; named closing fences `::: /NAME`; LT061, LT062 | 3.2, 12 |
 | 0.16 | Arrows at list items (`LIST[N]`, nested and from the end) and at their markers (the `bullet` anchor); the box of a list item leaves out its nested lists; text markers for bullet lists; LT063 | 8.8, 8.9, 12 |
+| 0.17 | Timeline sugar: open ranges `..STOP` from the current position (`reveal ..end`, `trace ..+2`), positions counted from the last (`end-N`), strides (`by K`), several ranges on one line in lockstep (LT031 now means ranges of different lengths) | 3.15, 6.3, 12 |

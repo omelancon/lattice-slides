@@ -4,14 +4,42 @@ from __future__ import annotations
 import re
 
 from .diagnostics import Diagnostics, SourceLoc
-from .model import Slide, TimelineAssign, TimelineLine, Track
+from .model import Slide, TimelineAssign, TimelineLine, TimelinePos, Track
 
+_END = r"end(?:\s*-\s*\d+)?"  # `end` or `end-N`
 _ASSIGN_RE = re.compile(
     r"\s*(?P<track>[A-Za-z0-9][A-Za-z0-9_-]*)\s+"
-    r"(?:(?P<a>\d+)\s*\.\.\s*(?P<b>\d+|end)|(?P<sign>[+-])(?P<rel>\d+)|(?P<abs>\d+)|(?P<end>end))\s*\Z"
+    rf"(?:(?P<start>\d+|{_END})?\s*\.\.\s*(?P<stop>[+-]?\d+|{_END})(?:\s+by\s+(?P<by>\d+))?"
+    rf"|(?P<pos>[+-]?\d+|{_END}))\s*\Z"
 )
 # A detour step (spec 6.4): `detour ID` alone on its line. `detour` is therefore not usable as a track name.
 _DETOUR_RE = re.compile(r"\s*detour\s+(?P<id>[A-Za-z0-9][A-Za-z0-9_-]*)(?P<blocking>\s+blocking)?\s*\Z")
+
+
+def _pos(text: str) -> TimelinePos:
+    text = text.replace(" ", "").replace("\t", "")
+    if text.startswith("end"):
+        return TimelinePos("end", int(text[4:]) if len(text) > 3 else 0)
+    if text[0] in "+-":
+        return TimelinePos("rel", int(text))
+    return TimelinePos("int", int(text))
+
+
+def _assign(part: str, m: re.Match, loc: SourceLoc, diags: Diagnostics) -> TimelineAssign | None:
+    tr = m.group("track")
+    if m.group("pos") is not None:
+        return TimelineAssign(tr, "pos", _pos(m.group("pos")))
+    start = _pos(m.group("start")) if m.group("start") is not None else None
+    stop = _pos(m.group("stop"))
+    if start is not None and stop.kind == "rel":
+        diags.error("LT049", f"{part.strip()!r}: a relative stop needs an open range (`..{m.group('stop')}`, from the "
+                             "current position); after an explicit start it would be ambiguous", loc)
+        return None
+    by = int(m.group("by")) if m.group("by") is not None else 1
+    if by < 1:
+        diags.error("LT049", f"{part.strip()!r}: the stride of `by K` must be at least 1", loc)
+        return None
+    return TimelineAssign(tr, "range", stop, start, by)
 
 
 def parse_timeline(body: str, first_line: int, file, diags: Diagnostics) -> list[TimelineLine]:
@@ -33,24 +61,19 @@ def parse_timeline(body: str, first_line: int, file, diags: Diagnostics) -> list
         for part in text.split(","):
             m = _ASSIGN_RE.match(part)
             if not m:
-                diags.error("LT049", f"cannot parse timeline cue {part.strip()!r}", loc)
+                if re.search(r"\sby\s", part) and ".." not in part:
+                    msg = f"{part.strip()!r}: a stride `by K` follows a range (`a..b by K` or `..b by K`)"
+                else:
+                    msg = f"cannot parse timeline cue {part.strip()!r}"
+                diags.error("LT049", msg, loc)
                 ok = False
                 break
-            tr = m.group("track")
-            if m.group("a") is not None:
-                b = None if m.group("b") == "end" else int(m.group("b"))
-                assigns.append(TimelineAssign(tr, "range", int(m.group("a")), b))
-            elif m.group("rel") is not None:
-                n = int(m.group("rel"))
-                assigns.append(TimelineAssign(tr, "rel", n if m.group("sign") == "+" else -n))
-            elif m.group("abs") is not None:
-                assigns.append(TimelineAssign(tr, "abs", int(m.group("abs"))))
-            else:
-                assigns.append(TimelineAssign(tr, "end"))
+            a = _assign(part, m, loc, diags)
+            if a is None:
+                ok = False
+                break
+            assigns.append(a)
         if not ok:
-            continue
-        if sum(1 for a in assigns if a.kind == "range") > 1:
-            diags.error("LT031", "more than one range on a timeline line", loc)
             continue
         tracks = [a.track for a in assigns]
         if len(set(tracks)) != len(tracks):
@@ -76,7 +99,7 @@ def compile_steps(slide: Slide, diags: Diagnostics) -> None:
             lines = []
         elif len(independent) == 1:
             t = independent[0]
-            lines = [TimelineLine([TimelineAssign(t.id, "range", 1, None)], slide.loc)]
+            lines = [TimelineLine([TimelineAssign(t.id, "range", TimelinePos("end"), TimelinePos("int", 1))], slide.loc)]
         else:
             lines = []
 
@@ -100,20 +123,8 @@ def compile_steps(slide: Slide, diags: Diagnostics) -> None:
                 bad = True
         if bad:
             continue
-        for cue in _expand(line, last):
-            for a in cue:
-                cur = pos[a.track]
-                if a.kind == "abs":
-                    new = a.a
-                elif a.kind == "rel":
-                    new = cur + a.a
-                else:  # "end"
-                    new = last[a.track]
-                if not 0 <= new <= last[a.track]:
-                    diags.error("LT025", f"position {new} out of range 0..{last[a.track]} for track {a.track!r}",
-                                line.loc)
-                    new = max(0, min(new, last[a.track]))
-                pos[a.track] = new
+        for cue in _expand(line, pos, last, diags):
+            pos.update(cue)
             if pos == table[-1]:
                 diags.warn("LT030", "timeline cue changes nothing", line.loc)
             table.append(dict(pos))
@@ -163,14 +174,54 @@ def compile_steps(slide: Slide, diags: Diagnostics) -> None:
     slide.positions = [[value(row, t) for t in tracks] for row in table]
 
 
-def _expand(line: TimelineLine, last: dict[str, int]):
-    rng = next((a for a in line.assigns if a.kind == "range"), None)
-    if rng is None:
-        yield line.assigns
-        return
-    others = [a for a in line.assigns if a is not rng]
-    b = last[rng.track] if rng.b is None else rng.b
-    step = 1 if b >= rng.a else -1
-    for i, v in enumerate(range(rng.a, b + step, step)):
-        cue = [TimelineAssign(rng.track, "abs", v)]
-        yield (others + cue) if i == 0 else cue
+def _value(p: TimelinePos, cur: int, last: int) -> int:
+    if p.kind == "int":
+        return p.n
+    if p.kind == "end":
+        return last - p.n
+    return cur + p.n  # "rel"
+
+
+def _range_values(a: TimelineAssign, cur: int, last: int) -> list[int]:
+    """The positions of a range (spec 6.3): from its start to its stop every ``by`` positions, the stop
+    always included; an open range starts from the current position, which it leaves out."""
+    stop = _value(a.stop, cur, last)
+    first = cur if a.start is None else _value(a.start, cur, last)
+    step = a.by if stop >= first else -a.by
+    values = list(range(first, stop, step)) + [stop]
+    return values[1:] if a.start is None else values
+
+
+def _expand(line: TimelineLine, pos: dict[str, int], last: dict[str, int], diags: Diagnostics) -> list[dict[str, int]]:
+    """The cues of a timeline line, as the positions each one assigns. Every value is resolved against the
+    positions before the line: a track appears once per line, so nothing on the line moves it earlier."""
+    others = {a.track: _value(a.stop, pos[a.track], last[a.track]) for a in line.assigns if a.kind == "pos"}
+    ranges = {a.track: _range_values(a, pos[a.track], last[a.track]) for a in line.assigns if a.kind == "range"}
+    lengths = {len(v) for v in ranges.values()}
+    if len(lengths) > 1:
+        sizes = ", ".join(f"{t} {len(v)}" for t, v in ranges.items())
+        diags.error("LT031", f"ranges of different lengths on one line ({sizes} steps); ranges on one line advance "
+                             "together and must give the same number of steps", line.loc)
+        return []
+    # Out of range (LT025): one error per line, at the first bad value.
+    for t, values in [(t, [v]) for t, v in others.items()] + list(ranges.items()):
+        bad = next((v for v in values if not 0 <= v <= last[t]), None)
+        if bad is not None:
+            diags.error("LT025", f"position {bad} out of range 0..{last[t]} for track {t!r} "
+                                 f"(the track is at {pos[t]} before this line)", line.loc)
+            return []  # the line adds no step, rather than clamped cues that would only add warnings
+    if not ranges:
+        return [others]
+    n = lengths.pop()
+    if n == 0:
+        what = "one range is" if len(ranges) == 1 else "the ranges are"
+        tail = "" if others else "; the line adds no step"
+        diags.warn("LT030", f"{what} empty: the track is already at its stop{tail}", line.loc)
+        return [others] if others else []
+    cues = []
+    for i in range(n):
+        cue = dict(others) if i == 0 else {}
+        for t, values in ranges.items():
+            cue[t] = values[i]
+        cues.append(cue)
+    return cues

@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.16.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.17.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -53,7 +53,7 @@ Navigation follows the history model (decision 5). Left undoes the last move, li
 
 ### 3.3 Steps are positions, not events (spec sections 6, 9 and 10)
 
-Within a slide, fragments and animations advance with the same key. Every stepping element is a track with numbered positions, and a slide step is a row of positions. When several tracks share a slide, a `timeline` block orders them explicitly rather than guessing (decision 4); a code block can instead follow an animation, which covers the most common pairing without a timeline.
+Within a slide, fragments and animations advance with the same key. Every stepping element is a track with numbered positions, and a slide step is a row of positions. When several tracks share a slide, a `timeline` block orders them explicitly rather than guessing (decision 4); a code block can instead follow an animation, which covers the most common pairing without a timeline. Timeline lines are resolved against the positions left by the lines before them, so a range can start where its track is (`reveal ..end`, the rest of the fragments) and a long animation needs no frame counting (decision 26).
 
 Runtimes always receive an absolute position. This single rule makes backward navigation, reloads on a given step and synchronized tracks straightforward, and it is why frames are stored as full states rather than as a chain of changes (decision 6). Authors still write deltas, which is the natural way to describe an algorithm step; the build expands them, and switches to keyframes only for very large animations.
 
@@ -220,6 +220,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.16 (done).** Arrows at list items and their bullets: `facts[2]` names an item (nested and from the end), `from_anchor=bullet` leaves from its marker, both checked at build time; bullets are text markers, measured exactly.
 
+**v0.17 (done).** Shorter timelines: open ranges from the current position (`reveal ..end`, `trace ..+2`), positions counted from the last (`end-1`), strides (`by 2`) and several ranges on one line advancing in lockstep.
+
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
 - Plugin hooks beyond components (new syntax, generated slides, custom checks).
@@ -261,3 +263,4 @@ Decisions taken while writing the specification, and since.
 | 23 | Container fences | A bare closing fence closes the innermost open container, whatever the colons, as in Pandoc; the end of a container is found by counting fences, skipping code blocks. An optional named closing fence, `::: /NAME` (the `/` cannot start a container name), checks the container it closes, like `@end NAME` for code segments. Mismatches and stray fences are errors (LT061); a container never closed is a warning (LT062), as markdown-it closes it at the end of its block. Decks written with decreasing colon counts parse as before. |
 | 24 | Enlarged blocks | `clickable` (default on) and `clickable_show` (default `label`, `context`, `code` and `after`, the exit context) on `bbv-anim`, `bbv-cfg` and `abstract-interp-anim`. The card is a core feature (`api.zoom`, a controller hook `zoom(inst, key)`) because only the core may read keys; it is not a position (no history, hash or storage) and any render closes it. Any key closes it and does nothing else, except bare modifiers and Ctrl, Meta or Alt combinations (left to the browser); a press outside the card is swallowed. It fits 80% of the slide, magnifying at most 4.5 times, over the slide pane (never the presenter panel), and is mirrored between the presenter and audience windows. It shows the current step (queued versions, partial specialization, the frame's context), sized at build time. |
 | 25 | Arrows at list items and bullets | `LIST[N]` names item `N` of the list with id `LIST` (from 1, negative from the end, `[N][M]` into the first nested list), checked at build time on the slide's HTML (LT063). The anchor `bullet` puts an end a gap left of the item's marker, at its vertical middle, leaving or entering to the left; valid only on a list item (`LIST[N]` or the id of an `<li>`), not on a whole list or a selector (LT063). An item's box leaves out its nested lists. Built-in bullets are text markers (`list-style-type` strings under `:where()`), measured by setting the marker inside for one measurement; drawn `::before` markers were rejected because they would override author rules on lists. |
+| 26 | Timeline ranges | A range MAY omit its start, `..STOP`: it starts from the track's current position (known at build time, since positions are resolved line by line) and leaves it out, so `reveal ..end` reveals the rest and `t ..+N` plays `N` positions in `N` steps where `t +N` jumps them in one. A relative stop exists only for open ranges: after an explicit start (`2..+3`) it would be ambiguous (LT049), and relative starts (`+1..end`) were left out as a second way to write the same thing. `end-N` wherever `end` is accepted. `by K` keeps every `K`-th position and always ends on the stop. Several ranges on one line advance in lockstep and must have the same length (LT031, which used to forbid a second range). An empty open range is a warning (LT030) and adds no step unless its line sets other tracks; a value out of range is LT025 once per line. |

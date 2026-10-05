@@ -48,7 +48,8 @@ src/lattice/
   body.py         BodyBuilder: blocks, reveal, containers, detour badges (default and placed), branch
                   menus, notes, timelines, component placeholders
   graph.py        next resolution, edges, keys, main path, reachability, tours
-  timeline.py     timeline parsing, step compilation, detour steps (and LT055 for badges tied to them)
+  timeline.py     timeline parsing, step compilation (ranges resolved against the current positions), detour
+                  steps (and LT055 for badges tied to them)
   render.py       component rendering, cache, tracks
   emit.py         deck JSON, single-file HTML, directory output, image embedding
   graphs.py       graph loading, Graphviz layouts, overview map layout, tree layouts per frame
@@ -119,7 +120,7 @@ Run `pytest` after every change; it takes about a minute and a half, most of it 
 |---|---|
 | `test_parsing.py` | attributes, ids, includes, links, reveal and `.reveal-with`, containers and their fences (bare and named closing fences, mixed, code blocks skipped, LT061, LT062), leaf directives |
 | `test_graph.py` | next resolution, detours, branches, keys, tours |
-| `test_steps.py` | tracks, timelines, detour steps and the badges of their detours (modes, placed badges, LT055 and LT056), followers, deltas, frame stores, tree and grid traces, tree layouts |
+| `test_steps.py` | tracks, timelines (open ranges `..STOP`, `end-N`, strides, lockstep ranges and their errors), detour steps and the badges of their detours (modes, placed badges, LT055 and LT056), followers, deltas, frame stores, tree and grid traces, tree layouts |
 | `test_bbv.py` | the type lattice and intervals, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), abstract interpretation against figures 1, 2 and 4, intervals in SBBV and ΛV, the symbolic bound rules of the paper and `findv` against its figure 7, frames, layout, the components (`clickable`, `clickable_show` and the sizes of enlarged blocks) |
 | `test_output.py` | plot backends, diff-steps, the arrow component, images, directory output, overview map, library inclusion |
 | `test_segments.py` | code segment markers (both forms, spaces, line numbers, errors), wrapping of Pygments output, segment highlights, LT058, arrow anchor options, arrows at list items and bullets (the item path, LT063) |
@@ -167,7 +168,7 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 
 1. Bump the version in `src/lattice/__init__.py` and `pyproject.toml` (patch for fixes, minor for features), and in the introductions of the README, the spec, the report and the manual (`check_docs.py` enforces it).
 2. `pytest`, then `python scripts/build_examples.py`, then check screenshots of anything visual (the manual included).
-3. Write the implementation report of the release, a `docs/implementation-report-*.md` named after its date (a patch release adds a section to the report of its minor version), and update `docs/todo.md` with what is left open.
+3. Write the implementation report of the release, a `docs/implementation-report-*.md` named after its date (a patch release adds a section to the report of its minor version; a second minor release on the same date adds `-b` to the name), and update `docs/todo.md` with what is left open.
 4. Run the documentation coherence pass below.
 5. Remove `.lattice-cache/`, `__pycache__/`, `*.egg-info/` and `.pytest_cache/`.
 

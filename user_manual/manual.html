@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.16.0">
+<meta name="generator" content="lattice 0.17.0">
 <title>Lattice User Manual</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -972,9 +972,17 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </div></div></div></section>
 <section class="lt-slide layout-default" id="s-timelines" data-slide="timelines" hidden><header class="lt-head"><h1 class="lt-title">Timelines</h1></header><div class="lt-body"><div class="lt-columns"><div class="lt-column" style="flex:1 1 0"><div class="lt-c lt-c-code" data-component="code" data-instance="timelines/c1"><div class="lt-code" data-lang="markdown"><pre><code><span class="lt-line" data-line="1"><span class="sb">```timeline</span></span><span class="lt-line" data-line="2"><span class="s">reveal 2          # first two bullets</span></span><span class="lt-line" data-line="3"><span class="s">trace 1..end      # one step per frame</span></span><span class="lt-line" data-line="4"><span class="s">code 2, trace 5   # two tracks, one step</span></span><span class="lt-line" data-line="5"><span class="s">detour heaps      # a detour step</span></span><span class="lt-line" data-line="6"><span class="s">reveal +1         # relative move</span></span><span class="lt-line" data-line="7"><span class="sb">```</span></span></code></pre></div></div></div><div class="lt-column" style="flex:1 1 0"><ul>
 <li data-lt-reveal="1">One line per step (several for a range <code>a..b</code>); a line sets the tracks it names, the others keep their position</li>
-<li data-lt-reveal="2">Positions: absolute <code>3</code>, relative <code>+1</code> or <code>-1</code>, <code>end</code>; <code>#</code> starts a comment</li>
+<li data-lt-reveal="2">Positions: absolute <code>3</code>, relative <code>+1</code> or <code>-1</code>, <code>end</code> or <code>end-2</code>; <code>#</code> starts a comment</li>
 <li data-lt-reveal="3">A <code>detour ID</code> line is a <strong>detour step</strong>: Right enters that detour there and, after the return, continues the slide; <code>blocking</code> also stops the skip keys</li>
 <li data-lt-reveal="4">Without a timeline, <code>at=2</code> on a detour inserts a detour step after step 2</li>
+</ul>
+</div></div></div></section>
+<section class="lt-slide layout-default dense" id="s-timeline-ranges" data-slide="timeline-ranges" hidden><header class="lt-head"><h1 class="lt-title">Timeline ranges</h1></header><div class="lt-body"><div class="lt-columns"><div class="lt-column" style="flex:1 1 0"><div class="lt-c lt-c-code" data-component="code" data-instance="timeline-ranges/c1"><div class="lt-code" data-lang="markdown"><pre><code><span class="lt-line" data-line="1"><span class="sb">```timeline</span></span><span class="lt-line" data-line="2"><span class="s">reveal 1                # the first bullet</span></span><span class="lt-line" data-line="3"><span class="s">sort ..+2               # two frames, two steps</span></span><span class="lt-line" data-line="4"><span class="s">reveal ..3, sort ..+2   # together</span></span><span class="lt-line" data-line="5"><span class="s">sort ..end-1 by 2       # every other frame</span></span><span class="lt-line" data-line="6"><span class="s">reveal ..end, sort end</span></span><span class="lt-line" data-line="7"><span class="sb">```</span></span></code></pre></div></div><div class="lt-c lt-c-array-anim" data-component="array-anim" data-instance="timeline-ranges/sort"><div class="lt-array-anim"></div></div></div><div class="lt-column" style="flex:1 1 0"><ul>
+<li data-lt-reveal="1"><code>..STOP</code> starts where the track is: <code>reveal ..end</code> reveals the remaining fragments, one per step</li>
+<li data-lt-reveal="2"><code>..+2</code> plays the next two positions in two steps, where <code>+2</code> jumps them in one</li>
+<li data-lt-reveal="3">Ranges on one line advance together and must have the same length (LT031)</li>
+<li data-lt-reveal="4"><code>end-1</code> counts from the last position; <code>by 2</code> keeps every other position and always ends on the stop</li>
+<li data-lt-reveal="5">An empty open range is warning LT030; <code>2..+3</code> is ambiguous, error LT049</li>
 </ul>
 </div></div></div></section>
 <section class="lt-slide layout-default dense" id="s-badge-steps" data-slide="badge-steps" hidden><header class="lt-head"><h1 class="lt-title">Badges that wait for their turn</h1></header><div class="lt-body"><div class="lt-columns"><div class="lt-column" style="flex:1 1 0"><div class="lt-c lt-c-code" data-component="code" data-instance="badge-steps/c1"><div class="lt-code" data-lang="markdown"><pre><code><span class="lt-line" data-line="1">{.reveal}</span><span class="lt-line" data-line="2"><span class="sb">```python</span></span><span class="lt-line" data-line="3"><span class="k">def</span><span class="w"> </span><span class="nf">fib</span><span class="p">(</span><span class="n">n</span><span class="p">):</span> <span class="o">...</span></span><span class="lt-line" data-line="4"><span class="sb">```</span></span><span class="lt-line" data-line="5"> </span><span class="lt-line" data-line="6">::: detour {#slow at=1 badge=next key=s}</span><span class="lt-line" data-line="7"><span class="gh"># Why is it slow?</span></span><span class="lt-line" data-line="8">:::</span><span class="lt-line" data-line="9"> </span><span class="lt-line" data-line="10">::: detour {#memo at=1 badge=step key=m}</span><span class="lt-line" data-line="11"><span class="gh"># Memoize it</span></span><span class="lt-line" data-line="12">:::</span></code></pre></div></div></div><div class="lt-column" style="flex:1 1 0"><div class="lt-c lt-c-code" data-component="code" data-instance="badge-steps/c2" data-lt-reveal="1"><div class="lt-code" data-lang="python"><pre><code><span class="lt-line" data-line="1"><span class="k">def</span><span class="w"> </span><span class="nf">fib</span><span class="p">(</span><span class="n">n</span><span class="p">):</span></span><span class="lt-line" data-line="2">    <span class="k">return</span> <span class="n">n</span> <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">fib</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">fib</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span></span></code></pre></div></div><p>Right shows the code; the next two steps enter <code>slow</code>, then <code>memo</code>. A badge with <code>badge=next</code> appears only when Right is about to enter its detour, one with <code>badge=step</code> stays from then on. Both need a detour step (else LT055); a hidden badge's key still works.</p>
@@ -1093,16 +1101,16 @@ z
      <g id="line2d_1">
       <path d="M 129.555717 181.008 
 L 129.555717 3.6 
-" clip-path="url(#pd9903f9794)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p8c44d05599)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_2">
       <defs>
-       <path id="m6922eeb46c" d="M 0 0 
+       <path id="m8d2e2b6f37" d="M 0 0 
 L 0 3.5 
 " style="stroke: #5d6778; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#m6922eeb46c" x="129.555717" y="181.008" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m8d2e2b6f37" x="129.555717" y="181.008" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_1">
@@ -1113,11 +1121,11 @@ L 0 3.5
      <g id="line2d_3">
       <path d="M 231.010263 181.008 
 L 231.010263 3.6 
-" clip-path="url(#pd9903f9794)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p8c44d05599)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_4">
       <g>
-       <use xlink:href="#m6922eeb46c" x="231.010263" y="181.008" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m8d2e2b6f37" x="231.010263" y="181.008" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_2">
@@ -1128,11 +1136,11 @@ L 231.010263 3.6
      <g id="line2d_5">
       <path d="M 332.464808 181.008 
 L 332.464808 3.6 
-" clip-path="url(#pd9903f9794)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p8c44d05599)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_6">
       <g>
-       <use xlink:href="#m6922eeb46c" x="332.464808" y="181.008" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m8d2e2b6f37" x="332.464808" y="181.008" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_3">
@@ -1143,11 +1151,11 @@ L 332.464808 3.6
      <g id="line2d_7">
       <path d="M 433.919354 181.008 
 L 433.919354 3.6 
-" clip-path="url(#pd9903f9794)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p8c44d05599)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_8">
       <g>
-       <use xlink:href="#m6922eeb46c" x="433.919354" y="181.008" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m8d2e2b6f37" x="433.919354" y="181.008" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_4">
@@ -1158,11 +1166,11 @@ L 433.919354 3.6
      <g id="line2d_9">
       <path d="M 535.373899 181.008 
 L 535.373899 3.6 
-" clip-path="url(#pd9903f9794)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p8c44d05599)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_10">
       <g>
-       <use xlink:href="#m6922eeb46c" x="535.373899" y="181.008" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m8d2e2b6f37" x="535.373899" y="181.008" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_5">
@@ -1178,16 +1186,16 @@ L 535.373899 3.6
      <g id="line2d_11">
       <path d="M 56.001172 148.966745 
 L 558.201172 148.966745 
-" clip-path="url(#pd9903f9794)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p8c44d05599)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_12">
       <defs>
-       <path id="m66255b789c" d="M 0 0 
+       <path id="m621c5e7029" d="M 0 0 
 L -3.5 0 
 " style="stroke: #5d6778; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#m66255b789c" x="56.001172" y="148.966745" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m621c5e7029" x="56.001172" y="148.966745" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_7">
@@ -1205,11 +1213,11 @@ L -3.5 0
      <g id="line2d_13">
       <path d="M 56.001172 88.713304 
 L 558.201172 88.713304 
-" clip-path="url(#pd9903f9794)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p8c44d05599)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_14">
       <g>
-       <use xlink:href="#m66255b789c" x="56.001172" y="88.713304" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m621c5e7029" x="56.001172" y="88.713304" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_8">
@@ -1227,11 +1235,11 @@ L 558.201172 88.713304
      <g id="line2d_15">
       <path d="M 56.001172 28.459864 
 L 558.201172 28.459864 
-" clip-path="url(#pd9903f9794)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p8c44d05599)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_16">
       <g>
-       <use xlink:href="#m66255b789c" x="56.001172" y="28.459864" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m621c5e7029" x="56.001172" y="28.459864" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_9">
@@ -1248,173 +1256,173 @@ L 558.201172 28.459864
     <g id="ytick_4">
      <g id="line2d_17">
       <defs>
-       <path id="m6d0ea5d431" d="M 0 0 
+       <path id="m90911cd713" d="M 0 0 
 L -2 0 
 " style="stroke: #5d6778; stroke-width: 0.6"/>
       </defs>
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="180.471989" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="180.471989" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_5">
      <g id="line2d_18">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="172.944" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="172.944" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_6">
      <g id="line2d_19">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="167.104838" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="167.104838" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_7">
      <g id="line2d_20">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="162.333896" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="162.333896" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_8">
      <g id="line2d_21">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="158.300121" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="158.300121" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_9">
      <g id="line2d_22">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="154.805907" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="154.805907" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_10">
      <g id="line2d_23">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="151.723791" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="151.723791" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_11">
      <g id="line2d_24">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="130.828652" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="130.828652" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_12">
      <g id="line2d_25">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="120.218548" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="120.218548" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_13">
      <g id="line2d_26">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="112.690559" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="112.690559" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_14">
      <g id="line2d_27">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="106.851397" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="106.851397" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_15">
      <g id="line2d_28">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="102.080455" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="102.080455" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_16">
      <g id="line2d_29">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="98.04668" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="98.04668" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_17">
      <g id="line2d_30">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="94.552466" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="94.552466" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_18">
      <g id="line2d_31">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="91.470351" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="91.470351" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_19">
      <g id="line2d_32">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="70.575211" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="70.575211" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_20">
      <g id="line2d_33">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="59.965107" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="59.965107" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_21">
      <g id="line2d_34">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="52.437118" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="52.437118" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_22">
      <g id="line2d_35">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="46.597957" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="46.597957" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_23">
      <g id="line2d_36">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="41.827014" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="41.827014" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_24">
      <g id="line2d_37">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="37.79324" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="37.79324" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_25">
      <g id="line2d_38">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="34.299025" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="34.299025" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_26">
      <g id="line2d_39">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="31.21691" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="31.21691" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_27">
      <g id="line2d_40">
       <g>
-       <use xlink:href="#m6d0ea5d431" x="56.001172" y="10.321771" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m90911cd713" x="56.001172" y="10.321771" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
@@ -1427,9 +1435,9 @@ L -2 0
 L 129.555717 95.894696 
 L 281.737536 48.217096 
 L 535.373899 11.664 
-" clip-path="url(#pd9903f9794)" style="fill: none; stroke: #0b6e7f; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p8c44d05599)" style="fill: none; stroke: #0b6e7f; stroke-width: 2.4; stroke-linecap: square"/>
     <defs>
-     <path id="mb79d2a9f48" d="M 0 3 
+     <path id="m531608a157" d="M 0 3 
 C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
 C 2.683901 1.55874 3 0.795609 3 0 
 C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
@@ -1441,11 +1449,11 @@ C -1.55874 2.683901 -0.795609 3 0 3
 z
 " style="stroke: #0b6e7f"/>
     </defs>
-    <g clip-path="url(#pd9903f9794)">
-     <use xlink:href="#mb79d2a9f48" x="78.828445" y="132.170882" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#mb79d2a9f48" x="129.555717" y="95.894696" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#mb79d2a9f48" x="281.737536" y="48.217096" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#mb79d2a9f48" x="535.373899" y="11.664" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+    <g clip-path="url(#p8c44d05599)">
+     <use xlink:href="#m531608a157" x="78.828445" y="132.170882" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m531608a157" x="129.555717" y="95.894696" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m531608a157" x="281.737536" y="48.217096" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m531608a157" x="535.373899" y="11.664" style="fill: #0b6e7f; stroke: #0b6e7f"/>
     </g>
    </g>
    <g id="line2d_42">
@@ -1453,9 +1461,9 @@ z
 L 129.555717 151.723791 
 L 281.737536 126.05771 
 L 535.373899 106.333208 
-" clip-path="url(#pd9903f9794)" style="fill: none; stroke: #c8741a; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p8c44d05599)" style="fill: none; stroke: #c8741a; stroke-width: 2.4; stroke-linecap: square"/>
     <defs>
-     <path id="m92456dc57d" d="M 0 3 
+     <path id="mc4676ff20a" d="M 0 3 
 C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
 C 2.683901 1.55874 3 0.795609 3 0 
 C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
@@ -1467,11 +1475,11 @@ C -1.55874 2.683901 -0.795609 3 0 3
 z
 " style="stroke: #c8741a"/>
     </defs>
-    <g clip-path="url(#pd9903f9794)">
-     <use xlink:href="#m92456dc57d" x="78.828445" y="172.944" style="fill: #c8741a; stroke: #c8741a"/>
-     <use xlink:href="#m92456dc57d" x="129.555717" y="151.723791" style="fill: #c8741a; stroke: #c8741a"/>
-     <use xlink:href="#m92456dc57d" x="281.737536" y="126.05771" style="fill: #c8741a; stroke: #c8741a"/>
-     <use xlink:href="#m92456dc57d" x="535.373899" y="106.333208" style="fill: #c8741a; stroke: #c8741a"/>
+    <g clip-path="url(#p8c44d05599)">
+     <use xlink:href="#mc4676ff20a" x="78.828445" y="172.944" style="fill: #c8741a; stroke: #c8741a"/>
+     <use xlink:href="#mc4676ff20a" x="129.555717" y="151.723791" style="fill: #c8741a; stroke: #c8741a"/>
+     <use xlink:href="#mc4676ff20a" x="281.737536" y="126.05771" style="fill: #c8741a; stroke: #c8741a"/>
+     <use xlink:href="#mc4676ff20a" x="535.373899" y="106.333208" style="fill: #c8741a; stroke: #c8741a"/>
     </g>
    </g>
    <g id="patch_3">
@@ -1491,7 +1499,7 @@ L 84.501172 23.247656
 L 99.501172 23.247656 
 " style="fill: none; stroke: #0b6e7f; stroke-width: 2.4; stroke-linecap: square"/>
      <g>
-      <use xlink:href="#mb79d2a9f48" x="84.501172" y="23.247656" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+      <use xlink:href="#m531608a157" x="84.501172" y="23.247656" style="fill: #0b6e7f; stroke: #0b6e7f"/>
      </g>
     </g>
     <g id="text_11">
@@ -1503,7 +1511,7 @@ L 84.501172 45.748828
 L 99.501172 45.748828 
 " style="fill: none; stroke: #c8741a; stroke-width: 2.4; stroke-linecap: square"/>
      <g>
-      <use xlink:href="#m92456dc57d" x="84.501172" y="45.748828" style="fill: #c8741a; stroke: #c8741a"/>
+      <use xlink:href="#mc4676ff20a" x="84.501172" y="45.748828" style="fill: #c8741a; stroke: #c8741a"/>
      </g>
     </g>
     <g id="text_12">
@@ -1513,7 +1521,7 @@ L 99.501172 45.748828
   </g>
  </g>
  <defs>
-  <clipPath id="pd9903f9794">
+  <clipPath id="p8c44d05599">
    <rect x="56.001172" y="3.6" width="502.2" height="177.408"/>
   </clipPath>
  </defs>
@@ -1554,16 +1562,16 @@ z
      <g id="line2d_1">
       <path d="M 196.613524 192.096 
 L 196.613524 3.6 
-" clip-path="url(#p5f6067d0dd)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p09ec81278b)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_2">
       <defs>
-       <path id="mffd652dda3" d="M 0 0 
+       <path id="m1bcf20fd65" d="M 0 0 
 L 0 3.5 
 " style="stroke: #5d6778; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#mffd652dda3" x="196.613524" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m1bcf20fd65" x="196.613524" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_1">
@@ -1581,11 +1589,11 @@ L 0 3.5
      <g id="line2d_3">
       <path d="M 365.125877 192.096 
 L 365.125877 3.6 
-" clip-path="url(#p5f6067d0dd)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p09ec81278b)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_4">
       <g>
-       <use xlink:href="#mffd652dda3" x="365.125877" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m1bcf20fd65" x="365.125877" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_2">
@@ -1603,11 +1611,11 @@ L 365.125877 3.6
      <g id="line2d_5">
       <path d="M 533.638229 192.096 
 L 533.638229 3.6 
-" clip-path="url(#p5f6067d0dd)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p09ec81278b)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_6">
       <g>
-       <use xlink:href="#mffd652dda3" x="533.638229" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#m1bcf20fd65" x="533.638229" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_3">
@@ -1624,173 +1632,173 @@ L 533.638229 3.6
     <g id="xtick_4">
      <g id="line2d_7">
       <defs>
-       <path id="m43a81a8a90" d="M 0 0 
+       <path id="m9d256cfb39" d="M 0 0 
 L 0 2 
 " style="stroke: #5d6778; stroke-width: 0.6"/>
       </defs>
       <g>
-       <use xlink:href="#m43a81a8a90" x="78.828445" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="78.828445" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_5">
      <g id="line2d_8">
       <g>
-       <use xlink:href="#m43a81a8a90" x="108.501997" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="108.501997" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_6">
      <g id="line2d_9">
       <g>
-       <use xlink:href="#m43a81a8a90" x="129.555717" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="129.555717" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_7">
      <g id="line2d_10">
       <g>
-       <use xlink:href="#m43a81a8a90" x="145.886252" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="145.886252" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_8">
      <g id="line2d_11">
       <g>
-       <use xlink:href="#m43a81a8a90" x="159.22927" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="159.22927" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_9">
      <g id="line2d_12">
       <g>
-       <use xlink:href="#m43a81a8a90" x="170.510631" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="170.510631" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_10">
      <g id="line2d_13">
       <g>
-       <use xlink:href="#m43a81a8a90" x="180.28299" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="180.28299" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_11">
      <g id="line2d_14">
       <g>
-       <use xlink:href="#m43a81a8a90" x="188.902822" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="188.902822" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_12">
      <g id="line2d_15">
       <g>
-       <use xlink:href="#m43a81a8a90" x="247.340797" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="247.340797" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_13">
      <g id="line2d_16">
       <g>
-       <use xlink:href="#m43a81a8a90" x="277.014349" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="277.014349" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_14">
      <g id="line2d_17">
       <g>
-       <use xlink:href="#m43a81a8a90" x="298.06807" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="298.06807" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_15">
      <g id="line2d_18">
       <g>
-       <use xlink:href="#m43a81a8a90" x="314.398604" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="314.398604" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_16">
      <g id="line2d_19">
       <g>
-       <use xlink:href="#m43a81a8a90" x="327.741622" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="327.741622" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_17">
      <g id="line2d_20">
       <g>
-       <use xlink:href="#m43a81a8a90" x="339.022983" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="339.022983" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_18">
      <g id="line2d_21">
       <g>
-       <use xlink:href="#m43a81a8a90" x="348.795343" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="348.795343" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_19">
      <g id="line2d_22">
       <g>
-       <use xlink:href="#m43a81a8a90" x="357.415174" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="357.415174" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_20">
      <g id="line2d_23">
       <g>
-       <use xlink:href="#m43a81a8a90" x="415.85315" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="415.85315" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_21">
      <g id="line2d_24">
       <g>
-       <use xlink:href="#m43a81a8a90" x="445.526702" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="445.526702" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_22">
      <g id="line2d_25">
       <g>
-       <use xlink:href="#m43a81a8a90" x="466.580422" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="466.580422" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_23">
      <g id="line2d_26">
       <g>
-       <use xlink:href="#m43a81a8a90" x="482.910956" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="482.910956" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_24">
      <g id="line2d_27">
       <g>
-       <use xlink:href="#m43a81a8a90" x="496.253975" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="496.253975" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_25">
      <g id="line2d_28">
       <g>
-       <use xlink:href="#m43a81a8a90" x="507.535336" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="507.535336" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_26">
      <g id="line2d_29">
       <g>
-       <use xlink:href="#m43a81a8a90" x="517.307695" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="517.307695" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="xtick_27">
      <g id="line2d_30">
       <g>
-       <use xlink:href="#m43a81a8a90" x="525.927527" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m9d256cfb39" x="525.927527" y="192.096" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
@@ -1803,16 +1811,16 @@ L 0 2
      <g id="line2d_31">
       <path d="M 56.001172 170.943245 
 L 558.201172 170.943245 
-" clip-path="url(#p5f6067d0dd)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p09ec81278b)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_32">
       <defs>
-       <path id="mea998baf0b" d="M 0 0 
+       <path id="mbdeab4ef16" d="M 0 0 
 L -3.5 0 
 " style="stroke: #5d6778; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#mea998baf0b" x="56.001172" y="170.943245" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#mbdeab4ef16" x="56.001172" y="170.943245" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_5">
@@ -1830,11 +1838,11 @@ L -3.5 0
      <g id="line2d_33">
       <path d="M 56.001172 139.318489 
 L 558.201172 139.318489 
-" clip-path="url(#p5f6067d0dd)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p09ec81278b)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_34">
       <g>
-       <use xlink:href="#mea998baf0b" x="56.001172" y="139.318489" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#mbdeab4ef16" x="56.001172" y="139.318489" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_6">
@@ -1852,11 +1860,11 @@ L 558.201172 139.318489
      <g id="line2d_35">
       <path d="M 56.001172 107.693734 
 L 558.201172 107.693734 
-" clip-path="url(#p5f6067d0dd)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p09ec81278b)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_36">
       <g>
-       <use xlink:href="#mea998baf0b" x="56.001172" y="107.693734" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#mbdeab4ef16" x="56.001172" y="107.693734" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_7">
@@ -1874,11 +1882,11 @@ L 558.201172 107.693734
      <g id="line2d_37">
       <path d="M 56.001172 76.068978 
 L 558.201172 76.068978 
-" clip-path="url(#p5f6067d0dd)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p09ec81278b)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_38">
       <g>
-       <use xlink:href="#mea998baf0b" x="56.001172" y="76.068978" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#mbdeab4ef16" x="56.001172" y="76.068978" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_8">
@@ -1896,11 +1904,11 @@ L 558.201172 76.068978
      <g id="line2d_39">
       <path d="M 56.001172 44.444223 
 L 558.201172 44.444223 
-" clip-path="url(#p5f6067d0dd)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p09ec81278b)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_40">
       <g>
-       <use xlink:href="#mea998baf0b" x="56.001172" y="44.444223" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#mbdeab4ef16" x="56.001172" y="44.444223" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_9">
@@ -1918,11 +1926,11 @@ L 558.201172 44.444223
      <g id="line2d_41">
       <path d="M 56.001172 12.819467 
 L 558.201172 12.819467 
-" clip-path="url(#p5f6067d0dd)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p09ec81278b)" style="fill: none; stroke: #e3e7ee; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_42">
       <g>
-       <use xlink:href="#mea998baf0b" x="56.001172" y="12.819467" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
+       <use xlink:href="#mbdeab4ef16" x="56.001172" y="12.819467" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_10">
@@ -1939,334 +1947,334 @@ L 558.201172 12.819467
     <g id="ytick_7">
      <g id="line2d_43">
       <defs>
-       <path id="mece36aed56" d="M 0 0 
+       <path id="m297a214fee" d="M 0 0 
 L -2 0 
 " style="stroke: #5d6778; stroke-width: 0.6"/>
       </defs>
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="187.479157" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="187.479157" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_8">
      <g id="line2d_44">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="183.528" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="183.528" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_9">
      <g id="line2d_45">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="180.463245" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="180.463245" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_10">
      <g id="line2d_46">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="177.959157" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="177.959157" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_11">
      <g id="line2d_47">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="175.841981" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="175.841981" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_12">
      <g id="line2d_48">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="174.008" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="174.008" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_13">
      <g id="line2d_49">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="172.390314" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="172.390314" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_14">
      <g id="line2d_50">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="161.423245" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="161.423245" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_15">
      <g id="line2d_51">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="155.854402" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="155.854402" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_16">
      <g id="line2d_52">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="151.903245" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="151.903245" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_17">
      <g id="line2d_53">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="148.838489" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="148.838489" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_18">
      <g id="line2d_54">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="146.334402" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="146.334402" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_19">
      <g id="line2d_55">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="144.217226" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="144.217226" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_20">
      <g id="line2d_56">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="142.383245" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="142.383245" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_21">
      <g id="line2d_57">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="140.765559" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="140.765559" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_22">
      <g id="line2d_58">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="129.798489" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="129.798489" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_23">
      <g id="line2d_59">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="124.229646" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="124.229646" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_24">
      <g id="line2d_60">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="120.278489" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="120.278489" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_25">
      <g id="line2d_61">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="117.213734" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="117.213734" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_26">
      <g id="line2d_62">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="114.709646" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="114.709646" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_27">
      <g id="line2d_63">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="112.59247" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="112.59247" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_28">
      <g id="line2d_64">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="110.758489" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="110.758489" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_29">
      <g id="line2d_65">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="109.140803" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="109.140803" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_30">
      <g id="line2d_66">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="98.173734" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="98.173734" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_31">
      <g id="line2d_67">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="92.604891" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="92.604891" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_32">
      <g id="line2d_68">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="88.653734" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="88.653734" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_33">
      <g id="line2d_69">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="85.588978" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="85.588978" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_34">
      <g id="line2d_70">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="83.084891" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="83.084891" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_35">
      <g id="line2d_71">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="80.967715" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="80.967715" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_36">
      <g id="line2d_72">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="79.133734" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="79.133734" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_37">
      <g id="line2d_73">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="77.516048" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="77.516048" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_38">
      <g id="line2d_74">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="66.548978" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="66.548978" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_39">
      <g id="line2d_75">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="60.980135" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="60.980135" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_40">
      <g id="line2d_76">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="57.028978" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="57.028978" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_41">
      <g id="line2d_77">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="53.964223" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="53.964223" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_42">
      <g id="line2d_78">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="51.460135" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="51.460135" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_43">
      <g id="line2d_79">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="49.342959" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="49.342959" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_44">
      <g id="line2d_80">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="47.508978" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="47.508978" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_45">
      <g id="line2d_81">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="45.891292" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="45.891292" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_46">
      <g id="line2d_82">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="34.924223" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="34.924223" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_47">
      <g id="line2d_83">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="29.35538" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="29.35538" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_48">
      <g id="line2d_84">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="25.404223" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="25.404223" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_49">
      <g id="line2d_85">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="22.339467" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="22.339467" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_50">
      <g id="line2d_86">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="19.83538" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="19.83538" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_51">
      <g id="line2d_87">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="17.718204" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="17.718204" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_52">
      <g id="line2d_88">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="15.884223" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="15.884223" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_53">
      <g id="line2d_89">
       <g>
-       <use xlink:href="#mece36aed56" x="56.001172" y="14.266537" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
+       <use xlink:href="#m297a214fee" x="56.001172" y="14.266537" style="fill: #5d6778; stroke: #5d6778; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
@@ -2285,9 +2293,9 @@ L 383.192081 107.368
 L 433.919354 96.230314 
 L 484.646626 85.263245 
 L 535.373899 74.434211 
-" clip-path="url(#p5f6067d0dd)" style="fill: none; stroke: #0b6e7f; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p09ec81278b)" style="fill: none; stroke: #0b6e7f; stroke-width: 2.4; stroke-linecap: square"/>
     <defs>
-     <path id="md1a16f77f2" d="M 0 3 
+     <path id="m13a10e5ea9" d="M 0 3 
 C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
 C 2.683901 1.55874 3 0.795609 3 0 
 C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
@@ -2299,17 +2307,17 @@ C -1.55874 2.683901 -0.795609 3 0 3
 z
 " style="stroke: #0b6e7f"/>
     </defs>
-    <g clip-path="url(#p5f6067d0dd)">
-     <use xlink:href="#md1a16f77f2" x="78.828445" y="183.528" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#md1a16f77f2" x="129.555717" y="168.439157" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#md1a16f77f2" x="180.28299" y="154.968" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#md1a16f77f2" x="231.010263" y="142.383245" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#md1a16f77f2" x="281.737536" y="130.359157" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#md1a16f77f2" x="332.464808" y="118.721981" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#md1a16f77f2" x="383.192081" y="107.368" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#md1a16f77f2" x="433.919354" y="96.230314" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#md1a16f77f2" x="484.646626" y="85.263245" style="fill: #0b6e7f; stroke: #0b6e7f"/>
-     <use xlink:href="#md1a16f77f2" x="535.373899" y="74.434211" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+    <g clip-path="url(#p09ec81278b)">
+     <use xlink:href="#m13a10e5ea9" x="78.828445" y="183.528" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m13a10e5ea9" x="129.555717" y="168.439157" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m13a10e5ea9" x="180.28299" y="154.968" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m13a10e5ea9" x="231.010263" y="142.383245" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m13a10e5ea9" x="281.737536" y="130.359157" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m13a10e5ea9" x="332.464808" y="118.721981" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m13a10e5ea9" x="383.192081" y="107.368" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m13a10e5ea9" x="433.919354" y="96.230314" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m13a10e5ea9" x="484.646626" y="85.263245" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+     <use xlink:href="#m13a10e5ea9" x="535.373899" y="74.434211" style="fill: #0b6e7f; stroke: #0b6e7f"/>
     </g>
    </g>
    <g id="line2d_91">
@@ -2323,26 +2331,26 @@ L 383.192081 69.288
 L 433.919354 50.248 
 L 484.646626 31.208 
 L 535.373899 12.168 
-" clip-path="url(#p5f6067d0dd)" style="fill: none; stroke: #c8741a; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p09ec81278b)" style="fill: none; stroke: #c8741a; stroke-width: 2.4; stroke-linecap: square"/>
     <defs>
-     <path id="m1a57794f1b" d="M -3 3 
+     <path id="m65b0471958" d="M -3 3 
 L 3 3 
 L 3 -3 
 L -3 -3 
 z
 " style="stroke: #c8741a; stroke-linejoin: miter"/>
     </defs>
-    <g clip-path="url(#p5f6067d0dd)">
-     <use xlink:href="#m1a57794f1b" x="78.828445" y="183.528" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
-     <use xlink:href="#m1a57794f1b" x="129.555717" y="164.488" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
-     <use xlink:href="#m1a57794f1b" x="180.28299" y="145.448" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
-     <use xlink:href="#m1a57794f1b" x="231.010263" y="126.408" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
-     <use xlink:href="#m1a57794f1b" x="281.737536" y="107.368" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
-     <use xlink:href="#m1a57794f1b" x="332.464808" y="88.328" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
-     <use xlink:href="#m1a57794f1b" x="383.192081" y="69.288" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
-     <use xlink:href="#m1a57794f1b" x="433.919354" y="50.248" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
-     <use xlink:href="#m1a57794f1b" x="484.646626" y="31.208" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
-     <use xlink:href="#m1a57794f1b" x="535.373899" y="12.168" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
+    <g clip-path="url(#p09ec81278b)">
+     <use xlink:href="#m65b0471958" x="78.828445" y="183.528" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
+     <use xlink:href="#m65b0471958" x="129.555717" y="164.488" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
+     <use xlink:href="#m65b0471958" x="180.28299" y="145.448" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
+     <use xlink:href="#m65b0471958" x="231.010263" y="126.408" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
+     <use xlink:href="#m65b0471958" x="281.737536" y="107.368" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
+     <use xlink:href="#m65b0471958" x="332.464808" y="88.328" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
+     <use xlink:href="#m65b0471958" x="383.192081" y="69.288" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
+     <use xlink:href="#m65b0471958" x="433.919354" y="50.248" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
+     <use xlink:href="#m65b0471958" x="484.646626" y="31.208" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
+     <use xlink:href="#m65b0471958" x="535.373899" y="12.168" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
     </g>
    </g>
    <g id="patch_3">
@@ -2362,7 +2370,7 @@ L 84.501172 23.247656
 L 99.501172 23.247656 
 " style="fill: none; stroke: #0b6e7f; stroke-width: 2.4; stroke-linecap: square"/>
      <g>
-      <use xlink:href="#md1a16f77f2" x="84.501172" y="23.247656" style="fill: #0b6e7f; stroke: #0b6e7f"/>
+      <use xlink:href="#m13a10e5ea9" x="84.501172" y="23.247656" style="fill: #0b6e7f; stroke: #0b6e7f"/>
      </g>
     </g>
     <g id="text_12">
@@ -2374,7 +2382,7 @@ L 84.501172 45.748828
 L 99.501172 45.748828 
 " style="fill: none; stroke: #c8741a; stroke-width: 2.4; stroke-linecap: square"/>
      <g>
-      <use xlink:href="#m1a57794f1b" x="84.501172" y="45.748828" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
+      <use xlink:href="#m65b0471958" x="84.501172" y="45.748828" style="fill: #c8741a; stroke: #c8741a; stroke-linejoin: miter"/>
      </g>
     </g>
     <g id="text_13">
@@ -2384,7 +2392,7 @@ L 99.501172 45.748828
   </g>
  </g>
  <defs>
-  <clipPath id="p5f6067d0dd">
+  <clipPath id="p09ec81278b">
    <rect x="56.001172" y="3.6" width="502.2" height="188.496"/>
   </clipPath>
  </defs>
@@ -3033,7 +3041,7 @@ L 99.501172 45.748828
 <tr>
 <td>LT029, LT030, LT031</td>
 <td>error, warning, error</td>
-<td>Two timelines; a cue changes nothing; two ranges on one line</td>
+<td>Two timelines; a cue changes nothing or a range is empty; ranges of different lengths on one line</td>
 </tr>
 <tr>
 <td>LT033, LT036</td>
@@ -3287,7 +3295,8 @@ L 99.501172 45.748828
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.16.0","meta":{"title":"Lattice User Manual","author":"Lattice 0.16.0","date":null,"aspect":"16:9","theme":"default"},"start":"lattice-user-manual","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["lattice-user-manual","what-is-a-deck","install","the-commands","front-matter","includes","slides-and-ids","slide-attributes","text-and-math","images-and-code","fragments","containers","closing-fences","links-and-notes","the-graph","detours","inside-a-detour","branches","branch-target","backup-and-tours","steps-and-tracks","timelines","badge-steps","why-slow","memoize-it","placed-badges","why-not-inside","badge-inheritance","pick-a-component","code-blocks","code-steps","plots","plot-sources","dot-and-math","arrows","code-segments","arrow-anchors","arrow-bullets","code-morph","morph-segments","graph-anim","graph-anim-options","array-anim","tree-anim","grid-anim","writing-traces","states","compiler-animations","bbv-language","bbv-anim","bbv-blocks","bbv-zoom","bbv-options","bbv-instructions","lv-and-absint","absint-options","bbv-intervals","reading-the-drawing","presenting-keys","history","navigation-details","presenter-view","output","pdf-export","themes","plugins","checklist-demo","animated-component","call-stack-demo","runtime-contract","diagnostics","diagnostics-files","diagnostics-graph","diagnostics-steps","diagnostics-output","cheat-sheet","glossary","thanks"],"slides":{"lattice-user-manual":{"title":"Lattice User Manual","label":"Lattice User Manual","scope":"root","next":{"slide":"what-is-a-deck"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":9},"notes":"<p>This manual is built from <code>user_manual/manual.md<\/code>. Every feature it describes is used live on its slides, so reading the source next to the deck is the fastest way to learn the syntax.<\/p>\n"},"what-is-a-deck":{"title":"What is a Lattice deck?","label":"What is a Lattice deck?","scope":"root","next":{"slide":"install"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":17}},"install":{"title":"Install","label":"Install","scope":"root","next":{"slide":"the-commands"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":29}},"the-commands":{"title":"The commands","label":"The commands","scope":"root","next":{"slide":"front-matter"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":40}},"front-matter":{"title":"Front matter","label":"Front matter","scope":"root","next":{"slide":"includes"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":54}},"includes":{"title":"Several files: includes","label":"Several files: includes","scope":"root","next":{"slide":"slides-and-ids"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":70}},"slides-and-ids":{"title":"Slides and ids","label":"Slides and ids","scope":"root","next":{"slide":"slide-attributes"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":98}},"slide-attributes":{"title":"Slide attributes","label":"Slide attributes","scope":"root","next":{"slide":"text-and-math"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":124}},"text-and-math":{"title":"Text and math","label":"Text and math","scope":"root","next":{"slide":"images-and-code"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":141}},"images-and-code":{"title":"Images and code","label":"Images and code","scope":"root","next":{"slide":"fragments"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":168}},"fragments":{"title":"Fragments: reveal step by step","label":"Fragments: reveal step by step","scope":"root","next":{"slide":"containers"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":188}},"containers":{"title":"Containers: columns, callouts, your own","label":"Containers: columns, callouts, your own","scope":"root","next":{"slide":"links-and-notes"},"branches":[],"detours":["fences-demo"],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":217}},"closing-fences":{"title":"Closing fences","label":"Closing fences","scope":"fences-demo","next":"back","branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":253}},"links-and-notes":{"title":"Links and notes","label":"Links and notes","scope":"root","next":{"slide":"the-graph"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":290}},"the-graph":{"title":"The graph: main path and next","label":"The graph: main path and next","scope":"root","next":{"slide":"detours"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":312}},"detours":{"title":"Detours","label":"Detours","scope":"root","next":{"slide":"branches"},"branches":[],"detours":["detour-demo"],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":339}},"inside-a-detour":{"title":"You are inside a detour","label":"You are inside a detour","scope":"detour-demo","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":364}},"branches":{"title":"Branches","label":"Branches","scope":"root","next":null,"branches":[{"target":"branch-target","key":"1","label":"Try an option"}],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":371}},"branch-target":{"title":"Where the option landed","label":"Where the option landed","scope":"root","next":{"slide":"backup-and-tours"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":396}},"backup-and-tours":{"title":"Backup slides, tours and the map","label":"Backup slides, tours and the map","scope":"root","next":{"slide":"steps-and-tracks"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":402}},"steps-and-tracks":{"title":"Steps and tracks","label":"Steps and tracks","scope":"root","next":{"slide":"timelines"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":427}},"timelines":{"title":"Timelines","label":"Timelines","scope":"root","next":{"slide":"badge-steps"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":453}},"badge-steps":{"title":"Badges that wait for their turn","label":"Badges that wait for their turn","scope":"root","next":{"slide":"placed-badges"},"branches":[],"detours":["slow","memo"],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[1]],"offpath":false,"source":{"file":"manual.md","line":476},"stepDetours":{"2":{"id":"slow","blocking":false},"3":{"id":"memo","blocking":false}}},"why-slow":{"title":"Why is it slow?","label":"Why is it slow?","scope":"slow","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":507}},"memoize-it":{"title":"Memoize it","label":"Memoize it","scope":"memo","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":515}},"placed-badges":{"title":"Badges where you want them","label":"Badges where you want them","scope":"root","next":{"slide":"pick-a-component"},"branches":[],"detours":["inside","inherits"],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[1]],"offpath":false,"source":{"file":"manual.md","line":528},"stepDetours":{"2":{"id":"inside","blocking":false},"3":{"id":"inherits","blocking":false}}},"why-not-inside":{"title":"Why not a detour inside the column?","label":"Why not a detour inside the column?","scope":"inside","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":557}},"badge-inheritance":{"title":"What a placed badge inherits","label":"What a placed badge inherits","scope":"inherits","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":565}},"pick-a-component":{"title":"Components","label":"Components","scope":"root","next":null,"branches":[{"target":"code-blocks","key":"c","label":"Code"},{"target":"plots","key":"l","label":"Plots and diagrams"},{"target":"graph-anim","key":"a","label":"Animations"},{"target":"compiler-animations","key":"v","label":"Compiler animations"}],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":577}},"code-blocks":{"title":"Code","label":"Code","scope":"root","next":{"slide":"code-steps"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":588}},"code-steps":{"title":"Code steps and diffs","label":"Code steps and diffs","scope":"root","next":{"slide":"plots"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"walk","kind":"component","instance":"code-steps/walk"},{"id":"diff","kind":"component","instance":"code-steps/diff"}],"positions":[[0,0],[1,0],[2,0],[3,0],[3,1]],"offpath":false,"source":{"file":"manual.md","line":618}},"plots":{"title":"Plots","label":"Plots","scope":"root","next":{"slide":"plot-sources"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"manual.md","line":645}},"plot-sources":{"title":"Plot sources and raw specs","label":"Plot sources and raw specs","scope":"root","next":{"slide":"dot-and-math"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":668}},"dot-and-math":{"title":"Diagrams, math and arrows","label":"Diagrams, math and arrows","scope":"root","next":{"slide":"arrows"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":691}},"arrows":{"title":"Arrows that move","label":"Arrows that move","scope":"root","next":{"slide":"code-segments"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"arrow-walk","kind":"component","instance":"arrows/arrow-walk"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"manual.md","line":719}},"code-segments":{"title":"Named code segments","label":"Named code segments","scope":"root","next":{"slide":"arrow-anchors"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"seg-walk","kind":"component","instance":"code-segments/seg-walk"},{"id":"seg-arrow","kind":"component","instance":"code-segments/seg-arrow","follow":"seg-walk"}],"positions":[[0,0],[1,1],[2,2]],"offpath":false,"source":{"file":"manual.md","line":753}},"arrow-anchors":{"title":"Arrow anchors","label":"Arrow anchors","scope":"root","next":{"slide":"arrow-bullets"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"anchor-walk","kind":"component","instance":"arrow-anchors/anchor-walk"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"manual.md","line":796}},"arrow-bullets":{"title":"Arrows at bullets","label":"Arrows at bullets","scope":"root","next":{"slide":"code-morph"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"bullet-walk","kind":"component","instance":"arrow-bullets/bullet-walk"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":832}},"code-morph":{"title":"Code that changes","label":"Code that changes","scope":"root","next":{"slide":"morph-segments"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"mean","kind":"component","instance":"code-morph/mean"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"manual.md","line":882}},"morph-segments":{"title":"Morphing named segments","label":"Morphing named segments","scope":"root","next":{"slide":"graph-anim"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"loop","kind":"component","instance":"morph-segments/loop"},{"id":"tr","kind":"component","instance":"morph-segments/tr"}],"positions":[[0,0,0],[1,1,0],[2,2,0],[3,2,1]],"offpath":false,"source":{"file":"manual.md","line":923}},"graph-anim":{"title":"Graph animations","label":"Graph animations","scope":"root","next":{"slide":"graph-anim-options"},"branches":[],"detours":[],"steps":16,"tracks":[{"id":"bfs-code","kind":"component","instance":"graph-anim/bfs-code","follow":"bfs"},{"id":"bfs","kind":"component","instance":"graph-anim/bfs"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15]],"offpath":false,"source":{"file":"manual.md","line":973}},"graph-anim-options":{"title":"Graph animation options","label":"Graph animation options","scope":"root","next":{"slide":"array-anim"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":995}},"array-anim":{"title":"Array animations","label":"Array animations","scope":"root","next":{"slide":"tree-anim"},"branches":[],"detours":[],"steps":23,"tracks":[{"id":"bubble","kind":"component","instance":"array-anim/bubble"}],"positions":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19],[20],[21],[22]],"offpath":false,"source":{"file":"manual.md","line":1008}},"tree-anim":{"title":"Tree animations","label":"Tree animations","scope":"root","next":{"slide":"grid-anim"},"branches":[],"detours":[],"steps":20,"tracks":[{"id":"bst","kind":"component","instance":"tree-anim/bst"}],"positions":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19]],"offpath":false,"source":{"file":"manual.md","line":1028}},"grid-anim":{"title":"Grid animations","label":"Grid animations","scope":"root","next":{"slide":"writing-traces"},"branches":[],"detours":[],"steps":22,"tracks":[{"id":"lcs","kind":"component","instance":"grid-anim/lcs"}],"positions":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19],[20],[21]],"offpath":false,"source":{"file":"manual.md","line":1050}},"writing-traces":{"title":"Writing a trace","label":"Writing a trace","scope":"root","next":{"slide":"states"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1068}},"states":{"title":"States the themes style","label":"States the themes style","scope":"root","next":{"slide":"compiler-animations"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1094}},"compiler-animations":{"title":"Compiler animations","label":"Compiler animations","scope":"root","next":{"slide":"bbv-language"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"manual.md","line":1107}},"bbv-language":{"title":"The program language","label":"The program language","scope":"root","next":{"slide":"bbv-anim"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1118}},"bbv-anim":{"title":"SBBV, with the source CFG following","label":"SBBV, with the source CFG following","scope":"root","next":{"slide":"bbv-blocks"},"branches":[],"detours":[],"steps":30,"tracks":[{"id":"src","kind":"component","instance":"bbv-anim/src","follow":"trace"},{"id":"trace","kind":"component","instance":"bbv-anim/trace"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26],[27,27],[28,28],[29,29]],"offpath":false,"source":{"file":"manual.md","line":1134}},"bbv-blocks":{"title":"The versioning blocks","label":"The versioning blocks","scope":"root","next":{"slide":"bbv-zoom"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1150}},"bbv-zoom":{"title":"Enlarging a block","label":"Enlarging a block","scope":"root","next":{"slide":"bbv-options"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1165}},"bbv-options":{"title":"Versioning options","label":"Versioning options","scope":"root","next":{"slide":"bbv-instructions"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1182}},"bbv-instructions":{"title":"Instruction by instruction, with the algorithm's listing","label":"Instruction by instruction, with the algorithm's listing","scope":"root","next":{"slide":"lv-and-absint"},"branches":[],"detours":[],"steps":17,"tracks":[{"id":"algo","kind":"component","instance":"bbv-instructions/algo","follow":"inst"},{"id":"inst","kind":"component","instance":"bbv-instructions/inst"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16]],"offpath":false,"source":{"file":"manual.md","line":1196}},"lv-and-absint":{"title":"Lambda versioning and abstract interpretation","label":"Lambda versioning and abstract interpretation","scope":"root","next":{"slide":"absint-options"},"branches":[],"detours":[],"steps":39,"tracks":[{"id":"lv","kind":"component","instance":"lv-and-absint/lv"},{"id":"ai","kind":"component","instance":"lv-and-absint/ai"}],"positions":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0],[11,0],[12,0],[13,0],[14,0],[15,0],[16,0],[17,0],[18,0],[19,0],[20,0],[21,0],[22,0],[23,0],[23,1],[23,2],[23,3],[23,4],[23,5],[23,6],[23,7],[23,8],[23,9],[23,10],[23,11],[23,12],[23,13],[23,14],[23,15]],"offpath":false,"source":{"file":"manual.md","line":1213}},"absint-options":{"title":"Abstract interpretation options","label":"Abstract interpretation options","scope":"root","next":{"slide":"bbv-intervals"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1236}},"bbv-intervals":{"title":"Intervals and vector lengths","label":"Intervals and vector lengths","scope":"root","next":{"slide":"reading-the-drawing"},"branches":[],"detours":[],"steps":53,"tracks":[{"id":"vec","kind":"component","instance":"bbv-intervals/vec"}],"positions":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19],[20],[21],[22],[23],[24],[25],[26],[27],[28],[29],[30],[31],[32],[33],[34],[35],[36],[37],[38],[39],[40],[41],[42],[43],[44],[45],[46],[47],[48],[49],[50],[51],[52]],"offpath":false,"source":{"file":"manual.md","line":1255}},"reading-the-drawing":{"title":"Reading the drawing","label":"Reading the drawing","scope":"root","next":{"slide":"presenting-keys"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1265}},"presenting-keys":{"title":"Presenting: the keys","label":"Presenting: the keys","scope":"root","next":{"slide":"history"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1280}},"history":{"title":"Left and Up: the history","label":"Left and Up: the history","scope":"root","next":{"slide":"navigation-details"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1298}},"navigation-details":{"title":"Detour steps, the URL and transitions","label":"Detour steps, the URL and transitions","scope":"root","next":{"slide":"presenter-view"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1306}},"presenter-view":{"title":"The presenter view","label":"The presenter view","scope":"root","next":{"slide":"output"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1314}},"output":{"title":"Output","label":"Output","scope":"root","next":{"slide":"pdf-export"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1339}},"pdf-export":{"title":"PDF export","label":"PDF export","scope":"root","next":{"slide":"themes"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"manual.md","line":1358}},"themes":{"title":"Themes and styling","label":"Themes and styling","scope":"root","next":{"slide":"plugins"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1382}},"plugins":{"title":"Extending Lattice: a plugin file","label":"Extending Lattice: a plugin file","scope":"root","next":{"slide":"checklist-demo"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"c1","kind":"component","instance":"plugins/c1"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"manual.md","line":1408}},"checklist-demo":{"title":"A static component in use","label":"A static component in use","scope":"root","next":{"slide":"animated-component"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1419}},"animated-component":{"title":"An animated component","label":"An animated component","scope":"root","next":{"slide":"call-stack-demo"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"c1","kind":"component","instance":"animated-component/c1"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1444}},"call-stack-demo":{"title":"Its runtime, and the result","label":"Its runtime, and the result","scope":"root","next":{"slide":"runtime-contract"},"branches":[],"detours":[],"steps":19,"tracks":[{"id":"fib","kind":"component","instance":"call-stack-demo/fib","follow":"calls"},{"id":"calls","kind":"component","instance":"call-stack-demo/calls"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18]],"offpath":false,"source":{"file":"manual.md","line":1454}},"runtime-contract":{"title":"The runtime contract","label":"The runtime contract","scope":"root","next":{"slide":"diagnostics"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1471}},"diagnostics":{"title":"Diagnostics","label":"Diagnostics","scope":"root","next":{"slide":"cheat-sheet"},"branches":[],"detours":["all-diagnostics"],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1487}},"diagnostics-files":{"title":"Files and ids","label":"Files and ids","scope":"all-diagnostics","next":{"slide":"diagnostics-graph"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1502}},"diagnostics-graph":{"title":"Graph and containers","label":"Graph and containers","scope":"all-diagnostics","next":{"slide":"diagnostics-steps"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1514}},"diagnostics-steps":{"title":"Components and steps","label":"Components and steps","scope":"all-diagnostics","next":{"slide":"diagnostics-output"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1525}},"diagnostics-output":{"title":"Plugins and output","label":"Plugins and output","scope":"all-diagnostics","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1541}},"cheat-sheet":{"title":"Cheat sheet","label":"Cheat sheet","scope":"root","next":{"slide":"glossary"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1555}},"glossary":{"title":"Glossary","label":"Glossary","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1590}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1606}}},"detours":{"fences-demo":{"origin":"containers","entry":"closing-fences","label":"Closing fences","key":"f","slides":["closing-fences"]},"detour-demo":{"origin":"detours","entry":"inside-a-detour","label":"A detour, live","key":"d","slides":["inside-a-detour"]},"slow":{"origin":"badge-steps","entry":"why-slow","label":"Why is it slow?","key":"s","slides":["why-slow"]},"memo":{"origin":"badge-steps","entry":"memoize-it","label":"Memoize it","key":"m","slides":["memoize-it"]},"inside":{"origin":"placed-badges","entry":"why-not-inside","label":"Why not a detour inside the column?","key":"i","slides":["why-not-inside"]},"inherits":{"origin":"placed-badges","entry":"badge-inheritance","label":"What does a placed badge inherit?","key":"n","slides":["badge-inheritance"]},"all-diagnostics":{"origin":"diagnostics","entry":"diagnostics-files","label":"Every diagnostic code","key":"e","slides":["diagnostics-files","diagnostics-graph","diagnostics-steps","diagnostics-output"]}},"instances":{"install/c1":{"component":"code","slide":"install","data":null},"includes/c1":{"component":"code","slide":"includes","data":null},"slides-and-ids/c1":{"component":"code","slide":"slides-and-ids","data":null},"slide-attributes/c1":{"component":"code","slide":"slide-attributes","data":null},"text-and-math/c1":{"component":"code","slide":"text-and-math","data":null},"images-and-code/c1":{"component":"code","slide":"images-and-code","data":null},"images-and-code/c2":{"component":"code","slide":"images-and-code","data":null},"fragments/c1":{"component":"code","slide":"fragments","data":null},"containers/c1":{"component":"code","slide":"containers","data":null},"closing-fences/c1":{"component":"code","slide":"closing-fences","data":null},"links-and-notes/c1":{"component":"code","slide":"links-and-notes","data":null},"the-graph/c1":{"component":"dot","slide":"the-graph","data":null},"detours/c1":{"component":"code","slide":"detours","data":null},"branches/c1":{"component":"code","slide":"branches","data":null},"backup-and-tours/c1":{"component":"code","slide":"backup-and-tours","data":null},"steps-and-tracks/c1":{"component":"code","slide":"steps-and-tracks","data":null},"timelines/c1":{"component":"code","slide":"timelines","data":null},"badge-steps/c1":{"component":"code","slide":"badge-steps","data":null},"badge-steps/c2":{"component":"code","slide":"badge-steps","data":null},"memoize-it/c1":{"component":"code","slide":"memoize-it","data":null},"placed-badges/c1":{"component":"code","slide":"placed-badges","data":null},"code-blocks/c1":{"component":"code","slide":"code-blocks","data":null},"code-blocks/c2":{"component":"code","slide":"code-blocks","data":null},"code-steps/walk":{"component":"code-steps","slide":"code-steps","data":"lt-data-code-steps/walk"},"code-steps/diff":{"component":"diff-steps","slide":"code-steps","data":"lt-data-code-steps/diff"},"plots/c1":{"component":"plot","slide":"plots","data":null},"plots/c2":{"component":"code","slide":"plots","data":null},"plot-sources/c1":{"component":"plot","slide":"plot-sources","data":null},"plot-sources/c2":{"component":"code","slide":"plot-sources","data":null},"plot-sources/c3":{"component":"plot","slide":"plot-sources","data":"lt-data-plot-sources/c3"},"dot-and-math/c1":{"component":"dot","slide":"dot-and-math","data":null},"dot-and-math/c2":{"component":"math","slide":"dot-and-math","data":null},"dot-and-math/c3":{"component":"arrow","slide":"dot-and-math","data":"lt-data-dot-and-math/c3"},"arrows/arrow-code":{"component":"code","slide":"arrows","data":null},"arrows/c2":{"component":"code","slide":"arrows","data":null},"arrows/arrow-walk":{"component":"arrow","slide":"arrows","data":"lt-data-arrows/arrow-walk"},"code-segments/seg-walk":{"component":"code-steps","slide":"code-segments","data":"lt-data-code-segments/seg-walk"},"code-segments/c2":{"component":"code","slide":"code-segments","data":null},"code-segments/seg-arrow":{"component":"arrow","slide":"code-segments","data":"lt-data-code-segments/seg-arrow"},"arrow-anchors/c1":{"component":"code","slide":"arrow-anchors","data":null},"arrow-anchors/c2":{"component":"code","slide":"arrow-anchors","data":null},"arrow-anchors/anchor-walk":{"component":"arrow","slide":"arrow-anchors","data":"lt-data-arrow-anchors/anchor-walk"},"arrow-bullets/c1":{"component":"code","slide":"arrow-bullets","data":null},"arrow-bullets/c2":{"component":"code","slide":"arrow-bullets","data":null},"arrow-bullets/bullet-walk":{"component":"arrow","slide":"arrow-bullets","data":"lt-data-arrow-bullets/bullet-walk"},"code-morph/mean":{"component":"code-morph","slide":"code-morph","data":"lt-data-code-morph/mean"},"code-morph/c2":{"component":"code","slide":"code-morph","data":null},"morph-segments/loop":{"component":"code-morph","slide":"morph-segments","data":"lt-data-morph-segments/loop"},"morph-segments/tr":{"component":"code-morph","slide":"morph-segments","data":"lt-data-morph-segments/tr"},"morph-segments/c3":{"component":"code","slide":"morph-segments","data":null},"morph-segments/morph-arrow":{"component":"arrow","slide":"morph-segments","data":"lt-data-morph-segments/morph-arrow"},"graph-anim/bfs-code":{"component":"code","slide":"graph-anim","data":"lt-data-graph-anim/bfs-code"},"graph-anim/bfs":{"component":"graph-anim","slide":"graph-anim","data":"lt-data-graph-anim/bfs"},"graph-anim/c3":{"component":"code","slide":"graph-anim","data":null},"array-anim/bubble":{"component":"array-anim","slide":"array-anim","data":"lt-data-array-anim/bubble"},"array-anim/c2":{"component":"code","slide":"array-anim","data":null},"tree-anim/bst":{"component":"tree-anim","slide":"tree-anim","data":"lt-data-tree-anim/bst"},"tree-anim/c2":{"component":"code","slide":"tree-anim","data":null},"grid-anim/lcs":{"component":"grid-anim","slide":"grid-anim","data":"lt-data-grid-anim/lcs"},"grid-anim/c2":{"component":"code","slide":"grid-anim","data":null},"writing-traces/c1":{"component":"code","slide":"writing-traces","data":null},"bbv-language/c1":{"component":"code","slide":"bbv-language","data":null},"bbv-anim/src":{"component":"bbv-cfg","slide":"bbv-anim","data":"lt-data-bbv-anim/src"},"bbv-anim/trace":{"component":"bbv-anim","slide":"bbv-anim","data":"lt-data-bbv-anim/trace"},"bbv-blocks/c1":{"component":"code","slide":"bbv-blocks","data":null},"bbv-zoom/zcfg":{"component":"bbv-cfg","slide":"bbv-zoom","data":"lt-data-bbv-zoom/zcfg"},"bbv-instructions/algo":{"component":"code","slide":"bbv-instructions","data":"lt-data-bbv-instructions/algo"},"bbv-instructions/inst":{"component":"bbv-anim","slide":"bbv-instructions","data":"lt-data-bbv-instructions/inst"},"lv-and-absint/lv":{"component":"bbv-anim","slide":"lv-and-absint","data":"lt-data-lv-and-absint/lv"},"lv-and-absint/ai":{"component":"abstract-interp-anim","slide":"lv-and-absint","data":"lt-data-lv-and-absint/ai"},"absint-options/c1":{"component":"code","slide":"absint-options","data":null},"bbv-intervals/vec":{"component":"bbv-anim","slide":"bbv-intervals","data":"lt-data-bbv-intervals/vec"},"presenter-view/c1":{"component":"code","slide":"presenter-view","data":null},"output/c1":{"component":"code","slide":"output","data":null},"pdf-export/c1":{"component":"code","slide":"pdf-export","data":null},"pdf-export/c2":{"component":"code","slide":"pdf-export","data":null},"themes/c1":{"component":"code","slide":"themes","data":null},"plugins/c1":{"component":"code-steps","slide":"plugins","data":"lt-data-plugins/c1"},"checklist-demo/c1":{"component":"checklist","slide":"checklist-demo","data":null},"checklist-demo/c2":{"component":"code","slide":"checklist-demo","data":null},"animated-component/c1":{"component":"code-steps","slide":"animated-component","data":"lt-data-animated-component/c1"},"call-stack-demo/fib":{"component":"code","slide":"call-stack-demo","data":"lt-data-call-stack-demo/fib"},"call-stack-demo/c2":{"component":"code","slide":"call-stack-demo","data":null},"call-stack-demo/calls":{"component":"stack-anim","slide":"call-stack-demo","data":"lt-data-call-stack-demo/calls"},"runtime-contract/c1":{"component":"code","slide":"runtime-contract","data":null}},"tours":{"quick":["lattice-user-manual","what-is-a-deck","the-commands","slides-and-ids","text-and-math","the-graph","detours","branches","steps-and-tracks","timelines","pick-a-component","presenting-keys","presenter-view","pdf-export","thanks"]},"mainPath":["lattice-user-manual","what-is-a-deck","install","the-commands","front-matter","includes","slides-and-ids","slide-attributes","text-and-math","images-and-code","fragments","containers","links-and-notes","the-graph","detours","branches"],"overview":{"nodes":{"lattice-user-manual":{"x":75.5,"y":105.0,"w":135.0,"h":26.0,"label":"Lattice User Manual"},"what-is-a-deck":{"x":248.5,"y":105.0,"w":151.0,"h":26.0,"label":"What is a Lattice deck?"},"install":{"x":381.5,"y":105.0,"w":55.0,"h":26.0,"label":"Install"},"the-commands":{"x":490.5,"y":105.0,"w":103.0,"h":26.0,"label":"The commands"},"front-matter":{"x":617.5,"y":105.0,"w":91.0,"h":26.0,"label":"Front matter"},"includes":{"x":764.5,"y":105.0,"w":143.0,"h":26.0,"label":"Several files: includes"},"slides-and-ids":{"x":914.5,"y":105.0,"w":97.0,"h":26.0,"label":"Slides and ids"},"slide-attributes":{"x":1046.0,"y":105.0,"w":106.0,"h":26.0,"label":"Slide attributes"},"text-and-math":{"x":1178.5,"y":105.0,"w":99.0,"h":26.0,"label":"Text and math"},"images-and-code":{"x":1315.0,"y":105.0,"w":114.0,"h":26.0,"label":"Images and code"},"fragments":{"x":1491.0,"y":105.0,"w":178.0,"h":26.0,"label":"Fragments: reveal step by…"},"containers":{"x":1696.5,"y":105.0,"w":173.0,"h":26.0,"label":"Containers: columns, call…"},"closing-fences":{"x":1867.0,"y":63.0,"w":100.0,"h":26.0,"label":"Closing fences"},"links-and-notes":{"x":1867.0,"y":105.0,"w":108.0,"h":26.0,"label":"Links and notes"},"the-graph":{"x":2040.0,"y":105.0,"w":178.0,"h":26.0,"label":"The graph: main path and …"},"detours":{"x":2191.0,"y":105.0,"w":64.0,"h":26.0,"label":"Detours"},"inside-a-detour":{"x":2327.5,"y":63.0,"w":149.0,"h":26.0,"label":"You are inside a detour"},"branches":{"x":2327.5,"y":105.0,"w":71.0,"h":26.0,"label":"Branches"},"branch-target":{"x":2510.5,"y":105.0,"w":157.0,"h":26.0,"label":"Where the option landed"},"backup-and-tours":{"x":2705.0,"y":105.0,"w":172.0,"h":26.0,"label":"Backup slides, tours and …"},"steps-and-tracks":{"x":2877.5,"y":105.0,"w":113.0,"h":26.0,"label":"Steps and tracks"},"timelines":{"x":3001.0,"y":105.0,"w":74.0,"h":26.0,"label":"Timelines"},"badge-steps":{"x":3153.5,"y":105.0,"w":171.0,"h":26.0,"label":"Badges that wait for thei…"},"why-slow":{"x":3362.0,"y":21.0,"w":104.0,"h":26.0,"label":"Why is it slow?"},"memoize-it":{"x":3362.0,"y":63.0,"w":82.0,"h":26.0,"label":"Memoize it"},"placed-badges":{"x":3362.0,"y":105.0,"w":186.0,"h":26.0,"label":"Badges where you want them"},"why-not-inside":{"x":3575.5,"y":21.0,"w":172.0,"h":26.0,"label":"Why not a detour inside t…"},"badge-inheritance":{"x":3575.5,"y":63.0,"w":181.0,"h":26.0,"label":"What a placed badge inher…"},"pick-a-component":{"x":3575.5,"y":105.0,"w":88.0,"h":26.0,"label":"Components"},"code-blocks":{"x":3723.0,"y":50.0,"w":54.0,"h":26.0,"label":"Code"},"code-steps":{"x":3846.5,"y":50.0,"w":133.0,"h":26.0,"label":"Code steps and diffs"},"plots":{"x":3970.0,"y":67.0,"w":54.0,"h":26.0,"label":"Plots"},"plot-sources":{"x":4113.5,"y":67.0,"w":173.0,"h":26.0,"label":"Plot sources and raw specs"},"dot-and-math":{"x":4318.5,"y":67.0,"w":177.0,"h":26.0,"label":"Diagrams, math and arrows"},"arrows":{"x":4497.0,"y":67.0,"w":120.0,"h":26.0,"label":"Arrows that move"},"code-segments":{"x":4660.5,"y":67.0,"w":147.0,"h":26.0,"label":"Named code segments"},"arrow-anchors":{"x":4815.0,"y":67.0,"w":102.0,"h":26.0,"label":"Arrow anchors"},"arrow-bullets":{"x":4954.5,"y":67.0,"w":117.0,"h":26.0,"label":"Arrows at bullets"},"code-morph":{"x":5104.5,"y":67.0,"w":123.0,"h":26.0,"label":"Code that changes"},"morph-segments":{"x":5282.0,"y":67.0,"w":172.0,"h":26.0,"label":"Morphing named segments"},"graph-anim":{"x":5457.5,"y":67.0,"w":119.0,"h":26.0,"label":"Graph animations"},"graph-anim-options":{"x":5626.0,"y":67.0,"w":158.0,"h":26.0,"label":"Graph animation options"},"array-anim":{"x":5793.0,"y":67.0,"w":116.0,"h":26.0,"label":"Array animations"},"tree-anim":{"x":5936.5,"y":67.0,"w":111.0,"h":26.0,"label":"Tree animations"},"grid-anim":{"x":6076.5,"y":67.0,"w":109.0,"h":26.0,"label":"Grid animations"},"writing-traces":{"x":6212.5,"y":67.0,"w":103.0,"h":26.0,"label":"Writing a trace"},"states":{"x":6370.0,"y":67.0,"w":152.0,"h":26.0,"label":"States the themes style"},"compiler-animations":{"x":6544.0,"y":67.0,"w":136.0,"h":26.0,"label":"Compiler animations"},"bbv-language":{"x":6715.0,"y":67.0,"w":146.0,"h":26.0,"label":"The program language"},"bbv-anim":{"x":6910.0,"y":67.0,"w":184.0,"h":26.0,"label":"SBBV, with the source CFG…"},"bbv-blocks":{"x":7103.0,"y":67.0,"w":142.0,"h":26.0,"label":"The versioning blocks"},"bbv-zoom":{"x":7263.0,"y":67.0,"w":118.0,"h":26.0,"label":"Enlarging a block"},"bbv-options":{"x":7413.5,"y":67.0,"w":123.0,"h":26.0,"label":"Versioning options"},"bbv-instructions":{"x":7588.0,"y":67.0,"w":166.0,"h":26.0,"label":"Instruction by instructio…"},"lv-and-absint":{"x":7793.0,"y":67.0,"w":184.0,"h":26.0,"label":"Lambda versioning and abs…"},"absint-options":{"x":8000.5,"y":67.0,"w":171.0,"h":26.0,"label":"Abstract interpretation o…"},"bbv-intervals":{"x":8201.5,"y":67.0,"w":171.0,"h":26.0,"label":"Intervals and vector leng…"},"reading-the-drawing":{"x":8385.0,"y":67.0,"w":136.0,"h":26.0,"label":"Reading the drawing"},"presenting-keys":{"x":8550.0,"y":67.0,"w":134.0,"h":26.0,"label":"Presenting: the keys"},"history":{"x":8723.5,"y":67.0,"w":153.0,"h":26.0,"label":"Left and Up: the history"},"navigation-details":{"x":8920.5,"y":67.0,"w":181.0,"h":26.0,"label":"Detour steps, the URL and…"},"presenter-view":{"x":9105.0,"y":67.0,"w":128.0,"h":26.0,"label":"The presenter view"},"output":{"x":9227.5,"y":67.0,"w":57.0,"h":26.0,"label":"Output"},"pdf-export":{"x":9327.0,"y":67.0,"w":82.0,"h":26.0,"label":"PDF export"},"themes":{"x":9462.0,"y":67.0,"w":128.0,"h":26.0,"label":"Themes and styling"},"plugins":{"x":9642.0,"y":67.0,"w":172.0,"h":26.0,"label":"Extending Lattice: a plug…"},"checklist-demo":{"x":9840.5,"y":67.0,"w":165.0,"h":26.0,"label":"A static component in use"},"animated-component":{"x":10030.0,"y":67.0,"w":155.0,"h":26.0,"label":"An animated component"},"call-stack-demo":{"x":10224.0,"y":67.0,"w":171.0,"h":26.0,"label":"Its runtime, and the resu…"},"runtime-contract":{"x":10408.0,"y":67.0,"w":138.0,"h":26.0,"label":"The runtime contract"},"diagnostics":{"x":10550.0,"y":67.0,"w":85.0,"h":26.0,"label":"Diagnostics"},"diagnostics-files":{"x":10668.0,"y":25.0,"w":91.0,"h":26.0,"label":"Files and ids"},"diagnostics-graph":{"x":10813.0,"y":25.0,"w":140.0,"h":26.0,"label":"Graph and containers"},"diagnostics-steps":{"x":10986.0,"y":25.0,"w":146.0,"h":26.0,"label":"Components and steps"},"diagnostics-output":{"x":11151.0,"y":25.0,"w":124.0,"h":26.0,"label":"Plugins and output"},"cheat-sheet":{"x":10668.0,"y":67.0,"w":86.0,"h":26.0,"label":"Cheat sheet"},"glossary":{"x":10813.0,"y":67.0,"w":68.0,"h":26.0,"label":"Glossary"},"thanks":{"x":10986.0,"y":67.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"lattice-user-manual","to":"what-is-a-deck","kind":"next","path":"M143.1,105.0 C150.9,105.0 158.9,105.0 166.8,105.0 L172.8,105.0"},{"from":"what-is-a-deck","to":"install","kind":"next","path":"M324.2,105.0 C332.3,105.0 340.2,105.0 347.4,105.0 L353.8,105.0"},{"from":"install","to":"the-commands","kind":"next","path":"M409.2,105.0 C416.4,105.0 424.5,105.0 432.7,105.0 L438.9,105.0"},{"from":"the-commands","to":"front-matter","kind":"next","path":"M542.3,105.0 C550.0,105.0 557.8,105.0 565.4,105.0 L571.7,105.0"},{"from":"front-matter","to":"includes","kind":"next","path":"M663.2,105.0 C670.7,105.0 678.6,105.0 686.7,105.0 L692.8,105.0"},{"from":"front-matter","to":"presenting-keys","kind":"link","path":"M657.9,118.1 C669.1,121.2 681.4,124.2 693.0,126.0 C966.0,167.6 1037.9,143.0 1314.0,143.0 C1314.0,143.0 1314.0,143.0 3363.0,143.0 C3578.5,143.0 3630.0,190.0 3845.5,190.0 C3845.5,190.0 3845.5,190.0 8202.5,190.0 C8328.7,190.0 8466.5,116.7 8522.8,83.3 L8528.0,80.2"},{"from":"front-matter","to":"plugins","kind":"link","path":"M637.3,118.1 C651.9,127.6 672.9,140.3 693.0,148.0 C786.5,183.9 813.3,195.0 913.5,195.0 C913.5,195.0 913.5,195.0 2706.0,195.0 C3212.6,195.0 3338.9,224.0 3845.5,224.0 C3845.5,224.0 3845.5,224.0 8202.5,224.0 C8726.5,224.0 9351.5,119.8 9565.1,81.2 L9571.3,80.1"},{"from":"includes","to":"slides-and-ids","kind":"next","path":"M836.0,105.0 C843.9,105.0 851.9,105.0 859.6,105.0 L865.9,105.0"},{"from":"slides-and-ids","to":"slide-attributes","kind":"next","path":"M963.4,105.0 C971.0,105.0 979.1,105.0 987.0,105.0 L993.0,105.0"},{"from":"slide-attributes","to":"text-and-math","kind":"next","path":"M1099.3,105.0 C1107.0,105.0 1114.9,105.0 1122.6,105.0 L1129.0,105.0"},{"from":"text-and-math","to":"images-and-code","kind":"next","path":"M1228.1,105.0 C1235.7,105.0 1243.8,105.0 1251.7,105.0 L1257.7,105.0"},{"from":"images-and-code","to":"fragments","kind":"next","path":"M1372.0,105.0 C1379.6,105.0 1387.6,105.0 1395.6,105.0 L1401.8,105.0"},{"from":"fragments","to":"containers","kind":"next","path":"M1580.1,105.0 C1587.9,105.0 1595.9,105.0 1603.8,105.0 L1609.9,105.0"},{"from":"containers","to":"closing-fences","kind":"detour","path":"M1749.9,91.9 C1769.2,87.1 1791.2,81.6 1810.8,76.8 L1816.8,75.3"},{"from":"containers","to":"links-and-notes","kind":"next","path":"M1783.2,105.0 C1791.1,105.0 1799.0,105.0 1806.5,105.0 L1812.8,105.0"},{"from":"links-and-notes","to":"the-graph","kind":"next","path":"M1921.2,105.0 C1928.7,105.0 1936.7,105.0 1944.8,105.0 L1951.0,105.0"},{"from":"the-graph","to":"detours","kind":"next","path":"M2129.4,105.0 C2137.5,105.0 2145.3,105.0 2152.5,105.0 L2158.9,105.0"},{"from":"detours","to":"inside-a-detour","kind":"detour","path":"M2223.2,93.9 C2232.8,90.6 2243.3,87.1 2253.0,84.0 C2259.6,81.9 2266.6,79.8 2273.5,77.8 L2279.3,76.1"},{"from":"detours","to":"branches","kind":"next","path":"M2223.2,105.0 C2241.8,105.0 2265.5,105.0 2285.6,105.0 L2291.7,105.0"},{"from":"branches","to":"branch-target","kind":"branch","path":"M2363.4,105.0 C2381.2,105.0 2403.8,105.0 2425.8,105.0 L2432.0,105.0"},{"from":"branch-target","to":"backup-and-tours","kind":"next","path":"M2589.2,105.0 C2596.8,105.0 2604.6,105.0 2612.3,105.0 L2618.7,105.0"},{"from":"backup-and-tours","to":"steps-and-tracks","kind":"next","path":"M2791.2,105.0 C2799.1,105.0 2806.9,105.0 2814.4,105.0 L2820.7,105.0"},{"from":"steps-and-tracks","to":"timelines","kind":"next","path":"M2934.3,105.0 C2942.1,105.0 2950.0,105.0 2957.5,105.0 L2963.7,105.0"},{"from":"timelines","to":"badge-steps","kind":"next","path":"M3038.0,105.0 C3045.3,105.0 3053.3,105.0 3061.5,105.0 L3067.8,105.0"},{"from":"badge-steps","to":"why-slow","kind":"detour","path":"M3174.4,91.8 C3196.6,77.6 3234.0,55.3 3269.0,42.0 C3280.0,37.8 3292.0,34.3 3303.6,31.5 L3309.6,30.1"},{"from":"badge-steps","to":"memoize-it","kind":"detour","path":"M3218.4,92.0 C3249.6,85.7 3286.4,78.2 3314.8,72.4 L3320.8,71.2"},{"from":"badge-steps","to":"placed-badges","kind":"next","path":"M3239.1,105.0 C3246.9,105.0 3254.9,105.0 3262.8,105.0 L3268.8,105.0"},{"from":"placed-badges","to":"why-not-inside","kind":"detour","path":"M3440.1,92.0 C3445.3,89.7 3450.4,87.1 3455.0,84.0 C3474.1,71.3 3465.9,54.8 3485.0,42.0 C3487.8,40.1 3490.8,38.4 3493.9,36.8 L3499.5,34.2"},{"from":"placed-badges","to":"badge-inheritance","kind":"detour","path":"M3428.5,92.0 C3452.1,87.3 3478.8,82.0 3502.9,77.2 L3509.0,76.0"},{"from":"placed-badges","to":"pick-a-component","kind":"next","path":"M3455.2,105.0 C3479.3,105.0 3504.3,105.0 3525.2,105.0 L3531.3,105.0"},{"from":"pick-a-component","to":"code-blocks","kind":"branch","path":"M3619.7,97.7 C3634.7,94.5 3651.4,90.0 3666.0,84.0 C3677.3,79.4 3688.9,72.7 3698.7,66.4 L3703.9,63.0"},{"from":"pick-a-component","to":"plots","kind":"branch","path":"M3619.6,100.8 C3698.9,93.2 3866.0,77.0 3936.5,70.1 L3942.6,69.6"},{"from":"pick-a-component","to":"graph-anim","kind":"branch","path":"M3619.8,109.4 C3672.9,114.5 3765.7,122.0 3845.5,122.0 C3845.5,122.0 3845.5,122.0 5105.5,122.0 C5210.3,122.0 5330.6,97.8 5399.6,81.5 L5405.7,80.0"},{"from":"pick-a-component","to":"compiler-animations","kind":"branch","path":"M3619.6,115.2 C3683.9,130.1 3802.1,156.0 3845.5,156.0 C3845.5,156.0 3845.5,156.0 6213.5,156.0 C6324.6,156.0 6449.8,108.2 6508.8,82.7 L6514.6,80.1"},{"from":"code-blocks","to":"code-steps","kind":"next","path":"M3750.1,50.0 C3757.1,50.0 3765.0,50.0 3773.2,50.0 L3779.5,50.0"},{"from":"code-steps","to":"plots","kind":"next","path":"M3913.2,59.2 C3921.4,60.3 3929.5,61.5 3936.9,62.5 L3942.9,63.3"},{"from":"plots","to":"plot-sources","kind":"next","path":"M3997.3,67.0 C4004.2,67.0 4012.1,67.0 4020.5,67.0 L4026.9,67.0"},{"from":"plot-sources","to":"dot-and-math","kind":"next","path":"M4200.0,67.0 C4207.9,67.0 4215.8,67.0 4223.8,67.0 L4229.8,67.0"},{"from":"dot-and-math","to":"arrows","kind":"next","path":"M4407.2,67.0 C4415.1,67.0 4422.9,67.0 4430.5,67.0 L4436.8,67.0"},{"from":"arrows","to":"code-segments","kind":"next","path":"M4557.2,67.0 C4564.9,67.0 4572.9,67.0 4580.8,67.0 L4586.8,67.0"},{"from":"code-segments","to":"arrow-anchors","kind":"next","path":"M4734.2,67.0 C4742.0,67.0 4749.8,67.0 4757.4,67.0 L4763.7,67.0"},{"from":"arrow-anchors","to":"arrow-bullets","kind":"next","path":"M4866.0,67.0 C4873.7,67.0 4881.8,67.0 4889.7,67.0 L4895.8,67.0"},{"from":"arrow-bullets","to":"code-morph","kind":"next","path":"M5013.1,67.0 C5020.9,67.0 5028.9,67.0 5036.8,67.0 L5042.8,67.0"},{"from":"code-morph","to":"morph-segments","kind":"next","path":"M5166.4,67.0 C5174.0,67.0 5181.8,67.0 5189.7,67.0 L5195.8,67.0"},{"from":"morph-segments","to":"graph-anim","kind":"next","path":"M5368.2,67.0 C5376.0,67.0 5383.8,67.0 5391.3,67.0 L5397.6,67.0"},{"from":"graph-anim","to":"graph-anim-options","kind":"next","path":"M5517.2,67.0 C5524.9,67.0 5532.9,67.0 5540.9,67.0 L5547.0,67.0"},{"from":"graph-anim-options","to":"array-anim","kind":"next","path":"M5705.2,67.0 C5713.0,67.0 5720.8,67.0 5728.5,67.0 L5734.8,67.0"},{"from":"array-anim","to":"tree-anim","kind":"next","path":"M5851.1,67.0 C5858.8,67.0 5866.7,67.0 5874.4,67.0 L5880.9,67.0"},{"from":"tree-anim","to":"grid-anim","kind":"next","path":"M5992.0,67.0 C5999.7,67.0 6007.6,67.0 6015.3,67.0 L6021.8,67.0"},{"from":"grid-anim","to":"writing-traces","kind":"next","path":"M6131.2,67.0 C6138.9,67.0 6146.7,67.0 6154.4,67.0 L6160.8,67.0"},{"from":"writing-traces","to":"states","kind":"next","path":"M6264.4,67.0 C6271.9,67.0 6279.8,67.0 6287.7,67.0 L6293.7,67.0"},{"from":"states","to":"compiler-animations","kind":"next","path":"M6446.2,67.0 C6453.9,67.0 6461.7,67.0 6469.4,67.0 L6475.8,67.0"},{"from":"compiler-animations","to":"bbv-language","kind":"next","path":"M6612.3,67.0 C6620.1,67.0 6628.0,67.0 6635.9,67.0 L6642.0,67.0"},{"from":"bbv-language","to":"bbv-anim","kind":"next","path":"M6788.1,67.0 C6795.9,67.0 6803.9,67.0 6811.9,67.0 L6818.0,67.0"},{"from":"bbv-anim","to":"bbv-blocks","kind":"next","path":"M7002.0,67.0 C7009.8,67.0 7017.7,67.0 7025.4,67.0 L7031.8,67.0"},{"from":"bbv-blocks","to":"bbv-zoom","kind":"next","path":"M7174.2,67.0 C7181.9,67.0 7189.8,67.0 7197.4,67.0 L7203.8,67.0"},{"from":"bbv-zoom","to":"bbv-options","kind":"next","path":"M7322.3,67.0 C7330.0,67.0 7338.1,67.0 7345.9,67.0 L7352.0,67.0"},{"from":"bbv-options","to":"bbv-instructions","kind":"next","path":"M7475.3,67.0 C7483.0,67.0 7490.9,67.0 7498.9,67.0 L7505.0,67.0"},{"from":"bbv-instructions","to":"lv-and-absint","kind":"next","path":"M7671.3,67.0 C7679.1,67.0 7687.0,67.0 7694.9,67.0 L7701.0,67.0"},{"from":"lv-and-absint","to":"absint-options","kind":"next","path":"M7885.0,67.0 C7892.7,67.0 7900.6,67.0 7908.3,67.0 L7914.7,67.0"},{"from":"absint-options","to":"bbv-intervals","kind":"next","path":"M8086.2,67.0 C8094.0,67.0 8102.0,67.0 8109.9,67.0 L8115.9,67.0"},{"from":"bbv-intervals","to":"reading-the-drawing","kind":"next","path":"M8287.1,67.0 C8294.9,67.0 8302.8,67.0 8310.5,67.0 L8316.9,67.0"},{"from":"reading-the-drawing","to":"presenting-keys","kind":"next","path":"M8453.2,67.0 C8461.1,67.0 8469.1,67.0 8477.0,67.0 L8483.0,67.0"},{"from":"presenting-keys","to":"history","kind":"next","path":"M8617.3,67.0 C8625.0,67.0 8633.0,67.0 8640.9,67.0 L8647.0,67.0"},{"from":"history","to":"navigation-details","kind":"next","path":"M8800.2,67.0 C8807.9,67.0 8815.9,67.0 8823.8,67.0 L8829.9,67.0"},{"from":"navigation-details","to":"presenter-view","kind":"next","path":"M9011.1,67.0 C9019.0,67.0 9026.8,67.0 9034.4,67.0 L9040.8,67.0"},{"from":"presenter-view","to":"output","kind":"next","path":"M9169.1,67.0 C9177.3,67.0 9185.4,67.0 9192.8,67.0 L9198.9,67.0"},{"from":"output","to":"pdf-export","kind":"next","path":"M9256.2,67.0 C9263.5,67.0 9271.7,67.0 9279.7,67.0 L9285.9,67.0"},{"from":"pdf-export","to":"themes","kind":"next","path":"M9368.3,67.0 C9375.7,67.0 9383.7,67.0 9391.7,67.0 L9397.8,67.0"},{"from":"themes","to":"plugins","kind":"next","path":"M9526.0,67.0 C9533.7,67.0 9541.8,67.0 9549.8,67.0 L9555.9,67.0"},{"from":"plugins","to":"checklist-demo","kind":"next","path":"M9728.0,67.0 C9735.9,67.0 9743.9,67.0 9751.7,67.0 L9757.7,67.0"},{"from":"checklist-demo","to":"animated-component","kind":"next","path":"M9923.1,67.0 C9931.0,67.0 9939.1,67.0 9947.0,67.0 L9953.0,67.0"},{"from":"animated-component","to":"call-stack-demo","kind":"next","path":"M10108.0,67.0 C10116.0,67.0 10124.0,67.0 10132.0,67.0 L10138.0,67.0"},{"from":"call-stack-demo","to":"runtime-contract","kind":"next","path":"M10309.0,67.0 C10317.0,67.0 10325.0,67.0 10332.0,67.0 L10339.0,67.0"},{"from":"runtime-contract","to":"diagnostics","kind":"next","path":"M10477.0,67.0 C10485.0,67.0 10493.0,67.0 10500.0,67.0 L10507.0,67.0"},{"from":"diagnostics","to":"diagnostics-files","kind":"detour","path":"M10587.0,53.9 C10599.0,49.6 10612.0,44.6 10625.0,40.1 L10630.0,38.1"},{"from":"diagnostics","to":"cheat-sheet","kind":"next","path":"M10592.0,67.0 C10601.0,67.0 10610.0,67.0 10618.0,67.0 L10624.0,67.0"},{"from":"diagnostics-files","to":"diagnostics-graph","kind":"next","path":"M10713.0,25.0 C10721.0,25.0 10729.0,25.0 10737.0,25.0 L10743.0,25.0"},{"from":"diagnostics-graph","to":"diagnostics-steps","kind":"next","path":"M10883.0,25.0 C10891.0,25.0 10899.0,25.0 10907.0,25.0 L10913.0,25.0"},{"from":"diagnostics-steps","to":"diagnostics-output","kind":"next","path":"M11059.0,25.0 C11067.0,25.0 11075.0,25.0 11083.0,25.0 L11089.0,25.0"},{"from":"cheat-sheet","to":"glossary","kind":"next","path":"M10711.0,67.0 C10730.0,67.0 10753.0,67.0 10772.0,67.0 L10779.0,67.0"},{"from":"glossary","to":"thanks","kind":"next","path":"M10847.0,67.0 C10877.0,67.0 10920.0,67.0 10950.0,67.0 L10956.0,67.0"}],"width":11221.0,"height":232.0},"hash":"1b68c718f9d66a64"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.17.0","meta":{"title":"Lattice User Manual","author":"Lattice 0.17.0","date":null,"aspect":"16:9","theme":"default"},"start":"lattice-user-manual","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["lattice-user-manual","what-is-a-deck","install","the-commands","front-matter","includes","slides-and-ids","slide-attributes","text-and-math","images-and-code","fragments","containers","closing-fences","links-and-notes","the-graph","detours","inside-a-detour","branches","branch-target","backup-and-tours","steps-and-tracks","timelines","timeline-ranges","badge-steps","why-slow","memoize-it","placed-badges","why-not-inside","badge-inheritance","pick-a-component","code-blocks","code-steps","plots","plot-sources","dot-and-math","arrows","code-segments","arrow-anchors","arrow-bullets","code-morph","morph-segments","graph-anim","graph-anim-options","array-anim","tree-anim","grid-anim","writing-traces","states","compiler-animations","bbv-language","bbv-anim","bbv-blocks","bbv-zoom","bbv-options","bbv-instructions","lv-and-absint","absint-options","bbv-intervals","reading-the-drawing","presenting-keys","history","navigation-details","presenter-view","output","pdf-export","themes","plugins","checklist-demo","animated-component","call-stack-demo","runtime-contract","diagnostics","diagnostics-files","diagnostics-graph","diagnostics-steps","diagnostics-output","cheat-sheet","glossary","thanks"],"slides":{"lattice-user-manual":{"title":"Lattice User Manual","label":"Lattice User Manual","scope":"root","next":{"slide":"what-is-a-deck"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":9},"notes":"<p>This manual is built from <code>user_manual/manual.md<\/code>. Every feature it describes is used live on its slides, so reading the source next to the deck is the fastest way to learn the syntax.<\/p>\n"},"what-is-a-deck":{"title":"What is a Lattice deck?","label":"What is a Lattice deck?","scope":"root","next":{"slide":"install"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":17}},"install":{"title":"Install","label":"Install","scope":"root","next":{"slide":"the-commands"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":29}},"the-commands":{"title":"The commands","label":"The commands","scope":"root","next":{"slide":"front-matter"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":40}},"front-matter":{"title":"Front matter","label":"Front matter","scope":"root","next":{"slide":"includes"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":54}},"includes":{"title":"Several files: includes","label":"Several files: includes","scope":"root","next":{"slide":"slides-and-ids"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":70}},"slides-and-ids":{"title":"Slides and ids","label":"Slides and ids","scope":"root","next":{"slide":"slide-attributes"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":98}},"slide-attributes":{"title":"Slide attributes","label":"Slide attributes","scope":"root","next":{"slide":"text-and-math"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":124}},"text-and-math":{"title":"Text and math","label":"Text and math","scope":"root","next":{"slide":"images-and-code"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":141}},"images-and-code":{"title":"Images and code","label":"Images and code","scope":"root","next":{"slide":"fragments"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":168}},"fragments":{"title":"Fragments: reveal step by step","label":"Fragments: reveal step by step","scope":"root","next":{"slide":"containers"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":188}},"containers":{"title":"Containers: columns, callouts, your own","label":"Containers: columns, callouts, your own","scope":"root","next":{"slide":"links-and-notes"},"branches":[],"detours":["fences-demo"],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":217}},"closing-fences":{"title":"Closing fences","label":"Closing fences","scope":"fences-demo","next":"back","branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":253}},"links-and-notes":{"title":"Links and notes","label":"Links and notes","scope":"root","next":{"slide":"the-graph"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":290}},"the-graph":{"title":"The graph: main path and next","label":"The graph: main path and next","scope":"root","next":{"slide":"detours"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":312}},"detours":{"title":"Detours","label":"Detours","scope":"root","next":{"slide":"branches"},"branches":[],"detours":["detour-demo"],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":339}},"inside-a-detour":{"title":"You are inside a detour","label":"You are inside a detour","scope":"detour-demo","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":364}},"branches":{"title":"Branches","label":"Branches","scope":"root","next":null,"branches":[{"target":"branch-target","key":"1","label":"Try an option"}],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":371}},"branch-target":{"title":"Where the option landed","label":"Where the option landed","scope":"root","next":{"slide":"backup-and-tours"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":396}},"backup-and-tours":{"title":"Backup slides, tours and the map","label":"Backup slides, tours and the map","scope":"root","next":{"slide":"steps-and-tracks"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":402}},"steps-and-tracks":{"title":"Steps and tracks","label":"Steps and tracks","scope":"root","next":{"slide":"timelines"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":427}},"timelines":{"title":"Timelines","label":"Timelines","scope":"root","next":{"slide":"timeline-ranges"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":453}},"timeline-ranges":{"title":"Timeline ranges","label":"Timeline ranges","scope":"root","next":{"slide":"badge-steps"},"branches":[],"detours":[],"steps":10,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"sort","kind":"component","instance":"timeline-ranges/sort"}],"positions":[[0,0],[1,0],[1,1],[1,2],[2,3],[3,4],[3,6],[3,7],[4,8],[5,8]],"offpath":false,"source":{"file":"manual.md","line":476}},"badge-steps":{"title":"Badges that wait for their turn","label":"Badges that wait for their turn","scope":"root","next":{"slide":"placed-badges"},"branches":[],"detours":["slow","memo"],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[1]],"offpath":false,"source":{"file":"manual.md","line":512},"stepDetours":{"2":{"id":"slow","blocking":false},"3":{"id":"memo","blocking":false}}},"why-slow":{"title":"Why is it slow?","label":"Why is it slow?","scope":"slow","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":543}},"memoize-it":{"title":"Memoize it","label":"Memoize it","scope":"memo","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":551}},"placed-badges":{"title":"Badges where you want them","label":"Badges where you want them","scope":"root","next":{"slide":"pick-a-component"},"branches":[],"detours":["inside","inherits"],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[1]],"offpath":false,"source":{"file":"manual.md","line":564},"stepDetours":{"2":{"id":"inside","blocking":false},"3":{"id":"inherits","blocking":false}}},"why-not-inside":{"title":"Why not a detour inside the column?","label":"Why not a detour inside the column?","scope":"inside","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":593}},"badge-inheritance":{"title":"What a placed badge inherits","label":"What a placed badge inherits","scope":"inherits","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":601}},"pick-a-component":{"title":"Components","label":"Components","scope":"root","next":null,"branches":[{"target":"code-blocks","key":"c","label":"Code"},{"target":"plots","key":"l","label":"Plots and diagrams"},{"target":"graph-anim","key":"a","label":"Animations"},{"target":"compiler-animations","key":"v","label":"Compiler animations"}],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":613}},"code-blocks":{"title":"Code","label":"Code","scope":"root","next":{"slide":"code-steps"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":624}},"code-steps":{"title":"Code steps and diffs","label":"Code steps and diffs","scope":"root","next":{"slide":"plots"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"walk","kind":"component","instance":"code-steps/walk"},{"id":"diff","kind":"component","instance":"code-steps/diff"}],"positions":[[0,0],[1,0],[2,0],[3,0],[3,1]],"offpath":false,"source":{"file":"manual.md","line":654}},"plots":{"title":"Plots","label":"Plots","scope":"root","next":{"slide":"plot-sources"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"manual.md","line":681}},"plot-sources":{"title":"Plot sources and raw specs","label":"Plot sources and raw specs","scope":"root","next":{"slide":"dot-and-math"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":704}},"dot-and-math":{"title":"Diagrams, math and arrows","label":"Diagrams, math and arrows","scope":"root","next":{"slide":"arrows"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":727}},"arrows":{"title":"Arrows that move","label":"Arrows that move","scope":"root","next":{"slide":"code-segments"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"arrow-walk","kind":"component","instance":"arrows/arrow-walk"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"manual.md","line":755}},"code-segments":{"title":"Named code segments","label":"Named code segments","scope":"root","next":{"slide":"arrow-anchors"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"seg-walk","kind":"component","instance":"code-segments/seg-walk"},{"id":"seg-arrow","kind":"component","instance":"code-segments/seg-arrow","follow":"seg-walk"}],"positions":[[0,0],[1,1],[2,2]],"offpath":false,"source":{"file":"manual.md","line":789}},"arrow-anchors":{"title":"Arrow anchors","label":"Arrow anchors","scope":"root","next":{"slide":"arrow-bullets"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"anchor-walk","kind":"component","instance":"arrow-anchors/anchor-walk"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"manual.md","line":832}},"arrow-bullets":{"title":"Arrows at bullets","label":"Arrows at bullets","scope":"root","next":{"slide":"code-morph"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"bullet-walk","kind":"component","instance":"arrow-bullets/bullet-walk"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":868}},"code-morph":{"title":"Code that changes","label":"Code that changes","scope":"root","next":{"slide":"morph-segments"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"mean","kind":"component","instance":"code-morph/mean"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"manual.md","line":918}},"morph-segments":{"title":"Morphing named segments","label":"Morphing named segments","scope":"root","next":{"slide":"graph-anim"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"loop","kind":"component","instance":"morph-segments/loop"},{"id":"tr","kind":"component","instance":"morph-segments/tr"}],"positions":[[0,0,0],[1,1,0],[2,2,0],[3,2,1]],"offpath":false,"source":{"file":"manual.md","line":959}},"graph-anim":{"title":"Graph animations","label":"Graph animations","scope":"root","next":{"slide":"graph-anim-options"},"branches":[],"detours":[],"steps":16,"tracks":[{"id":"bfs-code","kind":"component","instance":"graph-anim/bfs-code","follow":"bfs"},{"id":"bfs","kind":"component","instance":"graph-anim/bfs"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15]],"offpath":false,"source":{"file":"manual.md","line":1009}},"graph-anim-options":{"title":"Graph animation options","label":"Graph animation options","scope":"root","next":{"slide":"array-anim"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1031}},"array-anim":{"title":"Array animations","label":"Array animations","scope":"root","next":{"slide":"tree-anim"},"branches":[],"detours":[],"steps":23,"tracks":[{"id":"bubble","kind":"component","instance":"array-anim/bubble"}],"positions":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19],[20],[21],[22]],"offpath":false,"source":{"file":"manual.md","line":1044}},"tree-anim":{"title":"Tree animations","label":"Tree animations","scope":"root","next":{"slide":"grid-anim"},"branches":[],"detours":[],"steps":20,"tracks":[{"id":"bst","kind":"component","instance":"tree-anim/bst"}],"positions":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19]],"offpath":false,"source":{"file":"manual.md","line":1064}},"grid-anim":{"title":"Grid animations","label":"Grid animations","scope":"root","next":{"slide":"writing-traces"},"branches":[],"detours":[],"steps":22,"tracks":[{"id":"lcs","kind":"component","instance":"grid-anim/lcs"}],"positions":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19],[20],[21]],"offpath":false,"source":{"file":"manual.md","line":1086}},"writing-traces":{"title":"Writing a trace","label":"Writing a trace","scope":"root","next":{"slide":"states"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1104}},"states":{"title":"States the themes style","label":"States the themes style","scope":"root","next":{"slide":"compiler-animations"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1130}},"compiler-animations":{"title":"Compiler animations","label":"Compiler animations","scope":"root","next":{"slide":"bbv-language"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"manual.md","line":1143}},"bbv-language":{"title":"The program language","label":"The program language","scope":"root","next":{"slide":"bbv-anim"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1154}},"bbv-anim":{"title":"SBBV, with the source CFG following","label":"SBBV, with the source CFG following","scope":"root","next":{"slide":"bbv-blocks"},"branches":[],"detours":[],"steps":30,"tracks":[{"id":"src","kind":"component","instance":"bbv-anim/src","follow":"trace"},{"id":"trace","kind":"component","instance":"bbv-anim/trace"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26],[27,27],[28,28],[29,29]],"offpath":false,"source":{"file":"manual.md","line":1170}},"bbv-blocks":{"title":"The versioning blocks","label":"The versioning blocks","scope":"root","next":{"slide":"bbv-zoom"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1186}},"bbv-zoom":{"title":"Enlarging a block","label":"Enlarging a block","scope":"root","next":{"slide":"bbv-options"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1201}},"bbv-options":{"title":"Versioning options","label":"Versioning options","scope":"root","next":{"slide":"bbv-instructions"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1218}},"bbv-instructions":{"title":"Instruction by instruction, with the algorithm's listing","label":"Instruction by instruction, with the algorithm's listing","scope":"root","next":{"slide":"lv-and-absint"},"branches":[],"detours":[],"steps":17,"tracks":[{"id":"algo","kind":"component","instance":"bbv-instructions/algo","follow":"inst"},{"id":"inst","kind":"component","instance":"bbv-instructions/inst"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16]],"offpath":false,"source":{"file":"manual.md","line":1232}},"lv-and-absint":{"title":"Lambda versioning and abstract interpretation","label":"Lambda versioning and abstract interpretation","scope":"root","next":{"slide":"absint-options"},"branches":[],"detours":[],"steps":39,"tracks":[{"id":"lv","kind":"component","instance":"lv-and-absint/lv"},{"id":"ai","kind":"component","instance":"lv-and-absint/ai"}],"positions":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0],[11,0],[12,0],[13,0],[14,0],[15,0],[16,0],[17,0],[18,0],[19,0],[20,0],[21,0],[22,0],[23,0],[23,1],[23,2],[23,3],[23,4],[23,5],[23,6],[23,7],[23,8],[23,9],[23,10],[23,11],[23,12],[23,13],[23,14],[23,15]],"offpath":false,"source":{"file":"manual.md","line":1249}},"absint-options":{"title":"Abstract interpretation options","label":"Abstract interpretation options","scope":"root","next":{"slide":"bbv-intervals"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1272}},"bbv-intervals":{"title":"Intervals and vector lengths","label":"Intervals and vector lengths","scope":"root","next":{"slide":"reading-the-drawing"},"branches":[],"detours":[],"steps":53,"tracks":[{"id":"vec","kind":"component","instance":"bbv-intervals/vec"}],"positions":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19],[20],[21],[22],[23],[24],[25],[26],[27],[28],[29],[30],[31],[32],[33],[34],[35],[36],[37],[38],[39],[40],[41],[42],[43],[44],[45],[46],[47],[48],[49],[50],[51],[52]],"offpath":false,"source":{"file":"manual.md","line":1291}},"reading-the-drawing":{"title":"Reading the drawing","label":"Reading the drawing","scope":"root","next":{"slide":"presenting-keys"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1301}},"presenting-keys":{"title":"Presenting: the keys","label":"Presenting: the keys","scope":"root","next":{"slide":"history"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1316}},"history":{"title":"Left and Up: the history","label":"Left and Up: the history","scope":"root","next":{"slide":"navigation-details"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1334}},"navigation-details":{"title":"Detour steps, the URL and transitions","label":"Detour steps, the URL and transitions","scope":"root","next":{"slide":"presenter-view"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1342}},"presenter-view":{"title":"The presenter view","label":"The presenter view","scope":"root","next":{"slide":"output"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1350}},"output":{"title":"Output","label":"Output","scope":"root","next":{"slide":"pdf-export"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1375}},"pdf-export":{"title":"PDF export","label":"PDF export","scope":"root","next":{"slide":"themes"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"manual.md","line":1394}},"themes":{"title":"Themes and styling","label":"Themes and styling","scope":"root","next":{"slide":"plugins"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1418}},"plugins":{"title":"Extending Lattice: a plugin file","label":"Extending Lattice: a plugin file","scope":"root","next":{"slide":"checklist-demo"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"c1","kind":"component","instance":"plugins/c1"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"manual.md","line":1444}},"checklist-demo":{"title":"A static component in use","label":"A static component in use","scope":"root","next":{"slide":"animated-component"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1455}},"animated-component":{"title":"An animated component","label":"An animated component","scope":"root","next":{"slide":"call-stack-demo"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"c1","kind":"component","instance":"animated-component/c1"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"manual.md","line":1480}},"call-stack-demo":{"title":"Its runtime, and the result","label":"Its runtime, and the result","scope":"root","next":{"slide":"runtime-contract"},"branches":[],"detours":[],"steps":19,"tracks":[{"id":"fib","kind":"component","instance":"call-stack-demo/fib","follow":"calls"},{"id":"calls","kind":"component","instance":"call-stack-demo/calls"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18]],"offpath":false,"source":{"file":"manual.md","line":1490}},"runtime-contract":{"title":"The runtime contract","label":"The runtime contract","scope":"root","next":{"slide":"diagnostics"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1507}},"diagnostics":{"title":"Diagnostics","label":"Diagnostics","scope":"root","next":{"slide":"cheat-sheet"},"branches":[],"detours":["all-diagnostics"],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1523}},"diagnostics-files":{"title":"Files and ids","label":"Files and ids","scope":"all-diagnostics","next":{"slide":"diagnostics-graph"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1538}},"diagnostics-graph":{"title":"Graph and containers","label":"Graph and containers","scope":"all-diagnostics","next":{"slide":"diagnostics-steps"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1550}},"diagnostics-steps":{"title":"Components and steps","label":"Components and steps","scope":"all-diagnostics","next":{"slide":"diagnostics-output"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1561}},"diagnostics-output":{"title":"Plugins and output","label":"Plugins and output","scope":"all-diagnostics","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1577}},"cheat-sheet":{"title":"Cheat sheet","label":"Cheat sheet","scope":"root","next":{"slide":"glossary"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1591}},"glossary":{"title":"Glossary","label":"Glossary","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1626}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"manual.md","line":1642}}},"detours":{"fences-demo":{"origin":"containers","entry":"closing-fences","label":"Closing fences","key":"f","slides":["closing-fences"]},"detour-demo":{"origin":"detours","entry":"inside-a-detour","label":"A detour, live","key":"d","slides":["inside-a-detour"]},"slow":{"origin":"badge-steps","entry":"why-slow","label":"Why is it slow?","key":"s","slides":["why-slow"]},"memo":{"origin":"badge-steps","entry":"memoize-it","label":"Memoize it","key":"m","slides":["memoize-it"]},"inside":{"origin":"placed-badges","entry":"why-not-inside","label":"Why not a detour inside the column?","key":"i","slides":["why-not-inside"]},"inherits":{"origin":"placed-badges","entry":"badge-inheritance","label":"What does a placed badge inherit?","key":"n","slides":["badge-inheritance"]},"all-diagnostics":{"origin":"diagnostics","entry":"diagnostics-files","label":"Every diagnostic code","key":"e","slides":["diagnostics-files","diagnostics-graph","diagnostics-steps","diagnostics-output"]}},"instances":{"install/c1":{"component":"code","slide":"install","data":null},"includes/c1":{"component":"code","slide":"includes","data":null},"slides-and-ids/c1":{"component":"code","slide":"slides-and-ids","data":null},"slide-attributes/c1":{"component":"code","slide":"slide-attributes","data":null},"text-and-math/c1":{"component":"code","slide":"text-and-math","data":null},"images-and-code/c1":{"component":"code","slide":"images-and-code","data":null},"images-and-code/c2":{"component":"code","slide":"images-and-code","data":null},"fragments/c1":{"component":"code","slide":"fragments","data":null},"containers/c1":{"component":"code","slide":"containers","data":null},"closing-fences/c1":{"component":"code","slide":"closing-fences","data":null},"links-and-notes/c1":{"component":"code","slide":"links-and-notes","data":null},"the-graph/c1":{"component":"dot","slide":"the-graph","data":null},"detours/c1":{"component":"code","slide":"detours","data":null},"branches/c1":{"component":"code","slide":"branches","data":null},"backup-and-tours/c1":{"component":"code","slide":"backup-and-tours","data":null},"steps-and-tracks/c1":{"component":"code","slide":"steps-and-tracks","data":null},"timelines/c1":{"component":"code","slide":"timelines","data":null},"timeline-ranges/c1":{"component":"code","slide":"timeline-ranges","data":null},"timeline-ranges/sort":{"component":"array-anim","slide":"timeline-ranges","data":"lt-data-timeline-ranges/sort"},"badge-steps/c1":{"component":"code","slide":"badge-steps","data":null},"badge-steps/c2":{"component":"code","slide":"badge-steps","data":null},"memoize-it/c1":{"component":"code","slide":"memoize-it","data":null},"placed-badges/c1":{"component":"code","slide":"placed-badges","data":null},"code-blocks/c1":{"component":"code","slide":"code-blocks","data":null},"code-blocks/c2":{"component":"code","slide":"code-blocks","data":null},"code-steps/walk":{"component":"code-steps","slide":"code-steps","data":"lt-data-code-steps/walk"},"code-steps/diff":{"component":"diff-steps","slide":"code-steps","data":"lt-data-code-steps/diff"},"plots/c1":{"component":"plot","slide":"plots","data":null},"plots/c2":{"component":"code","slide":"plots","data":null},"plot-sources/c1":{"component":"plot","slide":"plot-sources","data":null},"plot-sources/c2":{"component":"code","slide":"plot-sources","data":null},"plot-sources/c3":{"component":"plot","slide":"plot-sources","data":"lt-data-plot-sources/c3"},"dot-and-math/c1":{"component":"dot","slide":"dot-and-math","data":null},"dot-and-math/c2":{"component":"math","slide":"dot-and-math","data":null},"dot-and-math/c3":{"component":"arrow","slide":"dot-and-math","data":"lt-data-dot-and-math/c3"},"arrows/arrow-code":{"component":"code","slide":"arrows","data":null},"arrows/c2":{"component":"code","slide":"arrows","data":null},"arrows/arrow-walk":{"component":"arrow","slide":"arrows","data":"lt-data-arrows/arrow-walk"},"code-segments/seg-walk":{"component":"code-steps","slide":"code-segments","data":"lt-data-code-segments/seg-walk"},"code-segments/c2":{"component":"code","slide":"code-segments","data":null},"code-segments/seg-arrow":{"component":"arrow","slide":"code-segments","data":"lt-data-code-segments/seg-arrow"},"arrow-anchors/c1":{"component":"code","slide":"arrow-anchors","data":null},"arrow-anchors/c2":{"component":"code","slide":"arrow-anchors","data":null},"arrow-anchors/anchor-walk":{"component":"arrow","slide":"arrow-anchors","data":"lt-data-arrow-anchors/anchor-walk"},"arrow-bullets/c1":{"component":"code","slide":"arrow-bullets","data":null},"arrow-bullets/c2":{"component":"code","slide":"arrow-bullets","data":null},"arrow-bullets/bullet-walk":{"component":"arrow","slide":"arrow-bullets","data":"lt-data-arrow-bullets/bullet-walk"},"code-morph/mean":{"component":"code-morph","slide":"code-morph","data":"lt-data-code-morph/mean"},"code-morph/c2":{"component":"code","slide":"code-morph","data":null},"morph-segments/loop":{"component":"code-morph","slide":"morph-segments","data":"lt-data-morph-segments/loop"},"morph-segments/tr":{"component":"code-morph","slide":"morph-segments","data":"lt-data-morph-segments/tr"},"morph-segments/c3":{"component":"code","slide":"morph-segments","data":null},"morph-segments/morph-arrow":{"component":"arrow","slide":"morph-segments","data":"lt-data-morph-segments/morph-arrow"},"graph-anim/bfs-code":{"component":"code","slide":"graph-anim","data":"lt-data-graph-anim/bfs-code"},"graph-anim/bfs":{"component":"graph-anim","slide":"graph-anim","data":"lt-data-graph-anim/bfs"},"graph-anim/c3":{"component":"code","slide":"graph-anim","data":null},"array-anim/bubble":{"component":"array-anim","slide":"array-anim","data":"lt-data-array-anim/bubble"},"array-anim/c2":{"component":"code","slide":"array-anim","data":null},"tree-anim/bst":{"component":"tree-anim","slide":"tree-anim","data":"lt-data-tree-anim/bst"},"tree-anim/c2":{"component":"code","slide":"tree-anim","data":null},"grid-anim/lcs":{"component":"grid-anim","slide":"grid-anim","data":"lt-data-grid-anim/lcs"},"grid-anim/c2":{"component":"code","slide":"grid-anim","data":null},"writing-traces/c1":{"component":"code","slide":"writing-traces","data":null},"bbv-language/c1":{"component":"code","slide":"bbv-language","data":null},"bbv-anim/src":{"component":"bbv-cfg","slide":"bbv-anim","data":"lt-data-bbv-anim/src"},"bbv-anim/trace":{"component":"bbv-anim","slide":"bbv-anim","data":"lt-data-bbv-anim/trace"},"bbv-blocks/c1":{"component":"code","slide":"bbv-blocks","data":null},"bbv-zoom/zcfg":{"component":"bbv-cfg","slide":"bbv-zoom","data":"lt-data-bbv-zoom/zcfg"},"bbv-instructions/algo":{"component":"code","slide":"bbv-instructions","data":"lt-data-bbv-instructions/algo"},"bbv-instructions/inst":{"component":"bbv-anim","slide":"bbv-instructions","data":"lt-data-bbv-instructions/inst"},"lv-and-absint/lv":{"component":"bbv-anim","slide":"lv-and-absint","data":"lt-data-lv-and-absint/lv"},"lv-and-absint/ai":{"component":"abstract-interp-anim","slide":"lv-and-absint","data":"lt-data-lv-and-absint/ai"},"absint-options/c1":{"component":"code","slide":"absint-options","data":null},"bbv-intervals/vec":{"component":"bbv-anim","slide":"bbv-intervals","data":"lt-data-bbv-intervals/vec"},"presenter-view/c1":{"component":"code","slide":"presenter-view","data":null},"output/c1":{"component":"code","slide":"output","data":null},"pdf-export/c1":{"component":"code","slide":"pdf-export","data":null},"pdf-export/c2":{"component":"code","slide":"pdf-export","data":null},"themes/c1":{"component":"code","slide":"themes","data":null},"plugins/c1":{"component":"code-steps","slide":"plugins","data":"lt-data-plugins/c1"},"checklist-demo/c1":{"component":"checklist","slide":"checklist-demo","data":null},"checklist-demo/c2":{"component":"code","slide":"checklist-demo","data":null},"animated-component/c1":{"component":"code-steps","slide":"animated-component","data":"lt-data-animated-component/c1"},"call-stack-demo/fib":{"component":"code","slide":"call-stack-demo","data":"lt-data-call-stack-demo/fib"},"call-stack-demo/c2":{"component":"code","slide":"call-stack-demo","data":null},"call-stack-demo/calls":{"component":"stack-anim","slide":"call-stack-demo","data":"lt-data-call-stack-demo/calls"},"runtime-contract/c1":{"component":"code","slide":"runtime-contract","data":null}},"tours":{"quick":["lattice-user-manual","what-is-a-deck","the-commands","slides-and-ids","text-and-math","the-graph","detours","branches","steps-and-tracks","timelines","pick-a-component","presenting-keys","presenter-view","pdf-export","thanks"]},"mainPath":["lattice-user-manual","what-is-a-deck","install","the-commands","front-matter","includes","slides-and-ids","slide-attributes","text-and-math","images-and-code","fragments","containers","links-and-notes","the-graph","detours","branches"],"overview":{"nodes":{"lattice-user-manual":{"x":75.5,"y":105.0,"w":135.0,"h":26.0,"label":"Lattice User Manual"},"what-is-a-deck":{"x":248.5,"y":105.0,"w":151.0,"h":26.0,"label":"What is a Lattice deck?"},"install":{"x":381.5,"y":105.0,"w":55.0,"h":26.0,"label":"Install"},"the-commands":{"x":490.5,"y":105.0,"w":103.0,"h":26.0,"label":"The commands"},"front-matter":{"x":617.5,"y":105.0,"w":91.0,"h":26.0,"label":"Front matter"},"includes":{"x":764.5,"y":105.0,"w":143.0,"h":26.0,"label":"Several files: includes"},"slides-and-ids":{"x":914.5,"y":105.0,"w":97.0,"h":26.0,"label":"Slides and ids"},"slide-attributes":{"x":1046.0,"y":105.0,"w":106.0,"h":26.0,"label":"Slide attributes"},"text-and-math":{"x":1178.5,"y":105.0,"w":99.0,"h":26.0,"label":"Text and math"},"images-and-code":{"x":1315.0,"y":105.0,"w":114.0,"h":26.0,"label":"Images and code"},"fragments":{"x":1491.0,"y":105.0,"w":178.0,"h":26.0,"label":"Fragments: reveal step by…"},"containers":{"x":1696.5,"y":105.0,"w":173.0,"h":26.0,"label":"Containers: columns, call…"},"closing-fences":{"x":1867.0,"y":63.0,"w":100.0,"h":26.0,"label":"Closing fences"},"links-and-notes":{"x":1867.0,"y":105.0,"w":108.0,"h":26.0,"label":"Links and notes"},"the-graph":{"x":2040.0,"y":105.0,"w":178.0,"h":26.0,"label":"The graph: main path and …"},"detours":{"x":2191.0,"y":105.0,"w":64.0,"h":26.0,"label":"Detours"},"inside-a-detour":{"x":2327.5,"y":63.0,"w":149.0,"h":26.0,"label":"You are inside a detour"},"branches":{"x":2327.5,"y":105.0,"w":71.0,"h":26.0,"label":"Branches"},"branch-target":{"x":2510.5,"y":105.0,"w":157.0,"h":26.0,"label":"Where the option landed"},"backup-and-tours":{"x":2705.0,"y":105.0,"w":172.0,"h":26.0,"label":"Backup slides, tours and …"},"steps-and-tracks":{"x":2877.5,"y":105.0,"w":113.0,"h":26.0,"label":"Steps and tracks"},"timelines":{"x":3001.0,"y":105.0,"w":74.0,"h":26.0,"label":"Timelines"},"timeline-ranges":{"x":3123.0,"y":105.0,"w":110.0,"h":26.0,"label":"Timeline ranges"},"badge-steps":{"x":3293.5,"y":105.0,"w":171.0,"h":26.0,"label":"Badges that wait for thei…"},"why-slow":{"x":3502.0,"y":21.0,"w":104.0,"h":26.0,"label":"Why is it slow?"},"memoize-it":{"x":3502.0,"y":63.0,"w":82.0,"h":26.0,"label":"Memoize it"},"placed-badges":{"x":3502.0,"y":105.0,"w":186.0,"h":26.0,"label":"Badges where you want them"},"why-not-inside":{"x":3715.5,"y":21.0,"w":172.0,"h":26.0,"label":"Why not a detour inside t…"},"badge-inheritance":{"x":3715.5,"y":63.0,"w":181.0,"h":26.0,"label":"What a placed badge inher…"},"pick-a-component":{"x":3715.5,"y":105.0,"w":88.0,"h":26.0,"label":"Components"},"code-blocks":{"x":3863.0,"y":50.0,"w":54.0,"h":26.0,"label":"Code"},"code-steps":{"x":3986.5,"y":50.0,"w":133.0,"h":26.0,"label":"Code steps and diffs"},"plots":{"x":4110.0,"y":67.0,"w":54.0,"h":26.0,"label":"Plots"},"plot-sources":{"x":4253.5,"y":67.0,"w":173.0,"h":26.0,"label":"Plot sources and raw specs"},"dot-and-math":{"x":4458.5,"y":67.0,"w":177.0,"h":26.0,"label":"Diagrams, math and arrows"},"arrows":{"x":4637.0,"y":67.0,"w":120.0,"h":26.0,"label":"Arrows that move"},"code-segments":{"x":4800.5,"y":67.0,"w":147.0,"h":26.0,"label":"Named code segments"},"arrow-anchors":{"x":4955.0,"y":67.0,"w":102.0,"h":26.0,"label":"Arrow anchors"},"arrow-bullets":{"x":5094.5,"y":67.0,"w":117.0,"h":26.0,"label":"Arrows at bullets"},"code-morph":{"x":5244.5,"y":67.0,"w":123.0,"h":26.0,"label":"Code that changes"},"morph-segments":{"x":5422.0,"y":67.0,"w":172.0,"h":26.0,"label":"Morphing named segments"},"graph-anim":{"x":5597.5,"y":67.0,"w":119.0,"h":26.0,"label":"Graph animations"},"graph-anim-options":{"x":5766.0,"y":67.0,"w":158.0,"h":26.0,"label":"Graph animation options"},"array-anim":{"x":5933.0,"y":67.0,"w":116.0,"h":26.0,"label":"Array animations"},"tree-anim":{"x":6076.5,"y":67.0,"w":111.0,"h":26.0,"label":"Tree animations"},"grid-anim":{"x":6216.5,"y":67.0,"w":109.0,"h":26.0,"label":"Grid animations"},"writing-traces":{"x":6352.5,"y":67.0,"w":103.0,"h":26.0,"label":"Writing a trace"},"states":{"x":6510.0,"y":67.0,"w":152.0,"h":26.0,"label":"States the themes style"},"compiler-animations":{"x":6684.0,"y":67.0,"w":136.0,"h":26.0,"label":"Compiler animations"},"bbv-language":{"x":6855.0,"y":67.0,"w":146.0,"h":26.0,"label":"The program language"},"bbv-anim":{"x":7050.0,"y":67.0,"w":184.0,"h":26.0,"label":"SBBV, with the source CFG…"},"bbv-blocks":{"x":7243.0,"y":67.0,"w":142.0,"h":26.0,"label":"The versioning blocks"},"bbv-zoom":{"x":7403.0,"y":67.0,"w":118.0,"h":26.0,"label":"Enlarging a block"},"bbv-options":{"x":7553.5,"y":67.0,"w":123.0,"h":26.0,"label":"Versioning options"},"bbv-instructions":{"x":7728.0,"y":67.0,"w":166.0,"h":26.0,"label":"Instruction by instructio…"},"lv-and-absint":{"x":7933.0,"y":67.0,"w":184.0,"h":26.0,"label":"Lambda versioning and abs…"},"absint-options":{"x":8140.5,"y":67.0,"w":171.0,"h":26.0,"label":"Abstract interpretation o…"},"bbv-intervals":{"x":8341.5,"y":67.0,"w":171.0,"h":26.0,"label":"Intervals and vector leng…"},"reading-the-drawing":{"x":8525.0,"y":67.0,"w":136.0,"h":26.0,"label":"Reading the drawing"},"presenting-keys":{"x":8690.0,"y":67.0,"w":134.0,"h":26.0,"label":"Presenting: the keys"},"history":{"x":8863.5,"y":67.0,"w":153.0,"h":26.0,"label":"Left and Up: the history"},"navigation-details":{"x":9060.5,"y":67.0,"w":181.0,"h":26.0,"label":"Detour steps, the URL and…"},"presenter-view":{"x":9245.0,"y":67.0,"w":128.0,"h":26.0,"label":"The presenter view"},"output":{"x":9367.5,"y":67.0,"w":57.0,"h":26.0,"label":"Output"},"pdf-export":{"x":9467.0,"y":67.0,"w":82.0,"h":26.0,"label":"PDF export"},"themes":{"x":9602.0,"y":67.0,"w":128.0,"h":26.0,"label":"Themes and styling"},"plugins":{"x":9782.0,"y":67.0,"w":172.0,"h":26.0,"label":"Extending Lattice: a plug…"},"checklist-demo":{"x":9980.5,"y":67.0,"w":165.0,"h":26.0,"label":"A static component in use"},"animated-component":{"x":10170.0,"y":67.0,"w":155.0,"h":26.0,"label":"An animated component"},"call-stack-demo":{"x":10364.0,"y":67.0,"w":171.0,"h":26.0,"label":"Its runtime, and the resu…"},"runtime-contract":{"x":10548.0,"y":67.0,"w":138.0,"h":26.0,"label":"The runtime contract"},"diagnostics":{"x":10690.0,"y":67.0,"w":85.0,"h":26.0,"label":"Diagnostics"},"diagnostics-files":{"x":10808.0,"y":25.0,"w":91.0,"h":26.0,"label":"Files and ids"},"diagnostics-graph":{"x":10953.0,"y":25.0,"w":140.0,"h":26.0,"label":"Graph and containers"},"diagnostics-steps":{"x":11126.0,"y":25.0,"w":146.0,"h":26.0,"label":"Components and steps"},"diagnostics-output":{"x":11291.0,"y":25.0,"w":124.0,"h":26.0,"label":"Plugins and output"},"cheat-sheet":{"x":10808.0,"y":67.0,"w":86.0,"h":26.0,"label":"Cheat sheet"},"glossary":{"x":10953.0,"y":67.0,"w":68.0,"h":26.0,"label":"Glossary"},"thanks":{"x":11126.0,"y":67.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"lattice-user-manual","to":"what-is-a-deck","kind":"next","path":"M143.1,105.0 C150.9,105.0 158.9,105.0 166.8,105.0 L172.8,105.0"},{"from":"what-is-a-deck","to":"install","kind":"next","path":"M324.2,105.0 C332.3,105.0 340.2,105.0 347.4,105.0 L353.8,105.0"},{"from":"install","to":"the-commands","kind":"next","path":"M409.2,105.0 C416.4,105.0 424.5,105.0 432.7,105.0 L438.9,105.0"},{"from":"the-commands","to":"front-matter","kind":"next","path":"M542.3,105.0 C550.0,105.0 557.8,105.0 565.4,105.0 L571.7,105.0"},{"from":"front-matter","to":"includes","kind":"next","path":"M663.2,105.0 C670.7,105.0 678.6,105.0 686.7,105.0 L692.8,105.0"},{"from":"front-matter","to":"presenting-keys","kind":"link","path":"M659.1,118.0 C670.0,121.1 681.9,124.0 693.0,126.0 C789.8,143.2 815.2,143.0 913.5,143.0 C913.5,143.0 913.5,143.0 3503.0,143.0 C3718.5,143.0 3770.0,190.0 3985.5,190.0 C3985.5,190.0 3985.5,190.0 6353.5,190.0 C6578.5,190.0 6629.0,114.0 6854.0,114.0 C6854.0,114.0 6854.0,114.0 7554.5,114.0 C7814.5,114.0 7879.5,123.0 8139.5,123.0 C8139.5,123.0 8139.5,123.0 8342.5,123.0 C8446.5,123.0 8565.7,98.1 8633.8,81.5 L8639.8,80.1"},{"from":"front-matter","to":"plugins","kind":"link","path":"M637.9,118.1 C652.5,127.4 673.3,139.5 693.0,147.0 C786.7,182.7 813.2,195.0 913.5,195.0 C913.5,195.0 913.5,195.0 2878.5,195.0 C3370.7,195.0 3493.3,224.0 3985.5,224.0 C3985.5,224.0 3985.5,224.0 6353.5,224.0 C7055.7,224.0 7229.8,157.0 7932.0,157.0 C7932.0,157.0 7932.0,157.0 8342.5,157.0 C8931.5,157.0 9081.0,156.4 9666.0,88.0 C9680.9,86.2 9696.9,83.8 9712.0,81.1 L9718.0,80.0"},{"from":"includes","to":"slides-and-ids","kind":"next","path":"M836.0,105.0 C843.9,105.0 851.9,105.0 859.6,105.0 L865.9,105.0"},{"from":"slides-and-ids","to":"slide-attributes","kind":"next","path":"M963.4,105.0 C971.0,105.0 979.1,105.0 987.0,105.0 L993.0,105.0"},{"from":"slide-attributes","to":"text-and-math","kind":"next","path":"M1099.3,105.0 C1107.0,105.0 1114.9,105.0 1122.6,105.0 L1129.0,105.0"},{"from":"text-and-math","to":"images-and-code","kind":"next","path":"M1228.1,105.0 C1235.7,105.0 1243.8,105.0 1251.7,105.0 L1257.7,105.0"},{"from":"images-and-code","to":"fragments","kind":"next","path":"M1372.0,105.0 C1379.6,105.0 1387.6,105.0 1395.6,105.0 L1401.8,105.0"},{"from":"fragments","to":"containers","kind":"next","path":"M1580.1,105.0 C1587.9,105.0 1595.9,105.0 1603.8,105.0 L1609.9,105.0"},{"from":"containers","to":"closing-fences","kind":"detour","path":"M1749.9,91.9 C1769.2,87.1 1791.2,81.6 1810.8,76.8 L1816.8,75.3"},{"from":"containers","to":"links-and-notes","kind":"next","path":"M1783.2,105.0 C1791.1,105.0 1799.0,105.0 1806.5,105.0 L1812.8,105.0"},{"from":"links-and-notes","to":"the-graph","kind":"next","path":"M1921.2,105.0 C1928.7,105.0 1936.7,105.0 1944.8,105.0 L1951.0,105.0"},{"from":"the-graph","to":"detours","kind":"next","path":"M2129.4,105.0 C2137.5,105.0 2145.3,105.0 2152.5,105.0 L2158.9,105.0"},{"from":"detours","to":"inside-a-detour","kind":"detour","path":"M2223.2,93.9 C2232.8,90.6 2243.3,87.1 2253.0,84.0 C2259.6,81.9 2266.6,79.8 2273.5,77.8 L2279.3,76.1"},{"from":"detours","to":"branches","kind":"next","path":"M2223.2,105.0 C2241.8,105.0 2265.5,105.0 2285.6,105.0 L2291.7,105.0"},{"from":"branches","to":"branch-target","kind":"branch","path":"M2363.4,105.0 C2381.2,105.0 2403.8,105.0 2425.8,105.0 L2432.0,105.0"},{"from":"branch-target","to":"backup-and-tours","kind":"next","path":"M2589.2,105.0 C2596.8,105.0 2604.6,105.0 2612.3,105.0 L2618.7,105.0"},{"from":"backup-and-tours","to":"steps-and-tracks","kind":"next","path":"M2791.2,105.0 C2799.1,105.0 2806.9,105.0 2814.4,105.0 L2820.7,105.0"},{"from":"steps-and-tracks","to":"timelines","kind":"next","path":"M2934.3,105.0 C2942.1,105.0 2950.0,105.0 2957.5,105.0 L2963.7,105.0"},{"from":"timelines","to":"timeline-ranges","kind":"next","path":"M3038.0,105.0 C3045.5,105.0 3053.6,105.0 3061.6,105.0 L3067.8,105.0"},{"from":"timeline-ranges","to":"badge-steps","kind":"next","path":"M3178.2,105.0 C3185.8,105.0 3193.8,105.0 3201.8,105.0 L3208.0,105.0"},{"from":"badge-steps","to":"why-slow","kind":"detour","path":"M3314.4,91.8 C3336.6,77.6 3374.0,55.3 3409.0,42.0 C3420.0,37.8 3432.0,34.3 3443.6,31.5 L3449.6,30.1"},{"from":"badge-steps","to":"memoize-it","kind":"detour","path":"M3358.4,92.0 C3389.6,85.7 3426.4,78.2 3454.8,72.4 L3460.8,71.2"},{"from":"badge-steps","to":"placed-badges","kind":"next","path":"M3379.1,105.0 C3386.9,105.0 3394.9,105.0 3402.8,105.0 L3408.8,105.0"},{"from":"placed-badges","to":"why-not-inside","kind":"detour","path":"M3580.1,92.0 C3585.3,89.7 3590.4,87.1 3595.0,84.0 C3614.1,71.3 3605.9,54.8 3625.0,42.0 C3627.8,40.1 3630.8,38.4 3633.9,36.8 L3639.5,34.2"},{"from":"placed-badges","to":"badge-inheritance","kind":"detour","path":"M3568.5,92.0 C3592.1,87.3 3618.8,82.0 3642.9,77.2 L3649.0,76.0"},{"from":"placed-badges","to":"pick-a-component","kind":"next","path":"M3595.2,105.0 C3619.3,105.0 3644.3,105.0 3665.2,105.0 L3671.3,105.0"},{"from":"pick-a-component","to":"code-blocks","kind":"branch","path":"M3759.7,97.7 C3774.7,94.5 3791.4,90.0 3806.0,84.0 C3817.3,79.4 3828.9,72.7 3838.7,66.4 L3843.9,63.0"},{"from":"pick-a-component","to":"plots","kind":"branch","path":"M3759.6,100.8 C3838.9,93.2 4006.0,77.0 4076.5,70.1 L4082.6,69.6"},{"from":"pick-a-component","to":"graph-anim","kind":"branch","path":"M3759.8,109.4 C3812.9,114.5 3905.7,122.0 3985.5,122.0 C3985.5,122.0 3985.5,122.0 5245.5,122.0 C5350.3,122.0 5470.6,97.8 5539.6,81.5 L5545.7,80.0"},{"from":"pick-a-component","to":"compiler-animations","kind":"branch","path":"M3759.6,115.2 C3823.9,130.1 3942.1,156.0 3985.5,156.0 C3985.5,156.0 3985.5,156.0 6353.5,156.0 C6464.6,156.0 6589.8,108.2 6648.8,82.7 L6654.6,80.1"},{"from":"code-blocks","to":"code-steps","kind":"next","path":"M3890.1,50.0 C3897.1,50.0 3905.0,50.0 3913.2,50.0 L3919.5,50.0"},{"from":"code-steps","to":"plots","kind":"next","path":"M4053.2,59.2 C4061.4,60.3 4069.5,61.5 4076.9,62.5 L4082.9,63.3"},{"from":"plots","to":"plot-sources","kind":"next","path":"M4137.3,67.0 C4144.2,67.0 4152.1,67.0 4160.5,67.0 L4166.9,67.0"},{"from":"plot-sources","to":"dot-and-math","kind":"next","path":"M4340.0,67.0 C4347.9,67.0 4355.8,67.0 4363.8,67.0 L4369.8,67.0"},{"from":"dot-and-math","to":"arrows","kind":"next","path":"M4547.2,67.0 C4555.1,67.0 4562.9,67.0 4570.5,67.0 L4576.8,67.0"},{"from":"arrows","to":"code-segments","kind":"next","path":"M4697.2,67.0 C4704.9,67.0 4712.9,67.0 4720.8,67.0 L4726.8,67.0"},{"from":"code-segments","to":"arrow-anchors","kind":"next","path":"M4874.2,67.0 C4882.0,67.0 4889.8,67.0 4897.4,67.0 L4903.7,67.0"},{"from":"arrow-anchors","to":"arrow-bullets","kind":"next","path":"M5006.0,67.0 C5013.7,67.0 5021.8,67.0 5029.7,67.0 L5035.8,67.0"},{"from":"arrow-bullets","to":"code-morph","kind":"next","path":"M5153.1,67.0 C5160.9,67.0 5168.9,67.0 5176.8,67.0 L5182.8,67.0"},{"from":"code-morph","to":"morph-segments","kind":"next","path":"M5306.4,67.0 C5314.0,67.0 5321.8,67.0 5329.7,67.0 L5335.8,67.0"},{"from":"morph-segments","to":"graph-anim","kind":"next","path":"M5508.2,67.0 C5516.0,67.0 5523.8,67.0 5531.3,67.0 L5537.6,67.0"},{"from":"graph-anim","to":"graph-anim-options","kind":"next","path":"M5657.2,67.0 C5664.9,67.0 5672.9,67.0 5680.9,67.0 L5687.0,67.0"},{"from":"graph-anim-options","to":"array-anim","kind":"next","path":"M5845.2,67.0 C5853.0,67.0 5860.8,67.0 5868.5,67.0 L5874.8,67.0"},{"from":"array-anim","to":"tree-anim","kind":"next","path":"M5991.1,67.0 C5998.8,67.0 6006.7,67.0 6014.4,67.0 L6020.9,67.0"},{"from":"tree-anim","to":"grid-anim","kind":"next","path":"M6132.0,67.0 C6139.7,67.0 6147.6,67.0 6155.3,67.0 L6161.8,67.0"},{"from":"grid-anim","to":"writing-traces","kind":"next","path":"M6271.2,67.0 C6278.9,67.0 6286.7,67.0 6294.4,67.0 L6300.8,67.0"},{"from":"writing-traces","to":"states","kind":"next","path":"M6404.4,67.0 C6411.9,67.0 6419.8,67.0 6427.7,67.0 L6433.7,67.0"},{"from":"states","to":"compiler-animations","kind":"next","path":"M6586.2,67.0 C6593.9,67.0 6601.7,67.0 6609.4,67.0 L6615.8,67.0"},{"from":"compiler-animations","to":"bbv-language","kind":"next","path":"M6752.3,67.0 C6760.1,67.0 6768.0,67.0 6775.9,67.0 L6782.0,67.0"},{"from":"bbv-language","to":"bbv-anim","kind":"next","path":"M6928.1,67.0 C6935.9,67.0 6943.9,67.0 6951.9,67.0 L6958.0,67.0"},{"from":"bbv-anim","to":"bbv-blocks","kind":"next","path":"M7142.0,67.0 C7149.8,67.0 7157.7,67.0 7165.4,67.0 L7171.8,67.0"},{"from":"bbv-blocks","to":"bbv-zoom","kind":"next","path":"M7314.2,67.0 C7321.9,67.0 7329.8,67.0 7337.4,67.0 L7343.8,67.0"},{"from":"bbv-zoom","to":"bbv-options","kind":"next","path":"M7462.3,67.0 C7470.0,67.0 7478.1,67.0 7485.9,67.0 L7492.0,67.0"},{"from":"bbv-options","to":"bbv-instructions","kind":"next","path":"M7615.3,67.0 C7623.0,67.0 7630.9,67.0 7638.9,67.0 L7645.0,67.0"},{"from":"bbv-instructions","to":"lv-and-absint","kind":"next","path":"M7811.3,67.0 C7819.1,67.0 7827.0,67.0 7834.9,67.0 L7841.0,67.0"},{"from":"lv-and-absint","to":"absint-options","kind":"next","path":"M8025.0,67.0 C8032.7,67.0 8040.6,67.0 8048.3,67.0 L8054.7,67.0"},{"from":"absint-options","to":"bbv-intervals","kind":"next","path":"M8226.2,67.0 C8234.0,67.0 8242.0,67.0 8249.9,67.0 L8255.9,67.0"},{"from":"bbv-intervals","to":"reading-the-drawing","kind":"next","path":"M8427.1,67.0 C8434.9,67.0 8442.8,67.0 8450.5,67.0 L8456.9,67.0"},{"from":"reading-the-drawing","to":"presenting-keys","kind":"next","path":"M8593.2,67.0 C8601.1,67.0 8609.1,67.0 8617.0,67.0 L8623.0,67.0"},{"from":"presenting-keys","to":"history","kind":"next","path":"M8757.3,67.0 C8765.0,67.0 8773.0,67.0 8780.9,67.0 L8787.0,67.0"},{"from":"history","to":"navigation-details","kind":"next","path":"M8940.2,67.0 C8947.9,67.0 8955.9,67.0 8963.8,67.0 L8969.9,67.0"},{"from":"navigation-details","to":"presenter-view","kind":"next","path":"M9151.1,67.0 C9159.0,67.0 9166.8,67.0 9174.4,67.0 L9180.8,67.0"},{"from":"presenter-view","to":"output","kind":"next","path":"M9309.1,67.0 C9317.3,67.0 9325.4,67.0 9332.8,67.0 L9338.9,67.0"},{"from":"output","to":"pdf-export","kind":"next","path":"M9396.2,67.0 C9403.5,67.0 9411.7,67.0 9419.7,67.0 L9425.9,67.0"},{"from":"pdf-export","to":"themes","kind":"next","path":"M9508.3,67.0 C9515.7,67.0 9523.7,67.0 9531.7,67.0 L9537.8,67.0"},{"from":"themes","to":"plugins","kind":"next","path":"M9666.0,67.0 C9673.7,67.0 9681.8,67.0 9689.8,67.0 L9695.9,67.0"},{"from":"plugins","to":"checklist-demo","kind":"next","path":"M9868.0,67.0 C9875.9,67.0 9883.9,67.0 9891.7,67.0 L9897.7,67.0"},{"from":"checklist-demo","to":"animated-component","kind":"next","path":"M10063.0,67.0 C10071.0,67.0 10079.0,67.0 10087.0,67.0 L10093.0,67.0"},{"from":"animated-component","to":"call-stack-demo","kind":"next","path":"M10248.0,67.0 C10256.0,67.0 10264.0,67.0 10272.0,67.0 L10278.0,67.0"},{"from":"call-stack-demo","to":"runtime-contract","kind":"next","path":"M10449.0,67.0 C10457.0,67.0 10465.0,67.0 10472.0,67.0 L10479.0,67.0"},{"from":"runtime-contract","to":"diagnostics","kind":"next","path":"M10617.0,67.0 C10625.0,67.0 10633.0,67.0 10640.0,67.0 L10647.0,67.0"},{"from":"diagnostics","to":"diagnostics-files","kind":"detour","path":"M10727.0,53.9 C10739.0,49.6 10752.0,44.6 10765.0,40.1 L10770.0,38.1"},{"from":"diagnostics","to":"cheat-sheet","kind":"next","path":"M10732.0,67.0 C10741.0,67.0 10750.0,67.0 10758.0,67.0 L10764.0,67.0"},{"from":"diagnostics-files","to":"diagnostics-graph","kind":"next","path":"M10853.0,25.0 C10861.0,25.0 10869.0,25.0 10877.0,25.0 L10883.0,25.0"},{"from":"diagnostics-graph","to":"diagnostics-steps","kind":"next","path":"M11023.0,25.0 C11031.0,25.0 11039.0,25.0 11047.0,25.0 L11053.0,25.0"},{"from":"diagnostics-steps","to":"diagnostics-output","kind":"next","path":"M11199.0,25.0 C11207.0,25.0 11215.0,25.0 11223.0,25.0 L11229.0,25.0"},{"from":"cheat-sheet","to":"glossary","kind":"next","path":"M10851.0,67.0 C10870.0,67.0 10893.0,67.0 10912.0,67.0 L10919.0,67.0"},{"from":"glossary","to":"thanks","kind":"next","path":"M10987.0,67.0 C11017.0,67.0 11060.0,67.0 11090.0,67.0 L11096.0,67.0"}],"width":11361.0,"height":232.0},"hash":"5918b369ec757b2e"}</script>
+<script type="application/json" id="lt-data-timeline-ranges/sort">{"frames":{"format":"full","count":9,"frames":[{"values":[3,1,2],"caption":"Unsorted input","marks":{}},{"values":[3,1,2],"caption":"Compare 3 and 1","pointers":{"i":0},"marks":{"0":"compare","1":"compare"}},{"values":[1,3,2],"caption":"Swap","pointers":{"i":0},"marks":{"0":"swap","1":"swap"}},{"values":[1,3,2],"caption":"Compare 3 and 2","pointers":{"i":1},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,3],"caption":"Swap","pointers":{"i":1},"marks":{"1":"swap","2":"swap"}},{"values":[1,2,3],"caption":"3 is in its final place","pointers":{},"cells":{"2":"sorted"},"marks":{}},{"values":[1,2,3],"caption":"Compare 1 and 2","pointers":{"i":0},"cells":{"2":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,2,3],"caption":"2 is in its final place","pointers":{},"cells":{"2":"sorted","1":"sorted"},"marks":{}},{"values":[1,2,3],"caption":"Sorted","pointers":{},"cells":{"2":"sorted","1":"sorted","0":"sorted"},"marks":{}}]},"panel":null}</script>
 <script type="application/json" id="lt-data-code-steps/walk">{"steps":[[],[4,5],[6,7,8,9,10],[11]]}</script>
 <script type="application/json" id="lt-data-code-steps/diff">{"count":2}</script>
 <script type="application/json" id="lt-data-plot-sources/c3">{"backend":"vega","spec":{"mark":{"type":"line","point":true},"encoding":{"x":{"field":"n","type":"quantitative","title":"elements","scale":{"type":"log"}},"y":{"field":"ms","type":"quantitative","title":"time (ms)","scale":{"type":"log"}},"color":{"field":"algorithm","type":"nominal","title":null},"tooltip":[{"field":"n"},{"field":"ms"},{"field":"algorithm"}]},"data":{"values":[{"n":1000,"algorithm":"insertion","ms":1.9},{"n":1000,"algorithm":"merge","ms":0.4},{"n":2000,"algorithm":"insertion","ms":7.6},{"n":2000,"algorithm":"merge","ms":0.9},{"n":5000,"algorithm":"insertion","ms":47.0},{"n":5000,"algorithm":"merge","ms":2.4},{"n":10000,"algorithm":"insertion","ms":190.0},{"n":10000,"algorithm":"merge","ms":5.1}]},"width":864,"height":326,"config":{"background":"transparent","font":"Avenir Next, Segoe UI, Helvetica Neue, Arial, DejaVu Sans","axis":{"labelColor":"#5d6778","titleColor":"#1d2433","gridColor":"#e3e7ee","domainColor":"#5d6778","tickColor":"#5d6778","labelFontSize":16,"titleFontSize":17,"titleFontWeight":500,"titlePadding":10},"legend":{"labelColor":"#1d2433","titleColor":"#5d6778","labelFontSize":16,"symbolSize":120},"title":{"color":"#1d2433","fontSize":18},"range":{"category":["#0b6e7f","#c8741a","#6a4fb3","#2f8f4e","#b23a48","#5d6778"]},"view":{"stroke":null},"line":{"strokeWidth":2.5},"point":{"size":60}},"$schema":"https://vega.github.io/schema/vega-lite/v5.json"}}</script>
