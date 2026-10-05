@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-05, after 0.18.0 (`implementation-report-2026-10-05-c.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-05, after 0.19.0 (`implementation-report-2026-10-05-d.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
@@ -31,7 +31,8 @@ Updated 2026-10-05, after 0.18.0 (`implementation-report-2026-10-05-c.md`). Item
 - [ ] 0.16.0: try `from_anchor: bullet` on your own slides (the manual's "Arrows at bullets"). The end leaves to the left; say if you want `bullet` combined with another direction (say, leaving downward from the marker).
 - [ ] 0.17.0: try the timeline ranges on one of your slides (the manual's "Timeline ranges"): `reveal ..end`, `trace ..+2`, `end-1`, `by 2` and ranges in lockstep. The examples and the rest of the manual were left as written (their decks are unchanged apart from the version); say if you want them rewritten with the new forms where they would be shorter.
 - [ ] 0.18.0: watch the bug-fix slide of example 05 (`highlight=changed`) and the manual's "Highlights in a morph" on your screen. `changed` lights rows holding new tokens only, so at the last step of example 05 the line `self.order.remove(key)`, which survives from the old code, stays dimmed in the middle of the four-line band; `highlight: refresh` on that step would light the whole segment instead. Judge the timing too: old highlights fade out with the leaving tokens, the new ones in with the arriving tokens.
-- [ ] 0.17.0 and 0.18.0: `docs/implementation-report-2026-10-05-b.md` is copied to `docs/archive/`; `git rm` it in `docs/`.
+- [ ] 0.19.0: `docs/implementation-report-2026-10-05-c.md` is copied to `docs/archive/`; `git rm` it in `docs/`.
+- [ ] 0.19.0: other attribute lines inside list items (an attribute line inside a block quote, or before a fenced block in an item, which stays a code block without a component) were left as before; say if you need them.
 
 ## Later, if wanted
 

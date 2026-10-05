@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.18.0
+author: Lattice 0.19.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -185,7 +185,7 @@ Code fences are highlighted by Pygments, for any language it knows. An unknown f
 :::
 ::::
 
-# Fragments: reveal step by step {#fragments}
+# Fragments: reveal step by step {#fragments .dense}
 
 :::: columns
 ::: column {width=1fr}
@@ -193,6 +193,9 @@ Code fences are highlighted by Pygments, for any language it knows. An unknown f
 {.reveal}
 - Greedy choice
 - Priority queue
+  {.reveal}
+  - binary heap
+  - Fibonacci heap
 - No negative weights
 
 {.reveal}
@@ -207,6 +210,10 @@ A remark, on the same step.
 - An attribute line `{.reveal}` directly before a block makes it revealable
 - A list reveals one top-level item per step; any other block is one fragment
 - Fragments are numbered across the slide and form its **reveal track**
+- A `{.reveal}` line after an item's text reveals its nested list
+  {.reveal}
+  - item by item
+  - in document order
 - Hidden fragments keep their space, so nothing jumps
 
 {.reveal-with}

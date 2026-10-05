@@ -15,4 +15,5 @@ Documents kept as they were written, for the history behind features. They are n
 | `implementation-report-2026-10-04.md` | Lattice 0.13.0 to 0.15.0: vector bound checks in SBBV and ΛV, container fences that nest without counting colons, enlarged blocks of the versioning drawings |
 | `implementation-report-2026-10-05.md` | Lattice 0.16.0: arrows at list items and at their bullets, text markers for bullet lists |
 | `implementation-report-2026-10-05-b.md` | Lattice 0.17.0: timeline ranges (open ranges, `end-N`, strides, lockstep ranges) |
+| `implementation-report-2026-10-05-c.md` | Lattice 0.18.0: highlights in `code-morph` (per version, per step, a default, `changed`) |
 | `thesis.pdf` | The thesis on basic block versioning that the 0.4.0 and 0.5.0 work follows |

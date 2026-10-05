@@ -503,9 +503,6 @@ class CodeMorph(Component):
     def render(self, block, opts: MorphOptions, ctx) -> RenderResult:
         texts, labels, given, langs, own = self._versions(opts, ctx)
         texts = [expand_tabs(t) for t in texts]
-        for v in range(1, len(texts)):
-            if texts[v].lines == texts[v - 1].lines and langs[v] == langs[v - 1]:
-                ctx.warn(f"code-morph: positions {v - 1} and {v} show the same code", "LT059")
         for v, t in enumerate(texts):
             odd = odd_char(t.lines)
             if odd:
@@ -524,6 +521,10 @@ class CodeMorph(Component):
             layer, bright = highlight_layer(t, rows, names)
             under.append(layer)
             hl.append(sorted(bright) if rows or names else None)
+        for v in range(1, len(texts)):  # LT059: nothing changes, not even the highlight
+            if (texts[v].lines == texts[v - 1].lines and langs[v] == langs[v - 1]
+                    and hl[v] == hl[v - 1] and under[v] == under[v - 1]):
+                ctx.warn(f"code-morph: positions {v - 1} and {v} show the same code", "LT059")
         lit0 = set(hl[0] or ())
         has_hl = any(h is not None for h in hl)
 

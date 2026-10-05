@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.18.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.19.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -264,11 +264,18 @@ The keys of a slide's branch options and detours MUST be unique within that slid
 
 {.reveal}
 Final remark, revealed as one block.
+
+{.reveal}
+- Data structures
+  {.reveal}
+  - binary heap
+  - Fibonacci heap
 ````
 
 - An attribute line containing the class `reveal` marks the next block as revealable. If the block is a list, each top-level item is one fragment; otherwise the whole block is one fragment.
 - Fragments are numbered 1, 2, 3, ... in document order across the slide (excluding detour content).
 - An attribute line containing the class `reveal-with` puts the next block on the last fragment numbered so far, in document order, instead of opening a new one: it appears on the same step as that fragment. A list marked `reveal-with` joins as a whole. `reveal-with` before the first fragment of the slide, or together with `reveal` on one line, is an error (LT057); a placed detour badge is never a fragment (LT056, section 3.9).
+- **Inside a list item**, a line holding only an attribute block, directly before a nested block of the same item, applies to that block: the line written after the item's text (which CommonMark reads as the last line of the item's paragraph, as in the example) or as a paragraph of its own; a line directly followed by text applies to the rest of that paragraph, as at the top level (section 3.4). A nested list marked `reveal` reveals one item per fragment, and the numbering stays in document order: an item is numbered before the items nested in it, and they before the next item. `reveal-with`, ids and classes apply as to any block. An attribute line in an item that is not directly followed by another block of that item stays text.
 - All fragments of a slide form the single **reveal track** (section 6.1).
 
 ### 3.13 Fenced component blocks
@@ -855,7 +862,7 @@ steps:
 2. Consecutive versions are aligned by lines with `difflib.SequenceMatcher` (`autojunk=False`), comparing each line's units without its spaces. A line that is deleted on one side and inserted on the other, with the same units, at least six characters long (not counting spaces) and unique among the unmatched lines of both sides, is a move. Equal lines and moves pair their units in order. In each other changed region, the units of all its old and new lines are aligned by a second `SequenceMatcher`, on class and text when both versions have the same language and on text alone otherwise; units of equal runs survive, possibly on another line (a line rewritten into several, or several into one).
 3. A unit that survives from one version to the next keeps its identity (and its element in the page); every other unit is new. A unit's class is recorded per version, so a surviving unit whose class changes (another language, or a lexer that reads it differently) changes colour.
 
-**Rendering.** At rest the block looks like a `code` block of its current version: the same background, title bar, font, size, line height and padding. Every drawn unit is an absolutely positioned element at `col` character widths (`ch`) and `row` line heights from the origin of the text, so no layout is measured. A transparent plain-text copy of the current version lies over the units at the same origin: it carries the native text selection and the segments of the current version (`<span class="lt-seg" data-lt-seg="NAME">`, one piece per line, the first with `id="NAME"`, as in section 8.10), which arrows measure. Changing position replaces that copy at once. The title bar shows `title` and the label of the current version; it is shown when `title` is set, when any label was written, or when the language changes. With `linenos`, the rows of the current version are numbered from 1, beside the text, and the numbers do not move. A character that does not take one column of a monospace font (a wide character of East Asian scripts or an emoji, a combining mark, a control character) misplaces the units after it on its line: warning LT060. Two consecutive versions with the same text and language: warning LT059.
+**Rendering.** At rest the block looks like a `code` block of its current version: the same background, title bar, font, size, line height and padding. Every drawn unit is an absolutely positioned element at `col` character widths (`ch`) and `row` line heights from the origin of the text, so no layout is measured. A transparent plain-text copy of the current version lies over the units at the same origin: it carries the native text selection and the segments of the current version (`<span class="lt-seg" data-lt-seg="NAME">`, one piece per line, the first with `id="NAME"`, as in section 8.10), which arrows measure. Changing position replaces that copy at once. The title bar shows `title` and the label of the current version; it is shown when `title` is set, when any label was written, or when the language changes. With `linenos`, the rows of the current version are numbered from 1, beside the text, and the numbers do not move. A character that does not take one column of a monospace font (a wide character of East Asian scripts or an emoji, a combining mark, a control character) misplaces the units after it on its line: warning LT060. Two consecutive positions with the same text, language and highlights: warning LT059 (positions that differ only by their highlights are not).
 
 **Room.** With `room=max` the text area keeps the height of the tallest version and the width of the widest at every position, so the rest of the slide never moves. With `room=fit` its height is that of the current version and changes with it (animated on a single step), moving what follows; its width stays that of the widest version. Long lines scroll horizontally, and a block taller than its space scrolls, as a `code` block does; when the text area overflows, the first highlighted row (or row holding a highlighted segment) of the shown position is scrolled into view, or, at a position that highlights nothing, the first row of the shown version that differs from the version before it (in the order of the versions).
 
@@ -1243,7 +1250,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT056 | error | Invalid placed badge (`::detour-badge`): missing or unknown `ref`, a detour of another slide, without an explicit id or with `badge=false`, an unknown attribute or value, an attribute line with `reveal` or key-value attributes, or a badge in speaker notes or in a branch |
 | LT057 | error | `.reveal-with` with no fragment before it on the slide, or together with `.reveal` |
 | LT058 | error | An id used twice on a slide: element ids written by the author, explicit component ids and code segment names (section 8.10) |
-| LT059 | warning | Two consecutive versions of a `code-morph` are identical (section 8.11) |
+| LT059 | warning | Two consecutive positions of a `code-morph` are identical: same text, language and highlights (section 8.11) |
 | LT060 | warning | A character of a `code-morph` that does not take one column of a monospace font: wide, combining or control (section 8.11) |
 | LT061 | error | A closing container fence with no open container, a named closing fence (`::: /NAME`) whose name is not that of the container it closes, or a malformed one (section 3.2) |
 | LT062 | warning | A container never closed: it ends with its file or its enclosing block (section 3.2) |
@@ -1443,3 +1450,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.16 | Arrows at list items (`LIST[N]`, nested and from the end) and at their markers (the `bullet` anchor); the box of a list item leaves out its nested lists; text markers for bullet lists; LT063 | 8.8, 8.9, 12 |
 | 0.17 | Timeline sugar: open ranges `..STOP` from the current position (`reveal ..end`, `trace ..+2`), positions counted from the last (`end-N`), strides (`by K`), several ranges on one line in lockstep (LT031 now means ranges of different lengths) | 3.15, 6.3, 12 |
 | 0.18 | Highlights in `code-morph`: `highlight` per version, per step and as the default of every position, the keyword `changed`; `highlight` in a `diff-steps` version is LT022 | 8.8, 8.10, 8.11 |
+| 0.19 | Attribute lines inside list items: a nested list revealed item by item; LT059 ignores positions whose highlights differ | 3.12, 8.11, 12 |

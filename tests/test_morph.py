@@ -440,3 +440,11 @@ def test_diff_steps_rejects_highlight(deck):
     root = deck({"talk.md": "# A\n```diff-steps\nversions: [{code: a}, {code: b, highlight: 1}]\n```\n"})
     items = check_deck(root, use_cache=False).items
     assert [x.code for x in items] == ["LT022"] and "a diff does not highlight" in items[0].message
+
+
+def test_lt059_ignores_positions_with_other_highlights(deck):
+    v = '{code: "a = 1\\nb = 2"'
+    body = f"versions:\n  - {v}}}\n  - {v}, highlight: 2}}\n  - {v}, highlight: 2}}\n"
+    root = deck({"talk.md": f"# A\n```code-morph {{#m lang=python}}\n{body}```\n"})
+    items = check_deck(root, use_cache=False).items
+    assert [(x.code, "positions 1 and 2" in x.message) for x in items] == [("LT059", True)]

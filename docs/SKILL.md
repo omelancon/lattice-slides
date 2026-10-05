@@ -45,7 +45,7 @@ src/lattice/
                   directives (::include, ::detour-badge), [[links]], $math$
   parser.py       Loader: files, includes, h1 segmentation, detours, ids, slide attributes
   attrs.py, ids.py  attribute blocks and slug ids
-  body.py         BodyBuilder: blocks, reveal, containers, detour badges (default and placed), branch
+  body.py         BodyBuilder: blocks, reveal (attribute lines inside list items too), containers, detour badges (default and placed), branch
                   menus, notes, timelines, component placeholders
   graph.py        next resolution, edges, keys, main path, reachability, tours
   timeline.py     timeline parsing, step compilation (ranges resolved against the current positions), detour
@@ -119,7 +119,7 @@ Run `pytest` after every change; it takes about a minute and a half, most of it 
 
 | File | Covers |
 |---|---|
-| `test_parsing.py` | attributes, ids, includes, links, reveal and `.reveal-with`, containers and their fences (bare and named closing fences, mixed, code blocks skipped, LT061, LT062), leaf directives |
+| `test_parsing.py` | attributes, ids, includes, links, reveal and `.reveal-with` (attribute lines inside list items, nested lists revealed item by item), containers and their fences (bare and named closing fences, mixed, code blocks skipped, LT061, LT062), leaf directives |
 | `test_graph.py` | next resolution, detours, branches, keys, tours |
 | `test_steps.py` | tracks, timelines (open ranges `..STOP`, `end-N`, strides, lockstep ranges and their errors), detour steps and the badges of their detours (modes, placed badges, LT055 and LT056), followers, deltas, frame stores, tree and grid traces, tree layouts |
 | `test_bbv.py` | the type lattice and intervals, the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), abstract interpretation against figures 1, 2 and 4, intervals in SBBV and ΛV, the symbolic bound rules of the paper and `findv` against its figure 7, frames, layout, the components (`clickable`, `clickable_show` and the sizes of enlarged blocks) |

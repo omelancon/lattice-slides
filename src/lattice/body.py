@@ -146,11 +146,33 @@ class BodyBuilder:
     def plain(self, g, pending: Attrs | None) -> str:
         attrs, reveal = self.wrapper_attrs(pending)
         first = g[0]
-        if reveal and first.type in ("bullet_list_open", "ordered_list_open"):
-            for tok in g:
-                if tok.type == "list_item_open" and tok.level == first.level + 1:
-                    tok.attrSet("data-lt-reveal", str(self.next_fragment()))
+        lists = ("bullet_list_open", "ordered_list_open")
+        if first.type in lists:
+            # walk the list in document order, so that fragments are numbered as they appear: its own items
+            # when the list is revealed, and the blocks inside items that an attribute line marks (spec 3.12)
+            nested = self.item_attr_lines(g)
+            per_item = {0} if reveal else set()
             reveal = False
+            stack: list[int] = []
+            for i, tok in enumerate(g):
+                if i in nested:
+                    wattrs, rv = self.wrapper_attrs(nested[i])
+                    if rv and tok.type in lists:
+                        per_item.add(i)
+                    elif rv:
+                        wattrs["data-lt-reveal"] = str(self.next_fragment())
+                    for k, v in wattrs.items():
+                        if k == "class":
+                            tok.attrJoin("class", v)
+                        else:
+                            tok.attrSet(k, v)
+                if tok.type in lists:
+                    stack.append(i)
+                elif tok.type in ("bullet_list_close", "ordered_list_close"):
+                    stack.pop()
+                elif (tok.type == "list_item_open" and stack and stack[-1] in per_item
+                      and tok.level == g[stack[-1]].level + 1):
+                    tok.attrSet("data-lt-reveal", str(self.next_fragment()))
         if reveal:
             attrs["data-lt-reveal"] = str(self.next_fragment())
         if attrs and first.nesting == 1:
@@ -164,6 +186,51 @@ class BodyBuilder:
         if attrs:
             return f"<div{self.attrs_html(attrs)}>{rendered}</div>"
         return rendered
+
+    def item_attr_lines(self, g) -> dict:
+        """Attribute lines inside the items of a list (spec 3.12): a line holding only an attribute block,
+        last in a paragraph of an item (or alone in it) and directly followed by another block of the same
+        item, applies to that block; one first in a paragraph, followed by text, applies to that paragraph.
+        The lines are removed from ``g``; returns ``{index in g: Attrs}``."""
+        found: dict[int, Attrs] = {}
+        i = 0
+        while i < len(g) - 3:
+            tok = g[i]
+            if not (tok.type == "paragraph_open" and g[i + 1].type == "inline" and g[i + 2].type == "paragraph_close"
+                    and tok.level > g[0].level):
+                i += 1
+                continue
+            lines = g[i + 1].content.split("\n")
+            head = lines[0].strip()
+            if len(lines) > 1 and _ATTR_LINE_RE.match(head):
+                # "{.reveal}" directly followed by text: the attributes apply to the rest of the paragraph
+                try:
+                    found[i] = parse_attr_block(head)
+                    lines = lines[1:]
+                    g[i + 1].content = "\n".join(lines)
+                    g[i + 1].children = self.md.parseInline(g[i + 1].content, self.env)[0].children
+                except AttrError:
+                    pass
+            nxt = g[i + 3]
+            last = lines[-1].strip()
+            if nxt.nesting != 1 or nxt.level != tok.level or not _ATTR_LINE_RE.match(last):
+                i += 1
+                continue
+            try:
+                attrs = parse_attr_block(last)
+            except AttrError:
+                i += 1
+                continue
+            if len(lines) == 1:  # the paragraph is the attribute line: drop it
+                del g[i:i + 3]
+                found[i] = attrs
+                continue
+            rest = "\n".join(lines[:-1])
+            g[i + 1].content = rest
+            g[i + 1].children = self.md.parseInline(rest, self.env)[0].children
+            found[i + 3] = attrs
+            i += 3
+        return found
 
     # ------------------------------------------------------------------ fences
     def fence(self, tok, pending: Attrs | None) -> str:

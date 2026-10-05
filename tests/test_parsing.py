@@ -1,3 +1,4 @@
+import re
 import pytest
 
 from lattice.attrs import AttrError, parse_attr_block, split_trailing_attrs
@@ -194,6 +195,44 @@ def test_reveal_with_joins_the_previous_fragment(deck):
     assert '<ul data-lt-reveal="2">' in html  # the list as a whole, not one fragment per item
     assert "<p data-lt-reveal=\"3\">Beside it" in html
     assert html.count('data-lt-reveal="3"') == 2
+
+
+def test_reveal_inside_list_items(deck):
+    """Spec 3.12: an attribute line inside an item applies to the next block of that item; a nested list
+    marked reveal shows one item per fragment, numbered in document order."""
+    root = deck({"talk.md": """
+        # A
+        {.reveal}
+        - one
+        - two
+          {.reveal .sub}
+          - two a
+          - two b
+        - three
+
+          {#late .reveal}
+          A paragraph of the item, after its text.
+        - four
+          {.reveal-with}
+          - with four
+        - five {.reveal} stays text
+          - not revealed
+    """})
+    s = build_deck(root, use_cache=False).slides["a"]
+    html = s.body_html
+    assert s.reveal_count == 8 and "{.reveal" not in html.replace("five {.reveal} stays text", "")
+    assert '<ul class="sub">' in html
+    for n, text in [(1, "one"), (2, "two"), (3, "two a"), (4, "two b"), (5, "three"), (7, "four"), (8, "five")]:
+        assert re.search(rf'<li data-lt-reveal="{n}">\s*(<p>)?{text}', html), (n, text)
+    assert '<p id="late" data-lt-reveal="6">A paragraph' in html
+    root.write_text("# A\n{.reveal}\n- one\n\n  {.reveal}\n\n  - one a\n- two\n")  # the line as a paragraph of its own
+    s2 = build_deck(root, use_cache=False).slides["a"]
+    assert s2.reveal_count == 3 and "{.reveal}" not in s2.body_html
+    assert '<ul data-lt-reveal="7">' in html and "<li>with four</li>" in html  # reveal-with: the list joins four
+    assert "five {.reveal} stays text" in html and "<li>not revealed</li>" in html
+    root.write_text("# A\n- plain\n  {.reveal}\n  - a\n  - b\n")  # the outer list need not be revealed
+    s = build_deck(root, use_cache=False).slides["a"]
+    assert s.reveal_count == 2 and '<li>plain\n<ul>\n<li data-lt-reveal="1">a</li>' in s.body_html
 
 
 def test_reveal_with_errors(deck):
