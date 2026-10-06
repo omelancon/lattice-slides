@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.23.0">
+<meta name="generator" content="lattice 0.24.0">
 <title>Extending Lattice</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -68,6 +68,14 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-column{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:16px}
 /* a table never spills into the next column: if it cannot fit, it scrolls inside its own */
 .lt-column table{display:block;max-width:100%;overflow-x:auto}
+/* columns whose width changes (spec 3.8, 10.4): the content sits in .lt-column-in, which keeps a fixed width
+   while the column's box moves (the box clips it); a collapsed column takes no width and gives back one gap */
+.lt-column-in{flex:1 1 auto;min-height:0;min-width:0;display:flex;flex-direction:column;gap:16px}
+.lt-column.lt-col-moving,.lt-column.lt-col-shut{overflow-x:clip}
+.lt-column.lt-col-shut{visibility:hidden}
+.lt-col-shut>.lt-column-in{opacity:0}
+.lt-columns>.lt-col-shut{margin-right:calc(-1 * var(--lt-gap, 40px))}
+.lt-columns>.lt-col-shut:last-child{margin-right:0;margin-left:calc(-1 * var(--lt-gap, 40px))}
 .lt-callout{padding:16px 22px;border-radius:10px;background:var(--lt-panel);border-left:6px solid var(--lt-accent)}
 .lt-callout-warn{border-left-color:var(--lt-warn)}
 .lt-callout-tip{border-left-color:var(--lt-good)}
@@ -623,7 +631,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.23.0","meta":{"title":"Extending Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"extending-lattice","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"slides":{"extending-lattice":{"title":"Extending Lattice","label":"Extending Lattice","scope":"root","next":{"slide":"plugin-file"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"plugin-file":{"title":"A plugin is a Python file","label":"A plugin is a Python file","scope":"root","next":{"slide":"truth"},"branches":[],"detours":[],"steps":7,"tracks":[{"id":"c1","kind":"component","instance":"plugin-file/c1"}],"positions":[[0],[1],[2],[3],[4],[5],[6]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>Lattice imports <code>lattice_plugins.py<\/code> automatically; installed packages are enabled with <code>plugins:<\/code> in the front matter.<\/p>\n"},"truth":{"title":"Truth tables, computed at build time","label":"Truth tables, computed at build time","scope":"root","next":{"slide":"stack"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":26}},"stack":{"title":"The call stack of fib(4)","label":"The call stack of fib(4)","scope":"root","next":{"slide":"runtime"},"branches":[],"detours":[],"steps":19,"tracks":[{"id":"src","kind":"component","instance":"stack/src","follow":"calls"},{"id":"calls","kind":"component","instance":"stack/calls"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18]],"offpath":false,"source":{"file":"talk.md","line":44}},"runtime":{"title":"Its runtime, in a few lines","label":"Its runtime, in a few lines","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"runtime/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":58}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":66}}},"detours":{},"instances":{"plugin-file/c1":{"component":"code-steps","slide":"plugin-file","data":"lt-data-plugin-file/c1"},"truth/c1":{"component":"truth-table","slide":"truth","data":null},"stack/src":{"component":"code","slide":"stack","data":"lt-data-stack/src"},"stack/calls":{"component":"call-stack","slide":"stack","data":"lt-data-stack/calls"},"runtime/c1":{"component":"code-steps","slide":"runtime","data":"lt-data-runtime/c1"}},"tours":{},"mainPath":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"overview":{"nodes":{"extending-lattice":{"x":67.0,"y":21.0,"w":118.0,"h":26.0,"label":"Extending Lattice"},"plugin-file":{"x":232.5,"y":21.0,"w":153.0,"h":26.0,"label":"A plugin is a Python file"},"truth":{"x":427.0,"y":21.0,"w":176.0,"h":26.0,"label":"Truth tables, computed at…"},"stack":{"x":617.5,"y":21.0,"w":145.0,"h":26.0,"label":"The call stack of fib(4)"},"runtime":{"x":801.5,"y":21.0,"w":163.0,"h":26.0,"label":"Its runtime, in a few lin…"},"thanks":{"x":942.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"extending-lattice","to":"plugin-file","kind":"next","path":"M126.1,21.0 C133.8,21.0 141.8,21.0 149.8,21.0 L155.8,21.0"},{"from":"plugin-file","to":"truth","kind":"next","path":"M309.0,21.0 C316.8,21.0 324.8,21.0 332.8,21.0 L338.9,21.0"},{"from":"truth","to":"stack","kind":"next","path":"M515.1,21.0 C522.8,21.0 530.7,21.0 538.4,21.0 L544.8,21.0"},{"from":"stack","to":"runtime","kind":"next","path":"M690.2,21.0 C697.9,21.0 705.9,21.0 713.8,21.0 L719.9,21.0"},{"from":"runtime","to":"thanks","kind":"next","path":"M883.4,21.0 C891.4,21.0 899.2,21.0 906.4,21.0 L912.8,21.0"}],"width":980.0,"height":42.0},"hash":"63a68300af17bd34"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.24.0","meta":{"title":"Extending Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"extending-lattice","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"slides":{"extending-lattice":{"title":"Extending Lattice","label":"Extending Lattice","scope":"root","next":{"slide":"plugin-file"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"plugin-file":{"title":"A plugin is a Python file","label":"A plugin is a Python file","scope":"root","next":{"slide":"truth"},"branches":[],"detours":[],"steps":7,"tracks":[{"id":"c1","kind":"component","instance":"plugin-file/c1"}],"positions":[[0],[1],[2],[3],[4],[5],[6]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>Lattice imports <code>lattice_plugins.py<\/code> automatically; installed packages are enabled with <code>plugins:<\/code> in the front matter.<\/p>\n"},"truth":{"title":"Truth tables, computed at build time","label":"Truth tables, computed at build time","scope":"root","next":{"slide":"stack"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":26}},"stack":{"title":"The call stack of fib(4)","label":"The call stack of fib(4)","scope":"root","next":{"slide":"runtime"},"branches":[],"detours":[],"steps":19,"tracks":[{"id":"src","kind":"component","instance":"stack/src","follow":"calls"},{"id":"calls","kind":"component","instance":"stack/calls"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18]],"offpath":false,"source":{"file":"talk.md","line":44}},"runtime":{"title":"Its runtime, in a few lines","label":"Its runtime, in a few lines","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"runtime/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":58}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":66}}},"detours":{},"instances":{"plugin-file/c1":{"component":"code-steps","slide":"plugin-file","data":"lt-data-plugin-file/c1"},"truth/c1":{"component":"truth-table","slide":"truth","data":null},"stack/src":{"component":"code","slide":"stack","data":"lt-data-stack/src"},"stack/calls":{"component":"call-stack","slide":"stack","data":"lt-data-stack/calls"},"runtime/c1":{"component":"code-steps","slide":"runtime","data":"lt-data-runtime/c1"}},"tours":{},"mainPath":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"overview":{"nodes":{"extending-lattice":{"x":67.0,"y":21.0,"w":118.0,"h":26.0,"label":"Extending Lattice"},"plugin-file":{"x":232.5,"y":21.0,"w":153.0,"h":26.0,"label":"A plugin is a Python file"},"truth":{"x":427.0,"y":21.0,"w":176.0,"h":26.0,"label":"Truth tables, computed at…"},"stack":{"x":617.5,"y":21.0,"w":145.0,"h":26.0,"label":"The call stack of fib(4)"},"runtime":{"x":801.5,"y":21.0,"w":163.0,"h":26.0,"label":"Its runtime, in a few lin…"},"thanks":{"x":942.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"extending-lattice","to":"plugin-file","kind":"next","path":"M126.1,21.0 C133.8,21.0 141.8,21.0 149.8,21.0 L155.8,21.0"},{"from":"plugin-file","to":"truth","kind":"next","path":"M309.0,21.0 C316.8,21.0 324.8,21.0 332.8,21.0 L338.9,21.0"},{"from":"truth","to":"stack","kind":"next","path":"M515.1,21.0 C522.8,21.0 530.7,21.0 538.4,21.0 L544.8,21.0"},{"from":"stack","to":"runtime","kind":"next","path":"M690.2,21.0 C697.9,21.0 705.9,21.0 713.8,21.0 L719.9,21.0"},{"from":"runtime","to":"thanks","kind":"next","path":"M883.4,21.0 C891.4,21.0 899.2,21.0 906.4,21.0 L912.8,21.0"}],"width":980.0,"height":42.0},"hash":"2801dd3cd5d593f3"}</script>
 <script type="application/json" id="lt-data-plugin-file/c1">{"steps":[[],[16,17,18,19,20,21],[23,24,25,26,27,28],[29,30,31,32,33,34,35,36,37],[38],[46,47,48,49,50,51,52],[54,55,56,57,58,59,60]]}</script>
 <script type="application/json" id="lt-data-stack/src">{"steps":[[2],[2],[2],[2],[3],[2],[3],[4],[2],[3],[4],[2],[2],[3],[2],[3],[4],[4],[1]]}</script>
 <script type="application/json" id="lt-data-stack/calls">{"frames":{"format":"full","count":19,"frames":[{"stack":[{"call":"fib(4)","note":"running"}],"caption":"Call fib(4)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"running"}],"caption":"Call fib(3)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"running"}],"caption":"Call fib(2)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running"}],"caption":"Call fib(0)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running","ret":0}],"caption":"Base case: fib(0) = 0"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)","ret":1}],"caption":"fib(2) = 1 + 0"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)","ret":2}],"caption":"fib(3) = 1 + 1"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"running"}],"caption":"Call fib(2)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running"}],"caption":"Call fib(0)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running","ret":0}],"caption":"Base case: fib(0) = 0"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)","ret":1}],"caption":"fib(2) = 1 + 0"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)","ret":3}],"caption":"fib(4) = 2 + 1"},{"stack":[],"caption":"fib(4) = 3 after 18 steps"}]}}</script>
@@ -945,11 +953,118 @@ const Lattice = (() => {
     }
   }
 
+  // ------------------------------------------------------------------ column widths (spec 3.8, 10.4)
+  // A `columns` container marked by the build ([data-lt-cols]) gives each of its columns the flex value of
+  // the current position of the columns track, or the column's own (`data-lt-flex`). An animated change
+  // measures the columns before and after it, moves their boxes in slide pixels while their contents keep a
+  // fixed width (their final one; a collapsing column keeps its own and fades out), then sets the final
+  // values. The measures are for display only: every width comes from the build.
+  const SHUT = "0 0 0px";
+  const QUICK_COLUMNS_MS = 140; // a change that interrupts another (skip playback)
+  const columnMoves = new Map(); // container -> pending end of its move
+  const columnsAt = new WeakMap(); // container -> the targets last placed
+  const columnsOf = (box) => Array.from(box.children).filter((c) => c.classList.contains("lt-column"));
+  const columnInner = (col) => Array.from(col.children).find((c) => c.classList.contains("lt-column-in"));
+
+  function restColumn(col, flex) {
+    const shut = flex === SHUT;
+    col.style.transition = "";
+    col.style.marginLeft = "";
+    col.style.marginRight = "";
+    col.style.flex = flex || "";
+    col.classList.remove("lt-col-moving", "lt-col-closing");
+    col.classList.toggle("lt-col-shut", shut);
+    col.inert = shut;
+    col.ltShut = shut;
+    const inner = columnInner(col);
+    if (inner) {
+      inner.style.transition = "";
+      inner.style.opacity = "";
+      if (!shut) inner.style.width = ""; // a collapsed column keeps the width of its content, to come back as it was
+    }
+  }
+
+  function placeColumns(box, state, animate) {
+    const cols = columnsOf(box);
+    const targets = cols.map((c) => (c.dataset.ltCol && c.dataset.ltCol in state ? state[c.dataset.ltCol] : c.dataset.ltFlex || ""));
+    const key = targets.join("|");
+    const moving = columnMoves.get(box);
+    if (moving) clearTimeout(moving);
+    columnMoves.delete(box);
+    if (!moving && columnsAt.get(box) === key) return;
+    columnsAt.set(box, key);
+    const ms = Number(box.dataset.ltDuration || 0);
+    if (!animate || !ms || reducedMotion() || !box.getClientRects().length) {
+      cols.forEach((c, i) => restColumn(c, targets[i]));
+      relayoutColumns(box, 0);
+      return;
+    }
+    const duration = moving ? Math.min(ms, QUICK_COLUMNS_MS) : ms;
+    const width = (c) => parseFloat(getComputedStyle(c).width) || 0;
+    const margins = (c) => { const cs = getComputedStyle(c); return [parseFloat(cs.marginLeft) || 0, parseFloat(cs.marginRight) || 0]; };
+    // where the columns are now (halfway through a move, too)
+    const w0 = cols.map(width), m0 = cols.map(margins);
+    const was = cols.map((c) => (c.ltShut !== undefined ? c.ltShut : c.classList.contains("lt-col-shut")));
+    const inners = cols.map(columnInner);
+    const content0 = inners.map((n, i) => (n && n.style.width ? parseFloat(n.style.width) : w0[i]));
+    const opacity0 = inners.map((n) => (n ? getComputedStyle(n).opacity : "1"));
+    // where they will be (a move under way is dropped first, or its transitions would still be measured)
+    for (const el of [...cols, ...inners]) if (el && el.getAnimations) el.getAnimations().forEach((a) => a.cancel());
+    cols.forEach((c, i) => restColumn(c, targets[i]));
+    const w1 = cols.map(width), m1 = cols.map(margins);
+    // back to the start, then move
+    cols.forEach((c, i) => {
+      const shut = targets[i] === SHUT;
+      c.classList.remove("lt-col-shut");
+      c.classList.add("lt-col-moving");
+      c.classList.toggle("lt-col-closing", shut && !was[i]);
+      c.style.flex = `0 1 ${w0[i]}px`;
+      c.style.marginLeft = `${m0[i][0]}px`;
+      c.style.marginRight = `${m0[i][1]}px`;
+      const n = inners[i];
+      if (n) {
+        n.style.width = `${shut ? content0[i] : w1[i]}px`;
+        n.style.opacity = opacity0[i];
+      }
+    });
+    void box.offsetWidth;
+    const ease = `${duration}ms ease-in-out`;
+    cols.forEach((c, i) => {
+      const shut = targets[i] === SHUT;
+      c.style.transition = `flex-basis ${ease}, margin-left ${ease}, margin-right ${ease}`;
+      c.style.flex = `0 1 ${w1[i]}px`;
+      c.style.marginLeft = `${m1[i][0]}px`;
+      c.style.marginRight = `${m1[i][1]}px`;
+      const n = inners[i];
+      if (n) {
+        n.style.transition = `opacity ${ease}`;
+        n.style.opacity = shut ? "0" : "1";
+      }
+    });
+    columnMoves.set(box, setTimeout(() => {
+      columnMoves.delete(box);
+      cols.forEach((c, i) => restColumn(c, targets[i]));
+      relayoutColumns(box, 0);
+    }, duration + 30));
+    relayoutColumns(box, duration);
+  }
+
+  // Runtimes that measure the slide (arrows) follow the columns: frame by frame while they move (`follow`).
+  function relayoutColumns(box, follow) {
+    box.dispatchEvent(new CustomEvent("lt-relayout", { bubbles: true, detail: follow ? { animate: true, follow } : { animate: false } }));
+  }
+
   function applyStep(id, step, info) {
     const s = slide(id);
     const row = s.positions[step] || [];
     const posOf = {};
     s.tracks.forEach((t, i) => { posOf[t.instance || t.id] = row[i] || 0; });
+    const boxes = $$("[data-lt-cols]", sections[id]);
+    if (boxes.length) {
+      const ci = s.tracks.findIndex((t) => t.kind === "columns");
+      const state = ci >= 0 && s.columns ? s.columns[row[ci] || 0] || {} : {};
+      for (const box of boxes) placeColumns(box, state, info.animate);
+    }
     if ("reveal" in posOf) {
       const shown = posOf.reveal;
       for (const el of $$("[data-lt-reveal]", sections[id])) {

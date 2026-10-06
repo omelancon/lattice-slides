@@ -314,11 +314,118 @@ const Lattice = (() => {
     }
   }
 
+  // ------------------------------------------------------------------ column widths (spec 3.8, 10.4)
+  // A `columns` container marked by the build ([data-lt-cols]) gives each of its columns the flex value of
+  // the current position of the columns track, or the column's own (`data-lt-flex`). An animated change
+  // measures the columns before and after it, moves their boxes in slide pixels while their contents keep a
+  // fixed width (their final one; a collapsing column keeps its own and fades out), then sets the final
+  // values. The measures are for display only: every width comes from the build.
+  const SHUT = "0 0 0px";
+  const QUICK_COLUMNS_MS = 140; // a change that interrupts another (skip playback)
+  const columnMoves = new Map(); // container -> pending end of its move
+  const columnsAt = new WeakMap(); // container -> the targets last placed
+  const columnsOf = (box) => Array.from(box.children).filter((c) => c.classList.contains("lt-column"));
+  const columnInner = (col) => Array.from(col.children).find((c) => c.classList.contains("lt-column-in"));
+
+  function restColumn(col, flex) {
+    const shut = flex === SHUT;
+    col.style.transition = "";
+    col.style.marginLeft = "";
+    col.style.marginRight = "";
+    col.style.flex = flex || "";
+    col.classList.remove("lt-col-moving", "lt-col-closing");
+    col.classList.toggle("lt-col-shut", shut);
+    col.inert = shut;
+    col.ltShut = shut;
+    const inner = columnInner(col);
+    if (inner) {
+      inner.style.transition = "";
+      inner.style.opacity = "";
+      if (!shut) inner.style.width = ""; // a collapsed column keeps the width of its content, to come back as it was
+    }
+  }
+
+  function placeColumns(box, state, animate) {
+    const cols = columnsOf(box);
+    const targets = cols.map((c) => (c.dataset.ltCol && c.dataset.ltCol in state ? state[c.dataset.ltCol] : c.dataset.ltFlex || ""));
+    const key = targets.join("|");
+    const moving = columnMoves.get(box);
+    if (moving) clearTimeout(moving);
+    columnMoves.delete(box);
+    if (!moving && columnsAt.get(box) === key) return;
+    columnsAt.set(box, key);
+    const ms = Number(box.dataset.ltDuration || 0);
+    if (!animate || !ms || reducedMotion() || !box.getClientRects().length) {
+      cols.forEach((c, i) => restColumn(c, targets[i]));
+      relayoutColumns(box, 0);
+      return;
+    }
+    const duration = moving ? Math.min(ms, QUICK_COLUMNS_MS) : ms;
+    const width = (c) => parseFloat(getComputedStyle(c).width) || 0;
+    const margins = (c) => { const cs = getComputedStyle(c); return [parseFloat(cs.marginLeft) || 0, parseFloat(cs.marginRight) || 0]; };
+    // where the columns are now (halfway through a move, too)
+    const w0 = cols.map(width), m0 = cols.map(margins);
+    const was = cols.map((c) => (c.ltShut !== undefined ? c.ltShut : c.classList.contains("lt-col-shut")));
+    const inners = cols.map(columnInner);
+    const content0 = inners.map((n, i) => (n && n.style.width ? parseFloat(n.style.width) : w0[i]));
+    const opacity0 = inners.map((n) => (n ? getComputedStyle(n).opacity : "1"));
+    // where they will be (a move under way is dropped first, or its transitions would still be measured)
+    for (const el of [...cols, ...inners]) if (el && el.getAnimations) el.getAnimations().forEach((a) => a.cancel());
+    cols.forEach((c, i) => restColumn(c, targets[i]));
+    const w1 = cols.map(width), m1 = cols.map(margins);
+    // back to the start, then move
+    cols.forEach((c, i) => {
+      const shut = targets[i] === SHUT;
+      c.classList.remove("lt-col-shut");
+      c.classList.add("lt-col-moving");
+      c.classList.toggle("lt-col-closing", shut && !was[i]);
+      c.style.flex = `0 1 ${w0[i]}px`;
+      c.style.marginLeft = `${m0[i][0]}px`;
+      c.style.marginRight = `${m0[i][1]}px`;
+      const n = inners[i];
+      if (n) {
+        n.style.width = `${shut ? content0[i] : w1[i]}px`;
+        n.style.opacity = opacity0[i];
+      }
+    });
+    void box.offsetWidth;
+    const ease = `${duration}ms ease-in-out`;
+    cols.forEach((c, i) => {
+      const shut = targets[i] === SHUT;
+      c.style.transition = `flex-basis ${ease}, margin-left ${ease}, margin-right ${ease}`;
+      c.style.flex = `0 1 ${w1[i]}px`;
+      c.style.marginLeft = `${m1[i][0]}px`;
+      c.style.marginRight = `${m1[i][1]}px`;
+      const n = inners[i];
+      if (n) {
+        n.style.transition = `opacity ${ease}`;
+        n.style.opacity = shut ? "0" : "1";
+      }
+    });
+    columnMoves.set(box, setTimeout(() => {
+      columnMoves.delete(box);
+      cols.forEach((c, i) => restColumn(c, targets[i]));
+      relayoutColumns(box, 0);
+    }, duration + 30));
+    relayoutColumns(box, duration);
+  }
+
+  // Runtimes that measure the slide (arrows) follow the columns: frame by frame while they move (`follow`).
+  function relayoutColumns(box, follow) {
+    box.dispatchEvent(new CustomEvent("lt-relayout", { bubbles: true, detail: follow ? { animate: true, follow } : { animate: false } }));
+  }
+
   function applyStep(id, step, info) {
     const s = slide(id);
     const row = s.positions[step] || [];
     const posOf = {};
     s.tracks.forEach((t, i) => { posOf[t.instance || t.id] = row[i] || 0; });
+    const boxes = $$("[data-lt-cols]", sections[id]);
+    if (boxes.length) {
+      const ci = s.tracks.findIndex((t) => t.kind === "columns");
+      const state = ci >= 0 && s.columns ? s.columns[row[ci] || 0] || {} : {};
+      for (const box of boxes) placeColumns(box, state, info.animate);
+    }
     if ("reveal" in posOf) {
       const shown = posOf.reveal;
       for (const el of $$("[data-lt-reveal]", sections[id])) {

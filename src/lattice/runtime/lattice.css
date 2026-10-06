@@ -60,6 +60,14 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-column{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:16px}
 /* a table never spills into the next column: if it cannot fit, it scrolls inside its own */
 .lt-column table{display:block;max-width:100%;overflow-x:auto}
+/* columns whose width changes (spec 3.8, 10.4): the content sits in .lt-column-in, which keeps a fixed width
+   while the column's box moves (the box clips it); a collapsed column takes no width and gives back one gap */
+.lt-column-in{flex:1 1 auto;min-height:0;min-width:0;display:flex;flex-direction:column;gap:16px}
+.lt-column.lt-col-moving,.lt-column.lt-col-shut{overflow-x:clip}
+.lt-column.lt-col-shut{visibility:hidden}
+.lt-col-shut>.lt-column-in{opacity:0}
+.lt-columns>.lt-col-shut{margin-right:calc(-1 * var(--lt-gap, 40px))}
+.lt-columns>.lt-col-shut:last-child{margin-right:0;margin-left:calc(-1 * var(--lt-gap, 40px))}
 .lt-callout{padding:16px 22px;border-radius:10px;background:var(--lt-panel);border-left:6px solid var(--lt-accent)}
 .lt-callout-warn{border-left-color:var(--lt-warn)}
 .lt-callout-tip{border-left-color:var(--lt-good)}

@@ -4,7 +4,7 @@ nothing drawn in a slide may spill below its body (over the footer).
 Every slide of every example and of the user manual is visited at its first and at its last step.
 Content inside a clipping
 container (overflow other than `visible`, such as a scrolling code block) is skipped, since it cannot
-paint outside that container.
+paint outside that container, and so is the content of a collapsed column (spec 3.8), which paints nothing.
 """
 from pathlib import Path
 
@@ -28,6 +28,7 @@ FIND_OVERFLOW = """(id) => {
   };
   const section = document.querySelector(`#s-${CSS.escape(id)}`);
   for (const col of section.querySelectorAll(".lt-column")) {
+    if (col.closest(".lt-col-shut")) continue;
     const box = col.getBoundingClientRect();
     for (const el of col.querySelectorAll("*")) {
       if (clipped(el, col, "overflowX") || el.closest("svg") !== null && el.tagName.toLowerCase() !== "svg") continue;
@@ -45,6 +46,7 @@ FIND_OVERFLOW = """(id) => {
     for (const el of body.querySelectorAll("*")) {
       if (clipped(el, body, "overflowY") || el.closest("svg") !== null && el.tagName.toLowerCase() !== "svg") continue;
       if (el.closest(".lt-arrow-box") || getComputedStyle(el).position === "absolute") continue;  // overlays
+      if (el.closest(".lt-col-shut")) continue;
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
       if (r.bottom > bottom + 1) {

@@ -105,12 +105,14 @@ class TimelinePos:
 class TimelineAssign:
     """``kind == "pos"``: the track goes to ``stop``. ``kind == "range"``: one cue per value from
     ``start`` to ``stop`` every ``by`` positions; ``start is None`` is an open range, which starts
-    from the current position (spec 6.3)."""
+    from the current position (spec 6.3). ``kind == "width"``: a `width` cue (spec 3.15), whose
+    ``widths`` are (column id, CSS flex value) pairs; its track is the columns track."""
     track: str
-    kind: Literal["pos", "range"]
+    kind: Literal["pos", "range", "width"]
     stop: TimelinePos
     start: TimelinePos | None = None
     by: int = 1
+    widths: list[tuple[str, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -124,7 +126,7 @@ class TimelineLine:
 @dataclass
 class Track:
     id: str
-    kind: Literal["reveal", "component"]
+    kind: Literal["reveal", "component", "columns"]
     positions: int
     instance: str | None = None
     follow: str | None = None
@@ -183,6 +185,8 @@ class Slide:
     tracks: list[Track] = field(default_factory=list)
     positions: list[list[int]] = field(default_factory=lambda: [[]])
     step_detours: dict[int, dict] = field(default_factory=dict)  # step -> {"id", "blocking"} (spec 6.4)
+    column_init: dict[str, str] = field(default_factory=dict)  # columns named by `width` cues: id -> flex at step 0
+    column_states: list[dict[str, str]] = field(default_factory=list)  # positions of the columns track (spec 6.1)
 
     @property
     def scope_id(self) -> str:

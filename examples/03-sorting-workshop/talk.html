@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.23.0">
+<meta name="generator" content="lattice 0.24.0">
 <title>Sorting, your way</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -68,6 +68,14 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-column{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:16px}
 /* a table never spills into the next column: if it cannot fit, it scrolls inside its own */
 .lt-column table{display:block;max-width:100%;overflow-x:auto}
+/* columns whose width changes (spec 3.8, 10.4): the content sits in .lt-column-in, which keeps a fixed width
+   while the column's box moves (the box clips it); a collapsed column takes no width and gives back one gap */
+.lt-column-in{flex:1 1 auto;min-height:0;min-width:0;display:flex;flex-direction:column;gap:16px}
+.lt-column.lt-col-moving,.lt-column.lt-col-shut{overflow-x:clip}
+.lt-column.lt-col-shut{visibility:hidden}
+.lt-col-shut>.lt-column-in{opacity:0}
+.lt-columns>.lt-col-shut{margin-right:calc(-1 * var(--lt-gap, 40px))}
+.lt-columns>.lt-col-shut:last-child{margin-right:0;margin-left:calc(-1 * var(--lt-gap, 40px))}
 .lt-callout{padding:16px 22px;border-radius:10px;background:var(--lt-panel);border-left:6px solid var(--lt-accent)}
 .lt-callout-warn{border-left-color:var(--lt-warn)}
 .lt-callout-tip{border-left-color:var(--lt-good)}
@@ -719,16 +727,16 @@ z
      <g id="line2d_1">
       <path d="M 73.049388 236.448 
 L 73.049388 3.6 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_2">
       <defs>
-       <path id="m35bce62842" d="M 0 0 
+       <path id="m6889027994" d="M 0 0 
 L 0 3.5 
 " style="stroke: #9aa4b5; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#m35bce62842" x="73.049388" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#m6889027994" x="73.049388" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_1">
@@ -739,11 +747,11 @@ L 0 3.5
      <g id="line2d_3">
       <path d="M 130.839952 236.448 
 L 130.839952 3.6 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_4">
       <g>
-       <use xlink:href="#m35bce62842" x="130.839952" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#m6889027994" x="130.839952" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_2">
@@ -754,11 +762,11 @@ L 130.839952 3.6
      <g id="line2d_5">
       <path d="M 188.630516 236.448 
 L 188.630516 3.6 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_6">
       <g>
-       <use xlink:href="#m35bce62842" x="188.630516" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#m6889027994" x="188.630516" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_3">
@@ -769,11 +777,11 @@ L 188.630516 3.6
      <g id="line2d_7">
       <path d="M 246.42108 236.448 
 L 246.42108 3.6 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_8">
       <g>
-       <use xlink:href="#m35bce62842" x="246.42108" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#m6889027994" x="246.42108" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_4">
@@ -784,11 +792,11 @@ L 246.42108 3.6
      <g id="line2d_9">
       <path d="M 304.211644 236.448 
 L 304.211644 3.6 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_10">
       <g>
-       <use xlink:href="#m35bce62842" x="304.211644" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#m6889027994" x="304.211644" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_5">
@@ -799,11 +807,11 @@ L 304.211644 3.6
      <g id="line2d_11">
       <path d="M 362.002208 236.448 
 L 362.002208 3.6 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_12">
       <g>
-       <use xlink:href="#m35bce62842" x="362.002208" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#m6889027994" x="362.002208" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_6">
@@ -814,11 +822,11 @@ L 362.002208 3.6
      <g id="line2d_13">
       <path d="M 419.792771 236.448 
 L 419.792771 3.6 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_14">
       <g>
-       <use xlink:href="#m35bce62842" x="419.792771" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#m6889027994" x="419.792771" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_7">
@@ -829,11 +837,11 @@ L 419.792771 3.6
      <g id="line2d_15">
       <path d="M 477.583335 236.448 
 L 477.583335 3.6 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_16">
       <g>
-       <use xlink:href="#m35bce62842" x="477.583335" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#m6889027994" x="477.583335" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_8">
@@ -844,11 +852,11 @@ L 477.583335 3.6
      <g id="line2d_17">
       <path d="M 535.373899 236.448 
 L 535.373899 3.6 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_18">
       <g>
-       <use xlink:href="#m35bce62842" x="535.373899" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#m6889027994" x="535.373899" y="236.448" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_9">
@@ -864,16 +872,16 @@ L 535.373899 3.6
      <g id="line2d_19">
       <path d="M 56.001172 194.360383 
 L 558.201172 194.360383 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_20">
       <defs>
-       <path id="m09da53125f" d="M 0 0 
+       <path id="md70db86718" d="M 0 0 
 L -3.5 0 
 " style="stroke: #9aa4b5; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#m09da53125f" x="56.001172" y="194.360383" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#md70db86718" x="56.001172" y="194.360383" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_11">
@@ -891,11 +899,11 @@ L -3.5 0
      <g id="line2d_21">
       <path d="M 56.001172 142.935156 
 L 558.201172 142.935156 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_22">
       <g>
-       <use xlink:href="#m09da53125f" x="56.001172" y="142.935156" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#md70db86718" x="56.001172" y="142.935156" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_12">
@@ -913,11 +921,11 @@ L 558.201172 142.935156
      <g id="line2d_23">
       <path d="M 56.001172 91.509929 
 L 558.201172 91.509929 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_24">
       <g>
-       <use xlink:href="#m09da53125f" x="56.001172" y="91.509929" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#md70db86718" x="56.001172" y="91.509929" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_13">
@@ -935,11 +943,11 @@ L 558.201172 91.509929
      <g id="line2d_25">
       <path d="M 56.001172 40.084702 
 L 558.201172 40.084702 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #343c4d; stroke-width: 0.8; stroke-linecap: square"/>
      </g>
      <g id="line2d_26">
       <g>
-       <use xlink:href="#m09da53125f" x="56.001172" y="40.084702" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
+       <use xlink:href="#md70db86718" x="56.001172" y="40.084702" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_14">
@@ -956,257 +964,257 @@ L 558.201172 40.084702
     <g id="ytick_5">
      <g id="line2d_27">
       <defs>
-       <path id="m02e157d3f8" d="M 0 0 
+       <path id="m06c85133d6" d="M 0 0 
 L -2 0 
 " style="stroke: #9aa4b5; stroke-width: 0.6"/>
       </defs>
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="230.305074" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="230.305074" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_6">
      <g id="line2d_28">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="221.249541" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="221.249541" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_7">
      <g id="line2d_29">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="214.824538" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="214.824538" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_8">
      <g id="line2d_30">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="209.840919" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="209.840919" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_9">
      <g id="line2d_31">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="205.769005" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="205.769005" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_10">
      <g id="line2d_32">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="202.326251" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="202.326251" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_11">
      <g id="line2d_33">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="199.344002" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="199.344002" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_12">
      <g id="line2d_34">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="196.713472" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="196.713472" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_13">
      <g id="line2d_35">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="178.879847" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="178.879847" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_14">
      <g id="line2d_36">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="169.824314" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="169.824314" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_15">
      <g id="line2d_37">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="163.399311" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="163.399311" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_16">
      <g id="line2d_38">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="158.415692" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="158.415692" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_17">
      <g id="line2d_39">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="154.343778" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="154.343778" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_18">
      <g id="line2d_40">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="150.901024" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="150.901024" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_19">
      <g id="line2d_41">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="147.918775" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="147.918775" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_20">
      <g id="line2d_42">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="145.288245" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="145.288245" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_21">
      <g id="line2d_43">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="127.45462" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="127.45462" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_22">
      <g id="line2d_44">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="118.399087" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="118.399087" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_23">
      <g id="line2d_45">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="111.974084" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="111.974084" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_24">
      <g id="line2d_46">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="106.990465" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="106.990465" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_25">
      <g id="line2d_47">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="102.918551" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="102.918551" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_26">
      <g id="line2d_48">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="99.475797" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="99.475797" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_27">
      <g id="line2d_49">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="96.493548" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="96.493548" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_28">
      <g id="line2d_50">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="93.863018" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="93.863018" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_29">
      <g id="line2d_51">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="76.029393" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="76.029393" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_30">
      <g id="line2d_52">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="66.97386" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="66.97386" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_31">
      <g id="line2d_53">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="60.548857" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="60.548857" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_32">
      <g id="line2d_54">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="55.565238" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="55.565238" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_33">
      <g id="line2d_55">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="51.493324" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="51.493324" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_34">
      <g id="line2d_56">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="48.05057" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="48.05057" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_35">
      <g id="line2d_57">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="45.068321" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="45.068321" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_36">
      <g id="line2d_58">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="42.437791" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="42.437791" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_37">
      <g id="line2d_59">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="24.604166" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="24.604166" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_38">
      <g id="line2d_60">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="15.548633" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="15.548633" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_39">
      <g id="line2d_61">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="9.12363" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="9.12363" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
     <g id="ytick_40">
      <g id="line2d_62">
       <g>
-       <use xlink:href="#m02e157d3f8" x="56.001172" y="4.140011" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
+       <use xlink:href="#m06c85133d6" x="56.001172" y="4.140011" style="fill: #9aa4b5; stroke: #9aa4b5; stroke-width: 0.6"/>
       </g>
      </g>
     </g>
@@ -1221,9 +1229,9 @@ L 130.839952 107.524774
 L 188.630516 76.316883 
 L 304.211644 45.18577 
 L 535.373899 14.184 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #5cc8d6; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #5cc8d6; stroke-width: 2.4; stroke-linecap: square"/>
     <defs>
-     <path id="m1471c77d7e" d="M 0 3 
+     <path id="ma02e29fbe2" d="M 0 3 
 C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
 C 2.683901 1.55874 3 0.795609 3 0 
 C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
@@ -1235,13 +1243,13 @@ C -1.55874 2.683901 -0.795609 3 0 3
 z
 " style="stroke: #5cc8d6"/>
     </defs>
-    <g clip-path="url(#p361f0e9445)">
-     <use xlink:href="#m1471c77d7e" x="78.828445" y="214.056227" style="fill: #5cc8d6; stroke: #5cc8d6"/>
-     <use xlink:href="#m1471c77d7e" x="101.94467" y="139.272702" style="fill: #5cc8d6; stroke: #5cc8d6"/>
-     <use xlink:href="#m1471c77d7e" x="130.839952" y="107.524774" style="fill: #5cc8d6; stroke: #5cc8d6"/>
-     <use xlink:href="#m1471c77d7e" x="188.630516" y="76.316883" style="fill: #5cc8d6; stroke: #5cc8d6"/>
-     <use xlink:href="#m1471c77d7e" x="304.211644" y="45.18577" style="fill: #5cc8d6; stroke: #5cc8d6"/>
-     <use xlink:href="#m1471c77d7e" x="535.373899" y="14.184" style="fill: #5cc8d6; stroke: #5cc8d6"/>
+    <g clip-path="url(#p6fc696adbc)">
+     <use xlink:href="#ma02e29fbe2" x="78.828445" y="214.056227" style="fill: #5cc8d6; stroke: #5cc8d6"/>
+     <use xlink:href="#ma02e29fbe2" x="101.94467" y="139.272702" style="fill: #5cc8d6; stroke: #5cc8d6"/>
+     <use xlink:href="#ma02e29fbe2" x="130.839952" y="107.524774" style="fill: #5cc8d6; stroke: #5cc8d6"/>
+     <use xlink:href="#ma02e29fbe2" x="188.630516" y="76.316883" style="fill: #5cc8d6; stroke: #5cc8d6"/>
+     <use xlink:href="#ma02e29fbe2" x="304.211644" y="45.18577" style="fill: #5cc8d6; stroke: #5cc8d6"/>
+     <use xlink:href="#ma02e29fbe2" x="535.373899" y="14.184" style="fill: #5cc8d6; stroke: #5cc8d6"/>
     </g>
    </g>
    <g id="line2d_64">
@@ -1251,9 +1259,9 @@ L 130.839952 120.384643
 L 188.630516 90.698934 
 L 304.211644 60.494875 
 L 535.373899 29.803027 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #f2b544; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #f2b544; stroke-width: 2.4; stroke-linecap: square"/>
     <defs>
-     <path id="me3f0d2fa8e" d="M 0 3 
+     <path id="m114f0c5fbd" d="M 0 3 
 C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
 C 2.683901 1.55874 3 0.795609 3 0 
 C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
@@ -1265,13 +1273,13 @@ C -1.55874 2.683901 -0.795609 3 0 3
 z
 " style="stroke: #f2b544"/>
     </defs>
-    <g clip-path="url(#p361f0e9445)">
-     <use xlink:href="#me3f0d2fa8e" x="78.828445" y="221.249541" style="fill: #f2b544; stroke: #f2b544"/>
-     <use xlink:href="#me3f0d2fa8e" x="101.94467" y="151.222378" style="fill: #f2b544; stroke: #f2b544"/>
-     <use xlink:href="#me3f0d2fa8e" x="130.839952" y="120.384643" style="fill: #f2b544; stroke: #f2b544"/>
-     <use xlink:href="#me3f0d2fa8e" x="188.630516" y="90.698934" style="fill: #f2b544; stroke: #f2b544"/>
-     <use xlink:href="#me3f0d2fa8e" x="304.211644" y="60.494875" style="fill: #f2b544; stroke: #f2b544"/>
-     <use xlink:href="#me3f0d2fa8e" x="535.373899" y="29.803027" style="fill: #f2b544; stroke: #f2b544"/>
+    <g clip-path="url(#p6fc696adbc)">
+     <use xlink:href="#m114f0c5fbd" x="78.828445" y="221.249541" style="fill: #f2b544; stroke: #f2b544"/>
+     <use xlink:href="#m114f0c5fbd" x="101.94467" y="151.222378" style="fill: #f2b544; stroke: #f2b544"/>
+     <use xlink:href="#m114f0c5fbd" x="130.839952" y="120.384643" style="fill: #f2b544; stroke: #f2b544"/>
+     <use xlink:href="#m114f0c5fbd" x="188.630516" y="90.698934" style="fill: #f2b544; stroke: #f2b544"/>
+     <use xlink:href="#m114f0c5fbd" x="304.211644" y="60.494875" style="fill: #f2b544; stroke: #f2b544"/>
+     <use xlink:href="#m114f0c5fbd" x="535.373899" y="29.803027" style="fill: #f2b544; stroke: #f2b544"/>
     </g>
    </g>
    <g id="line2d_65">
@@ -1281,9 +1289,9 @@ L 130.839952 150.111145
 L 188.630516 134.215655 
 L 304.211644 113.448844 
 L 535.373899 94.579129 
-" clip-path="url(#p361f0e9445)" style="fill: none; stroke: #b69cff; stroke-width: 2.4; stroke-linecap: square"/>
+" clip-path="url(#p6fc696adbc)" style="fill: none; stroke: #b69cff; stroke-width: 2.4; stroke-linecap: square"/>
     <defs>
-     <path id="mba003a25bc" d="M 0 3 
+     <path id="m26310a9dce" d="M 0 3 
 C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
 C 2.683901 1.55874 3 0.795609 3 0 
 C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
@@ -1295,13 +1303,13 @@ C -1.55874 2.683901 -0.795609 3 0 3
 z
 " style="stroke: #b69cff"/>
     </defs>
-    <g clip-path="url(#p361f0e9445)">
-     <use xlink:href="#mba003a25bc" x="78.828445" y="225.864" style="fill: #b69cff; stroke: #b69cff"/>
-     <use xlink:href="#mba003a25bc" x="101.94467" y="173.736001" style="fill: #b69cff; stroke: #b69cff"/>
-     <use xlink:href="#mba003a25bc" x="130.839952" y="150.111145" style="fill: #b69cff; stroke: #b69cff"/>
-     <use xlink:href="#mba003a25bc" x="188.630516" y="134.215655" style="fill: #b69cff; stroke: #b69cff"/>
-     <use xlink:href="#mba003a25bc" x="304.211644" y="113.448844" style="fill: #b69cff; stroke: #b69cff"/>
-     <use xlink:href="#mba003a25bc" x="535.373899" y="94.579129" style="fill: #b69cff; stroke: #b69cff"/>
+    <g clip-path="url(#p6fc696adbc)">
+     <use xlink:href="#m26310a9dce" x="78.828445" y="225.864" style="fill: #b69cff; stroke: #b69cff"/>
+     <use xlink:href="#m26310a9dce" x="101.94467" y="173.736001" style="fill: #b69cff; stroke: #b69cff"/>
+     <use xlink:href="#m26310a9dce" x="130.839952" y="150.111145" style="fill: #b69cff; stroke: #b69cff"/>
+     <use xlink:href="#m26310a9dce" x="188.630516" y="134.215655" style="fill: #b69cff; stroke: #b69cff"/>
+     <use xlink:href="#m26310a9dce" x="304.211644" y="113.448844" style="fill: #b69cff; stroke: #b69cff"/>
+     <use xlink:href="#m26310a9dce" x="535.373899" y="94.579129" style="fill: #b69cff; stroke: #b69cff"/>
     </g>
    </g>
    <g id="patch_3">
@@ -1321,7 +1329,7 @@ L 452.085547 169.092141
 L 467.085547 169.092141 
 " style="fill: none; stroke: #5cc8d6; stroke-width: 2.4; stroke-linecap: square"/>
      <g>
-      <use xlink:href="#m1471c77d7e" x="452.085547" y="169.092141" style="fill: #5cc8d6; stroke: #5cc8d6"/>
+      <use xlink:href="#ma02e29fbe2" x="452.085547" y="169.092141" style="fill: #5cc8d6; stroke: #5cc8d6"/>
      </g>
     </g>
     <g id="text_16">
@@ -1333,7 +1341,7 @@ L 452.085547 191.593313
 L 467.085547 191.593313 
 " style="fill: none; stroke: #f2b544; stroke-width: 2.4; stroke-linecap: square"/>
      <g>
-      <use xlink:href="#me3f0d2fa8e" x="452.085547" y="191.593313" style="fill: #f2b544; stroke: #f2b544"/>
+      <use xlink:href="#m114f0c5fbd" x="452.085547" y="191.593313" style="fill: #f2b544; stroke: #f2b544"/>
      </g>
     </g>
     <g id="text_17">
@@ -1345,7 +1353,7 @@ L 452.085547 214.094484
 L 467.085547 214.094484 
 " style="fill: none; stroke: #b69cff; stroke-width: 2.4; stroke-linecap: square"/>
      <g>
-      <use xlink:href="#mba003a25bc" x="452.085547" y="214.094484" style="fill: #b69cff; stroke: #b69cff"/>
+      <use xlink:href="#m26310a9dce" x="452.085547" y="214.094484" style="fill: #b69cff; stroke: #b69cff"/>
      </g>
     </g>
     <g id="text_18">
@@ -1355,7 +1363,7 @@ L 467.085547 214.094484
   </g>
  </g>
  <defs>
-  <clipPath id="p361f0e9445">
+  <clipPath id="p6fc696adbc">
    <rect x="56.001172" y="3.6" width="502.2" height="232.848"/>
   </clipPath>
  </defs>
@@ -1369,7 +1377,7 @@ L 467.085547 214.094484
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.23.0","meta":{"title":"Sorting, your way","author":"Workshop","date":null,"aspect":"16:9","theme":"dark"},"start":"sorting-your-way","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["sorting-your-way","pick","bubble","insertion","quick","the-recursion-tree","compare","done"],"slides":{"sorting-your-way":{"title":"Sorting, your way","label":"Sorting, your way","scope":"root","next":{"slide":"pick"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":9}},"pick":{"title":"Pick an algorithm","label":"Pick an algorithm","scope":"root","next":null,"branches":[{"target":"bubble","key":"1","label":"Bubble sort"},{"target":"insertion","key":"2","label":"Insertion sort"},{"target":"quick","key":"3","label":"Quicksort"}],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":13},"notes":"<p>Let the room vote. Press 1, 2 or 3, or click a card.<\/p>\n"},"bubble":{"title":"Bubble sort","label":"Bubble sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":27,"tracks":[{"id":"src","kind":"component","instance":"bubble/src","follow":"bars"},{"id":"bars","kind":"component","instance":"bubble/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26]],"offpath":false,"source":{"file":"talk.md","line":27}},"insertion":{"title":"Insertion sort","label":"Insertion sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":25,"tracks":[{"id":"src","kind":"component","instance":"insertion/src","follow":"bars"},{"id":"bars","kind":"component","instance":"insertion/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24]],"offpath":false,"source":{"file":"talk.md","line":41}},"quick":{"title":"Quicksort","label":"Quicksort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":["quick-detour-1"],"steps":34,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"bars","kind":"component","instance":"quick/bars"}],"positions":[[0,0],[1,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12],[2,13],[2,14],[2,15],[2,16],[2,17],[2,18],[2,19],[2,20],[2,21],[2,22],[2,23],[2,24],[2,25],[2,26],[2,27],[2,28],[2,29],[2,30],[2,31]],"offpath":false,"source":{"file":"talk.md","line":56}},"the-recursion-tree":{"title":"The recursion tree","label":"The recursion tree","scope":"quick-detour-1","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":73}},"compare":{"title":"How many comparisons?","label":"How many comparisons?","scope":"root","next":{"slide":"done"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":87}},"done":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":94}}},"detours":{"quick-detour-1":{"origin":"quick","entry":"the-recursion-tree","label":"The recursion tree","key":"r","slides":["the-recursion-tree"]}},"instances":{"bubble/src":{"component":"code","slide":"bubble","data":"lt-data-bubble/src"},"bubble/bars":{"component":"array-anim","slide":"bubble","data":"lt-data-bubble/bars"},"insertion/src":{"component":"code","slide":"insertion","data":"lt-data-insertion/src"},"insertion/bars":{"component":"array-anim","slide":"insertion","data":"lt-data-insertion/bars"},"quick/bars":{"component":"array-anim","slide":"quick","data":"lt-data-quick/bars"},"the-recursion-tree/c1":{"component":"dot","slide":"the-recursion-tree","data":null},"compare/c1":{"component":"plot","slide":"compare","data":null}},"tours":{"bubble-only":["sorting-your-way","pick","bubble","compare","done"]},"mainPath":["sorting-your-way","pick"],"overview":{"nodes":{"sorting-your-way":{"x":67.0,"y":63.0,"w":118.0,"h":26.0,"label":"Sorting, your way"},"pick":{"x":215.0,"y":63.0,"w":118.0,"h":26.0,"label":"Pick an algorithm"},"bubble":{"x":352.0,"y":21.0,"w":84.0,"h":26.0,"label":"Bubble sort"},"insertion":{"x":352.0,"y":63.0,"w":96.0,"h":26.0,"label":"Insertion sort"},"quick":{"x":352.0,"y":105.0,"w":73.0,"h":26.0,"label":"Quicksort"},"the-recursion-tree":{"x":510.0,"y":105.0,"w":124.0,"h":26.0,"label":"The recursion tree"},"compare":{"x":510.0,"y":63.0,"w":160.0,"h":26.0,"label":"How many comparisons?"},"done":{"x":649.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"sorting-your-way","to":"pick","kind":"next","path":"M126.1,63.0 C133.7,63.0 141.5,63.0 149.2,63.0 L155.6,63.0"},{"from":"pick","to":"bubble","kind":"branch","path":"M258.0,49.9 C272.6,45.4 289.1,40.3 304.1,35.6 L310.0,33.8"},{"from":"pick","to":"insertion","kind":"branch","path":"M274.0,63.0 C281.9,63.0 289.8,63.0 297.6,63.0 L304.0,63.0"},{"from":"pick","to":"quick","kind":"branch","path":"M258.0,76.1 C274.4,81.2 293.1,87.0 309.5,92.1 L315.4,93.9"},{"from":"bubble","to":"compare","kind":"next","path":"M394.4,32.1 C412.8,37.1 434.7,43.0 454.4,48.3 L460.5,49.9"},{"from":"insertion","to":"compare","kind":"next","path":"M400.2,63.0 C407.7,63.0 415.7,63.0 423.8,63.0 L429.9,63.0"},{"from":"quick","to":"the-recursion-tree","kind":"detour","path":"M388.8,105.0 C404.6,105.0 423.6,105.0 441.8,105.0 L448.0,105.0"},{"from":"quick","to":"compare","kind":"next","path":"M388.6,95.2 C401.6,91.7 416.5,87.6 430.0,84.0 C437.6,81.9 445.7,79.8 453.6,77.7 L459.7,76.1"},{"from":"compare","to":"done","kind":"next","path":"M590.2,63.0 C598.5,63.0 606.6,63.0 614.0,63.0 L620.0,63.0"}],"width":687.0,"height":126.0},"hash":"76cfbc80f419b664"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.24.0","meta":{"title":"Sorting, your way","author":"Workshop","date":null,"aspect":"16:9","theme":"dark"},"start":"sorting-your-way","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["sorting-your-way","pick","bubble","insertion","quick","the-recursion-tree","compare","done"],"slides":{"sorting-your-way":{"title":"Sorting, your way","label":"Sorting, your way","scope":"root","next":{"slide":"pick"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":9}},"pick":{"title":"Pick an algorithm","label":"Pick an algorithm","scope":"root","next":null,"branches":[{"target":"bubble","key":"1","label":"Bubble sort"},{"target":"insertion","key":"2","label":"Insertion sort"},{"target":"quick","key":"3","label":"Quicksort"}],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":13},"notes":"<p>Let the room vote. Press 1, 2 or 3, or click a card.<\/p>\n"},"bubble":{"title":"Bubble sort","label":"Bubble sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":27,"tracks":[{"id":"src","kind":"component","instance":"bubble/src","follow":"bars"},{"id":"bars","kind":"component","instance":"bubble/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26]],"offpath":false,"source":{"file":"talk.md","line":27}},"insertion":{"title":"Insertion sort","label":"Insertion sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":25,"tracks":[{"id":"src","kind":"component","instance":"insertion/src","follow":"bars"},{"id":"bars","kind":"component","instance":"insertion/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24]],"offpath":false,"source":{"file":"talk.md","line":41}},"quick":{"title":"Quicksort","label":"Quicksort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":["quick-detour-1"],"steps":34,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"bars","kind":"component","instance":"quick/bars"}],"positions":[[0,0],[1,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12],[2,13],[2,14],[2,15],[2,16],[2,17],[2,18],[2,19],[2,20],[2,21],[2,22],[2,23],[2,24],[2,25],[2,26],[2,27],[2,28],[2,29],[2,30],[2,31]],"offpath":false,"source":{"file":"talk.md","line":56}},"the-recursion-tree":{"title":"The recursion tree","label":"The recursion tree","scope":"quick-detour-1","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":73}},"compare":{"title":"How many comparisons?","label":"How many comparisons?","scope":"root","next":{"slide":"done"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":87}},"done":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":94}}},"detours":{"quick-detour-1":{"origin":"quick","entry":"the-recursion-tree","label":"The recursion tree","key":"r","slides":["the-recursion-tree"]}},"instances":{"bubble/src":{"component":"code","slide":"bubble","data":"lt-data-bubble/src"},"bubble/bars":{"component":"array-anim","slide":"bubble","data":"lt-data-bubble/bars"},"insertion/src":{"component":"code","slide":"insertion","data":"lt-data-insertion/src"},"insertion/bars":{"component":"array-anim","slide":"insertion","data":"lt-data-insertion/bars"},"quick/bars":{"component":"array-anim","slide":"quick","data":"lt-data-quick/bars"},"the-recursion-tree/c1":{"component":"dot","slide":"the-recursion-tree","data":null},"compare/c1":{"component":"plot","slide":"compare","data":null}},"tours":{"bubble-only":["sorting-your-way","pick","bubble","compare","done"]},"mainPath":["sorting-your-way","pick"],"overview":{"nodes":{"sorting-your-way":{"x":67.0,"y":63.0,"w":118.0,"h":26.0,"label":"Sorting, your way"},"pick":{"x":215.0,"y":63.0,"w":118.0,"h":26.0,"label":"Pick an algorithm"},"bubble":{"x":352.0,"y":21.0,"w":84.0,"h":26.0,"label":"Bubble sort"},"insertion":{"x":352.0,"y":63.0,"w":96.0,"h":26.0,"label":"Insertion sort"},"quick":{"x":352.0,"y":105.0,"w":73.0,"h":26.0,"label":"Quicksort"},"the-recursion-tree":{"x":510.0,"y":105.0,"w":124.0,"h":26.0,"label":"The recursion tree"},"compare":{"x":510.0,"y":63.0,"w":160.0,"h":26.0,"label":"How many comparisons?"},"done":{"x":649.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"sorting-your-way","to":"pick","kind":"next","path":"M126.1,63.0 C133.7,63.0 141.5,63.0 149.2,63.0 L155.6,63.0"},{"from":"pick","to":"bubble","kind":"branch","path":"M258.0,49.9 C272.6,45.4 289.1,40.3 304.1,35.6 L310.0,33.8"},{"from":"pick","to":"insertion","kind":"branch","path":"M274.0,63.0 C281.9,63.0 289.8,63.0 297.6,63.0 L304.0,63.0"},{"from":"pick","to":"quick","kind":"branch","path":"M258.0,76.1 C274.4,81.2 293.1,87.0 309.5,92.1 L315.4,93.9"},{"from":"bubble","to":"compare","kind":"next","path":"M394.4,32.1 C412.8,37.1 434.7,43.0 454.4,48.3 L460.5,49.9"},{"from":"insertion","to":"compare","kind":"next","path":"M400.2,63.0 C407.7,63.0 415.7,63.0 423.8,63.0 L429.9,63.0"},{"from":"quick","to":"the-recursion-tree","kind":"detour","path":"M388.8,105.0 C404.6,105.0 423.6,105.0 441.8,105.0 L448.0,105.0"},{"from":"quick","to":"compare","kind":"next","path":"M388.6,95.2 C401.6,91.7 416.5,87.6 430.0,84.0 C437.6,81.9 445.7,79.8 453.6,77.7 L459.7,76.1"},{"from":"compare","to":"done","kind":"next","path":"M590.2,63.0 C598.5,63.0 606.6,63.0 614.0,63.0 L620.0,63.0"}],"width":687.0,"height":126.0},"hash":"1ff19986e759cfa7"}</script>
 <script type="application/json" id="lt-data-bubble/src">{"steps":[[1],[6],[7],[6],[7],[6],[7],[6],[6],[7],[9],[6],[6],[7],[6],[6],[7],[9],[6],[6],[6],[7],[9],[6],[6],[9],[10]]}</script>
 <script type="application/json" id="lt-data-bubble/bars">{"frames":{"format":"full","count":27,"frames":[{"values":[5,1,4,2,8,3],"caption":"Unsorted input","marks":{}},{"values":[5,1,4,2,8,3],"caption":"Compare 5 and 1","pointers":{"i":0},"marks":{"0":"compare","1":"compare"}},{"values":[1,5,4,2,8,3],"caption":"Out of order: swap","pointers":{"i":0},"marks":{"0":"swap","1":"swap"}},{"values":[1,5,4,2,8,3],"caption":"Compare 5 and 4","pointers":{"i":1},"marks":{"1":"compare","2":"compare"}},{"values":[1,4,5,2,8,3],"caption":"Out of order: swap","pointers":{"i":1},"marks":{"1":"swap","2":"swap"}},{"values":[1,4,5,2,8,3],"caption":"Compare 5 and 2","pointers":{"i":2},"marks":{"2":"compare","3":"compare"}},{"values":[1,4,2,5,8,3],"caption":"Out of order: swap","pointers":{"i":2},"marks":{"2":"swap","3":"swap"}},{"values":[1,4,2,5,8,3],"caption":"Compare 5 and 8","pointers":{"i":3},"marks":{"3":"compare","4":"compare"}},{"values":[1,4,2,5,8,3],"caption":"Compare 8 and 3","pointers":{"i":4},"marks":{"4":"compare","5":"compare"}},{"values":[1,4,2,5,3,8],"caption":"Out of order: swap","pointers":{"i":4},"marks":{"4":"swap","5":"swap"}},{"values":[1,4,2,5,3,8],"caption":"8 has bubbled to its final place","pointers":{},"cells":{"5":"sorted"},"marks":{}},{"values":[1,4,2,5,3,8],"caption":"Compare 1 and 4","pointers":{"i":0},"cells":{"5":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,4,2,5,3,8],"caption":"Compare 4 and 2","pointers":{"i":1},"cells":{"5":"sorted"},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,4,5,3,8],"caption":"Out of order: swap","pointers":{"i":1},"cells":{"5":"sorted"},"marks":{"1":"swap","2":"swap"}},{"values":[1,2,4,5,3,8],"caption":"Compare 4 and 5","pointers":{"i":2},"cells":{"5":"sorted"},"marks":{"2":"compare","3":"compare"}},{"values":[1,2,4,5,3,8],"caption":"Compare 5 and 3","pointers":{"i":3},"cells":{"5":"sorted"},"marks":{"3":"compare","4":"compare"}},{"values":[1,2,4,3,5,8],"caption":"Out of order: swap","pointers":{"i":3},"cells":{"5":"sorted"},"marks":{"3":"swap","4":"swap"}},{"values":[1,2,4,3,5,8],"caption":"5 has bubbled to its final place","pointers":{},"cells":{"5":"sorted","4":"sorted"},"marks":{}},{"values":[1,2,4,3,5,8],"caption":"Compare 1 and 2","pointers":{"i":0},"cells":{"5":"sorted","4":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,2,4,3,5,8],"caption":"Compare 2 and 4","pointers":{"i":1},"cells":{"5":"sorted","4":"sorted"},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,4,3,5,8],"caption":"Compare 4 and 3","pointers":{"i":2},"cells":{"5":"sorted","4":"sorted"},"marks":{"2":"compare","3":"compare"}},{"values":[1,2,3,4,5,8],"caption":"Out of order: swap","pointers":{"i":2},"cells":{"5":"sorted","4":"sorted"},"marks":{"2":"swap","3":"swap"}},{"values":[1,2,3,4,5,8],"caption":"4 has bubbled to its final place","pointers":{},"cells":{"5":"sorted","4":"sorted","3":"sorted"},"marks":{}},{"values":[1,2,3,4,5,8],"caption":"Compare 1 and 2","pointers":{"i":0},"cells":{"5":"sorted","4":"sorted","3":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,2,3,4,5,8],"caption":"Compare 2 and 3","pointers":{"i":1},"cells":{"5":"sorted","4":"sorted","3":"sorted"},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,3,4,5,8],"caption":"3 has bubbled to its final place","pointers":{},"cells":{"5":"sorted","4":"sorted","3":"sorted","2":"sorted"},"marks":{}},{"values":[1,2,3,4,5,8],"caption":"No swap in a full pass: done early","pointers":{},"cells":{"5":"sorted","4":"sorted","3":"sorted","2":"sorted","0":"sorted","1":"sorted"},"marks":{}}]},"panel":null}</script>
 <script type="application/json" id="lt-data-insertion/src">{"steps":[[1],[3],[5],[6],[8],[3],[5],[6],[8],[3],[5],[6],[5],[6],[8],[3],[8],[3],[5],[6],[5],[6],[5],[6],[8]]}</script>
@@ -1692,11 +1700,118 @@ const Lattice = (() => {
     }
   }
 
+  // ------------------------------------------------------------------ column widths (spec 3.8, 10.4)
+  // A `columns` container marked by the build ([data-lt-cols]) gives each of its columns the flex value of
+  // the current position of the columns track, or the column's own (`data-lt-flex`). An animated change
+  // measures the columns before and after it, moves their boxes in slide pixels while their contents keep a
+  // fixed width (their final one; a collapsing column keeps its own and fades out), then sets the final
+  // values. The measures are for display only: every width comes from the build.
+  const SHUT = "0 0 0px";
+  const QUICK_COLUMNS_MS = 140; // a change that interrupts another (skip playback)
+  const columnMoves = new Map(); // container -> pending end of its move
+  const columnsAt = new WeakMap(); // container -> the targets last placed
+  const columnsOf = (box) => Array.from(box.children).filter((c) => c.classList.contains("lt-column"));
+  const columnInner = (col) => Array.from(col.children).find((c) => c.classList.contains("lt-column-in"));
+
+  function restColumn(col, flex) {
+    const shut = flex === SHUT;
+    col.style.transition = "";
+    col.style.marginLeft = "";
+    col.style.marginRight = "";
+    col.style.flex = flex || "";
+    col.classList.remove("lt-col-moving", "lt-col-closing");
+    col.classList.toggle("lt-col-shut", shut);
+    col.inert = shut;
+    col.ltShut = shut;
+    const inner = columnInner(col);
+    if (inner) {
+      inner.style.transition = "";
+      inner.style.opacity = "";
+      if (!shut) inner.style.width = ""; // a collapsed column keeps the width of its content, to come back as it was
+    }
+  }
+
+  function placeColumns(box, state, animate) {
+    const cols = columnsOf(box);
+    const targets = cols.map((c) => (c.dataset.ltCol && c.dataset.ltCol in state ? state[c.dataset.ltCol] : c.dataset.ltFlex || ""));
+    const key = targets.join("|");
+    const moving = columnMoves.get(box);
+    if (moving) clearTimeout(moving);
+    columnMoves.delete(box);
+    if (!moving && columnsAt.get(box) === key) return;
+    columnsAt.set(box, key);
+    const ms = Number(box.dataset.ltDuration || 0);
+    if (!animate || !ms || reducedMotion() || !box.getClientRects().length) {
+      cols.forEach((c, i) => restColumn(c, targets[i]));
+      relayoutColumns(box, 0);
+      return;
+    }
+    const duration = moving ? Math.min(ms, QUICK_COLUMNS_MS) : ms;
+    const width = (c) => parseFloat(getComputedStyle(c).width) || 0;
+    const margins = (c) => { const cs = getComputedStyle(c); return [parseFloat(cs.marginLeft) || 0, parseFloat(cs.marginRight) || 0]; };
+    // where the columns are now (halfway through a move, too)
+    const w0 = cols.map(width), m0 = cols.map(margins);
+    const was = cols.map((c) => (c.ltShut !== undefined ? c.ltShut : c.classList.contains("lt-col-shut")));
+    const inners = cols.map(columnInner);
+    const content0 = inners.map((n, i) => (n && n.style.width ? parseFloat(n.style.width) : w0[i]));
+    const opacity0 = inners.map((n) => (n ? getComputedStyle(n).opacity : "1"));
+    // where they will be (a move under way is dropped first, or its transitions would still be measured)
+    for (const el of [...cols, ...inners]) if (el && el.getAnimations) el.getAnimations().forEach((a) => a.cancel());
+    cols.forEach((c, i) => restColumn(c, targets[i]));
+    const w1 = cols.map(width), m1 = cols.map(margins);
+    // back to the start, then move
+    cols.forEach((c, i) => {
+      const shut = targets[i] === SHUT;
+      c.classList.remove("lt-col-shut");
+      c.classList.add("lt-col-moving");
+      c.classList.toggle("lt-col-closing", shut && !was[i]);
+      c.style.flex = `0 1 ${w0[i]}px`;
+      c.style.marginLeft = `${m0[i][0]}px`;
+      c.style.marginRight = `${m0[i][1]}px`;
+      const n = inners[i];
+      if (n) {
+        n.style.width = `${shut ? content0[i] : w1[i]}px`;
+        n.style.opacity = opacity0[i];
+      }
+    });
+    void box.offsetWidth;
+    const ease = `${duration}ms ease-in-out`;
+    cols.forEach((c, i) => {
+      const shut = targets[i] === SHUT;
+      c.style.transition = `flex-basis ${ease}, margin-left ${ease}, margin-right ${ease}`;
+      c.style.flex = `0 1 ${w1[i]}px`;
+      c.style.marginLeft = `${m1[i][0]}px`;
+      c.style.marginRight = `${m1[i][1]}px`;
+      const n = inners[i];
+      if (n) {
+        n.style.transition = `opacity ${ease}`;
+        n.style.opacity = shut ? "0" : "1";
+      }
+    });
+    columnMoves.set(box, setTimeout(() => {
+      columnMoves.delete(box);
+      cols.forEach((c, i) => restColumn(c, targets[i]));
+      relayoutColumns(box, 0);
+    }, duration + 30));
+    relayoutColumns(box, duration);
+  }
+
+  // Runtimes that measure the slide (arrows) follow the columns: frame by frame while they move (`follow`).
+  function relayoutColumns(box, follow) {
+    box.dispatchEvent(new CustomEvent("lt-relayout", { bubbles: true, detail: follow ? { animate: true, follow } : { animate: false } }));
+  }
+
   function applyStep(id, step, info) {
     const s = slide(id);
     const row = s.positions[step] || [];
     const posOf = {};
     s.tracks.forEach((t, i) => { posOf[t.instance || t.id] = row[i] || 0; });
+    const boxes = $$("[data-lt-cols]", sections[id]);
+    if (boxes.length) {
+      const ci = s.tracks.findIndex((t) => t.kind === "columns");
+      const state = ci >= 0 && s.columns ? s.columns[row[ci] || 0] || {} : {};
+      for (const box of boxes) placeColumns(box, state, info.animate);
+    }
     if ("reveal" in posOf) {
       const shown = posOf.reveal;
       for (const el of $$("[data-lt-reveal]", sections[id])) {

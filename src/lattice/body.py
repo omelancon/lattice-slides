@@ -9,6 +9,7 @@ from pygments.lexers import find_lexer_class_by_name
 from pygments.util import ClassNotFound
 
 from .attrs import AttrError, Attrs, parse_attr_block, split_name_and_attrs
+from . import columns as colmod
 from .components.base import REGISTRY
 from .diagnostics import Diagnostics, SourceLoc
 from .markdown import container_name, new_env, title_placeholder, token_groups
@@ -20,7 +21,6 @@ _ATTR_LINE_RE = re.compile(r"\{[^{}]*\}\Z")
 _BRANCH_ITEM_RE = re.compile(
     r"\s*\[\[\s*([A-Za-z0-9][A-Za-z0-9_-]*)\s*(?:\|([^\]]*))?\]\]\s*(\{[^{}]*\})?\s*(.*)\Z", re.S
 )
-_CSS_LEN_RE = re.compile(r"\d+(\.\d+)?(px|em|rem|%|vw|vh)\Z")
 
 
 def _edit_distance(a: str, b: str) -> int:
@@ -58,8 +58,12 @@ class BodyBuilder:
         self.env["badge"] = self.placed_badge
         self.env["include"] = self.nested_include
         self.in_notes = False
+        self.col_boxes: list[colmod.ColumnBox] = []
+        self.col_infos: list[colmod.ColumnInfo] = []
+        self.box_stack: list[int | None] = []  # enclosing containers: a box index for `columns`, else None
         slide.body_html = self.render_groups(slide.groups, container=None)
         self.default_badges(slide)
+        self.finish_columns(slide)
         links = slide.links + self.env["links"]
         slide.links = list(dict.fromkeys(links))
         slide.uses_math = slide.uses_math or self.env["math"]
@@ -302,24 +306,46 @@ class BodyBuilder:
             return self.branch(inner, cattrs, loc)
         if name == "notes":
             outer, self.in_notes = self.in_notes, True
+            self.box_stack.append(None)
             notes = self.render_groups(inner, container="notes")
+            self.box_stack.pop()
             self.in_notes = outer
             slide.notes_html = (slide.notes_html or "") + notes
             return ""
+        box = None
+        if name == "columns":  # columns whose width may change (spec 3.8): placeholders, see finish_columns
+            duration = cattrs.get("duration")
+            if duration is not None and not colmod.DURATION_RE.match(duration.strip()):
+                self.d.error("LT064", f"duration={duration!r}: a duration is a number of milliseconds", loc)
+                duration = None
+            box = colmod.ColumnBox(len(self.col_boxes), loc, int(duration) if duration else colmod.DEFAULT_DURATION,
+                                   cattrs.get("gap"), self.in_notes)
+            self.col_boxes.append(box)
+        self.box_stack.append(box.index if box else None)
         body = self.render_groups(inner, container=name)
+        self.box_stack.pop()
         if name == "columns":
-            style = f"gap:{cattrs.get('gap')}" if cattrs.get("gap") else ""
-            if style:
-                wattrs["style"] = style
-            return f'<div class="{cls("lt-columns")}"{self.attrs_html(wattrs)}>{body}</div>'
+            end, gap_tok = colmod.box_tokens(box.index)
+            if cattrs.get("gap"):
+                wattrs["style"] = f"gap:{cattrs.get('gap')}{gap_tok}"
+            return f'<div class="{cls("lt-columns")}"{self.attrs_html(wattrs)}{end}>{body}</div>'
         if name == "column":
             width = cattrs.get("width")
-            if width:
-                if width.endswith("fr"):
-                    wattrs["style"] = f"flex:{width[:-2]} 1 0"
-                elif _CSS_LEN_RE.match(width):
-                    wattrs["style"] = f"flex:0 0 {width}"
-            return f'<div class="{cls("lt-column")}"{self.attrs_html(wattrs)}>{body}</div>'
+            flex = None
+            if width is not None:
+                flex = colmod.column_flex(width)
+                if flex is None:
+                    self.d.error("LT064", f"width={width!r}: {colmod.WIDTH_HELP}", loc)
+                else:
+                    wattrs["style"] = f"flex:{flex}"
+            parent = self.box_stack[-1] if self.box_stack else None
+            info = colmod.ColumnInfo(len(self.col_infos), wattrs.get("id"), flex, parent, loc)
+            self.col_infos.append(info)
+            if parent is not None:
+                self.col_boxes[parent].columns.append(info.index)
+            shut, tag, open_, close = colmod.column_tokens(info.index)
+            return (f'<div class="{cls("lt-column")}{shut}"{self.attrs_html(wattrs)}{tag}>'
+                    f'{open_}{body}{close}</div>')
         if name == "callout":
             kind = cattrs.get("kind", "info")
             return f'<aside class="{cls("lt-callout", "lt-callout-" + kind)}"{self.attrs_html(wattrs)}>{body}</aside>'
@@ -328,6 +354,30 @@ class BodyBuilder:
             if near:
                 self.d.warn("LT019", f"unknown container {name!r}; did you mean {near[0]!r}?", loc)
         return f'<div class="{cls(name)}"{self.attrs_html(wattrs)}>{body}</div>'
+
+    # ------------------------------------------------------------------ columns
+    def finish_columns(self, slide: Slide) -> None:
+        """Check the columns named by the timeline's `width` cues (LT064), record the widths they start from
+        (the columns track, spec 6.1) and replace the column placeholders (spec 10.4)."""
+        by_id = {c.id: c for c in self.col_infos if c.id is not None}
+        named: dict[str, str] = {}
+        for line in slide.timeline or []:
+            for a in line.assigns:
+                if a.kind != "width":
+                    continue
+                for col, _ in a.widths:
+                    c = by_id.get(col)
+                    if c is None or c.box is None or self.col_boxes[c.box].in_notes:
+                        why = ("is not directly in a `columns` container" if c is not None and c.box is None
+                               else "is in speaker notes" if c is not None
+                               else "is not the id of a column of this slide")
+                        self.d.error("LT064", f"width cue: {col!r} {why}", line.loc)
+                        continue
+                    named[col] = c.flex or colmod.DEFAULT
+        slide.column_init = named
+        slide.body_html = colmod.finish(slide.body_html, self.col_boxes, self.col_infos, set(named))
+        if slide.notes_html:
+            slide.notes_html = colmod.finish(slide.notes_html, self.col_boxes, self.col_infos, set())
 
     # ------------------------------------------------------------------ branch
     def branch(self, inner, cattrs: Attrs, loc: SourceLoc) -> str:

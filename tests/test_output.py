@@ -212,3 +212,59 @@ def test_scheme_binding_sites_are_variables():
     assert types["x"] == types["rest"] == types["a"] == types["b"] == types["k"] == types["z"] == {Name.Variable}
     assert types["g"] == {Name.Function} and types["+"] == {Name.Builtin}
     assert lexer_for("no-such-language").name == "Text only" and lexer_for("python").name == "Python"
+
+
+def test_columns_that_change_width_in_the_output(deck):
+    """Spec 10.4 and 11.2: columns named by a width cue (or collapsed by their attribute) are marked and
+    wrapped; every other column renders as before 0.24."""
+    root = deck({"talk.md": """
+        # A
+        ::: columns {gap=24px duration=450}
+        ::: column {#l}
+        left
+        :::
+        ::: column {#r width=2fr .wide}
+        right
+        :::
+        :::
+        ::: columns
+        ::: column {width=1fr}
+        untouched
+        :::
+        ::: column
+        also
+        :::
+        :::
+        ```timeline
+        width l=0
+        width l=300px r=1fr
+        ```
+
+        # B
+        ::: columns
+        ::: column {width=3fr}
+        x
+        :::
+        ::: column {#z width=0}
+        y
+        :::
+        :::
+    """})
+    html = emit_html(build_deck(root, use_cache=False))
+    assert "\x00" not in html
+    assert ('<div class="lt-columns" style="gap:24px;--lt-gap:24px" data-lt-cols="" data-lt-duration="450">'
+            '<div class="lt-column" id="l" data-lt-col="l" data-lt-flex=""><div class="lt-column-in">') in html
+    assert ('<div class="lt-column wide" id="r" style="flex:2 1 0" data-lt-col="r" data-lt-flex="2 1 0">'
+            '<div class="lt-column-in">') in html
+    # a `columns` none of whose columns change is exactly as before
+    assert ('<div class="lt-columns"><div class="lt-column" style="flex:1 1 0"><p>untouched</p>\n</div>'
+            '<div class="lt-column"><p>also</p>\n</div></div>') in html
+    # a column collapsed from step 0 is marked even without a width cue: hidden, inert, its gap given back
+    assert ('<div class="lt-column lt-col-shut" id="z" style="flex:0 0 0px" data-lt-col="z" data-lt-flex="0 0 0px" '
+            'inert><div class="lt-column-in">') in html
+    a, b = deck_json(html)["slides"]["a"], deck_json(html)["slides"]["b"]
+    assert a["tracks"] == [{"id": "@columns", "kind": "columns"}]
+    assert a["positions"] == [[0], [1], [2]]
+    assert a["columns"] == [{"l": "1 1 0", "r": "2 1 0"}, {"l": "0 0 0px", "r": "2 1 0"},
+                            {"l": "0 0 300px", "r": "1 1 0"}]
+    assert "columns" not in b and b["tracks"] == []

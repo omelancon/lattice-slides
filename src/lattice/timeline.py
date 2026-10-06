@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 
+from .columns import WIDTH_HELP, column_flex
 from .diagnostics import Diagnostics, SourceLoc
 from .model import Slide, TimelineAssign, TimelineLine, TimelinePos, Track
 
@@ -14,6 +15,32 @@ _ASSIGN_RE = re.compile(
 )
 # A detour step (spec 6.4): `detour ID` alone on its line. `detour` is therefore not usable as a track name.
 _DETOUR_RE = re.compile(r"\s*detour\s+(?P<id>[A-Za-z0-9][A-Za-z0-9_-]*)(?P<blocking>\s+blocking)?\s*\Z")
+# A `width` cue (spec 3.15): `width COL=W ...`. `width` is therefore not usable as a track name either.
+_WIDTH_RE = re.compile(r"\s*width(?:\s+(?P<rest>.*?))?\s*\Z", re.S)
+_COL_WIDTH_RE = re.compile(r"(?P<col>[A-Za-z0-9][A-Za-z0-9_-]*)=(?P<w>\S+)\Z")
+COLUMNS_TRACK = "@columns"
+
+
+def _width(m: re.Match, loc: SourceLoc, diags: Diagnostics) -> TimelineAssign | None:
+    rest = m.group("rest") or ""
+    if not rest:
+        diags.error("LT064", "a width cue names columns and their widths: `width COL=W ...`", loc)
+        return None
+    widths: list[tuple[str, str]] = []
+    for item in rest.split():
+        cm = _COL_WIDTH_RE.match(item)
+        if not cm:
+            diags.error("LT064", f"{item!r} in a width cue: write COL=W, the id of a column and its width", loc)
+            return None
+        flex = column_flex(cm.group("w"))
+        if flex is None:
+            diags.error("LT064", f"{item!r}: {WIDTH_HELP}", loc)
+            return None
+        if any(c == cm.group("col") for c, _ in widths):
+            diags.error("LT064", f"column {cm.group('col')!r} is named twice in one width cue", loc)
+            return None
+        widths.append((cm.group("col"), flex))
+    return TimelineAssign(COLUMNS_TRACK, "width", TimelinePos("int", 0), widths=widths)
 
 
 def _pos(text: str) -> TimelinePos:
@@ -59,6 +86,14 @@ def parse_timeline(body: str, first_line: int, file, diags: Diagnostics) -> list
         assigns: list[TimelineAssign] = []
         ok = True
         for part in text.split(","):
+            wm = _WIDTH_RE.match(part)
+            if wm:
+                a = _width(wm, loc, diags)
+                if a is None:
+                    ok = False
+                    break
+                assigns.append(a)
+                continue
             m = _ASSIGN_RE.match(part)
             if not m:
                 if re.search(r"\sby\s", part) and ".." not in part:
@@ -76,6 +111,9 @@ def parse_timeline(body: str, first_line: int, file, diags: Diagnostics) -> list
         if not ok:
             continue
         tracks = [a.track for a in assigns]
+        if tracks.count(COLUMNS_TRACK) > 1:
+            diags.error("LT064", "one width cue per line: name every column in it (`width a=0 b=2fr`)", loc)
+            continue
         if len(set(tracks)) != len(tracks):
             diags.error("LT049", "a track appears twice in the same cue", loc)
             continue
@@ -106,6 +144,12 @@ def compile_steps(slide: Slide, diags: Diagnostics) -> None:
     detour_ids = {d.id for d in slide.detours}
     step_detours: dict[int, dict] = {}
     pos = {t: 0 for t in indep_ids}
+    # The columns track (spec 6.1): its positions are width states, made by the `width` cues as they come.
+    columns = next((t for t in tracks if t.kind == "columns"), None)
+    states: list[dict[str, str]] = [dict(slide.column_init)]
+    if columns is not None:
+        pos[columns.id] = 0
+        last[columns.id] = 0
     table = [dict(pos)]
     for line in lines:
         if line.detour is not None:
@@ -116,13 +160,27 @@ def compile_steps(slide: Slide, diags: Diagnostics) -> None:
             step_detours[len(table) - 1] = {"id": line.detour, "blocking": line.blocking}
             continue
         bad = False
+        assigns = []
         for a in line.assigns:
+            if a.kind == "width":
+                if columns is None:  # its columns were refused (LT064)
+                    bad = True
+                    continue
+                state = dict(states[pos[columns.id]])  # resolved against the state before the line
+                state.update(a.widths)
+                if state not in states:
+                    states.append(state)
+                    last[columns.id] = len(states) - 1
+                assigns.append(TimelineAssign(columns.id, "pos", TimelinePos("int", states.index(state))))
+                continue
+            assigns.append(a)
             if a.track not in indep_ids:
                 why = "is a follower" if a.track in by_id else "is not a track of this slide"
                 diags.error("LT024", f"timeline track {a.track!r} {why}", line.loc)
                 bad = True
         if bad:
             continue
+        line = TimelineLine(assigns, line.loc)
         for cue in _expand(line, pos, last, diags):
             pos.update(cue)
             if pos == table[-1]:
@@ -172,6 +230,9 @@ def compile_steps(slide: Slide, diags: Diagnostics) -> None:
         return row.get(t.id, 0)
 
     slide.positions = [[value(row, t) for t in tracks] for row in table]
+    if columns is not None:
+        columns.positions = len(states)
+        slide.column_states = states
 
 
 def _value(p: TimelinePos, cur: int, last: int) -> int:

@@ -20,4 +20,5 @@ Documents kept as they were written, for the history behind features. They are n
 | `implementation-report-2026-10-05-e.md` | Lattice 0.20.0: thresholds that name the fixnum range, predicates of `prims` |
 | `implementation-report-2026-10-05-f.md` | Lattice 0.21.0: symbolic vector bounds that can be turned off, threshold offsets |
 | `implementation-report-2026-10-06.md` | Lattice 0.22.0: `null` steps of `arrow`, a position without an arrow |
+| `implementation-report-2026-10-06-b.md` | Lattice 0.23.0: three quick skip presses go to the last or first step |
 | `thesis.pdf` | The thesis on basic block versioning that the 0.4.0 and 0.5.0 work follows |

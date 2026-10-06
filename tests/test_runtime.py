@@ -1767,3 +1767,233 @@ def test_arrow_at_bullets(tmp_path):
             pytest.skip("Chromium for Playwright is not installed")
         raise
     assert not errors
+
+
+COLS_DECK = """
+# Cols {#cols}
+
+::: columns {duration=400}
+::: column {#a}
+{#aq}
+Left text, long enough to wrap when its column is narrow, so that a reflow would show.
+
+```diff-steps {#d lang=python}
+versions:
+  - {code: "x = 1"}
+  - {code: "x = 2"}
+  - {code: "x = 3"}
+```
+:::
+::: column {#b}
+{#pt}
+Target in b
+:::
+::: column {#c width=0}
+{.reveal}
+- one
+- two
+:::
+:::
+
+```arrow {#p to=pt angle=270 length=60}
+```
+
+```arrow {#q to=aq angle=300 length=60}
+```
+
+```timeline
+reveal 1
+width a=0 c=1fr
+d ..end
+width a=1fr c=0, reveal end
+width b=200px
+```
+"""
+
+# Columns of a slide (left and width relative to the body, collapsed, visibility, inert, the opacity and width
+# of their contents, moving), the heads of the two arrows (null when hidden), the diff shown and the fragments.
+COLS_GEOMETRY = """(sid) => {
+  const sec = document.querySelector(`#s-${sid}`), body = sec.querySelector('.lt-body').getBoundingClientRect();
+  const r1 = (x) => Math.round(x * 2) / 2;
+  const cols = Array.from(sec.querySelectorAll('.lt-column')).map((c) => {
+    const r = c.getBoundingClientRect(), cs = getComputedStyle(c), inner = c.querySelector('.lt-column-in');
+    return [c.id, r1(r.left - body.left), r1(r.width), c.classList.contains('lt-col-shut'), cs.visibility, c.inert,
+            getComputedStyle(inner).opacity, c.classList.contains('lt-col-moving')]; });
+  const head = (id) => { const el = sec.querySelector(`[data-instance="${sid}/${id}"]`), svg = el.querySelector('svg');
+    const path = el.querySelector('path.lt-arrow-line');
+    if (svg.style.visibility === 'hidden' || !path.getAttribute('d')) return null;
+    const p = path.getPointAtLength(path.getTotalLength()); return [r1(p.x), r1(p.y)]; };
+  const pt = sec.querySelector('#pt').getBoundingClientRect(), s = sec.getBoundingClientRect();
+  return {cols, body: r1(body.width), p: head('p'), q: head('q'),
+          target: [r1(pt.left - s.left), r1(pt.bottom - s.top)],
+          diff: Array.from(sec.querySelectorAll('[data-instance="cols/d"] .lt-diff-pane')).findIndex((e) => !e.hidden),
+          shown: Array.from(sec.querySelectorAll('#c li')).map((li) => !li.classList.contains('lt-hidden'))};
+}"""
+
+
+def _near(a, b, tol=1.5):
+    """Two geometries alike: the columns exactly, the arrow heads within `tol` slide pixels."""
+    if a["cols"] != b["cols"] or a["diff"] != b["diff"] or a["shown"] != b["shown"]:
+        return False
+    for k in ("p", "q"):
+        if (a[k] is None) != (b[k] is None):
+            return False
+        if a[k] and max(abs(x - y) for x, y in zip(a[k], b[k])) > tol:
+            return False
+    return True
+
+
+def test_columns_change_width_however_a_step_is_reached(tmp_path):
+    """Spec 3.8 and 10.4: the widths of a step are the same from a fresh load, a jump, an animated step, an
+    interrupted one, skip playback, the preview and print. A collapsed column takes no width and gives back
+    its gap, is hidden and inert, and an arrow into it is hidden; while columns move, their contents keep a
+    fixed width and an arrow follows its target."""
+    import random
+
+    src = tmp_path / "talk.md"
+    src.write_text(COLS_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type in ("error", "warning") else None)
+
+            def geo():
+                return page.evaluate(COLS_GEOMETRY, "cols")
+
+            def go(step):
+                page.evaluate("(h) => { location.hash = h; }", f"#/cols/{step}")
+                page.wait_for_timeout(150)
+
+            fresh = {}
+            for k in range(7):
+                page.goto(f"{out.as_uri()}#/cols/{k}")
+                page.reload()
+                page.wait_for_timeout(250)
+                fresh[k] = geo()
+            body = fresh[0]["body"]
+            ids = lambda g: {c[0]: c for c in g["cols"]}  # noqa: E731
+            # step 0: c collapsed; a and b share the row exactly, with one gap of 40 between them
+            a, b, c = (ids(fresh[0])[x] for x in "abc")
+            assert a[1] == 0 and b[1] + b[2] == body and b[1] == a[2] + 40 and c[2] == 0
+            assert c[3:7] == [True, "hidden", True, "0"] and a[3:7] == [False, "visible", False, "1"]
+            # step 2: a collapsed, b and c share the row; the arrow into a is hidden, the other moved with pt
+            a, b, c = (ids(fresh[2])[x] for x in "abc")
+            assert a[2] == 0 and b[1] == 0 and c[1] + c[2] == body and a[3]
+            assert fresh[2]["q"] is None and fresh[1]["q"] is not None and fresh[2]["p"] != fresh[1]["p"]
+            # the fragment revealed while c was collapsed is there when it opens; the diff stepped while a was
+            assert fresh[2]["shown"] == [True, False] and fresh[5]["shown"] == [True, True]
+            assert fresh[4]["diff"] != fresh[2]["diff"] and fresh[5]["diff"] == fresh[4]["diff"]
+            # step 6: a length
+            assert ids(fresh[6])["b"][2] == 200 and ids(fresh[5])["b"][2] != 200
+
+            # jumps in a random order: placed directly
+            order = list(range(7)) * 2
+            random.Random(3).shuffle(order)
+            last = None
+            for k in order:
+                go(k)
+                if last is None or abs(last - k) != 1:
+                    assert not any(col[7] for col in geo()["cols"]), (last, k)
+                page.wait_for_timeout(300)
+                assert _near(geo(), fresh[k]), (last, k)
+                last = k
+
+            # an animated step: a closes, c opens; frozen halfway, the contents keep their width and the
+            # arrow at pt follows it
+            go(1)
+            page.wait_for_timeout(200)
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(150)
+            page.evaluate("document.getAnimations().forEach(a => a.pause())")
+            page.wait_for_timeout(100)
+            mid = geo()
+            a, b, c = (ids(mid)[x] for x in "abc")
+            assert a[7] and c[7] and 0 < c[2] < ids(fresh[2])["c"][2] and c[4] == "visible"
+            widths = page.evaluate("""() => Object.fromEntries(Array.from(document.querySelectorAll('#s-cols .lt-column'))
+                .map(c => [c.id, c.querySelector('.lt-column-in').getBoundingClientRect().width]))""")
+            assert abs(widths["a"] - ids(fresh[1])["a"][2]) < 1   # a collapsing column keeps its own width
+            assert abs(widths["c"] - ids(fresh[2])["c"][2]) < 1   # an opening one has its final width
+            assert abs(widths["b"] - ids(fresh[2])["b"][2]) < 1   # and so has every other one
+            assert mid["q"] is None  # into a closing column
+            # the arrow ends below the middle of pt, as measured now (its GAP is 6)
+            pt = page.evaluate("""() => { const r = document.querySelector('#s-cols #pt').getBoundingClientRect(),
+                s = document.querySelector('#s-cols').getBoundingClientRect(); return [r.left - s.left, r.right - s.left]; }""")
+            assert pt[0] < mid["p"][0] < pt[1] and mid["p"] != fresh[1]["p"] and mid["p"] != fresh[2]["p"]
+            page.evaluate("document.getAnimations().forEach(a => a.cancel())")  # the paused transitions
+            page.wait_for_timeout(500)  # the move still ends with its final values
+            assert _near(geo(), fresh[2])
+
+            # every step forward and backward, animated, then at rest
+            go(0)
+            page.wait_for_timeout(300)
+            for k in range(1, 7):
+                page.keyboard.press("ArrowRight")
+                page.wait_for_timeout(650)
+                assert _near(geo(), fresh[k]), (k, "forward")
+            for k in range(5, -1, -1):
+                page.keyboard.press("ArrowLeft")
+                page.wait_for_timeout(650)
+                assert _near(geo(), fresh[k]), (k, "backward")
+
+            # a step pressed in the middle of another: a short move from where the columns are
+            go(1)
+            page.wait_for_timeout(300)
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(120)
+            page.keyboard.press("ArrowLeft")
+            # it heads for the widths of step 1 (the transitions under way are not taken for the final layout)
+            heading = page.evaluate("""() => Array.from(document.querySelectorAll('#s-cols .lt-column'))
+                .map(c => Math.round(parseFloat(c.style.flex.split(' ')[2]) * 2) / 2)""")
+            assert heading == [c[2] for c in fresh[1]["cols"]]
+            page.wait_for_timeout(80)
+            assert any(col[7] for col in geo()["cols"])
+            page.wait_for_timeout(250)
+            assert _near(geo(), fresh[1])
+
+            # skip playback
+            go(0)
+            page.wait_for_timeout(300)
+            page.evaluate("Lattice.actions()['last-step']()")
+            page.wait_for_timeout(1200)
+            assert page.evaluate("Lattice.state().cur") == {"slide": "cols", "step": 6}
+            assert _near(geo(), fresh[6])
+
+            # reduced motion: placed directly
+            page.emulate_media(reduced_motion="reduce")
+            go(1)
+            page.keyboard.press("ArrowRight")
+            assert not any(col[7] for col in geo()["cols"])
+            page.emulate_media(reduced_motion="no-preference")
+
+            # the preview renders the position it is sent, directly
+            page.goto(out.as_uri() + "?preview")
+            page.wait_for_timeout(250)
+            page.evaluate("window.postMessage({lattice: 'preview', slide: 'cols', step: 1}, '*')")
+            page.wait_for_timeout(100)
+            page.evaluate("window.postMessage({lattice: 'preview', slide: 'cols', step: 2}, '*')")
+            page.wait_for_timeout(50)
+            assert not any(col[7] for col in geo()["cols"])
+            page.wait_for_timeout(250)
+            assert _near(geo(), fresh[2])
+
+            # print: each page has the widths of its step
+            page.goto(out.as_uri() + "?print")
+            page.wait_for_timeout(250)
+            plan = {"title": "t", "pageOf": {}, "sections": [],
+                    "pages": [{"slide": "cols", "step": 0, "n": 1}, {"slide": "cols", "step": 2, "n": 2},
+                              {"slide": "cols", "step": 6, "n": 3}]}
+            assert page.evaluate("plan => Lattice.print(plan)", plan) == 3
+            printed = page.evaluate("""() => [1, 2, 3].map(n => Array.from(document.querySelectorAll(`#lt-page-${n} .lt-column`))
+                .map(c => Math.round(c.getBoundingClientRect().width * 2) / 2))""")
+            assert printed == [[c[2] for c in fresh[k]["cols"]] for k in (0, 2, 6)]
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors

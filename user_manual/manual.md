@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.23.0
+author: Lattice 0.24.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -245,7 +245,7 @@ A styling hook: <div class="aside">
 ```
 :::
 ::: column {width=1fr}
-- `columns` holds `column` containers; `width` is a fraction (`2fr`) or a CSS length, `gap` spaces them
+- `columns` holds `column` containers; `width` is a fraction (`2fr`), a CSS length or `0`, `gap` spaces them; a timeline can change widths: [[columns-room]]
 - `callout` with `kind` `info`, `tip` or `warn`
 - `notes`, `detour` and `branch` have their own slides
 - Any other name becomes `<div class="NAME">` for your CSS (warning LT019 near a built-in name)
@@ -515,6 +515,71 @@ reveal ..end, sort end
 ```
 :::
 ::::
+
+# Columns that make room {#columns-room}
+
+:::: columns
+::: column {#vsum-src}
+```code-morph {#vsum lang=scheme file="programs/vsum.scm" lines=2-7 label="as written"}
+steps:
+  - ref: "(##vector-ref v i)"
+    next: "(##fx+ i 1)"
+    label: "checks removed"
+```
+:::
+::: column {#vsum-ai width=0}
+```abstract-interp-anim {#ai program="programs/vsum.bbv" direction=LR height=270}
+panel: [worklist]
+```
+:::
+::::
+
+```arrow {#vsum-arrow to=ref to_anchor=right length=70 label="the access" color=detour}
+```
+
+```timeline
+width vsum-src=0 vsum-ai=1fr   # the source makes room for the analysis
+ai ..end
+width vsum-src=1fr vsum-ai=0   # and comes back
+vsum 1
+```
+
+The analysis needs the whole row: a `width` step collapses the source column, and another brings it back for the optimised code.
+
+::: detour {#columns-room-syntax label="How it is written" key=w}
+# How columns make room {#columns-room-how .dense}
+
+:::: columns
+::: column {width=1fr}
+````markdown
+::: columns
+::: column {#src}
+```code-morph {#code ...}
+```
+:::
+::: column {#viz width=0}
+```abstract-interp-anim {#ai ...}
+```
+:::
+:::
+
+```timeline
+width src=0 viz=1fr   # src collapses
+ai ..end
+width src=1fr viz=0   # src comes back
+code 1
+```
+````
+:::
+::: column {width=1fr}
+- `width COL=W ...` gives the named columns a new width from that step on; the others keep theirs
+- `W` is a fraction (`2fr`), a CSS length or `0`; `width=0` on a column collapses it from the start
+- A collapsed column takes no room and gives back its gap; it is hidden, and what it holds keeps stepping
+- The contents take their final width at once and the columns slide for `duration` ms (`::: columns {duration=600}`); arrows follow
+- Left, jumps, the scrubber and print place the widths of the step directly
+:::
+::::
+:::
 
 # Badges that wait for their turn {#badge-steps .dense}
 
@@ -1600,6 +1665,7 @@ Lattice.component("stack-anim", {
 | LT019, LT020 | warning | Container name close to a built-in; unknown fenced block name |
 | LT034, LT035 | error | An include or a detour where it is not allowed (in a container, a list item, a quote); detour does not terminate |
 | LT041, LT042, LT043 | warning, error, error | Level-1 heading inside a container; no start slide; slide repeated in a tour |
+| LT064 | error | A column width that is not a fraction, a length or `0`; a `width` step naming no column of the slide |
 
 # Components and steps {#diagnostics-steps .dense}
 
@@ -1662,6 +1728,7 @@ Lattice.component("stack-anim", {
 | ` ```graph-anim `, ` ```array-anim `, ` ```tree-anim `, ` ```grid-anim ` | Animations from your Python |
 | ` ```bbv-anim `, ` ```bbv-cfg `, ` ```abstract-interp-anim ` | Compiler animations |
 | ` ```timeline ` | Steps of several tracks |
+| `width src=0 viz=1fr` in a timeline | Columns that make room |
 | `$x$`, `$$x$$` | Math |
 :::
 ::::

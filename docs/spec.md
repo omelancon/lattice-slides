@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.23.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.24.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -190,8 +190,8 @@ wiki_link = "[[" IDENT [ "|" label ] "]]" ;
 | `detour` | Nested slides (3.9) | `#id`, `label`, `key`, `badge`, `at`, `blocking` |
 | `branch` | Choice point (3.10) | `layout` (`menu` or `cards`) |
 | `notes` | Speaker notes (3.14) | none |
-| `columns` | Horizontal layout; direct children are `column` containers | `gap` |
-| `column` | One column | `width` (CSS length or fraction like `2fr`) |
+| `columns` | Horizontal layout; direct children are `column` containers | `gap`, `duration` (milliseconds of a change of widths, default 600, below) |
+| `column` | One column | `width`: a fraction of the free space (`2fr`, `1.5fr`), a CSS length (`px`, `em`, `rem`, `%`, `vw`, `vh`) or `0` (collapsed, below) |
 | `callout` | Highlighted box | `kind` (`info`, `tip`, `warn`) |
 | any other name | Rendered as `<div class="NAME">`, a styling hook for themes | any |
 
@@ -213,6 +213,31 @@ right
 ````
 
 Content never paints outside its column: a table wider than its column scrolls horizontally inside it.
+
+**Widths that change.** A `width` cue of the timeline (section 3.15) gives named columns a new width from that step on, to make room for an animation in another column, say:
+
+````markdown
+::: columns
+::: column {#src}
+...
+:::
+::: column {#viz}
+...
+:::
+:::
+
+```timeline
+width src=0      # src collapses: viz takes the whole row
+ai ..end
+width src=1fr    # src comes back
+code 1
+```
+````
+
+- Widths are positions (section 6.1): a step shows the widths of its row however it was reached. Step 0 shows the `width` attributes.
+- A column of width `0` (or any zero length) is **collapsed**: it takes no width and takes away one gap of its `columns`, so the other columns fill the row as if it were not there. It is hidden and inert (no clicks, focus or links); its content keeps its layout and its components keep their positions, so it comes back as it would have been. An arrow at an element inside it is hidden (section 8.9). `width=0` on the column collapses it from step 0.
+- **Motion.** A change of widths reached with a single step (NEXT, PREV) moves the columns for `duration` milliseconds (`0` changes them at once). The content of every column of that `columns` takes its final width at once, and the boxes of the columns move and clip it, so content reflows at most once per step: a growing column uncovers content already laid out at its final size, a shrinking one rewraps at the start. A collapsing column keeps its width and fades out; an opening one is laid out at its final width and fades in. A change that interrupts another, as during skip playback (section 7.2), takes 140 ms. Other moves (jumps, the scrubber, the preview, print, reduced motion) place the columns directly (section 10.1).
+- Errors (LT064): a `width` attribute that is none of the values above, and a `duration` that is not a non-negative integer.
 
 ### 3.9 Detours
 
@@ -313,7 +338,10 @@ At most one `timeline` block per slide (LT029). Its body is not YAML; it has its
 ```ebnf
 timeline  = { line } ;
 line      = { SP } ( cue | detour_cue | ) [ comment ] NL ;
-cue       = assign { { SP } "," { SP } assign } ;
+cue       = part { { SP } "," { SP } part } ;
+part      = assign | width_cue ;
+width_cue = "width" SP { SP } column_width { SP { SP } column_width } ;   (* section 3.8; "width" is not a track name *)
+column_width = IDENT "=" WIDTH ;    (* IDENT: the #id of a column; WIDTH: a value of the `width` attribute (3.8) *)
 detour_cue = "detour" SP { SP } IDENT [ SP { SP } "blocking" ] ;   (* a detour step, section 6.4; "detour" is not a track name *)
 assign    = TRACK SP { SP } ( position | range ) ;
 position  = INT
@@ -339,6 +367,8 @@ trace ..end-1       # one cue per frame, from the current one to the one before 
 trace end
 ```
 ````
+
+A `width` cue sets the width of each column it names (section 3.8) and leaves the other columns as they are. It is part of a cue like an assignment: alone on its line it is one step, and with other assignments the widths change on the same step (`width src=1fr, code 1`). Errors (LT064): a name that is not the `#id` of a column of this slide placed directly in a `columns` container (outside speaker notes), an invalid width, a column named twice in one cue, `width` without a column.
 
 Positions are absolute (`3`), relative to the track's current position (`+1`, `-1`) or counted from the last one (`end`, `end-2`). A **range** gives one cue per position: `a..b` from `a` to `b`; an **open range** `..b` starts from where the track is, so `reveal ..end` reveals the remaining fragments one per step and `trace ..+2` plays the next two frames in two steps (where `trace +2` jumps them in one). `by K` keeps every `K`-th position of a range (`trace 1..end by 2`). Several ranges on one line advance in lockstep (`reveal ..+3, trace ..+3`). Semantics are defined in sections 6.3 and 6.4.
 
@@ -391,6 +421,7 @@ class Slide:
     tracks: list[Track]
     positions: list[list[int]]    # positions[step][track_index]
     step_detours: dict[int, dict] # detour steps: step -> {"id": detour id, "blocking": bool} (6.4)
+    column_states: list[dict[str, str]]  # positions of the columns track: column id -> CSS flex value (3.8, 6.1)
 
 class Detour:
     id: str
@@ -423,7 +454,7 @@ class TimelineSpec:
 
 class Track:
     id: str                       # "reveal" or component id
-    kind: Literal["reveal", "component"]
+    kind: Literal["reveal", "component", "columns"]
     instance: str | None          # "<slide-id>/<component-id>"
     positions: int                # count, at least 1
     follow: str | None            # leader track id
@@ -504,8 +535,9 @@ A slide has these tracks, in this order:
 
 1. The **reveal track** (`reveal`), if the slide has at least one fragment. With `m` fragments it has `m + 1` positions: position `k` shows fragments `1..k`.
 2. One **component track** per component instance whose render result has `positions > 1` or that is a follower. Its id is the block's `#id`.
+3. The **columns track** (`@columns`), if the timeline has a `width` cue (section 3.15). Its positions are the width states of the columns named in the slide's `width` cues: position 0 holds the widths of their attributes, and each `width` cue moves the track to the state it makes (a state equal to an earlier one takes that state's position). Timelines do not name it; `width` cues move it.
 
-A track is **independent** if it is not a follower and has more than one position.
+A track is **independent** if it is not a follower and has more than one position. The columns track is never the cause of LT023 or LT026.
 
 ### 6.2 Component ids and followers
 
@@ -542,6 +574,7 @@ for t in I:
     if all(row[t] == 0 for row in table): warn("LT026")  # never advanced
 ```
 
+- `width` cues (section 3.15) are assignments of the columns track: the state after the line is the state before it with the named columns changed. A cue whose widths are those already shown changes nothing (LT030), like any other.
 - `resolve`: `INT` is absolute; `+N` and `-N` are relative to the current position; `end` is `last(t)` and `end-N` is `last(t) - N`.
 - `expand`: a line without a range is one cue. A range on track `t` gives a sequence of values, and the line produces one cue per value (each cue assigns that value to `t`); the line's other assignments are applied in the first of these cues only. The values, with `K` the stride (`by K`, default 1, `K >= 1`):
   - **Range** `a..b` (`a` and `b` are integers, `end` or `end-N`): `a`, `a ± K`, ... in the direction from `a` to `b` (ascending or descending), ending with `b` even when `b` is not a multiple of `K` away from `a`. `a..a` is the single value `a`.
@@ -794,7 +827,7 @@ A `code` or `code-steps` block taller than its space scrolls. At each position t
 
 An `arrow` draws an arrow over the current slide, pointing at one of its elements. It is the one component whose geometry is computed in the browser, because element boxes exist only there; the build still decides everything else (targets, directions, steps).
 
-- **Targets.** `to` and `from` name an element of the slide: a bare identifier is an element id (an `{#id}` attribute line, a component `#id`, a code segment of section 8.10, or any id in the rendered body), an identifier followed by indices in brackets is an item of a list (below), anything else is a CSS selector such as `.lt-line[data-line="4"]` or `.lt-title`, resolved inside the slide section. A bare id that no element of the slide carries, and that is not an anchor of one of its components (a segment of a later position of a `code-morph`, say), is warning LT046 at build time; a target not found at runtime hides the arrow (console warning). The box of a target is the extent of its contents when it has some (so a heading or a code line is pointed at its text, not at its full row), else the element's box; the box of a code segment is the union of its pieces, one per line it spans. The box of a list item (`<li>`) is that of its own content, without the lists nested in it, so an arrow at an item with sub-items points at the item's own lines.
+- **Targets.** `to` and `from` name an element of the slide: a bare identifier is an element id (an `{#id}` attribute line, a component `#id`, a code segment of section 8.10, or any id in the rendered body), an identifier followed by indices in brackets is an item of a list (below), anything else is a CSS selector such as `.lt-line[data-line="4"]` or `.lt-title`, resolved inside the slide section. A bare id that no element of the slide carries, and that is not an anchor of one of its components (a segment of a later position of a `code-morph`, say), is warning LT046 at build time; a target not found at runtime hides the arrow (console warning), and so does a target inside a collapsed column (section 3.8), without a warning. The box of a target is the extent of its contents when it has some (so a heading or a code line is pointed at its text, not at its full row), else the element's box; the box of a code segment is the union of its pieces, one per line it spans. The box of a list item (`<li>`) is that of its own content, without the lists nested in it, so an arrow at an item with sub-items points at the item's own lines.
 - **List items.** `LIST[N]` names the `N`-th item of the list whose id is `LIST` (an `{#id}` attribute line before a bullet or ordered list puts the id on the list), counted from 1 in document order, whatever numbers an ordered list displays; a negative `N` counts from the end (`[-1]` is the last item). Further indices descend into the first list nested in that item: `facts[2][1]` is the first item of the list nested in item 2 of `facts`. The grammar is `IDENT "[" ["-"] DIGITS "]" { "[" ["-"] DIGITS "]" }`, which is not a CSS selector, so no working selector changes meaning (in a YAML flow sequence, `[a, b]`, the value needs quotes). An index of 0 is LT022. At build time, an item that does not exist is error LT063: no element with that id on the slide, an element that is not a `<ul>` or `<ol>`, an index beyond the number of items, or an item with no nested list to descend into.
 - **Anchors.** `from_anchor` and `to_anchor` choose where the arrow leaves `from` and enters `to`. A side is an angle: `right` is 0, `top` 90, `left` 180, `bottom` 270, and a number is an angle in degrees with the convention of `angle` (counterclockwise, 0 pointing right). The end sits where the ray from the center of the box at that angle leaves the box (for a side, the middle of that side), a small gap outside it, and the curve leaves or enters along that ray. `center` puts the end at the center of the box, with no gap. `bullet` puts the end at the marker of a list item (its bullet, or its number in an ordered list): a small gap to the left of the marker, at its vertical middle, and the curve leaves or enters to the left, as with `left` (without `from`, `to_anchor=bullet` gives `angle` 180). The end MUST be a list item, written `LIST[N]` or the bare id of an `<li>`; a bare id of a whole list, any other element and a CSS selector (which the build cannot check) are error LT063. A step whose `from_anchor` is set has a `from` (LT022); the block's `from_anchor` applies to the steps that have one.
 - **Direction.** With `from`, an end without an anchor (or with `center`) aims at the other end: at its anchor point, or at the center of its box. With no anchor at all, the arrow runs from the edge of the `from` box to the edge of the `to` box along the line between their centers, shortened by a small gap at both ends. Without `from`, the arrow comes from `angle`: degrees measured from the target toward the tail, counterclockwise with 0 pointing right (90 means the arrow comes from above, 315 from the lower right); its head sits at the target's edge along that direction, or at `to_anchor` when it is set, and its tail `length` slide pixels from the head's edge point along `angle`, shortened when it would leave the slide. `angle` defaults to the direction of `to_anchor` when it is an angle, a side or `bullet` (180), else to 315, a fixed direction chosen over any direction computed at runtime (report, decision 14).
@@ -1063,6 +1096,7 @@ Requirements:
 - Badges that wait for their step (section 3.9): the badge carries `data-lt-badge="step"` or `data-lt-badge="next"`; at every step the core looks up the detour steps of its `data-lt-detour` in the slide's `stepDetours` and hides the badge the same way as a fragment. Each badge is handled on its own, so the placed badges of one detour may differ. The presenter preview and print mode render positions through the same path, so they follow.
 - Branch menus, detour badges, wiki links, transitions, overview, go-to, presenter view (with its preview and scrubber), enlarged elements (section 7.7) and print mode (section 11.5) are implemented by the core.
 - A runtime that moves content of the slide without changing its own box (the text of a `code-morph`, section 8.11) dispatches a bubbling `CustomEvent` named `lt-relayout` on its element after it has placed its new state, with `detail.animate` true when the move is animated and, optionally, `detail.timing = {delay, duration}` in milliseconds, when the content glides. Runtimes that measure the slide (`arrow`, section 8.9) listen for it on their slide section and glide with that timing.
+- Column widths (section 3.8). A `columns` container with a column named in a `width` cue or collapsed by its attribute carries `data-lt-cols` and `data-lt-duration`; each of its columns carries `data-lt-col` (its id, or empty) and `data-lt-flex` (the `flex` value of its attribute, empty for the default), and its content is wrapped in `<div class="lt-column-in">`. At every step the core gives each such column the `flex` value of the current position of the columns track (`SlideJSON.columns`), or its own `data-lt-flex`; a collapsed column has the class `lt-col-shut` and is `inert`. An animated change measures the columns before and after the change (for display only, as `arrow` does), moves their boxes in slide pixels while the width of their contents stays fixed, then sets the final values. It dispatches `lt-relayout` on the container with `detail.follow`, the duration of the move in milliseconds; a still change dispatches it with `animate` false. A runtime that measures the slide re-measures at every frame while `follow` lasts (`arrow` does). A runtime whose drawing depends on its own size observes it (`ResizeObserver`): a change of widths changes its box once per step.
 - The core exports helpers for runtimes: `Lattice.frames(store)`, `Lattice.applyDelta`, `Lattice.renderPanel(el, panel, keys)` (the variable panel of the animation components) and `Lattice.esc` (HTML escaping).
 
 ---
@@ -1145,9 +1179,10 @@ interface SlideJSON {
   branches: { target: string; key: string; label: string }[];
   detours: string[];
   steps: number;
-  tracks: { id: string; kind: "reveal" | "component";
+  tracks: { id: string; kind: "reveal" | "component" | "columns";
             instance?: string; follow?: string }[];
   positions: number[][];                   // [step][trackIndex]
+  columns?: Record<string, string>[];      // positions of the columns track: column id -> CSS flex value (section 3.8)
   stepDetours?: Record<string, { id: string; blocking: boolean }>;  // detour steps (section 6.4)
   offpath: boolean;
   transition?: string;
@@ -1257,6 +1292,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT061 | error | A closing container fence with no open container, a named closing fence (`::: /NAME`) whose name is not that of the container it closes, or a malformed one (section 3.2) |
 | LT062 | warning | A container never closed: it ends with its file or its enclosing block (section 3.2) |
 | LT063 | error | An `arrow` end naming a list item that does not exist (`LIST[N]`: no such list on the slide, not a list, an index out of range, no nested list), or a `bullet` anchor on an end that is not a list item (section 8.9) |
+| LT064 | error | A column width that is not a fraction (`Nfr`), a CSS length or `0`, in a `width` attribute or a `width` cue; a `duration` of `columns` that is not a non-negative integer; a `width` cue naming something that is not a column of this slide directly in a `columns` container, naming a column twice, or naming none (sections 3.8, 3.15) |
 
 Diagnostics are printed as `file:line:col: severity LTnnn: message`. `lattice check` exits with status 1 if any error is reported, 0 otherwise (`--strict` also fails on warnings).
 
@@ -1457,3 +1493,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.21 | `vector_bounds` (symbolic vector bounds can be turned off); threshold names with an offset (`maxfix-1`) | 8.8, 9.5, 9.6 |
 | 0.22 | `null` steps of `arrow`: a position without an arrow | 8.8, 8.9 |
 | 0.23 | Three quick presses of `skip-forward` or `skip-back` play to the last or first step of the slide | 7.2, 7.5, 7.6 |
+| 0.24 | Columns that change width: the `width` timeline cue, collapsed columns (`width=0`), `duration` on `columns`, the columns track, `lt-relayout` with `follow`; an invalid column width is LT064 | 3.8, 3.15, 4, 6.1, 6.3, 8.9, 10.4, 11.2, 12 |

@@ -15,7 +15,7 @@ from .components.base import REGISTRY, ComponentError, MissingFileError, RenderC
 from .diagnostics import Diagnostics
 from .model import ComponentBlock, Deck, Slide, Track
 from .themes import get_theme
-from .timeline import compile_steps
+from .timeline import COLUMNS_TRACK, compile_steps
 
 
 def _library_hash() -> str:
@@ -221,6 +221,8 @@ def render_slide_components(deck: Deck, slide: Slide, cache: Cache, palette: dic
     for b in rendered:
         if b.id in track_ids:
             tracks.append(Track(b.id, "component", results[b.index].positions, f"{slide.id}/{b.id}", b.follow))
+    if slide.column_init:  # `width` cues (spec 3.15): the columns track, whose positions compile_steps counts
+        tracks.append(Track(COLUMNS_TRACK, "columns", 1))
     independent = [t for t in tracks if t.follow is None and t.positions > 1 and t.kind == "component"]
     if len(independent) + (1 if slide.reveal_count else 0) >= 2 or slide.timeline is not None:
         for t in independent:

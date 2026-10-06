@@ -49,7 +49,9 @@ src/lattice/
                   menus, notes, timelines, component placeholders
   graph.py        next resolution, edges, keys, main path, reachability, tours
   timeline.py     timeline parsing, step compilation (ranges resolved against the current positions), detour
-                  steps (and LT055 for badges tied to them)
+                  steps (and LT055 for badges tied to them), `width` cues (the states of the columns track)
+  columns.py      column widths as CSS flex values (LT064), and the pass that marks the columns whose width
+                  changes or starts at 0 (data attributes, the `lt-column-in` wrapper)
   render.py       component rendering, cache, tracks
   emit.py         deck JSON, single-file HTML, directory output, image embedding
   graphs.py       graph loading, Graphviz layouts, overview map layout, tree layouts per frame
@@ -68,11 +70,12 @@ src/lattice/
                   filter), visual.py (plot, dot, math, arrow), animations.py, bbv.py
   runtime/
     lattice.js    navigation state machine (with the structural predecessor, skip playback and detour
-                  steps), reveal and badge visibility per step, overlays, enlarged elements (the zoom
+                  steps), reveal and badge visibility per step, column widths per step (and their moves), overlays, enlarged elements (the zoom
                   card, its input rules and sync), presenter view (preview, scrubber, keybindings),
                   input (bindings, three quick skip presses), print mode, component host
     lattice.css   layout and component styles; themes/*.css hold custom properties only
-    components/   one runtime per animated or interactive component (arrow.js measures element boxes and list markers;
+    components/   one runtime per animated or interactive component (arrow.js measures element boxes and list markers,
+                  and follows columns that move;
                   code-morph.js places units on a grid and moves them with CSS transitions,
                   and cross-fades the highlight layers under them)
     vendor/       KaTeX, Vega, Vega-Lite, Plotly (with licenses), embedded only when used
@@ -98,8 +101,8 @@ Each of these was decided deliberately; the reasoning is in the report (sections
 - **Ids are global** across files, detours are nested only, and `#` is the only slide boundary (report section 7, decisions 1 to 3).
 - **Registered components take precedence over Pygments lexers** (spec 3.13). Never register a component under a common language name; that is why the diff component is `diff-steps`.
 - **Output is self-contained.** Images, fonts, data and libraries are embedded in single-file mode. Heavy libraries are embedded only when an instance requires them (`RenderResult.requires`).
-- **Columns contain their content.** Nothing may paint outside its column or below the slide body; `tests/test_layout.py` checks every example slide at its first and last step. A component option such as `height` must be honoured in every layout mode (the animation panels switch to a column under 760 px of container width).
-- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT063. New code, new row in spec section 12.
+- **Columns contain their content.** Nothing may paint outside its column or below the slide body; `tests/test_layout.py` checks every example slide at its first and last step (a collapsed column paints nothing and is skipped). A component option such as `height` must be honoured in every layout mode (the animation panels switch to a column under 760 px of container width).
+- **Diagnostics have stable codes.** Codes are never reused or renumbered; the current highest is LT064. New code, new row in spec section 12.
 
 ## Common tasks
 
@@ -121,15 +124,15 @@ Run `pytest` after every change; it takes about a minute and a half, most of it 
 |---|---|
 | `test_parsing.py` | attributes, ids, includes, links, reveal and `.reveal-with` (attribute lines inside list items, nested lists revealed item by item), containers and their fences (bare and named closing fences, mixed, code blocks skipped, LT061, LT062), leaf directives |
 | `test_graph.py` | next resolution, detours, branches, keys, tours |
-| `test_steps.py` | tracks, timelines (open ranges `..STOP`, `end-N`, strides, lockstep ranges and their errors), detour steps and the badges of their detours (modes, placed badges, LT055 and LT056), followers, deltas, frame stores, tree and grid traces, tree layouts |
+| `test_steps.py` | tracks, timelines (open ranges `..STOP`, `end-N`, strides, lockstep ranges and their errors; `width` cues and the columns track, LT064), detour steps and the badges of their detours (modes, placed badges, LT055 and LT056), followers, deltas, frame stores, tree and grid traces, tree layouts |
 | `test_bbv.py` | the type lattice and intervals (thresholds by name, with offsets; runs without vector bounds), the `.bbv` syntax, SBBV and ΛV against the thesis figures (6, 14, 16), abstract interpretation against figures 1, 2 and 4, intervals in SBBV and ΛV, the symbolic bound rules of the paper and `findv` against its figure 7, frames, layout, the components (`clickable`, `clickable_show` and the sizes of enlarged blocks) |
-| `test_output.py` | plot backends, diff-steps, the arrow component (null steps included), images, directory output, overview map, library inclusion |
+| `test_output.py` | plot backends, diff-steps, the arrow component (null steps included), images, directory output, overview map, library inclusion, the HTML and deck JSON of columns that change width (others unchanged) |
 | `test_segments.py` | code segment markers (both forms, spaces, line numbers, errors), wrapping of Pygments output, segment highlights, LT058, arrow anchor options, arrows at list items and bullets (the item path, LT063) |
 | `test_morph.py` | `code-morph` at build time: units and alignment (every version rebuilt from the data, survivors across lines, moves, tabs, a language change), the steps form (cumulative replacements, indentation, removed lines, nesting errors), highlights (per version and step, the default, `changed`, the layers, their errors, `diff-steps` refusing them), options, LT059, LT060, the cache |
 | `test_pdf.py` | `pdf` steps and LT053, the page plan (tour, appendix, back links), a real export in Chromium |
 | `test_cli.py` | CLI commands, building every example, the user manual building without warnings and using every component |
-| `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys and their three quick presses, detour steps, badges that wait for their detour step, placed in columns), the presenter preview, scrubber and keybindings, the arrow geometry (anchors, segments as targets, null steps that hide it, bullets checked against the pixels of their markers, items without their nested lists), the tree, grid, versioning and abstract interpretation runtimes, enlarged blocks (keys and clicks that close without moving, the current step shown, `clickable=off`, passive windows, the presenter pane and sync), `code-morph` (the same geometry and highlights however a position is reached: fresh load, jumps, animated, interrupted and skipped steps, preview, print; an arrow following a segment; highlights placed and dimmed as in a `code` block, compared on pixels, and scrolled into view), in Chromium |
-| `test_layout.py` | no content spills out of a column or below the slide body, at the first and last step of every slide of the examples and the manual |
+| `test_runtime.py` | the navigation state machine (the spec 7.3 trace, backward walking without history, skip keys and their three quick presses, detour steps, badges that wait for their detour step, placed in columns), the presenter preview, scrubber and keybindings, the arrow geometry (anchors, segments as targets, null steps that hide it, bullets checked against the pixels of their markers, items without their nested lists), the tree, grid, versioning and abstract interpretation runtimes, enlarged blocks (keys and clicks that close without moving, the current step shown, `clickable=off`, passive windows, the presenter pane and sync), `code-morph` (the same geometry and highlights however a position is reached: fresh load, jumps, animated, interrupted and skipped steps, preview, print; an arrow following a segment; highlights placed and dimmed as in a `code` block, compared on pixels, and scrolled into view), columns that change width (the same widths however a step is reached, preview and print included; collapsed columns, contents of a fixed width while columns move, an interrupted move, an arrow that follows), in Chromium |
+| `test_layout.py` | no content spills out of a column or below the slide body, at the first and last step of every slide of the examples and the manual (collapsed columns skipped) |
 
 Tests prove structure, not appearance. After any visual change (CSS, runtime rendering, a component's HTML, an example), rebuild the examples and look at screenshots of the affected slides:
 
@@ -164,6 +167,7 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 - **Bullets are text markers.** `arrow.js` measures a marker by setting its item's `list-style-position` to `inside` for one measurement: the first character moves by the marker's width, and an outside marker ends where the content starts. That is exact only for text markers, so the built-in bullets are `list-style-type` strings (`•`, `◦`, `▪`, each with an en space) in `lattice.css`, under `:where()` so that theme and plugin rules on lists win. Do not switch back to `disc` or draw markers with `::before` (which would override plugins' own `::before` markers, such as the manual's `checklist`). `test_arrow_at_bullets` compares the arrow's end with the marker's pixels; run it in Firefox too after touching this (`p.firefox`, after `playwright install firefox`).
 - **Arrows re-measure on `lt-relayout`.** A runtime that moves content without changing its box dispatches it (spec 10.4); `arrow.js` handles it in a microtask, after every `show` of the step. A new component that moves text an arrow may point at should dispatch it too.
 - **An enlarged element is not a position.** The zoom card of spec 7.7 never touches `nav`, the hash or `sessionStorage`, and `render` closes it first thing, so a sync, a hash change or the scrubber cannot leave a stale card over a new step. Its input handlers run before everything else (`onKey` checks it before overlays; a capture-phase `pointerdown` swallows the press, its `mousedown` and its `click`), so a new handler that must act while a card is open has to be placed before them. A component offers elements through its controller's `zoom(inst, key)`, which must build a new element from the position last shown: the same hook serves a local click and the other window's request. In `bbv.js`, `drawNode` and `nodeState` are shared by the drawing and the enlarged copy; a change to what a node shows goes there once, and to `layout.node_size`, which sizes both.
+- **Columns move in pixels, then rest in flex values.** `placeColumns` in `lattice.js` measures the columns where they are (halfway through a move, too), cancels the transitions under way, applies the final flex values to measure them, then moves the boxes from the first widths to the second as `flex: 0 1 Wpx` and sets the final values at the end. Without the cancel, a move interrupted by the next step measures its own transitions and heads for the wrong widths (`test_columns_change_width_however_a_step_is_reached` checks it). The content of a tracked column sits in `.lt-column-in`, whose inline width is fixed during a move and kept by a collapsed column; CSS that targets the children of `.lt-column` sees the wrapper there. A `columns` with no named or collapsed column has no wrapper and renders byte for byte as before 0.24.
 - **Writing style.** The project owner avoids em dashes in prose; use colons, commas or parentheses.
 
 ## Release

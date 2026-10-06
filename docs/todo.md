@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-06, after 0.23.0 (`implementation-report-2026-10-06-b.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-06, after 0.24.0 (`implementation-report-2026-10-06-c.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
@@ -31,17 +31,24 @@ Updated 2026-10-06, after 0.23.0 (`implementation-report-2026-10-06-b.md`). Item
 - [ ] 0.16.0: try `from_anchor: bullet` on your own slides (the manual's "Arrows at bullets"). The end leaves to the left; say if you want `bullet` combined with another direction (say, leaving downward from the marker).
 - [ ] 0.17.0: try the timeline ranges on one of your slides (the manual's "Timeline ranges"): `reveal ..end`, `trace ..+2`, `end-1`, `by 2` and ranges in lockstep. The examples and the rest of the manual were left as written (their decks are unchanged apart from the version); say if you want them rewritten with the new forms where they would be shorter.
 - [ ] 0.18.0: watch the bug-fix slide of example 05 (`highlight=changed`) and the manual's "Highlights in a morph" on your screen. `changed` lights rows holding new tokens only, so at the last step of example 05 the line `self.order.remove(key)`, which survives from the old code, stays dimmed in the middle of the four-line band; `highlight: refresh` on that step would light the whole segment instead. Judge the timing too: old highlights fade out with the leaving tokens, the new ones in with the arriving tokens.
-- [ ] 0.23.0: `docs/implementation-report-2026-10-06.md` (0.22.0) is copied to `docs/archive/`; `git rm` it in `docs/`.
+- [ ] 0.24.0: `docs/implementation-report-2026-10-06-b.md` (0.23.0) is copied to `docs/archive/`; `git rm` it in `docs/`, and `git add` the new files (`src/lattice/columns.py`, `user_manual/programs/vsum.scm`, `user_manual/programs/vsum.bbv`, the new report).
 - [ ] 0.23.0: try three quick Shift+Right (Shift+Left) presses on a long animation (example 07, or 06). The window is one second from the first press (`BURST_WINDOW_MS` in `lattice.js`), the first two presses still move ten steps each, and the playback to the end uses the `last-step` interval (30 to 90 ms per step), so 60 steps take about two seconds; say if the window or the playback should be shorter. Only Chromium was available here.
 - [ ] 0.21.0: the abstract interpreter widens at every join, as the thesis's figure 2 does, so a bound found by a test is kept only if a threshold sits on it (`maxfix-1` for the defense's `findv`). Widening only at loop heads (targets of back edges, plain union elsewhere) was prototyped and keeps such bounds with `[sign, maxfix]` alone; say if you want it as an option.
 - [ ] 0.20.0: a long CFG (the defense's `findv`, 11 blocks in 7 ranks) is drawn small in either direction, since block bands stack ranks in one line or one column; a layout that folds long chains (two columns of ranks) would make such drawings readable without clicking blocks.
 - [ ] 0.19.0: other attribute lines inside list items (an attribute line inside a block quote, or before a fenced block in an item, which stays a code block without a component) were left as before; say if you need them.
+
+- [ ] 0.24.0: watch the manual's "Columns that make room" on your screen (only Chromium was available here), and try a `width` cue on your own slide (the source, the analysis, the optimised code). Judge the motion: 600 ms ease-in-out by default (`duration` on `columns`), contents laid out at their final width at once, so the analysis slides in already at its size while the source fades out under the moving edge; a move that interrupts another takes 140 ms (`QUICK_COLUMNS_MS` in `lattice.js`). Continuous reflow (`resize=smooth`, drawings zooming as their column grows) was left out as agreed; say if you want it as an option.
+- [ ] 0.24.0: an animation without `height` in a column, with a paragraph below the columns, lets its caption overlap that paragraph (seen with an `abstract-interp-anim` in `direction=LR`; it happens on a static slide too, so it predates 0.24). `test_layout.py` checks spills out of columns and below the body, not overlaps between siblings. The manual slide sets `height=270`.
 
 ## Later, if wanted
 
 Authoring and parsing:
 - [ ] Container fences (0.14): a container opened in a list item ends with the item, as before, and its closing fence must be indented with the item: written at the left margin, it reports the container as never closed (LT062) and the fence as closing nothing (LT061). Accepting the margin fence would mean letting a fence end a list item, which CommonMark lists do not allow.
 - [ ] A `{.reveal}` line before a `::: detour` container is still ignored without a word (the badge is not a fragment). Either make the badge a fragment of the reveal track (a step-table change) or warn; `badge=step` covers the case that motivated it.
+
+Columns (0.24):
+- [ ] A duration per `width` cue, row heights or a `gap` that changes: the columns track would hold them without changing the model.
+- [ ] A slide opened directly at a step where a column is collapsed lays that column's content out at width 0 (invisible, clipped) until it opens; the content takes its final width at the start of the opening move, so nothing shows, but a component that measures itself while hidden sees a zero width meanwhile.
 
 Navigation and presenter view:
 - [ ] Arrow labels: a `label_at` option (tail, middle, head). A label beside the middle of a `from` arrow can overlap text when the two boxes are close; `curve` moves it for now. A tail label near the slide edge is pushed back inside and then sits over its own line, which shows through the spaces of the label.

@@ -158,15 +158,20 @@
     return [box(el, section), anchor];
   }
 
+  // An element of a collapsed column (spec 3.8), or of one collapsing, is not pointed at.
+  const shutAway = (el) => !!el.closest(".lt-col-shut, .lt-col-closing");
+
   function geometry(inst, step) {
     const target = find(inst.section, step.to, inst.slideId, step.to_item);
     if (!target) {
       console.warn(`lattice: arrow target ${written(step.to, step.to_item)} not found on slide ${inst.slideId}`);
       return null;
     }
+    if (shutAway(target)) return null;
     const [tb, toAnchor] = endBox(target, step.to_anchor, inst.section);
     step = Object.assign({}, step, { to_anchor: toAnchor });
     const from = step.from ? find(inst.section, step.from, inst.slideId, step.from_item) : null;
+    if (from && shutAway(from)) return null;
     let g, label;
     if (from) {
       const [fb, fromAnchor] = endBox(from, step.from_anchor, inst.section);
@@ -226,8 +231,44 @@
   }
 
   // `timing` ({delay, duration} in ms, from an `lt-relayout` event) makes the glide follow the content.
+  const stepOf = (inst) => inst.steps[Math.max(0, Math.min(inst.position, inst.steps.length - 1))];
+
+  // Columns that move (spec 3.8, `lt-relayout` with `follow`): the arrow is measured again at every frame for
+  // `ms` milliseconds, so that it stays on a target carried by a column. A change of the arrow's own geometry
+  // on the same step (its new target) is blended in over the same time.
+  function follow(inst, ms) {
+    cancelAnimationFrame(inst.raf);
+    const step0 = stepOf(inst);
+    const from = inst.drawn || inst.last;
+    const g0 = step0 ? geometry(inst, step0) : null;
+    const t0 = performance.now();
+    inst.followUntil = t0 + ms;
+    const frame = (now) => {
+      const t = Math.max(0, Math.min(1, (now - t0) / ms));
+      const step = stepOf(inst);
+      const g = step ? geometry(inst, step) : null;
+      inst.svg.setAttribute("viewBox", `0 0 ${inst.section.offsetWidth} ${inst.section.offsetHeight}`);
+      inst.svg.style.visibility = g ? "" : "hidden";
+      if (!g) {
+        inst.drawn = inst.last = null;
+      } else {
+        const k = 1 - (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+        draw(inst, from && g0 && k > 0 ? shift(g, from, g0, k) : g);
+        inst.last = g;
+      }
+      if (t < 1) inst.raf = requestAnimationFrame(frame);
+    };
+    inst.raf = requestAnimationFrame(frame);
+  }
+  // `g` moved by `k` times the offset between what was drawn and what the arrow measured at the start.
+  function shift(g, from, g0, k) {
+    const pt = (p, a, b) => ({ x: p.x + (a.x - b.x) * k, y: p.y + (a.y - b.y) * k });
+    return { tail: pt(g.tail, from.tail, g0.tail), head: pt(g.head, from.head, g0.head), c1: pt(g.c1, from.c1, g0.c1),
+      c2: pt(g.c2, from.c2, g0.c2), label: Object.assign({}, g.label, pt(g.label, from.label, g0.label)), text: g.text };
+  }
+
   function update(inst, animate, timing) {
-    const step = inst.steps[Math.max(0, Math.min(inst.position, inst.steps.length - 1))];
+    const step = stepOf(inst);
     const svg = inst.svg;
     svg.setAttribute("viewBox", `0 0 ${inst.section.offsetWidth} ${inst.section.offsetHeight}`);
     const g = step ? geometry(inst, step) : null; // a null step: no arrow at this position (spec 8.9)
@@ -281,12 +322,18 @@
       // (after every show of this step, so that the arrow's own step, if any, is the one measured)
       section.addEventListener("lt-relayout", (e) => {
         const d = e.detail || {};
-        queueMicrotask(() => { if (!section.hidden) update(inst, !!d.animate, d.timing); });
+        queueMicrotask(() => {
+          if (section.hidden) return;
+          if (d.follow) follow(inst, d.follow);
+          else if (performance.now() >= (inst.followUntil || 0)) update(inst, !!d.animate, d.timing);
+          // else: the frames of the running follow measure anyway
+        });
       });
       return inst;
     },
     show(inst, position, info) {
       inst.position = position;
+      inst.followUntil = 0; // a new step ends a follow; a move of columns on this step starts another
       update(inst, !!(info && info.animate));
     },
     enter(inst) {

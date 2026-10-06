@@ -554,3 +554,94 @@ def test_placed_badge_errors(deck):
     assert "LT056" in check("# A\n{.wide type=submit}\n::detour-badge{ref=d1}\n" + det)
     assert "LT056" in check("# A\n::: branch\n- [[b]] go\n  ::detour-badge{ref=d1}\n:::\n" + det + "# B\n")
     assert "LT034" in check("# A\n- item\n  ::include{file=x.md}\n")  # an include in a list item
+
+
+# ---------------------------------------------------------------- columns that change width (spec 3.8, 3.15, 6.1)
+
+def width_deck(deck, timeline: str, cols: str = "", extra: str = ""):
+    """Two columns `l` and `r` (the second `2fr`), three fragments in `l`, a 5-frame walk `g` in `r`."""
+    body = "\n".join("        " + line for line in timeline.strip().split("\n"))
+    return deck({"talk.md": f"""
+        # A
+        ::: columns {cols}
+        ::: column {{#l}}
+        {{.reveal}}
+        - one
+        - two
+        - three
+        :::
+        ::: column {{#r width=2fr}}
+        ```graph-anim {{#g source="algos.py:walk"}}
+        edges: ["A B", "B C", "C D", "D E"]
+        ```
+        :::
+        :::
+        {extra}
+        ```timeline
+{body}
+        ```
+    """, "algos.py": ALGOS})
+
+
+def test_width_cues_make_the_columns_track(deck):
+    root = width_deck(deck, "reveal 1\nwidth l=0\ng ..end\nwidth l=1fr r=1fr, reveal end\nwidth l=1fr r=2fr")
+    s = build_deck(root, use_cache=False).slides["a"]
+    assert [(t.id, t.kind, t.positions) for t in s.tracks] == [
+        ("reveal", "reveal", 4), ("g", "component", 5), ("@columns", "columns", 3)]
+    assert s.column_states == [{"l": "1 1 0", "r": "2 1 0"}, {"l": "0 0 0px", "r": "2 1 0"},
+                               {"l": "1 1 0", "r": "1 1 0"}]
+    # a width cue is one step alone, or part of the step of its line; a state seen before keeps its position
+    assert columns(root, "reveal", "g", "@columns") == [
+        (0, 0, 0), (1, 0, 0), (1, 0, 1), (1, 1, 1), (1, 2, 1), (1, 3, 1), (1, 4, 1), (3, 4, 2), (3, 4, 0)]
+    assert warnings(root) == []
+
+
+def test_width_cues_in_lockstep_and_detour_steps(deck):
+    root = width_deck(deck, "width r=300px, g ..+2\ndetour d\nwidth l=0px r=1fr\ng end, reveal end",
+                      extra="::: detour {#d}\n        # Inside\n        :::")
+    s = build_deck(root, use_cache=False).slides["a"]
+    assert s.column_states == [{"l": "1 1 0", "r": "2 1 0"}, {"l": "1 1 0", "r": "0 0 300px"},
+                               {"l": "0 0 0px", "r": "1 1 0"}]
+    # the width applies in the first cue of the line; a detour step copies the row before it
+    assert columns(root, "g", "@columns") == [(0, 0), (1, 1), (2, 1), (2, 1), (2, 2), (4, 2)]
+    assert s.step_detours == {3: {"id": "d", "blocking": False}}
+
+
+def test_width_cue_that_changes_nothing(deck):
+    root = width_deck(deck, "width r=2fr\ng end, reveal end")
+    assert [c for c, _ in warnings(root)] == ["LT030"]
+    root = width_deck(deck, "width l=0\nwidth l=0px\ng end, reveal end")  # every zero is the collapsed width
+    assert [c for c, _ in warnings(root)] == ["LT030"]
+
+
+@pytest.mark.parametrize("timeline", [
+    "width",                      # names no column
+    "width l",                    # no width
+    "width l=wide",               # not a width
+    "width l=1x",
+    "width l=-1fr",
+    "width l=0 l=1fr",            # twice in one cue
+    "width l=0, width r=1fr",     # two width cues on one line
+    "width nope=0",               # not a column
+    "width g=0",                  # a component, not a column
+    "width 2",                    # `width` is not a track name
+])
+def test_width_cue_errors(deck, timeline):
+    root = width_deck(deck, timeline + "\ng end, reveal end")
+    assert "LT064" in [c for c, _ in warnings(root)]
+
+
+def test_width_errors_on_the_containers(deck):
+    def check(src):
+        root.write_text(src)
+        return [c for c, _ in warnings(root)]
+
+    root = deck({"talk.md": "# A\n"})
+    assert check("# A\n::: columns\n::: column {width=auto}\nx\n:::\n:::\n") == ["LT064"]  # was silently ignored
+    assert check("# A\n::: columns\n::: column {width=12}\nx\n:::\n:::\n") == ["LT064"]
+    assert check("# A\n::: columns {duration=fast}\n::: column\nx\n:::\n:::\n") == ["LT064"]
+    assert check("# A\n::: columns {duration=0}\n::: column {width=1.5fr}\nx\n:::\n::: column {width=0}\ny\n:::\n:::\n") == []
+    # a column outside a `columns`, or in speaker notes, cannot be named by a width cue
+    assert "LT064" in check("# A\n::: column {#x}\nx\n:::\n```timeline\nwidth x=0\n```\n")
+    assert "LT064" in check("# A\n::: notes\n::: columns\n::: column {#x}\nx\n:::\n:::\n:::\n"
+                            "```timeline\nwidth x=0\n```\n")

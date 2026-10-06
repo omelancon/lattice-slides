@@ -1,0 +1,13 @@
+; The manual's "Columns that make room": a vector summed, with the checks of vector-ref written out.
+function vsum(v: vec)
+A:  len = ##vector-length(v)
+    goto B(i=0, s=0)
+B:  if fx<(i, len) goto C else goto D
+D:  return s
+C:  if fx>=(i, 0) goto C1 else goto K
+C1: if fx<(i, len) goto E else goto K
+K:  fail
+E:  e = ##vector-ref(v, i)
+    i2 = fx+(i, 1)
+    s2 = +(s, e)
+    goto B(i=i2, s=s2)

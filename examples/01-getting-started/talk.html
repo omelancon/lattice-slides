@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.23.0">
+<meta name="generator" content="lattice 0.24.0">
 <title>Getting started with Lattice</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -68,6 +68,14 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-column{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:16px}
 /* a table never spills into the next column: if it cannot fit, it scrolls inside its own */
 .lt-column table{display:block;max-width:100%;overflow-x:auto}
+/* columns whose width changes (spec 3.8, 10.4): the content sits in .lt-column-in, which keeps a fixed width
+   while the column's box moves (the box clips it); a collapsed column takes no width and gives back one gap */
+.lt-column-in{flex:1 1 auto;min-height:0;min-width:0;display:flex;flex-direction:column;gap:16px}
+.lt-column.lt-col-moving,.lt-column.lt-col-shut{overflow-x:clip}
+.lt-column.lt-col-shut{visibility:hidden}
+.lt-col-shut>.lt-column-in{opacity:0}
+.lt-columns>.lt-col-shut{margin-right:calc(-1 * var(--lt-gap, 40px))}
+.lt-columns>.lt-col-shut:last-child{margin-right:0;margin-left:calc(-1 * var(--lt-gap, 40px))}
 .lt-callout{padding:16px 22px;border-radius:10px;background:var(--lt-panel);border-left:6px solid var(--lt-accent)}
 .lt-callout-warn{border-left-color:var(--lt-warn)}
 .lt-callout-tip{border-left-color:var(--lt-good)}
@@ -738,7 +746,7 @@ and every index from <code>hi</code> on holds a value at least <code>target</cod
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.23.0","meta":{"title":"Getting started with Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"welcome","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["welcome","markdown","talk-3","code","the-graph","the-loop-invariant","termination","diagram","thanks","proof"],"slides":{"welcome":{"title":"Getting started with Lattice","label":"Getting started with Lattice","scope":"root","next":{"slide":"markdown"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":8},"notes":"<p>Press <code>p<\/code> to open this presenter view in another window. Both windows stay in sync.<\/p>\n"},"markdown":{"title":"Every # heading is a slide","label":"Every # heading is a slide","scope":"root","next":{"slide":"talk-3"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"talk.md","line":16},"notes":"<p>The next slide has no title at all: it was written as a bare <code>#<\/code>.<\/p>\n"},"talk-3":{"title":"","label":"talk-3","scope":"root","next":{"slide":"code"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":28}},"code":{"title":"Code, highlighted at build time","label":"Code, highlighted at build time","scope":"root","next":{"slide":"the-graph"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"arrows","kind":"component","instance":"code/arrows"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":43}},"the-graph":{"title":"Nothing here is linear","label":"Nothing here is linear","scope":"root","next":{"slide":"diagram"},"branches":[],"detours":["invariant-detour"],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":82},"stepDetours":{"2":{"id":"invariant-detour","blocking":false}},"notes":"<p>The detour is also a step of this slide (<code>at=1<\/code>): the Right after the first bullet enters it,\nand the Right after returning reveals the second bullet. Press <code>w<\/code> to enter it at any time.<\/p>\n"},"the-loop-invariant":{"title":"The loop invariant","label":"The loop invariant","scope":"invariant-detour","next":{"slide":"termination"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":92}},"termination":{"title":"Termination","label":"Termination","scope":"invariant-detour","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":98}},"diagram":{"title":"Diagrams from Graphviz","label":"Diagrams from Graphviz","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":111}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":124}},"proof":{"title":"Proof of correctness","label":"Proof of correctness","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"talk.md","line":128}}},"detours":{"invariant-detour":{"origin":"the-graph","entry":"the-loop-invariant","label":"Why binary search terminates","key":"w","slides":["the-loop-invariant","termination"]}},"instances":{"code/c1":{"component":"code","slide":"code","data":null},"code/arrows":{"component":"arrow","slide":"code","data":"lt-data-code/arrows"},"diagram/c1":{"component":"dot","slide":"diagram","data":null}},"tours":{"quick":["welcome","markdown","code","the-graph","thanks"]},"mainPath":["welcome","markdown","talk-3","code","the-graph","diagram","thanks"],"overview":{"nodes":{"welcome":{"x":94.0,"y":63.0,"w":172.0,"h":26.0,"label":"Getting started with Latt…"},"markdown":{"x":293.0,"y":63.0,"w":166.0,"h":26.0,"label":"Every # heading is a slide"},"talk-3":{"x":433.0,"y":63.0,"w":54.0,"h":26.0,"label":"talk-3"},"code":{"x":574.5,"y":63.0,"w":169.0,"h":26.0,"label":"Code, highlighted at buil…"},"the-graph":{"x":760.5,"y":63.0,"w":143.0,"h":26.0,"label":"Nothing here is linear"},"the-loop-invariant":{"x":940.5,"y":21.0,"w":121.0,"h":26.0,"label":"The loop invariant"},"termination":{"x":1092.5,"y":21.0,"w":87.0,"h":26.0,"label":"Termination"},"diagram":{"x":940.5,"y":63.0,"w":157.0,"h":26.0,"label":"Diagrams from Graphviz"},"thanks":{"x":1092.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"},"proof":{"x":1232.5,"y":82.0,"w":133.0,"h":26.0,"label":"Proof of correctness"}},"edges":[{"from":"welcome","to":"markdown","kind":"next","path":"M180.3,63.0 C187.9,63.0 195.6,63.0 203.3,63.0 L209.7,63.0"},{"from":"markdown","to":"talk-3","kind":"next","path":"M376.3,63.0 C384.4,63.0 392.3,63.0 399.4,63.0 L405.8,63.0"},{"from":"talk-3","to":"code","kind":"next","path":"M460.2,63.0 C467.2,63.0 475.0,63.0 483.3,63.0 L489.7,63.0"},{"from":"code","to":"the-graph","kind":"next","path":"M659.1,63.0 C666.9,63.0 674.8,63.0 682.5,63.0 L689.0,63.0"},{"from":"the-graph","to":"the-loop-invariant","kind":"detour","path":"M816.8,49.9 C836.4,45.3 858.4,40.1 878.3,35.4 L884.2,34.1"},{"from":"the-graph","to":"diagram","kind":"next","path":"M832.1,63.0 C839.9,63.0 847.9,63.0 855.9,63.0 L862.0,63.0"},{"from":"the-graph","to":"proof","kind":"link","path":"M813.6,76.0 C829.1,79.3 846.1,82.4 862.0,84.0 C965.0,94.6 1085.1,91.1 1159.7,87.0 L1165.9,86.6"},{"from":"the-loop-invariant","to":"termination","kind":"next","path":"M1001.2,21.0 C1014.8,21.0 1029.2,21.0 1042.3,21.0 L1048.6,21.0"},{"from":"diagram","to":"thanks","kind":"next","path":"M1019.1,63.0 C1032.3,63.0 1045.3,63.0 1056.6,63.0 L1062.7,63.0"}],"width":1307.0,"height":103.0},"hash":"07714cb301ca6e2b"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.24.0","meta":{"title":"Getting started with Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"welcome","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["welcome","markdown","talk-3","code","the-graph","the-loop-invariant","termination","diagram","thanks","proof"],"slides":{"welcome":{"title":"Getting started with Lattice","label":"Getting started with Lattice","scope":"root","next":{"slide":"markdown"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":8},"notes":"<p>Press <code>p<\/code> to open this presenter view in another window. Both windows stay in sync.<\/p>\n"},"markdown":{"title":"Every # heading is a slide","label":"Every # heading is a slide","scope":"root","next":{"slide":"talk-3"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"talk.md","line":16},"notes":"<p>The next slide has no title at all: it was written as a bare <code>#<\/code>.<\/p>\n"},"talk-3":{"title":"","label":"talk-3","scope":"root","next":{"slide":"code"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":28}},"code":{"title":"Code, highlighted at build time","label":"Code, highlighted at build time","scope":"root","next":{"slide":"the-graph"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"arrows","kind":"component","instance":"code/arrows"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":43}},"the-graph":{"title":"Nothing here is linear","label":"Nothing here is linear","scope":"root","next":{"slide":"diagram"},"branches":[],"detours":["invariant-detour"],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":82},"stepDetours":{"2":{"id":"invariant-detour","blocking":false}},"notes":"<p>The detour is also a step of this slide (<code>at=1<\/code>): the Right after the first bullet enters it,\nand the Right after returning reveals the second bullet. Press <code>w<\/code> to enter it at any time.<\/p>\n"},"the-loop-invariant":{"title":"The loop invariant","label":"The loop invariant","scope":"invariant-detour","next":{"slide":"termination"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":92}},"termination":{"title":"Termination","label":"Termination","scope":"invariant-detour","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":98}},"diagram":{"title":"Diagrams from Graphviz","label":"Diagrams from Graphviz","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":111}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":124}},"proof":{"title":"Proof of correctness","label":"Proof of correctness","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"talk.md","line":128}}},"detours":{"invariant-detour":{"origin":"the-graph","entry":"the-loop-invariant","label":"Why binary search terminates","key":"w","slides":["the-loop-invariant","termination"]}},"instances":{"code/c1":{"component":"code","slide":"code","data":null},"code/arrows":{"component":"arrow","slide":"code","data":"lt-data-code/arrows"},"diagram/c1":{"component":"dot","slide":"diagram","data":null}},"tours":{"quick":["welcome","markdown","code","the-graph","thanks"]},"mainPath":["welcome","markdown","talk-3","code","the-graph","diagram","thanks"],"overview":{"nodes":{"welcome":{"x":94.0,"y":63.0,"w":172.0,"h":26.0,"label":"Getting started with Latt…"},"markdown":{"x":293.0,"y":63.0,"w":166.0,"h":26.0,"label":"Every # heading is a slide"},"talk-3":{"x":433.0,"y":63.0,"w":54.0,"h":26.0,"label":"talk-3"},"code":{"x":574.5,"y":63.0,"w":169.0,"h":26.0,"label":"Code, highlighted at buil…"},"the-graph":{"x":760.5,"y":63.0,"w":143.0,"h":26.0,"label":"Nothing here is linear"},"the-loop-invariant":{"x":940.5,"y":21.0,"w":121.0,"h":26.0,"label":"The loop invariant"},"termination":{"x":1092.5,"y":21.0,"w":87.0,"h":26.0,"label":"Termination"},"diagram":{"x":940.5,"y":63.0,"w":157.0,"h":26.0,"label":"Diagrams from Graphviz"},"thanks":{"x":1092.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"},"proof":{"x":1232.5,"y":82.0,"w":133.0,"h":26.0,"label":"Proof of correctness"}},"edges":[{"from":"welcome","to":"markdown","kind":"next","path":"M180.3,63.0 C187.9,63.0 195.6,63.0 203.3,63.0 L209.7,63.0"},{"from":"markdown","to":"talk-3","kind":"next","path":"M376.3,63.0 C384.4,63.0 392.3,63.0 399.4,63.0 L405.8,63.0"},{"from":"talk-3","to":"code","kind":"next","path":"M460.2,63.0 C467.2,63.0 475.0,63.0 483.3,63.0 L489.7,63.0"},{"from":"code","to":"the-graph","kind":"next","path":"M659.1,63.0 C666.9,63.0 674.8,63.0 682.5,63.0 L689.0,63.0"},{"from":"the-graph","to":"the-loop-invariant","kind":"detour","path":"M816.8,49.9 C836.4,45.3 858.4,40.1 878.3,35.4 L884.2,34.1"},{"from":"the-graph","to":"diagram","kind":"next","path":"M832.1,63.0 C839.9,63.0 847.9,63.0 855.9,63.0 L862.0,63.0"},{"from":"the-graph","to":"proof","kind":"link","path":"M813.6,76.0 C829.1,79.3 846.1,82.4 862.0,84.0 C965.0,94.6 1085.1,91.1 1159.7,87.0 L1165.9,86.6"},{"from":"the-loop-invariant","to":"termination","kind":"next","path":"M1001.2,21.0 C1014.8,21.0 1029.2,21.0 1042.3,21.0 L1048.6,21.0"},{"from":"diagram","to":"thanks","kind":"next","path":"M1019.1,63.0 C1032.3,63.0 1045.3,63.0 1056.6,63.0 L1062.7,63.0"}],"width":1307.0,"height":103.0},"hash":"96abfa0530f953cb"}</script>
 <script type="application/json" id="lt-data-code/arrows">{"steps":[{"to":".lt-line[data-line=\"3\"]","from":"emphasis","angle":null,"length":120,"label":"the loop"},{"to":".lt-line[data-line=\"4\"]","from":"emphasis","angle":null,"length":120,"label":"the midpoint"},{"to":".lt-line[data-line=\"9\"]","from":null,"angle":315.0,"length":120,"label":"the answer"}],"color":"var(--lt-detour)","width":4,"curve":0.2}</script>
 <script type="module">
 // Lattice runtime: navigation state machine (spec section 7) and component host (spec section 10).
@@ -1057,11 +1065,118 @@ const Lattice = (() => {
     }
   }
 
+  // ------------------------------------------------------------------ column widths (spec 3.8, 10.4)
+  // A `columns` container marked by the build ([data-lt-cols]) gives each of its columns the flex value of
+  // the current position of the columns track, or the column's own (`data-lt-flex`). An animated change
+  // measures the columns before and after it, moves their boxes in slide pixels while their contents keep a
+  // fixed width (their final one; a collapsing column keeps its own and fades out), then sets the final
+  // values. The measures are for display only: every width comes from the build.
+  const SHUT = "0 0 0px";
+  const QUICK_COLUMNS_MS = 140; // a change that interrupts another (skip playback)
+  const columnMoves = new Map(); // container -> pending end of its move
+  const columnsAt = new WeakMap(); // container -> the targets last placed
+  const columnsOf = (box) => Array.from(box.children).filter((c) => c.classList.contains("lt-column"));
+  const columnInner = (col) => Array.from(col.children).find((c) => c.classList.contains("lt-column-in"));
+
+  function restColumn(col, flex) {
+    const shut = flex === SHUT;
+    col.style.transition = "";
+    col.style.marginLeft = "";
+    col.style.marginRight = "";
+    col.style.flex = flex || "";
+    col.classList.remove("lt-col-moving", "lt-col-closing");
+    col.classList.toggle("lt-col-shut", shut);
+    col.inert = shut;
+    col.ltShut = shut;
+    const inner = columnInner(col);
+    if (inner) {
+      inner.style.transition = "";
+      inner.style.opacity = "";
+      if (!shut) inner.style.width = ""; // a collapsed column keeps the width of its content, to come back as it was
+    }
+  }
+
+  function placeColumns(box, state, animate) {
+    const cols = columnsOf(box);
+    const targets = cols.map((c) => (c.dataset.ltCol && c.dataset.ltCol in state ? state[c.dataset.ltCol] : c.dataset.ltFlex || ""));
+    const key = targets.join("|");
+    const moving = columnMoves.get(box);
+    if (moving) clearTimeout(moving);
+    columnMoves.delete(box);
+    if (!moving && columnsAt.get(box) === key) return;
+    columnsAt.set(box, key);
+    const ms = Number(box.dataset.ltDuration || 0);
+    if (!animate || !ms || reducedMotion() || !box.getClientRects().length) {
+      cols.forEach((c, i) => restColumn(c, targets[i]));
+      relayoutColumns(box, 0);
+      return;
+    }
+    const duration = moving ? Math.min(ms, QUICK_COLUMNS_MS) : ms;
+    const width = (c) => parseFloat(getComputedStyle(c).width) || 0;
+    const margins = (c) => { const cs = getComputedStyle(c); return [parseFloat(cs.marginLeft) || 0, parseFloat(cs.marginRight) || 0]; };
+    // where the columns are now (halfway through a move, too)
+    const w0 = cols.map(width), m0 = cols.map(margins);
+    const was = cols.map((c) => (c.ltShut !== undefined ? c.ltShut : c.classList.contains("lt-col-shut")));
+    const inners = cols.map(columnInner);
+    const content0 = inners.map((n, i) => (n && n.style.width ? parseFloat(n.style.width) : w0[i]));
+    const opacity0 = inners.map((n) => (n ? getComputedStyle(n).opacity : "1"));
+    // where they will be (a move under way is dropped first, or its transitions would still be measured)
+    for (const el of [...cols, ...inners]) if (el && el.getAnimations) el.getAnimations().forEach((a) => a.cancel());
+    cols.forEach((c, i) => restColumn(c, targets[i]));
+    const w1 = cols.map(width), m1 = cols.map(margins);
+    // back to the start, then move
+    cols.forEach((c, i) => {
+      const shut = targets[i] === SHUT;
+      c.classList.remove("lt-col-shut");
+      c.classList.add("lt-col-moving");
+      c.classList.toggle("lt-col-closing", shut && !was[i]);
+      c.style.flex = `0 1 ${w0[i]}px`;
+      c.style.marginLeft = `${m0[i][0]}px`;
+      c.style.marginRight = `${m0[i][1]}px`;
+      const n = inners[i];
+      if (n) {
+        n.style.width = `${shut ? content0[i] : w1[i]}px`;
+        n.style.opacity = opacity0[i];
+      }
+    });
+    void box.offsetWidth;
+    const ease = `${duration}ms ease-in-out`;
+    cols.forEach((c, i) => {
+      const shut = targets[i] === SHUT;
+      c.style.transition = `flex-basis ${ease}, margin-left ${ease}, margin-right ${ease}`;
+      c.style.flex = `0 1 ${w1[i]}px`;
+      c.style.marginLeft = `${m1[i][0]}px`;
+      c.style.marginRight = `${m1[i][1]}px`;
+      const n = inners[i];
+      if (n) {
+        n.style.transition = `opacity ${ease}`;
+        n.style.opacity = shut ? "0" : "1";
+      }
+    });
+    columnMoves.set(box, setTimeout(() => {
+      columnMoves.delete(box);
+      cols.forEach((c, i) => restColumn(c, targets[i]));
+      relayoutColumns(box, 0);
+    }, duration + 30));
+    relayoutColumns(box, duration);
+  }
+
+  // Runtimes that measure the slide (arrows) follow the columns: frame by frame while they move (`follow`).
+  function relayoutColumns(box, follow) {
+    box.dispatchEvent(new CustomEvent("lt-relayout", { bubbles: true, detail: follow ? { animate: true, follow } : { animate: false } }));
+  }
+
   function applyStep(id, step, info) {
     const s = slide(id);
     const row = s.positions[step] || [];
     const posOf = {};
     s.tracks.forEach((t, i) => { posOf[t.instance || t.id] = row[i] || 0; });
+    const boxes = $$("[data-lt-cols]", sections[id]);
+    if (boxes.length) {
+      const ci = s.tracks.findIndex((t) => t.kind === "columns");
+      const state = ci >= 0 && s.columns ? s.columns[row[ci] || 0] || {} : {};
+      for (const box of boxes) placeColumns(box, state, info.animate);
+    }
     if ("reveal" in posOf) {
       const shown = posOf.reveal;
       for (const el of $$("[data-lt-reveal]", sections[id])) {
@@ -2011,15 +2126,20 @@ window.Lattice = Lattice;
     return [box(el, section), anchor];
   }
 
+  // An element of a collapsed column (spec 3.8), or of one collapsing, is not pointed at.
+  const shutAway = (el) => !!el.closest(".lt-col-shut, .lt-col-closing");
+
   function geometry(inst, step) {
     const target = find(inst.section, step.to, inst.slideId, step.to_item);
     if (!target) {
       console.warn(`lattice: arrow target ${written(step.to, step.to_item)} not found on slide ${inst.slideId}`);
       return null;
     }
+    if (shutAway(target)) return null;
     const [tb, toAnchor] = endBox(target, step.to_anchor, inst.section);
     step = Object.assign({}, step, { to_anchor: toAnchor });
     const from = step.from ? find(inst.section, step.from, inst.slideId, step.from_item) : null;
+    if (from && shutAway(from)) return null;
     let g, label;
     if (from) {
       const [fb, fromAnchor] = endBox(from, step.from_anchor, inst.section);
@@ -2079,8 +2199,44 @@ window.Lattice = Lattice;
   }
 
   // `timing` ({delay, duration} in ms, from an `lt-relayout` event) makes the glide follow the content.
+  const stepOf = (inst) => inst.steps[Math.max(0, Math.min(inst.position, inst.steps.length - 1))];
+
+  // Columns that move (spec 3.8, `lt-relayout` with `follow`): the arrow is measured again at every frame for
+  // `ms` milliseconds, so that it stays on a target carried by a column. A change of the arrow's own geometry
+  // on the same step (its new target) is blended in over the same time.
+  function follow(inst, ms) {
+    cancelAnimationFrame(inst.raf);
+    const step0 = stepOf(inst);
+    const from = inst.drawn || inst.last;
+    const g0 = step0 ? geometry(inst, step0) : null;
+    const t0 = performance.now();
+    inst.followUntil = t0 + ms;
+    const frame = (now) => {
+      const t = Math.max(0, Math.min(1, (now - t0) / ms));
+      const step = stepOf(inst);
+      const g = step ? geometry(inst, step) : null;
+      inst.svg.setAttribute("viewBox", `0 0 ${inst.section.offsetWidth} ${inst.section.offsetHeight}`);
+      inst.svg.style.visibility = g ? "" : "hidden";
+      if (!g) {
+        inst.drawn = inst.last = null;
+      } else {
+        const k = 1 - (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+        draw(inst, from && g0 && k > 0 ? shift(g, from, g0, k) : g);
+        inst.last = g;
+      }
+      if (t < 1) inst.raf = requestAnimationFrame(frame);
+    };
+    inst.raf = requestAnimationFrame(frame);
+  }
+  // `g` moved by `k` times the offset between what was drawn and what the arrow measured at the start.
+  function shift(g, from, g0, k) {
+    const pt = (p, a, b) => ({ x: p.x + (a.x - b.x) * k, y: p.y + (a.y - b.y) * k });
+    return { tail: pt(g.tail, from.tail, g0.tail), head: pt(g.head, from.head, g0.head), c1: pt(g.c1, from.c1, g0.c1),
+      c2: pt(g.c2, from.c2, g0.c2), label: Object.assign({}, g.label, pt(g.label, from.label, g0.label)), text: g.text };
+  }
+
   function update(inst, animate, timing) {
-    const step = inst.steps[Math.max(0, Math.min(inst.position, inst.steps.length - 1))];
+    const step = stepOf(inst);
     const svg = inst.svg;
     svg.setAttribute("viewBox", `0 0 ${inst.section.offsetWidth} ${inst.section.offsetHeight}`);
     const g = step ? geometry(inst, step) : null; // a null step: no arrow at this position (spec 8.9)
@@ -2134,12 +2290,18 @@ window.Lattice = Lattice;
       // (after every show of this step, so that the arrow's own step, if any, is the one measured)
       section.addEventListener("lt-relayout", (e) => {
         const d = e.detail || {};
-        queueMicrotask(() => { if (!section.hidden) update(inst, !!d.animate, d.timing); });
+        queueMicrotask(() => {
+          if (section.hidden) return;
+          if (d.follow) follow(inst, d.follow);
+          else if (performance.now() >= (inst.followUntil || 0)) update(inst, !!d.animate, d.timing);
+          // else: the frames of the running follow measure anyway
+        });
       });
       return inst;
     },
     show(inst, position, info) {
       inst.position = position;
+      inst.followUntil = 0; // a new step ends a follow; a move of columns on this step starts another
       update(inst, !!(info && info.animate));
     },
     enter(inst) {
