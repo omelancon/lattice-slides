@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.22.0. This README covers usage in brief. The rest:
+This is version 0.23.0. This README covers usage in brief. The rest:
 
 - [`user_manual/manual.md`](user_manual/manual.md) is the user manual, itself a Lattice deck (open
   [`user_manual/manual.html`](user_manual/manual.html)): every feature, with a live example of each.
@@ -162,7 +162,7 @@ the themes style are in spec section 9.1, and the program syntax in spec section
 |---|---|
 | Right, Space | Next step, then next slide |
 | Left | Undo the last move (history), or the previous slide when there is no history |
-| Shift+Right, Shift+Left | Ten steps forward or back on the slide, played quickly |
+| Shift+Right, Shift+Left | Ten steps forward or back on the slide, played quickly; pressed three times within a second, to the last or first step (spec section 7.6) |
 | End | Last step of the slide |
 | Shift+Down | Step over the next detour step without entering it |
 | Down | Enter the slide's first detour |
@@ -229,7 +229,7 @@ Rebuild them all, and the user manual, with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.22.0 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.23.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

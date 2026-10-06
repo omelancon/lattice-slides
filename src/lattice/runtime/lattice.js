@@ -747,6 +747,12 @@ const Lattice = (() => {
     const rows = Object.entries(deck.keys).map(([action, keys]) =>
       `<li><span class="lt-pp-kbd">${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("")}</span>` +
       `<span>${esc(ACTION_LABELS[action] || action)}</span></li>`);
+    const fwd = (deck.keys["skip-forward"] || [])[0], back = (deck.keys["skip-back"] || [])[0];
+    if (fwd || back) { // three quick presses of a skip key (spec 7.6)
+      const kbds = [fwd, back].filter(Boolean).map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("");
+      const ends = [fwd && "last", back && "first"].filter(Boolean).join(" or ");
+      rows.push(`<li><span class="lt-pp-kbd">${kbds}×3</span><span>${ends} step of the slide (three presses within a second)</span></li>`);
+    }
     rows.push(`<li><span class="lt-pp-kbd"><kbd>1</kbd>…<kbd>9</kbd></span><span>choose a branch option or a detour (slide keys)</span></li>`);
     if (Object.values(deck.instances).some((i) => registry[i.component] && registry[i.component].zoom)) {
       rows.push(`<li><span class="lt-pp-kbd"><kbd>click</kbd></span><span>enlarge a block; any key or click closes it</span></li>`);
@@ -963,12 +969,32 @@ const Lattice = (() => {
     }
     const s = slide(nav.cur.slide);
     const slideKey = s.branches.some((b) => b.key === e.key) || s.detours.some((d) => deck.detours[d].key === e.key);
-    if (slideKey) { stopPlaying(); actions.choose(e.key); e.preventDefault(); return; }
+    if (slideKey) { stopPlaying(); burstTarget(null, e); actions.choose(e.key); e.preventDefault(); return; }
     // Bindings may name a shifted key as "Shift+ArrowRight"; a plain key still matches with Shift held
     // (letters already arrive shifted, as "A" for Shift+a).
     const map = keyMap();
     const action = (e.shiftKey && map[`Shift+${e.key}`]) || map[e.key];
-    if (action && actions[action]) { stopPlaying(); actions[action](); e.preventDefault(); }
+    if (action && actions[action]) {
+      stopPlaying();
+      const target = burstTarget(action, e);
+      if (target === null) actions[action](); else playSteps(target);
+      e.preventDefault();
+    }
+  }
+
+  // Three presses of `skip-forward` within a second play to the last step of the slide, three of
+  // `skip-back` to its first step (spec 7.6). The auto-repeat of a held key does not count, and any
+  // other action starts the count again. Returns the step to play to, or null for the plain action.
+  const BURST = { "skip-forward": () => steps(nav.cur.slide) - 1, "skip-back": () => 0 };
+  const BURST_PRESSES = 3, BURST_WINDOW_MS = 1000;
+  let burst = { action: null, times: [] };
+  function burstTarget(action, e) {
+    if (!BURST[action]) { burst = { action: null, times: [] }; return null; }
+    if (e.repeat) return null;
+    const now = performance.now();
+    if (burst.action !== action) burst = { action, times: [] };
+    burst.times = burst.times.filter((t) => now - t < BURST_WINDOW_MS).concat(now);
+    return burst.times.length >= BURST_PRESSES ? BURST[action]() : null;
   }
 
   function onClick(e) {

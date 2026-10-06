@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.22.0
+author: Lattice 0.23.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1362,7 +1362,7 @@ show: [label, context]
 |---|---|
 | Right, Space, PageDown | Next step, then next slide (`next`) |
 | Left, PageUp | Undo the last move; with nothing to undo, the previous slide (`prev`) |
-| Shift+Right, Shift+Left | Ten steps forward or back on the slide, played quickly (`skip-forward`, `skip-back`) |
+| Shift+Right, Shift+Left | Ten steps forward or back, played quickly; three in a second: all the way (`skip-forward`, `skip-back`) |
 | End | Last step of the slide (`last-step`) |
 | Down | Enter the slide's first detour (`enter-detour`) |
 | Shift+Down | Step over the next detour step without entering it (`skip-detour`) |

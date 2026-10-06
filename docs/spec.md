@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.22.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.23.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -597,7 +597,7 @@ Initial state: `cur = (start, 0)`, `H = []`, `tour = none` (subject to 7.4).
 | | else, `H` not empty | `e = pop(H)`, `go(e.slide, e.step)` |
 | | else, `pred(cur.slide)` is a slide `p` | `go(p, S(p) - 1)` without any push, so PREV keeps walking backward |
 | | else | no-op |
-| **SKIP(n)** (`skip-forward`: `n = 10`, `skip-back`: `n = -10`, `last-step`: to `S(cur.slide) - 1`) | | `cur.step` moves by `n`, clamped to `0..S(cur.slide) - 1`, never leaving the slide and never touching `H`. The intermediate steps are played in rapid succession (single-step moves, so runtimes animate), and a new event cancels the playback. Detour steps passed on the way are not entered; a forward playback stops in front of a blocking detour step ("Cannot step detour") |
+| **SKIP(n)** (`skip-forward`: `n = 10`, `skip-back`: `n = -10`, `last-step` or three quick presses of `skip-forward` (section 7.6): to `S(cur.slide) - 1`, three quick presses of `skip-back`: to 0) | | `cur.step` moves by `n`, clamped to `0..S(cur.slide) - 1`, never leaving the slide and never touching `H`. The intermediate steps are played in rapid succession (single-step moves, so runtimes animate), and a new event cancels the playback. Detour steps passed on the way are not entered; a forward playback stops in front of a blocking detour step ("Cannot step detour") |
 | **SKIP-DETOUR** | `detourstep(cur.slide, cur.step + 1)` is a detour step | `cur.step` moves past it and any detour steps directly following it (clamped to `S(cur.slide) - 1`), without entering them and without touching `H` |
 | | else | no-op |
 | **CHOOSE(k)** | `k` is a branch option key of `cur.slide`, target `t` | `push(forward)`, `go(t, 0)` |
@@ -644,7 +644,7 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 
 ### 7.5 Presenter view
 
-- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, a scrubber, a preview of what comes next, the available moves (what NEXT does, branch options, detours and the return target, each with its key), a **Keybindings** section listing every global action of section 7.6 with its keys (as bound by the deck, in smaller type than the moves, plus the digit keys of branch options and detours, and the click that enlarges an element when the deck has components that offer it, section 7.7) and the notes.
+- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, a scrubber, a preview of what comes next, the available moves (what NEXT does, branch options, detours and the return target, each with its key), a **Keybindings** section listing every global action of section 7.6 with its keys (as bound by the deck, in smaller type than the moves, plus the three quick presses of the skip keys, the digit keys of branch options and detours, and the click that enlarges an element when the deck has components that offer it, section 7.7) and the notes.
 - The **scrubber** is a slider over the steps of the current slide, shown when the slide has more than one step. Moving it sets `cur.step` directly: it is not an event of section 7.2 and leaves `H` unchanged, and runtimes receive `animate: false` (section 10.1).
 - The **preview** shows what NEXT would show: the next step of the current slide (the entry slide of the detour when that step is a detour step, which the moves list names as "detour: label", marked "(blocking)" when it is, followed by the `skip-detour` key); at the last step, the slide NEXT moves to (tour successor, `next` slide at step 0, or the return target at the step it restores). At a branch point or at the end of the path it shows a label instead. The preview is a second copy of the document opened with `?preview`: a passive window that ignores keys and clicks, keeps no history or storage, does not join the `BroadcastChannel`, never animates, and renders the position the presenter window sends it with `postMessage`.
 - Audience and presenter windows share state over a `BroadcastChannel` named `lattice:<deck-hash>`. After every event, the window that handled it broadcasts `{cur, H, tour}`; the other window adopts it without re-running the event. Either window may drive. An enlarged element (section 7.7) is shared the same way: opening one broadcasts `{zoom: {instance, key}}` and closing one `{zoom: null}`, and the other window opens or closes its own copy.
@@ -667,6 +667,8 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 | `presenter` | `p` |
 | `tour` | `t` |
 | `home` | `Home` |
+
+**Three quick presses.** The third press of a `skip-forward` key within one second of the first (presses of that action only) performs SKIP to the last step instead of ten steps, like `last-step`; three presses of `skip-back` likewise perform SKIP to step 0. A later press still inside the window does the same, so a fourth quick press keeps the playback going rather than cutting it short. The auto-repeat of a held key (`KeyboardEvent.repeat`) does not count as a press, and any other action, or a slide key, starts the count again. The count follows the action, so it applies to whatever keys the deck binds to it.
 
 Bindings are overridable in front matter under `keys`. A key is a `KeyboardEvent.key` value, optionally prefixed with `Shift+`; with Shift held, the `Shift+` binding is tried first, then the plain key (letters already arrive shifted, so `A` binds Shift+a). Slide-level keys (branch options and detours) never override global bindings: a collision is an error (LT018).
 
@@ -1454,3 +1456,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.20 | Widening thresholds may name `machine`, `sign`, `maxfix` and `minfix` in a list; the predicates of a `prims` option may be tested in an `if` | 8.8, 9.5, 9.6 |
 | 0.21 | `vector_bounds` (symbolic vector bounds can be turned off); threshold names with an offset (`maxfix-1`) | 8.8, 9.5, 9.6 |
 | 0.22 | `null` steps of `arrow`: a position without an arrow | 8.8, 8.9 |
+| 0.23 | Three quick presses of `skip-forward` or `skip-back` play to the last or first step of the slide | 7.2, 7.5, 7.6 |

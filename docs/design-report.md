@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.22.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.23.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -232,6 +232,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.22 (done).** A `null` step of `arrow` is a position without an arrow, so one arrow block can appear for a few steps of a slide only; for the defense slide that explains why four checks of `findv` are redundant.
 
+**v0.23 (done).** Three quick presses of Shift+Right (Shift+Left) go to the last (first) step of a slide, for slides with long animations where ten steps at a time is too slow and End is out of reach.
+
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
 - Plugin hooks beyond components (new syntax, generated slides, custom checks).
@@ -279,3 +281,4 @@ Decisions taken while writing the specification, and since.
 | 29 | Thresholds that name the fixnum range | A list of thresholds MAY name `machine`, `sign`, `maxfix` and `minfix`, resolved with `fixnum_bits`. The `machine` thresholds stay the thesis's (sign, 8, 32 and 64 bits), which figure 2 depends on; an index bounded by a vector length (at most maxfix) would otherwise widen past maxfix to `2^63-1` at a join and read `fx \| bg`. The `prims` option is applied before the program is checked, since a declared predicate could not be tested in an `if` before. |
 | 30 | Lengths without symbols | `vector_bounds: false` keeps symbols out of every context rather than hiding them in the display: `vector-length` gives `fx [0, maxfix]` and annotations naming a length are widened at the entry, so the analyses run as before the paper's section 3.3 (figure 7 keeps the check against the second length read). Since the interpreter widens at every join, the bound `i < len` gives after a test survives only if a threshold sits on it: threshold names take an offset (`maxfix-1`) rather than widening only at loop heads, which would have changed the thesis figures' algorithm. |
 | 31 | Arrows absent at some positions | A `null` step rather than a `visible` range or one block per arrow: an arrow is already a track with one position per entry, so leaving a position empty keeps the timeline the only place that says when (`why ..+4`, `why end`). The arrow shown after an empty position is placed, not glided from the last one, because a glide from an arrow the audience no longer sees would come from nowhere. |
+| 32 | Three quick skip presses | A gesture on the skip keys rather than a new binding: the presenter's hand is already on Shift and the arrows, and the first two presses still move ten steps each, so nothing is lost when the third does not come. The count lives in the input layer and follows the action (`skip-forward`, `skip-back`), not the physical key, so rebinding keeps it; the auto-repeat of a held key is not counted, or holding Shift+Right would reach the end by accident. The window is one second from the first press, and the result is SKIP to the end, played and clamped like `last-step`, so a blocking detour step still stops it. |
