@@ -230,10 +230,13 @@
     const step = inst.steps[Math.max(0, Math.min(inst.position, inst.steps.length - 1))];
     const svg = inst.svg;
     svg.setAttribute("viewBox", `0 0 ${inst.section.offsetWidth} ${inst.section.offsetHeight}`);
-    const g = geometry(inst, step);
+    const g = step ? geometry(inst, step) : null; // a null step: no arrow at this position (spec 8.9)
     cancelAnimationFrame(inst.raf);
     svg.style.visibility = g ? "" : "hidden";
-    if (!g) return;
+    if (!g) {
+      inst.drawn = inst.last = null; // the next arrow appears in place, it does not glide from here
+      return;
+    }
     if (animate && (inst.drawn || inst.last)) {
       const from = inst.drawn || inst.last; // from what is on screen, even halfway through a glide
       const t0 = performance.now() + ((timing && timing.delay) || 0);

@@ -647,6 +647,70 @@ def test_arrow_runtime_points_at_its_targets(tmp_path):
     assert not errors
 
 
+NULL_ARROW_DECK = """
+# Arrows
+
+{#why}
+A paragraph to point at.
+
+```arrow {#w}
+steps:
+  - null
+  - {to: why, label: here}
+  - null
+  - {to: .lt-title, angle: 270, length: 60}
+```
+"""
+
+
+def test_arrow_null_steps_hide_it(tmp_path):
+    """Spec 8.9: no arrow at a null position, and the next arrow appears in place instead of gliding."""
+    src = tmp_path / "talk.md"
+    src.write_text(NULL_ARROW_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type in ("error", "warning") else None)
+            page.goto(out.as_uri())
+            page.wait_for_timeout(300)
+            state = """() => {
+                const sec = document.querySelector('.lt-slide:not([hidden])');
+                const svg = sec.querySelector('.lt-c-arrow svg');
+                const path = sec.querySelector('.lt-arrow-line');
+                const shown = getComputedStyle(svg).visibility !== 'hidden';
+                const n = shown ? path.getTotalLength() : 0;
+                return {shown, head: shown ? path.getPointAtLength(n).y : null};
+            }"""
+            assert not page.evaluate(state)["shown"]
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(500)
+            first = page.evaluate(state)
+            assert first["shown"]
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(500)
+            assert not page.evaluate(state)["shown"]
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(30)  # right away: placed, not gliding from the paragraph
+            early = page.evaluate(state)
+            page.wait_for_timeout(500)
+            last = page.evaluate(state)
+            assert early["shown"] and abs(early["head"] - last["head"]) < 0.5 and last["head"] < first["head"]
+            page.keyboard.press("ArrowLeft")
+            page.wait_for_timeout(500)
+            assert not page.evaluate(state)["shown"]
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
 ANCHOR_DECK = """
 # Anchors
 

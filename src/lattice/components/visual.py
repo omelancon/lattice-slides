@@ -373,7 +373,7 @@ class ArrowOptions(BaseModel):
     curve: float = 0               # bend, as a fraction of the arrow's length; 0 is straight
     from_anchor: Anchor | None = None  # where the arrow leaves `from`: a side, center, or degrees
     to_anchor: Anchor | None = None    # where it enters `to`
-    steps: list[ArrowStep | str] | None = None   # several targets, one per position
+    steps: list[ArrowStep | str | None] | None = None   # several targets, one per position; null: no arrow
 
 
 ARROW_DEFAULT_ANGLE = 315.0
@@ -406,8 +406,13 @@ class Arrow(Component):
         if opts.to is not None and opts.steps:
             raise ComponentError("arrow: give either `to` or `steps`, not both")
         entries = opts.steps or [ArrowStep(to=opts.to)]
+        if all(e is None for e in entries):
+            raise ComponentError("arrow: every step is null; give at least one target")
         steps = []
         for i, e in enumerate(entries):
+            if e is None:  # no arrow at this position (spec 8.9)
+                steps.append(None)
+                continue
             if isinstance(e, str):
                 e = ArrowStep(to=e)
             frm = (e.from_ or None) if e.from_ is not None else opts.from_  # "" drops the block's `from`
@@ -433,10 +438,10 @@ class Arrow(Component):
             if from_item:
                 step["from_item"] = from_item
             steps.append(step)
-        if opts.from_anchor is not None and not any(s["from"] for s in steps):
+        if opts.from_anchor is not None and not any(s and s["from"] for s in steps):
             raise ComponentError("arrow: `from_anchor` needs `from`")
         for s in steps:
-            if s["from"] is None and s["angle"] is None:
+            if s is not None and s["from"] is None and s["angle"] is None:
                 ta = s.get("to_anchor")
                 # a side gives the direction, and `bullet` the left one
                 s["angle"] = ta if isinstance(ta, float) else 180.0 if ta == "bullet" else ARROW_DEFAULT_ANGLE
@@ -463,6 +468,8 @@ def arrow_targets(data: dict) -> list[str]:
     path is checked with the path (`arrow_ends`)."""
     out = []
     for s in data.get("steps", []):
+        if s is None:
+            continue
         for end in ("to", "from"):
             ref = s.get(end)
             if ref and _ID_RE.match(ref) and not s.get(f"{end}_item"):
@@ -475,6 +482,8 @@ def arrow_ends(data: dict) -> list[tuple[int, str, str, list[int] | None, bool]]
     whether its anchor is `bullet`), for every end written as an item path or anchored at a bullet."""
     out = []
     for i, s in enumerate(data.get("steps", [])):
+        if s is None:
+            continue
         for end in ("to", "from"):
             ref, path = s.get(end), s.get(f"{end}_item")
             bullet = s.get(f"{end}_anchor") == "bullet"

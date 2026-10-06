@@ -180,6 +180,21 @@ def test_arrow_needs_a_target(deck):
     assert "LT022" in {x.code for x in check_deck(root, use_cache=False).items}
 
 
+def test_arrow_null_steps(deck):
+    """Spec 8.9: a null step is a position without an arrow; steps that are all null are LT022."""
+    from lattice.build import check_deck
+
+    src = ("# A\n{#why}\nA paragraph.\n\n```arrow {#w}\nsteps:\n  - null\n"
+           "  - {to: why, label: here}\n  - null\n```\n")
+    d = build_deck(deck({"talk.md": src}), use_cache=False)
+    assert not d.diagnostics.items
+    steps = d.instances["a/w"]["data"]["steps"]
+    assert steps[0] is None and steps[2] is None and steps[1]["to"] == "why" and steps[1]["angle"] == 315.0
+    assert d.slides["a"].steps == 3
+    root = deck({"talk.md": "# A\n```arrow\nsteps: [null, null]\n```\n"})
+    assert "LT022" in {x.code for x in check_deck(root, use_cache=False).items}
+
+
 def test_scheme_binding_sites_are_variables():
     """Pygments paints every symbol after "(" as a call; the Scheme filter restores the binding sites (spec 3.13)."""
     from pygments.token import Name

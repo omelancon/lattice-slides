@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.21.0
+author: Lattice 0.22.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -778,7 +778,7 @@ steps:
 ````
 
 {#arrow-code-note}
-`to` and `from` name an element id, an item of a list (`facts[2]`, next slides) or a CSS selector. `angle` is measured from the target toward the tail (0 right, 90 above, 315 lower right), `length` in slide pixels; `curve` bends, `color` is a CSS colour or a theme token (`accent`, `detour`, `muted`, `ink`). With `steps:` the arrow is a track, gliding from target to target.
+`to` and `from` name an element id, an item of a list (`facts[2]`, next slides) or a CSS selector. `angle` is measured from the target toward the tail (0 right, 90 above, 315 lower right), `length` in slide pixels; `curve` bends, `color` is a CSS colour or a theme token (`accent`, `detour`, `muted`, `ink`). With `steps:` the arrow is a track, gliding from target to target; a `null` step shows no arrow.
 :::
 ::::
 
