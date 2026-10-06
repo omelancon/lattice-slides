@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.20.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.21.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -228,6 +228,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.20 (done).** Widening thresholds that name the fixnum range (`[sign, maxfix]`), and predicates of a `prims` option usable in an `if`; for the defense slide that analyses `findv`.
 
+**v0.21 (done).** `vector_bounds: false` drops the symbolic vector bounds (lengths become numbers up to maxfix), and threshold names take offsets (`maxfix-1`); the defense's `findv` now checks overflow with `fx+?`, and the analysis removes that check without symbols.
+
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
 - Plugin hooks beyond components (new syntax, generated slides, custom checks).
@@ -273,3 +275,4 @@ Decisions taken while writing the specification, and since.
 | 27 | Highlights in a morph | `highlight` takes the targets of `code` (lines, ranges, segments) per version or per step, for that position only (a `code-steps` list, not cumulative like the replacements), with the option as the default of every position; line numbers count the rows of the version shown. `changed` lights the rows holding units that did not survive from the position before, which is what the audience just watched arrive. A position's own targets are checked against its version (LT022); the default's lines must exist wherever it applies, its segments somewhere. Bands and segment marks are a layer per position, built in Python and painted under the units in two slots that cross-fade with the units' phases; units and line numbers outside the lit rows are dimmed by a class. A block without highlights renders as before. `highlight` in a `diff-steps` version is LT022 rather than ignored. |
 | 28 | Attribute lines inside list items | An attribute line inside an item applies to the next block of that item, so a nested list can be revealed item by item. Written on the line after the item's text, where CommonMark reads it as the last line of the item's paragraph (so the list stays tight), or as a paragraph of its own; one followed by text applies to that paragraph, as at the top level. Fragments keep the document order (an item before the items nested in it). A line not followed by a block of the item stays text, as before. LT059 compares highlights too, since a morph that repeats its text to move a highlight is now a normal use. |
 | 29 | Thresholds that name the fixnum range | A list of thresholds MAY name `machine`, `sign`, `maxfix` and `minfix`, resolved with `fixnum_bits`. The `machine` thresholds stay the thesis's (sign, 8, 32 and 64 bits), which figure 2 depends on; an index bounded by a vector length (at most maxfix) would otherwise widen past maxfix to `2^63-1` at a join and read `fx \| bg`. The `prims` option is applied before the program is checked, since a declared predicate could not be tested in an `if` before. |
+| 30 | Lengths without symbols | `vector_bounds: false` keeps symbols out of every context rather than hiding them in the display: `vector-length` gives `fx [0, maxfix]` and annotations naming a length are widened at the entry, so the analyses run as before the paper's section 3.3 (figure 7 keeps the check against the second length read). Since the interpreter widens at every join, the bound `i < len` gives after a test survives only if a threshold sits on it: threshold names take an offset (`maxfix-1`) rather than widening only at loop heads, which would have changed the thesis figures' algorithm. |

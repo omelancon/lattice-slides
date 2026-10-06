@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from .heuristics import HEURISTICS
-from .intervals import Bound, thresholds_from, using_fixnum_bits
+from .intervals import Bound, thresholds_from, using_fixnum_bits, using_vector_bounds
 from .ir import RESULT, Arg, Assign, Block, Call, Const, Fail, Function, Goto, If, Move, Program, Return, Var
 from .rich import SEP, binding, code, context, join, struck, ver
 from .types import ANY, Context, Type
@@ -96,12 +96,13 @@ class Specializer:
     def __init__(self, program: Program, limit: int = 2, heuristic: str = "similarity", *,
                  entry: str | None = None, limits: dict | None = None, seed: int = 0,
                  max_steps: int = 5000, emit: Emit | None = None, intervals: bool = False,
-                 thresholds="machine", fixnum_bits: int = 61):
+                 thresholds="machine", fixnum_bits: int = 61, vector_bounds: bool = True):
         self.program = program
         self.limit = limit
         self.intervals = intervals
         self.thresholds: list[Bound] | None = thresholds_from(thresholds, fixnum_bits)
         self.fixnum_bits = fixnum_bits
+        self.vector_bounds = vector_bounds
         self.limits = dict(limits or {})
         if heuristic not in HEURISTICS:
             raise ValueError(f"unknown merge heuristic {heuristic!r}")
@@ -221,6 +222,8 @@ class Specializer:
         if not self.intervals:
             ctx = Context({p: t.without_range() for p, t in ctx.types().items()})
         else:
+            if not self.vector_bounds:  # annotations naming a vector length: widened at once
+                ctx = ctx.map(lambda t: t.remap_symbols({s: None for s in t.symbols()}))
             ctx = ctx.map(lambda t: t.refined())
         v = self.get_or_create(fn.entry, ctx)
         v.is_entry = True
@@ -231,7 +234,7 @@ class Specializer:
         return v
 
     def run(self) -> None:
-        with using_fixnum_bits(self.fixnum_bits):
+        with using_fixnum_bits(self.fixnum_bits), using_vector_bounds(self.vector_bounds):
             self._run()
 
     def _run(self) -> None:

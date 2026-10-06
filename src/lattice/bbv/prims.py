@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
-from .intervals import Interval, Sym, maxfix, minfix
+from .intervals import Interval, Sym, maxfix, minfix, vector_bounds
 from .types import Type
 
 Result = Type | Callable[[list[Type]], Type]  # or, with ``names``, Callable[[list[Type], list[str | None]], Type]
@@ -82,8 +82,8 @@ def _checked_op(op: Callable[[Interval, Interval], Interval]):
 
 def _vector_length(types: list[Type], names: list[str | None]) -> Type:
     """The length of a vector: the symbol ``⟦v⟧`` of the variable's class, or a fixnum in
-    ``0..maxfix`` for a value with no name."""
-    if names and names[0] is not None:
+    ``0..maxfix`` for a value with no name, or for any value without symbolic vector bounds."""
+    if names and names[0] is not None and vector_bounds():
         return FX.with_range(Interval.of(Sym(names[0])))
     return FX.with_range(Interval(0, maxfix()))
 

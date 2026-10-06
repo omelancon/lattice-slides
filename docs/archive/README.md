@@ -17,4 +17,5 @@ Documents kept as they were written, for the history behind features. They are n
 | `implementation-report-2026-10-05-b.md` | Lattice 0.17.0: timeline ranges (open ranges, `end-N`, strides, lockstep ranges) |
 | `implementation-report-2026-10-05-c.md` | Lattice 0.18.0: highlights in `code-morph` (per version, per step, a default, `changed`) |
 | `implementation-report-2026-10-05-d.md` | Lattice 0.19.0: sub-bullets revealed one by one, LT059 and highlights |
+| `implementation-report-2026-10-05-e.md` | Lattice 0.20.0: thresholds that name the fixnum range, predicates of `prims` |
 | `thesis.pdf` | The thesis on basic block versioning that the 0.4.0 and 0.5.0 work follows |

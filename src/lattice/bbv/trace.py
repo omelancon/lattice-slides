@@ -41,13 +41,14 @@ class VersioningTrace(Trace):
                  entry: str | None = None, limits: dict | None = None, seed: int = 0, functions: list[str] | None = None,
                  events: list[str] | None = None, caption: str = "auto", until: int | None = None,
                  max_steps: int = 5000, granularity: str = "block", intervals: bool = False,
-                 thresholds="machine", fixnum_bits: int = 61):
+                 thresholds="machine", fixnum_bits: int = 61, vector_bounds: bool = True):
         super().__init__({})
         self.program = program
         self.algorithm = algorithm
         cls = LambdaVersioning if algorithm == "lv" else Specializer
         self.spec = cls(program, limit, heuristic, entry=entry, limits=limits, seed=seed, max_steps=max_steps,
-                        emit=self._on_event, intervals=intervals, thresholds=thresholds, fixnum_bits=fixnum_bits)
+                        emit=self._on_event, intervals=intervals, thresholds=thresholds, fixnum_bits=fixnum_bits,
+                        vector_bounds=vector_bounds)
         self.visible = [f for f in program.functions if not program.functions[f].hidden] if functions is None else list(functions)
         for f in self.visible:
             program.function(f)
@@ -425,13 +426,14 @@ class AbstractTrace(Trace):
     def __init__(self, program: Program, *, function: str | None = None, thresholds="machine", narrowing: bool = True,
                  fixnum_bits: int = 61, events: list[str] | None = None, granularity: str = "block",
                  history: list[str] | None = None, caption: str = "auto", until: int | None = None,
-                 max_steps: int = 2000):
+                 max_steps: int = 2000, vector_bounds: bool = True):
         from .absint import AbstractInterpreter
 
         super().__init__({})
         self.program = program
         self.ai = AbstractInterpreter(program, function, thresholds=thresholds, narrowing=narrowing,
-                                      fixnum_bits=fixnum_bits, max_steps=max_steps, emit=self._on_event)
+                                      fixnum_bits=fixnum_bits, max_steps=max_steps, emit=self._on_event,
+                                      vector_bounds=vector_bounds)
         self.fn = self.ai.function
         self.visible = [self.fn.name]
         self.ids = {b.name: str(i + 1) for i, b in enumerate(self.fn.blocks.values())}

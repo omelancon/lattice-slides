@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-05, after 0.20.0 (`implementation-report-2026-10-05-e.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-05, after 0.21.0 (`implementation-report-2026-10-05-f.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
@@ -31,7 +31,8 @@ Updated 2026-10-05, after 0.20.0 (`implementation-report-2026-10-05-e.md`). Item
 - [ ] 0.16.0: try `from_anchor: bullet` on your own slides (the manual's "Arrows at bullets"). The end leaves to the left; say if you want `bullet` combined with another direction (say, leaving downward from the marker).
 - [ ] 0.17.0: try the timeline ranges on one of your slides (the manual's "Timeline ranges"): `reveal ..end`, `trace ..+2`, `end-1`, `by 2` and ranges in lockstep. The examples and the rest of the manual were left as written (their decks are unchanged apart from the version); say if you want them rewritten with the new forms where they would be shorter.
 - [ ] 0.18.0: watch the bug-fix slide of example 05 (`highlight=changed`) and the manual's "Highlights in a morph" on your screen. `changed` lights rows holding new tokens only, so at the last step of example 05 the line `self.order.remove(key)`, which survives from the old code, stays dimmed in the middle of the four-line band; `highlight: refresh` on that step would light the whole segment instead. Judge the timing too: old highlights fade out with the leaving tokens, the new ones in with the arriving tokens.
-- [ ] 0.20.0: `docs/implementation-report-2026-10-05-d.md` is copied to `docs/archive/`; `git rm` it in `docs/`.
+- [ ] 0.21.0: `docs/implementation-report-2026-10-05-e.md` is copied to `docs/archive/`; `git rm` it in `docs/`.
+- [ ] 0.21.0: the abstract interpreter widens at every join, as the thesis's figure 2 does, so a bound found by a test is kept only if a threshold sits on it (`maxfix-1` for the defense's `findv`). Widening only at loop heads (targets of back edges, plain union elsewhere) was prototyped and keeps such bounds with `[sign, maxfix]` alone; say if you want it as an option.
 - [ ] 0.20.0: a long CFG (the defense's `findv`, 11 blocks in 7 ranks) is drawn small in either direction, since block bands stack ranks in one line or one column; a layout that folds long chains (two columns of ranks) would make such drawings readable without clicking blocks.
 - [ ] 0.19.0: other attribute lines inside list items (an attribute line inside a block quote, or before a fenced block in an item, which stays a code block without a component) were left as before; say if you need them.
 

@@ -47,6 +47,7 @@ class BbvAnimOptions(BbvCommonOptions):
     intervals: bool = False
     thresholds: str | list[int | str] = "machine"
     fixnum_bits: int = 61
+    vector_bounds: bool = True  # vector lengths as symbolic bounds (with intervals)
 
 
 class BbvCfgOptions(BbvCommonOptions):
@@ -58,6 +59,7 @@ class AbstractInterpOptions(BbvCommonOptions):
     thresholds: str | list[int | str] = "machine"
     narrowing: bool = True
     fixnum_bits: int = 61
+    vector_bounds: bool = True  # vector lengths as symbolic bounds
     events: list[str] | None = None
     granularity: Literal["block", "instruction"] = "block"
     until: int | None = None
@@ -69,7 +71,7 @@ class AbstractInterpOptions(BbvCommonOptions):
 
 _KNOWN = {"program", "source", "functions", "show", "colors", "direction", "height", "prims", "algorithm", "limit", "limits",
           "heuristic", "entry", "events", "granularity", "until", "call_edges", "panel", "caption", "max_steps", "wrap",
-          "thresholds", "narrowing", "fixnum_bits", "history", "intervals", "clickable", "clickable_show"}
+          "thresholds", "narrowing", "fixnum_bits", "history", "intervals", "clickable", "clickable_show", "vector_bounds"}
 
 
 def load_program(opts: BbvCommonOptions, ctx) -> Program:
@@ -170,7 +172,8 @@ class BbvAnim(Component):
                                     entry=opts.entry, limits=opts.limits, seed=ctx.seed, functions=opts.functions,
                                     events=opts.events, caption=opts.caption, until=opts.until,
                                     max_steps=opts.max_steps, granularity=opts.granularity,
-                                    intervals=opts.intervals, thresholds=opts.thresholds, fixnum_bits=opts.fixnum_bits)
+                                    intervals=opts.intervals, thresholds=opts.thresholds, fixnum_bits=opts.fixnum_bits,
+                                    vector_bounds=opts.vector_bounds)
         except (ProgramError, ValueError) as e:
             raise ComponentError(str(e)) from None
         if trace.spec.truncated:
@@ -263,7 +266,8 @@ class AbstractInterpAnim(Component):
             trace = AbstractTrace(prog, function=opts.entry or (opts.functions[0] if opts.functions else None),
                                   thresholds=opts.thresholds, narrowing=opts.narrowing, fixnum_bits=opts.fixnum_bits,
                                   events=opts.events, granularity=opts.granularity, history=opts.history,
-                                  caption=opts.caption, until=opts.until, max_steps=opts.max_steps)
+                                  caption=opts.caption, until=opts.until, max_steps=opts.max_steps,
+                                  vector_bounds=opts.vector_bounds)
         except (ProgramError, ValueError) as e:
             raise ComponentError(str(e)) from None
         if trace.ai.truncated:

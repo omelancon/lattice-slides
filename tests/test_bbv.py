@@ -796,3 +796,72 @@ def test_prims_predicates_may_be_tested(deck):
     root.write_text(text.replace("prims: {pred: {args: [any, any], result: bool}}\n", ""))
     items = check_deck(root, use_cache=False).items
     assert [x.code for x in items] == ["LT022"] and "'pred' is not a predicate" in items[0].message
+
+
+FINDV_OVF = FINDV_AI.replace("""T:  i2 = fx+(i, 1)
+    goto L(i=i2)
+X:  i3 = ##+(i, 1)
+    goto L(i=i3)
+""", """T:  i2 = fx+?(i, 1)
+    if i2 goto T2 else goto O
+T2: goto L(i=i2)
+O:  i3 = ##+(i, 1)
+    goto L(i=i3)
+X:  i4 = ##+(i, 1)
+    goto L(i=i4)
+""")
+
+
+def test_without_vector_bounds():
+    """Spec 9.5: with `vector_bounds` off a vector length is a number in [0, maxfix] and an annotation naming
+    one is widened at the entry; the overflow check of findv still disappears with thresholds that stop
+    at maxfix-1 and maxfix, but SBBV keeps the second bound check of figure 7, against another length."""
+    from lattice.bbv.absint import AbstractInterpreter
+    from lattice.bbv.intervals import thresholds_from
+
+    assert thresholds_from(["maxfix-1", "minfix+2", "maxfix - 3"], 8) == [-126, 124, 126]
+    with pytest.raises(ValueError, match="unknown name"):
+        thresholds_from(["maxfix*2"])
+    prims = {"pred": {"args": ["any", "any"], "result": "bool"}}
+    assert FINDV_OVF != FINDV_AI
+    for bounds, after_test in ((True, "fx [0, ⟦v⟧-1]"), (False, "fx [0, maxfix-1]")):
+        ai = AbstractInterpreter(parse(FINDV_OVF, prims), thresholds=["sign", "maxfix-1", "maxfix"],
+                                 vector_bounds=bounds)
+        ai.run()
+        assert str(ai.contexts["L"].get("i")) == "fx [0, maxfix]" and str(ai.contexts["P"].get("i")) == after_test
+        assert ai.contexts["O"] is None and ("T", "O") in ai.dead  # the overflow branch is never reached
+    ai = AbstractInterpreter(parse(FINDV_OVF, prims), thresholds=["sign", "maxfix"], vector_bounds=False)
+    ai.run()
+    assert ai.contexts["O"] is not None  # P widened past maxfix-1: fx+? may overflow
+    ai = AbstractInterpreter(parse("function f(v, i: fx [0, ⟦v⟧-1])\nA:  return i\n"), vector_bounds=False)
+    ai.run()
+    assert str(ai.contexts["A"].get("i")) == "fx [0, maxfix-1]"
+    for bounds in (True, False):
+        spec = Specializer(program("findv.bbv"), limit=2, intervals=True, vector_bounds=bounds)
+        spec.run()
+        findv = [v for v in spec.final_versions() if v.function == "findv"]
+        kept = {ln.text.split(" goto")[0] for v in findv for ln in v.body or [] if ln.text.startswith("if ") and not ln.removed}
+        assert ("if fx<(i, len2)" in kept) is not bounds
+        assert any("⟦" in str(v.context) for v in findv) is bounds
+
+
+def test_vector_bounds_option(deck):
+    body = ("vector_bounds: false\nprims: {pred: {args: [any, any], result: bool}}\nthresholds: [sign, maxfix-1, maxfix]\n"
+            "source: |\n" + "".join("  " + line + "\n" for line in FINDV_OVF.splitlines()))
+    root = deck({"talk.md": f"# A\n```abstract-interp-anim {{#ai}}\n{body}```\n"})
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items
+    from lattice.emit import emit_html
+
+    assert "⟦" not in instance_data(emit_html(d), "a/ai")
+    root.write_text(f"# A\n```bbv-anim {{#b intervals=true vector_bounds=false}}\nprogram: programs/findv.bbv\n```\n")
+    (root.parent / "programs").mkdir()
+    (root.parent / "programs" / "findv.bbv").write_text((PROGRAMS / "findv.bbv").read_text(encoding="utf-8"))
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items and "⟦" not in instance_data(emit_html(d), "a/b")
+
+
+def instance_data(html: str, instance: str) -> str:
+    import re
+
+    return re.search(rf'id="lt-data-{re.escape(instance)}">(.*?)</script>', html, re.S).group(1)

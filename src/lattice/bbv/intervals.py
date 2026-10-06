@@ -19,6 +19,7 @@ a lower bound (what bound checks need), and a join keeps the symbol only when it
 from __future__ import annotations
 
 import contextlib
+import re
 from dataclasses import dataclass
 from math import inf
 
@@ -36,6 +37,24 @@ def maxfix(bits: int | None = None) -> int:
 
 def minfix(bits: int | None = None) -> int:
     return -(1 << ((bits or fixnum_bits()) - 1))
+
+
+_VECTOR_BOUNDS = [True]
+
+
+def vector_bounds() -> bool:
+    """Whether vector lengths are symbolic bounds (``⟦v⟧``); off, a length is a number in ``0..maxfix``."""
+    return _VECTOR_BOUNDS[-1]
+
+
+@contextlib.contextmanager
+def using_vector_bounds(on: bool):
+    """Run with or without symbolic vector bounds (the ``vector_bounds`` option of the components)."""
+    _VECTOR_BOUNDS.append(on)
+    try:
+        yield
+    finally:
+        _VECTOR_BOUNDS.pop()
 
 
 @contextlib.contextmanager
@@ -82,10 +101,14 @@ def thresholds_named(name: str) -> list[Bound] | None:
     raise ValueError(f"unknown thresholds {name!r}; use machine, sign, none or a list")
 
 
+_FIX_NAME = re.compile(r"(maxfix|minfix)(?:([+-])(\d+))?")
+
+
 def thresholds_from(spec, bits: int | None = None) -> list[Bound] | None:
     """The widening thresholds of a ``thresholds`` option: a name (``machine``, ``sign``, ``none``) or a list
     of integers and names, where ``machine`` and ``sign`` add their thresholds and ``maxfix`` and ``minfix``
-    the bounds of the fixnum range (of ``bits``, the ``fixnum_bits`` option)."""
+    the bounds of the fixnum range (of ``bits``, the ``fixnum_bits`` option), possibly with an offset
+    (``maxfix-1``, ``minfix+1``)."""
     if spec is None:
         return None
     if isinstance(spec, str):
@@ -98,12 +121,12 @@ def thresholds_from(spec, bits: int | None = None) -> list[Bound] | None:
             out.add(t)
         elif t.strip() in ("machine", "thesis", "sign"):
             out.update(thresholds_named(t.strip()))
-        elif t.strip() == "maxfix":
-            out.add(maxfix(bits))
-        elif t.strip() == "minfix":
-            out.add(minfix(bits))
+        elif m := _FIX_NAME.fullmatch(t.replace(" ", "")):
+            base = maxfix(bits) if m.group(1) == "maxfix" else minfix(bits)
+            out.add(base + (int(m.group(2) + m.group(3)) if m.group(2) else 0))
         else:
-            raise ValueError(f"thresholds: unknown name {t!r}; a list holds integers, machine, sign, maxfix and minfix")
+            raise ValueError(f"thresholds: unknown name {t!r}; a list holds integers, machine, sign, maxfix and "
+                             "minfix, with an offset if wanted (maxfix-1, minfix+1)")
     return sorted(out)
 
 
