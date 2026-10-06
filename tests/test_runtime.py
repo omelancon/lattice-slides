@@ -1772,7 +1772,7 @@ def test_arrow_at_bullets(tmp_path):
 COLS_DECK = """
 # Cols {#cols}
 
-::: columns {duration=400}
+::: columns {duration=800}
 ::: column {#a}
 {#aq}
 Left text, long enough to wrap when its column is narrow, so that a reflow would show.
@@ -1899,7 +1899,7 @@ def test_columns_change_width_however_a_step_is_reached(tmp_path):
                 go(k)
                 if last is None or abs(last - k) != 1:
                     assert not any(col[7] for col in geo()["cols"]), (last, k)
-                page.wait_for_timeout(300)
+                page.wait_for_timeout(300 if last is None or abs(last - k) != 1 else 1000)  # an adjacent step moves
                 assert _near(geo(), fresh[k]), (last, k)
                 last = k
 
@@ -1925,7 +1925,7 @@ def test_columns_change_width_however_a_step_is_reached(tmp_path):
                 s = document.querySelector('#s-cols').getBoundingClientRect(); return [r.left - s.left, r.right - s.left]; }""")
             assert pt[0] < mid["p"][0] < pt[1] and mid["p"] != fresh[1]["p"] and mid["p"] != fresh[2]["p"]
             page.evaluate("document.getAnimations().forEach(a => a.cancel())")  # the paused transitions
-            page.wait_for_timeout(500)  # the move still ends with its final values
+            page.wait_for_timeout(900)  # the move still ends with its final values
             assert _near(geo(), fresh[2])
 
             # every step forward and backward, animated, then at rest
@@ -1933,11 +1933,11 @@ def test_columns_change_width_however_a_step_is_reached(tmp_path):
             page.wait_for_timeout(300)
             for k in range(1, 7):
                 page.keyboard.press("ArrowRight")
-                page.wait_for_timeout(650)
+                page.wait_for_timeout(1000)
                 assert _near(geo(), fresh[k]), (k, "forward")
             for k in range(5, -1, -1):
                 page.keyboard.press("ArrowLeft")
-                page.wait_for_timeout(650)
+                page.wait_for_timeout(1000)
                 assert _near(geo(), fresh[k]), (k, "backward")
 
             # a step pressed in the middle of another: a short move from where the columns are
@@ -1950,16 +1950,15 @@ def test_columns_change_width_however_a_step_is_reached(tmp_path):
             heading = page.evaluate("""() => Array.from(document.querySelectorAll('#s-cols .lt-column'))
                 .map(c => Math.round(parseFloat(c.style.flex.split(' ')[2]) * 2) / 2)""")
             assert heading == [c[2] for c in fresh[1]["cols"]]
-            page.wait_for_timeout(80)
-            assert any(col[7] for col in geo()["cols"])
-            page.wait_for_timeout(250)
+            assert any(col[7] for col in geo()["cols"])  # still moving (a short move of 140 ms)
+            page.wait_for_timeout(350)
             assert _near(geo(), fresh[1])
 
             # skip playback
             go(0)
             page.wait_for_timeout(300)
             page.evaluate("Lattice.actions()['last-step']()")
-            page.wait_for_timeout(1200)
+            page.wait_for_timeout(1600)
             assert page.evaluate("Lattice.state().cur") == {"slide": "cols", "step": 6}
             assert _near(geo(), fresh[6])
 
@@ -1991,6 +1990,81 @@ def test_columns_change_width_however_a_step_is_reached(tmp_path):
             printed = page.evaluate("""() => [1, 2, 3].map(n => Array.from(document.querySelectorAll(`#lt-page-${n} .lt-column`))
                 .map(c => Math.round(c.getBoundingClientRect().width * 2) / 2))""")
             assert printed == [[c[2] for c in fresh[k]["cols"]] for k in (0, 2, 6)]
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
+PROG = """source: |
+  function f(n)
+  A:  goto B(i=0)
+  B:  if <(i, n) goto C else goto D
+  C:  i2 = +(i, 1)
+      goto B(i=i2)
+  D:  return i
+panel: [worklist]"""
+
+PANEL_DECK = f"""
+# Narrow {{#narrow}}
+
+::: columns
+::: column
+```abstract-interp-anim {{#n-auto height=200}}
+{PROG}
+```
+:::
+::: column
+```abstract-interp-anim {{#n-right height=200 panel_at=right}}
+{PROG}
+```
+:::
+:::
+
+```timeline
+n-auto 1, n-right 1
+```
+
+# Wide {{#wide}}
+
+```abstract-interp-anim {{#w-below height=200 panel_at=below}}
+{PROG}
+```
+"""
+
+# Where the panel of an instance sits relative to its drawing.
+PANEL_PLACE = """(inst) => {
+  const el = document.querySelector(`[data-instance="${inst}"]`);
+  const c = el.querySelector('.lt-ga-canvas').getBoundingClientRect(), p = el.querySelector('.lt-ga-panel').getBoundingClientRect();
+  return p.left >= c.right - 1 ? 'right' : p.top >= c.bottom - 1 ? 'below' : 'other';
+}"""
+
+
+def test_panel_at_places_the_panel(tmp_path):
+    """Spec 8.8: `auto` puts the panel under the drawing in a narrow component, `right` keeps it beside the
+    drawing there, and `below` puts it under the drawing at any width; the drawing keeps its `height`."""
+    src = tmp_path / "talk.md"
+    src.write_text(PANEL_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(f"{out.as_uri()}#/narrow/1")
+            page.wait_for_timeout(300)
+            assert page.evaluate(PANEL_PLACE, "narrow/n-auto") == "below"
+            assert page.evaluate(PANEL_PLACE, "narrow/n-right") == "right"
+            page.goto(f"{out.as_uri()}#/wide/1")
+            page.wait_for_timeout(300)
+            assert page.evaluate(PANEL_PLACE, "wide/w-below") == "below"
+            height = page.evaluate("""() => document.querySelector('[data-instance="wide/w-below"] .lt-ga-canvas')
+                                      .getBoundingClientRect().height""")
+            assert abs(height - 200) < 1
             browser.close()
     except Exception as e:
         if "Executable doesn't exist" in str(e):

@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.24.0
+author: Lattice 0.25.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1144,7 +1144,7 @@ edge_labels: false
 | `graph="g.dot"`, `edges: ["A B 4", "B C 1"]` | The graph: a `.dot`, `.gml` or node-link `.json` file, or inline weighted edges |
 | `directed`, `engine`, `rankdir` | Arrowheads; Graphviz engine (`auto` is `dot`, left to right) and rank direction |
 | `edge_labels` | Show edge weights (on by default when the graph has them) |
-| `panel: [dist, queue]` | Which panel entries of the frames to show, in that order |
+| `panel: [dist, queue]`, `panel_at` | Which panel entries of the frames to show, in that order; `panel_at=right` or `below` places the panel at any width (default `auto`: under the drawing in a narrow column) |
 | `height` | Height of the drawing in slide pixels |
 
 The layout is computed once over every node and edge of every frame, so nothing moves between frames. The code beside the animation follows it through `follow=bfs`: each frame names the line it executes in its `meta`.
@@ -1332,7 +1332,7 @@ show: [label]
 | `heuristic` | The merge heuristic: `similarity`, `arithmetic` or `random` |
 | `entry`, `functions: [f, g]` | The function traversed first; the functions drawn, in that order (hidden ones are analysed, not drawn) |
 | `events`, `granularity=instruction`, `until` | Event kinds kept as frames; a frame per instruction; stop after N frames |
-| `panel: [queue, versions, checks, merges, limit]`, `caption=none` | Panel entries; no captions |
+| `panel: [queue, versions, checks, merges, limit]`, `panel_at=below`, `caption=none` | Panel entries, and where the panel sits (`auto`, `right`, `below`); no captions |
 | `colors=none`, `direction=LR`, `wrap=4`, `call_edges`, `height`, `prims` | Fills off; block bands direction; versions per line; dotted call edges; drawing height; extra primitives (a predicate declared there can be tested in an `if`) |
 | `intervals=true`, `thresholds`, `fixnum_bits=61`, `vector_bounds=false` | Track integer intervals and vector lengths (merges widen with the thresholds of the abstract interpreter); the fixnum width; lengths as numbers instead of `⟦v⟧` |
 | `clickable=off`, `clickable_show` | No enlarging on click; what an enlarged block shows |
@@ -1393,7 +1393,7 @@ history: [B.i]
 | `narrowing=false` | Keep the outcomes of tests but learn nothing from them |
 | `fixnum_bits` | Where an integer stops being a fixnum (default 61) |
 | `history: [B.i]` | Variables whose chain of entry values the panel shows, with `∪` and `∇` steps |
-| `panel: [worklist, iterations, history]` | Panel entries |
+| `panel: [worklist, iterations, history]`, `panel_at` | Panel entries; `right` or `below` the drawing at any width |
 | `show`, `events`, `granularity`, `until`, `caption`, `height`, `clickable`, `clickable_show` | As for `bbv-anim`; events are `start`, `dequeue`, `instruction`, `propagate`, `done` |
 
 # Intervals and vector lengths {#bbv-intervals .dense}

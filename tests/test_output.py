@@ -268,3 +268,60 @@ def test_columns_that_change_width_in_the_output(deck):
     assert a["columns"] == [{"l": "1 1 0", "r": "2 1 0"}, {"l": "0 0 0px", "r": "2 1 0"},
                             {"l": "0 0 300px", "r": "1 1 0"}]
     assert "columns" not in b and b["tracks"] == []
+
+
+def test_panel_at_marks_the_animation_root(deck):
+    """Spec 8.8: `panel_at` (`auto`, `right`, `below`) is a class on the root of the animation components;
+    `auto`, the default, adds nothing, so decks render as before."""
+    root = deck({"talk.md": """
+        # A
+        ```graph-anim {#g source="t.py:walk" panel_at=below}
+        edges: ["A B"]
+        ```
+        ```array-anim {#a source="t.py:arr" panel_at=right}
+        values: [2, 1]
+        ```
+        ```abstract-interp-anim {#ai panel_at=below}
+        source: |
+          function f(n)
+          A:  return n
+        ```
+        ```bbv-anim {#bb panel_at=right}
+        source: |
+          function f(n)
+          A:  return n
+        ```
+        ```array-anim {#d source="t.py:arr"}
+        values: [2, 1]
+        ```
+        ```timeline
+        g end, a end
+        ```
+    """, "t.py": """
+        from lattice import ArrayTrace, GraphTrace
+
+        def walk(g):
+            t = GraphTrace(g)
+            for n in sorted(g):
+                t.frame(nodes={n: "active"})
+            return t
+
+        def arr(values):
+            t = ArrayTrace(values)
+            t.frame(caption="start")
+            t.frame(marks={0: "compare"})
+            return t
+    """})
+    body = build_deck(root, use_cache=False).slides["a"].body_html
+    assert '<div class="lt-graph-anim lt-panel-below"></div>' in body
+    assert '<div class="lt-array-anim lt-panel-right"></div>' in body
+    assert '<div class="lt-bbv-anim lt-bbv-absint lt-panel-below"></div>' in body
+    assert '<div class="lt-bbv-anim lt-panel-right"></div>' in body
+    assert '<div class="lt-array-anim"></div>' in body  # auto
+
+
+def test_panel_at_rejects_other_values(deck):
+    from lattice.build import check_deck
+
+    root = deck({"talk.md": "# A\n```bbv-anim {panel_at=left}\nsource: |\n  function f(n)\n  A:  return n\n```\n"})
+    assert "LT021" in {d.code for d in check_deck(root, use_cache=False).items}

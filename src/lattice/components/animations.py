@@ -8,6 +8,16 @@ from pydantic import BaseModel, ConfigDict
 from ..anim import ArrayTrace, GraphTrace, GridTrace, Trace, TreeTrace, frame_store
 from .base import Component, ComponentError, RenderResult, register
 
+# Where the variable panel sits (spec 8.8): `auto` beside the drawing, or under it in a component narrower
+# than 760 px (a container query of lattice.css); `right` and `below` whatever the width.
+PanelAt = Literal["auto", "right", "below"]
+
+
+def panel_root(cls: str, panel_at: str) -> str:
+    """The root element of an animation component; `auto` adds nothing, so that decks render as before."""
+    extra = "" if panel_at == "auto" else f" lt-panel-{panel_at}"
+    return f'<div class="{cls}{extra}"></div>'
+
 
 class GraphAnimOptions(BaseModel):
     model_config = ConfigDict(extra="allow")
@@ -18,6 +28,7 @@ class GraphAnimOptions(BaseModel):
     engine: str = "auto"
     rankdir: str = "LR"
     panel: list[str] | None = None
+    panel_at: PanelAt = "auto"
     edge_labels: bool | None = None
     height: int | None = None
 
@@ -27,6 +38,7 @@ class ArrayAnimOptions(BaseModel):
     source: str
     values: list | None = None
     panel: list[str] | None = None
+    panel_at: PanelAt = "auto"
 
 
 class TreeAnimOptions(BaseModel):
@@ -35,6 +47,7 @@ class TreeAnimOptions(BaseModel):
     values: list | None = None
     layout: Literal["auto", "binary", "tidy"] = "auto"
     panel: list[str] | None = None
+    panel_at: PanelAt = "auto"
     height: int | None = None
 
 
@@ -43,6 +56,7 @@ class GridAnimOptions(BaseModel):
     source: str
     values: list | None = None
     panel: list[str] | None = None
+    panel_at: PanelAt = "auto"
     cell: int = 48
     height: int | None = None
 
@@ -102,7 +116,7 @@ class GraphAnim(Component):
         lay = layout(full, engine=opts.engine, seed=ctx.seed, rankdir=opts.rankdir,
                      edge_labels=opts.edge_labels)
         data = {"layout": lay, "frames": _store(trace, ctx), "panel": opts.panel, "height": opts.height}
-        return RenderResult('<div class="lt-graph-anim"></div>', data=data, positions=len(trace),
+        return RenderResult(panel_root("lt-graph-anim", opts.panel_at), data=data, positions=len(trace),
                             meta=trace.meta)
 
 
@@ -123,7 +137,7 @@ class ArrayAnim(Component):
         if not len(trace):
             raise ComponentError(f"{opts.source} produced no frames")
         data = {"frames": _store(trace, ctx), "panel": opts.panel}
-        return RenderResult('<div class="lt-array-anim"></div>', data=data, positions=len(trace),
+        return RenderResult(panel_root("lt-array-anim", opts.panel_at), data=data, positions=len(trace),
                             meta=trace.meta)
 
 
@@ -153,7 +167,7 @@ class TreeAnim(Component):
         cfg = ctx.frames_config
         data = {"size": size, "frames": frame_store(frames, cfg.max_full_bytes, cfg.keyframe_interval),
                 "panel": opts.panel, "height": opts.height}
-        return RenderResult('<div class="lt-tree-anim"></div>', data=data, positions=len(trace), meta=trace.meta)
+        return RenderResult(panel_root("lt-tree-anim", opts.panel_at), data=data, positions=len(trace), meta=trace.meta)
 
 
 @register("grid-anim")
@@ -176,4 +190,4 @@ class GridAnim(Component):
                 "rowHead": any("rows" in f for f in trace.frames),
                 "colHead": any("cols" in f for f in trace.frames)}
         data = {"dims": dims, "frames": _store(trace, ctx), "panel": opts.panel, "height": opts.height}
-        return RenderResult('<div class="lt-grid-anim"></div>', data=data, positions=len(trace), meta=trace.meta)
+        return RenderResult(panel_root("lt-grid-anim", opts.panel_at), data=data, positions=len(trace), meta=trace.meta)

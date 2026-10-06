@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.24.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.25.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -242,6 +242,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.24 (done).** Columns that change width: a `width` cue in the timeline collapses a column (`0`) or gives it another width, so an animation can take the whole row and the code come back after it; the content takes its final width at once and the columns slide, and arrows follow.
 
+**v0.25 (done).** `panel_at` on the animation components: the panel beside (`right`) or under (`below`) the drawing at any width, for a drawing that has the whole row after its column widened.
+
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".
 - Plugin hooks beyond components (new syntax, generated slides, custom checks).
@@ -291,3 +293,4 @@ Decisions taken while writing the specification, and since.
 | 31 | Arrows absent at some positions | A `null` step rather than a `visible` range or one block per arrow: an arrow is already a track with one position per entry, so leaving a position empty keeps the timeline the only place that says when (`why ..+4`, `why end`). The arrow shown after an empty position is placed, not glided from the last one, because a glide from an arrow the audience no longer sees would come from nowhere. |
 | 32 | Three quick skip presses | A gesture on the skip keys rather than a new binding: the presenter's hand is already on Shift and the arrows, and the first two presses still move ten steps each, so nothing is lost when the third does not come. The count lives in the input layer and follows the action (`skip-forward`, `skip-back`), not the physical key, so rebinding keeps it; the auto-repeat of a held key is not counted, or holding Shift+Right would reach the end by accident. The window is one second from the first press, and the result is SKIP to the end, played and clamped like `last-step`, so a blocking detour step still stops it. |
 | 33 | Columns that change width | A `width` cue of the timeline (`width src=0 viz=1fr`) rather than width states declared on the container: the change is read where it happens, next to the animation it makes room for. It compiles to a columns track whose positions are the width states (attributes first, then each new state in timeline order), so widths are positions. Width `0` collapses a column: no width, one gap given back, hidden and inert, its content laid out and its components stepping. In motion, contents take their final width at once (a collapsing column keeps its own) and the boxes slide in slide pixels, measured before and after by the core, so content reflows once per step. A column of a `columns` with a named or collapsed column gets a wrapper; others render as before. An invalid `width=` became an error (LT064) instead of being ignored. |
+| 34 | Panel placement | `panel_at` (`auto`, `right`, `below`) on every component that has a panel, rather than a theme rule: the right place depends on the drawing (a tall CFG wants the panel beside it, a wide one under it), not on the deck. `auto` keeps the container query (beside, under below 760 px), so existing decks are unchanged; the other values are a class on the component's root, so the build decides and the runtimes are untouched. |

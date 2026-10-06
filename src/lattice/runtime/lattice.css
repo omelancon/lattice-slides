@@ -288,6 +288,17 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 .lt-c-bbv-anim,.lt-c-bbv-cfg,.lt-c-abstract-interp-anim{flex:1 1 auto}
 .lt-bbv-anim .lt-ga-main{flex:none}
 .lt-bbv-anim .lt-ga-caption{flex:1 1 auto;min-height:33px;overflow:hidden}
+/* panel_at (spec 8.8): `below` and `right` keep the panel in one place whatever the component's width
+   (`auto` is the container query above: beside, and under the drawing below 760 px) */
+.lt-panel-below .lt-ga-main,.lt-panel-below .lt-aa-main{flex-direction:column;align-items:stretch;gap:12px}
+.lt-panel-below .lt-ga-canvas{flex:none}
+.lt-panel-below .lt-ga-panel,.lt-bbv-anim.lt-panel-below .lt-ga-panel{max-width:none;flex:none;flex-direction:row;flex-wrap:wrap;gap:12px 28px}
+@container (max-width: 760px){
+  .lt-panel-right .lt-ga-main{flex-direction:row;align-items:center;gap:28px}
+  .lt-panel-right .lt-ga-canvas{flex:1}
+  .lt-panel-right .lt-ga-panel{max-width:40%;flex:none;flex-direction:column;flex-wrap:nowrap;gap:14px}
+  .lt-bbv-anim.lt-panel-right .lt-ga-panel{flex:0 0 clamp(150px,22%,260px);max-width:none}
+}
 .lt-bbv-header{font-family:var(--lt-font-head);font-size:15px;font-weight:600;fill:var(--lt-muted)}
 .lt-bbv-node rect{fill:var(--lt-bg);stroke:var(--lt-edge);stroke-width:1.6}
 .lt-bbv-node.has-origin rect{fill:color-mix(in srgb,var(--origin) 16%,var(--lt-bg))}

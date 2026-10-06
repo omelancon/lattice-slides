@@ -10,6 +10,7 @@ from ..anim import frame_store
 from ..bbv.ir import Program, ProgramError, parse
 from ..bbv.layout import layout_frames, node_size
 from ..bbv.trace import ABSINT_EVENTS, EVENTS, AbstractTrace, VersioningTrace
+from .animations import PanelAt, panel_root
 from .base import Component, ComponentError, RenderResult, register
 
 SHOW = ["label", "context", "code"]
@@ -42,6 +43,7 @@ class BbvAnimOptions(BbvCommonOptions):
     until: int | None = None
     call_edges: bool = False
     panel: list[str] | None = None
+    panel_at: PanelAt = "auto"
     caption: Literal["auto", "none"] = "auto"
     max_steps: int = 5000
     intervals: bool = False
@@ -64,6 +66,7 @@ class AbstractInterpOptions(BbvCommonOptions):
     granularity: Literal["block", "instruction"] = "block"
     until: int | None = None
     panel: list[str] | None = None
+    panel_at: PanelAt = "auto"
     history: list[str] | None = None
     caption: Literal["auto", "none"] = "auto"
     max_steps: int = 2000
@@ -71,7 +74,8 @@ class AbstractInterpOptions(BbvCommonOptions):
 
 _KNOWN = {"program", "source", "functions", "show", "colors", "direction", "height", "prims", "algorithm", "limit", "limits",
           "heuristic", "entry", "events", "granularity", "until", "call_edges", "panel", "caption", "max_steps", "wrap",
-          "thresholds", "narrowing", "fixnum_bits", "history", "intervals", "clickable", "clickable_show", "vector_bounds"}
+          "thresholds", "narrowing", "fixnum_bits", "history", "intervals", "clickable", "clickable_show", "vector_bounds",
+          "panel_at"}
 
 
 def load_program(opts: BbvCommonOptions, ctx) -> Program:
@@ -187,7 +191,7 @@ class BbvAnim(Component):
         zoom = _zoom(opts, trace.tables["versions"], trace.frames)
         if zoom:
             data["zoom"] = zoom
-        return RenderResult('<div class="lt-bbv-anim"></div>', data=data, positions=len(frames), meta=trace.meta)
+        return RenderResult(panel_root("lt-bbv-anim", opts.panel_at), data=data, positions=len(frames), meta=trace.meta)
 
 
 @register("bbv-cfg")
@@ -284,5 +288,5 @@ class AbstractInterpAnim(Component):
         zoom = _zoom(opts, trace.tables["versions"], trace.frames)
         if zoom:
             data["zoom"] = zoom
-        return RenderResult('<div class="lt-bbv-anim lt-bbv-absint"></div>', data=data, positions=len(frames),
+        return RenderResult(panel_root("lt-bbv-anim lt-bbv-absint", opts.panel_at), data=data, positions=len(frames),
                             meta=trace.meta)
