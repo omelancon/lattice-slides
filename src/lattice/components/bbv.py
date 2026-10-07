@@ -6,12 +6,14 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from ..anim import frame_store
+import re
+
+from ..anim import frame_store, frames_of
 from ..bbv.ir import Program, ProgramError, parse
 from ..bbv.layout import layout_frames, node_size
 from ..bbv.trace import ABSINT_EVENTS, EVENTS, AbstractTrace, VersioningTrace
 from .animations import PanelAt, panel_root
-from .base import Component, ComponentError, RenderResult, register
+from .base import Component, ComponentError, Part, RenderResult, register
 
 SHOW = ["label", "context", "code"]
 CLICKABLE_SHOW = SHOW + ["after"]  # an enlarged block may also show its exit context
@@ -158,8 +160,150 @@ def _colors(tables: dict, ctx, mode: str) -> dict[str, str]:
     return out
 
 
+# ---------------------------------------------------------------- parts (spec 9.5), for arrows
+KINDS = {"goto": "goto", "true": "true", "false": "false", "return": "return", "call": "call", "#t": "true",
+         "#f": "false"}
+_EDGE = re.compile(r"^(.+?)->(.+)$")
+
+
+class _Drawing:
+    """What a versioning drawing shows, read from its render result: its nodes (versions; a block each in a
+    fixed CFG), and which nodes and edges each position draws, as ``bbv.js`` draws them."""
+
+    def __init__(self, result: RenderResult):
+        data = result.data or {}
+        self.versions: dict[str, dict] = data["tables"]["versions"]
+        self.functions = [f["name"] for f in data["tables"]["program"]["functions"]]
+        self.blocks = {f["name"]: [b["name"] for b in f["blocks"]] for f in data["tables"]["program"]["functions"]}
+        frames = frames_of(data["frames"])
+        if data.get("highlight") is not None:  # a bbv-cfg follower: one drawing at every position
+            frames = frames[:1]
+        call_edges = bool(data.get("callEdges"))
+        self.nodes: list[set[str]] = []
+        self.edges: list[set[str]] = []
+        for f in frames:
+            nodes = set((f.get("nodes") or {}).keys())
+            edges = set()
+            for key in (f.get("edges") or {}):
+                src, rest = key.split("->", 1)
+                dst, kind = rest.split(":", 1)
+                if src in nodes and dst in nodes and (kind != "call" or call_edges):
+                    edges.add(key)
+            self.nodes.append(nodes)
+            self.edges.append(edges)
+        self.static = len(frames) == 1 or result.positions != len(frames)
+        self.all_edges = sorted(set().union(*self.edges)) if self.edges else []
+
+    # ---------------------------------------------------------------- names
+    def node(self, ref: str, function: str | None = None) -> tuple[set[str], str, str | None]:
+        """The vids a node reference names, the function it lives in, and a warning."""
+        if "/" in ref:
+            function, label = ref.rsplit("/", 1)
+            if function not in self.functions:
+                raise ComponentError(f"function {function!r} is not drawn here (drawn: {', '.join(self.functions)})")
+            fns = [function]
+        else:
+            label = ref
+            fns = [function] if function else self.functions
+        if not label:
+            raise ComponentError(f"{ref!r} is not a block name")
+        blocks = [f for f in fns if label in self.blocks[f]]
+        versions: dict[str, list[str]] = {}
+        for vid, v in self.versions.items():
+            if v["label"] == label and v["function"] in fns:
+                versions.setdefault(v["function"], []).append(vid)
+        if blocks:
+            if len(blocks) > 1:
+                raise ComponentError(f"several drawn functions have a block {label!r}: write "
+                                     + " or ".join(f"{f}/{label}" for f in blocks))
+            fn = blocks[0]
+            vids = {vid for vid, v in self.versions.items() if v["block"] == f"{fn}/{label}"}
+            if not vids or not any(vids & n for n in self.nodes):
+                raise ComponentError(f"block {fn}/{label} has no version in any frame of this drawing")
+            other = [vid for f, vs in versions.items() for vid in vs if vid not in vids]
+            warning = None
+            if other:
+                v = self.versions[other[0]]
+                warning = (f"{label!r} is a block and also a version of block {v['name']!r}; it names the block "
+                           f"(rename one of the blocks to point at the version)")
+            return vids, fn, warning
+        if versions:
+            if len(versions) > 1:
+                raise ComponentError(f"several drawn functions have a version {label!r}: write "
+                                     + " or ".join(f"{f}/{label}" for f in versions))
+            fn, vids = next(iter(versions.items()))
+            return set(vids), fn, None
+        raise ComponentError(self._unknown(label, fns))
+
+    def _unknown(self, label: str, fns: list[str]) -> str:
+        names = [b if len(self.functions) == 1 else f"{f}/{b}" for f in fns for b in self.blocks[f]]
+        fixed = all(v["label"] == v["name"] for v in self.versions.values())  # a fixed CFG: no versions
+        msg = f"no block {label!r}" if fixed else f"no block or version {label!r}"
+        if len(fns) == 1 and len(self.functions) > 1:
+            msg += f" in function {fns[0]!r}"
+        for f in fns:  # B4 when B has versions B1 to B3
+            for b in self.blocks[f]:
+                if label.startswith(b) and label != b and re.fullmatch(r"\.?\d+", label[len(b):]):
+                    labels = [v["label"] for v in self.versions.values() if v["block"] == f"{f}/{b}"]
+                    if labels:
+                        return f"{msg}: block {b} has the versions {', '.join(labels)}"
+        return f"{msg}; the blocks are {', '.join(names)}"
+
+    def edge(self, src: str, dst: str, kind: str | None) -> set[str]:
+        a, fn, _ = self.node(src)
+        b, _, _ = self.node(dst, None if "/" in dst else fn)
+        keys = [k for k in self.all_edges if k.split("->", 1)[0] in a and k.split("->", 1)[1].split(":")[0] in b]
+        kinds = sorted({k.rsplit(":", 1)[1] for k in keys})
+        if kind is not None:
+            keys = [k for k in keys if k.rsplit(":", 1)[1] == kind]
+        if not keys:
+            outs = sorted({f"{self.versions[k.split('->', 1)[1].split(':')[0]]['label']} ({k.rsplit(':', 1)[1]})"
+                           for k in self.all_edges if k.split("->", 1)[0] in a})
+            what = f"no {kind} edge" if kind and kinds else "no edge"
+            goes = f"; {src} goes to {', '.join(outs)}" if outs else f"; no edge leaves {src}"
+            others = f" (its edges to {dst} are {', '.join(kinds)})" if kind and kinds else ""
+            raise ComponentError(f"{what} {src}->{dst} in this drawing{others}{goes}")
+        if kind is None and len(kinds) > 1:
+            raise ComponentError(f"{src}->{dst} has edges of several kinds ({', '.join(kinds)}): write "
+                                 + " or ".join(f"{src}->{dst}:{k}" for k in kinds))
+        return set(keys)
+
+    def part(self, name: str) -> Part:
+        m = _EDGE.match(name)
+        if m:
+            src, dst = m.group(1), m.group(2)
+            kind = None
+            if ":" in dst:
+                dst, _, written = dst.rpartition(":")
+                if written not in KINDS:
+                    raise ComponentError(f"unknown edge kind {written!r}; use goto, true, false, return, call, #t or #f")
+                kind = KINDS[written]
+            keys = self.edge(src.strip(), dst.strip(), kind)
+            alts = ",".join(f'[data-key="{k}"]' for k in sorted(keys))
+            selector = f".lt-bbv-edge:is({alts}):not(.lt-gone) > .lt-bbv-edge-mark"
+            drawn = [bool(keys & e) for e in self.edges]
+            warning = None
+        else:
+            if ":" in name:
+                raise ComponentError(f"a kind (`:{name.rpartition(':')[2]}`) belongs to an edge, written A->B:kind")
+            vids, _, warning = self.node(name.strip())
+            alts = ",".join(f'[data-vid="{v}"]' for v in sorted(vids, key=int))
+            selector = f".lt-bbv-node:is({alts}):not(.lt-gone)"
+            drawn = [bool(vids & n) for n in self.nodes]
+        if self.static or all(drawn):
+            drawn = None
+        return Part(selector, drawn, warning)
+
+
+class _NamesParts:
+    """The `part` hook of the versioning drawings (spec 8.2, 9.5)."""
+
+    def part(self, result: RenderResult, name: str) -> Part:
+        return _Drawing(result).part(name)
+
+
 @register("bbv-anim")
-class BbvAnim(Component):
+class BbvAnim(_NamesParts, Component):
     Options = BbvAnimOptions
     body = "yaml"
     runtime = "bbv.js"
@@ -195,7 +339,7 @@ class BbvAnim(Component):
 
 
 @register("bbv-cfg")
-class BbvCfg(Component):
+class BbvCfg(_NamesParts, Component):
     Options = BbvCfgOptions
     body = "yaml"
     runtime = "bbv.js"
@@ -250,7 +394,7 @@ class BbvCfg(Component):
 
 
 @register("abstract-interp-anim")
-class AbstractInterpAnim(Component):
+class AbstractInterpAnim(_NamesParts, Component):
     """Abstract interpretation over the fixed CFG of one function (thesis 1.1)."""
 
     Options = AbstractInterpOptions

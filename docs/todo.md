@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-06, after 0.25.0 (`implementation-report-2026-10-06-d.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-06, after 0.26.0 (`implementation-report-2026-10-06-e.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
@@ -32,6 +32,11 @@ Updated 2026-10-06, after 0.25.0 (`implementation-report-2026-10-06-d.md`). Item
 - [ ] 0.17.0: try the timeline ranges on one of your slides (the manual's "Timeline ranges"): `reveal ..end`, `trace ..+2`, `end-1`, `by 2` and ranges in lockstep. The examples and the rest of the manual were left as written (their decks are unchanged apart from the version); say if you want them rewritten with the new forms where they would be shorter.
 - [ ] 0.18.0: watch the bug-fix slide of example 05 (`highlight=changed`) and the manual's "Highlights in a morph" on your screen. `changed` lights rows holding new tokens only, so at the last step of example 05 the line `self.order.remove(key)`, which survives from the old code, stays dimmed in the middle of the four-line band; `highlight: refresh` on that step would light the whole segment instead. Judge the timing too: old highlights fade out with the leaving tokens, the new ones in with the arriving tokens.
 - [ ] 0.25.0: `docs/implementation-report-2026-10-06-c.md` (0.24.0) is copied to `docs/archive/`; `git rm` it in `docs/`, and `git add` the new report. If 0.24.0 is not committed yet, also `git add` `src/lattice/columns.py`, `user_manual/programs/vsum.scm` and `user_manual/programs/vsum.bbv`.
+- [ ] 0.26.0: `docs/implementation-report-2026-10-06-d.md` (0.25.0) is copied to `docs/archive/`; `git rm` it in `docs/`, and `git add` the new report `implementation-report-2026-10-06-e.md`.
+- [ ] 0.26.0: switch `cfg-parts` in `src/preface.md` to `avg-graph.B`, `avg-graph.A->L` and the like (another session was waiting to do it), and look at the manual's "Arrows at a CFG" on your screen. Only Chromium was available here: the arrows at parts use `getBoundingClientRect` of SVG groups and of a zero-size `rect` (the mark of an unlabelled edge), worth a look in Firefox.
+- [ ] 0.26.0: the mark of a labelled edge is sized from the label's length (7.3 px per character of the 12 px code font, `MARK_CH` in `bbv.js`), not measured; if your code font is wider, an arrowhead may touch the end of a `[1] [2]` label.
+- [ ] 0.26.0: found while writing edge kinds, not changed: `if x goto L else goto L` draws a single `true` edge, because the program table gives both successors the kind `true` (`_program_table` in `trace.py`); `cfg.A->L:false` is then LT063. Say if you want it fixed (the two edges would then be drawn on top of each other).
+- [ ] 0.26.0: `test_columns_change_width_however_a_step_is_reached` failed on the first full run of the session twice (an arrow 3 px off after a skip playback), on the 0.25.0 sources as well, and passed on every rerun; a timing margin in the test, probably, to watch.
 - [ ] 0.25.0: `panel_at=below` on the defense's `findv` analysis needs a smaller `height` than 470 (the panel and caption then go under the drawing, and at 470 they reach the footer); `direction: LR` with `below` is the other way to use the whole row.
 - [ ] 0.23.0: try three quick Shift+Right (Shift+Left) presses on a long animation (example 07, or 06). The window is one second from the first press (`BURST_WINDOW_MS` in `lattice.js`), the first two presses still move ten steps each, and the playback to the end uses the `last-step` interval (30 to 90 ms per step), so 60 steps take about two seconds; say if the window or the playback should be shorter. Only Chromium was available here.
 - [ ] 0.21.0: the abstract interpreter widens at every join, as the thesis's figure 2 does, so a bound found by a test is kept only if a threshold sits on it (`maxfix-1` for the defense's `findv`). Widening only at loop heads (targets of back edges, plain union elsewhere) was prototyped and keeps such bounds with `[sign, maxfix]` alone; say if you want it as an option.
@@ -54,8 +59,9 @@ Columns (0.24):
 Navigation and presenter view:
 - [ ] Arrow labels: a `label_at` option (tail, middle, head). A label beside the middle of a `from` arrow can overlap text when the two boxes are close; `curve` moves it for now. A tail label near the slide edge is pushed back inside and then sits over its own line, which shows through the spaces of the label.
 - [ ] Ids on inline spans (`[text]{#id}`, the attrs plugin of mdit-py-plugins), so that an arrow can point at a word of a paragraph. List items are covered by `LIST[N]` since 0.16; an id on an item would then also take `bullet`.
-- [ ] The manual's samples of `arrow` blocks ("Arrows that move", "Arrow anchors") show red error boxes: Pygments has an `arrow` lexer, which the Markdown lexer uses inside the sample fence.
-- [ ] Segments in `bbv-cfg` and `bbv-anim` drawings (a block or an instruction as an arrow target).
+- [ ] The manual's samples of `arrow` blocks ("Arrows that move", "Arrow anchors", "Arrows at a CFG") show red error boxes: Pygments has an `arrow` lexer, which the Markdown lexer uses inside the sample fence.
+- [ ] Instruction lines of a versioning block as arrow targets (`cfg.B[2]`, reusing the item grammar); blocks, versions and edges are named since 0.26. In `bbv-anim` a version's code differs from its block's (removed tests, specialized calls), which needs its own rule.
+- [ ] Parts of the other animations through the `part` hook (0.26): `trace.A` for a node of `graph-anim` or `tree-anim`, a cell of `array-anim` or `grid-anim`.
 - [ ] Enlarged elements (0.15) for other components: graph and tree nodes, grid cells, code blocks, plots. The core layer and the `zoom(inst, key)` hook are generic; each runtime needs a click handler and a hook.
 - [ ] Detour steps inside a tour: a detour step enters its detour as anywhere else and the tour successor applies only at the last step; decide whether a tour should be able to turn detour steps off.
 

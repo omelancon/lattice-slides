@@ -2071,3 +2071,196 @@ def test_panel_at_places_the_panel(tmp_path):
             pytest.skip("Chromium for Playwright is not installed")
         raise
     assert not errors
+
+
+PARTS_JS = """([inst, sel]) => {
+    const sec = document.querySelector('.lt-slide:not([hidden])');
+    const wrap = sec.querySelector(`[data-instance="${inst}"]`);
+    const svg = wrap.querySelector('svg');
+    const path = wrap.querySelector('.lt-arrow-line');
+    const s = sec.getBoundingClientRect(), scale = s.width / sec.offsetWidth;
+    const unit = (r) => ({x: (r.left - s.left) / scale, y: (r.top - s.top) / scale, w: r.width / scale, h: r.height / scale});
+    const els = Array.from(sec.querySelectorAll(sel));
+    let box = null;
+    for (const e of els) {
+        const b = unit(e.getBoundingClientRect());
+        box = box ? {x: Math.min(box.x, b.x), y: Math.min(box.y, b.y),
+                     w: Math.max(box.x + box.w, b.x + b.w) - Math.min(box.x, b.x),
+                     h: Math.max(box.y + box.h, b.y + b.h) - Math.min(box.y, b.y)} : b;
+    }
+    const shown = svg.style.visibility !== 'hidden' && !!path.getAttribute('d');
+    const head = shown ? path.getPointAtLength(path.getTotalLength()) : {x: NaN, y: NaN};
+    return {shown, head: {x: head.x, y: head.y}, box};
+}"""
+
+
+def _near_box(m, gap=14):
+    """The head sits just outside the box (within `gap` slide pixels of it), not inside it or far away."""
+    b, h = m["box"], m["head"]
+    dx = max(b["x"] - h["x"], 0, h["x"] - (b["x"] + b["w"]))
+    dy = max(b["y"] - h["y"], 0, h["y"] - (b["y"] + b["h"]))
+    inside = dx == 0 and dy == 0
+    return (not inside or b["w"] < 1) and max(dx, dy) <= gap
+
+
+CFG_PARTS_DECK = """
+# Parts {#parts}
+
+```bbv-cfg {#g program="find.bbv" height=560}
+```
+
+```arrow {#p}
+steps:
+  - {to: g.A, angle: 0, label: block}
+  - {to: "g.A->B:#t", angle: 180, label: branch}
+  - {to: g.J2->A, angle: 0, label: back}
+  - {to: g.F->G, angle: 0, label: return}
+```
+"""
+
+
+def test_arrow_at_parts_of_a_cfg(tmp_path):
+    """Spec 8.9 and 9.5: the head touches the block, or the mark at the middle of an edge, which covers its label."""
+    import shutil
+    from pathlib import Path
+
+    shutil.copy(Path(__file__).resolve().parent.parent / "user_manual" / "programs" / "find.bbv", tmp_path)
+    src = tmp_path / "talk.md"
+    src.write_text(CFG_PARTS_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    targets = ['.lt-bbv-node[data-vid="1"]', '.lt-bbv-edge[data-key="1->3:true"] > .lt-bbv-edge-mark',
+               '.lt-bbv-edge[data-key="14->1:goto"] > .lt-bbv-edge-mark', '.lt-bbv-edge[data-key="7->8:return"] > .lt-bbv-edge-mark']
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type in ("error", "warning") else None)
+            page.goto(out.as_uri())
+            page.wait_for_timeout(400)
+            heads = []
+            for i, sel in enumerate(targets):
+                if i:
+                    page.keyboard.press("ArrowRight")
+                    page.wait_for_timeout(500)
+                m = page.evaluate(PARTS_JS, ["parts/p", sel])
+                assert m["shown"] and m["box"] and _near_box(m), (i, m)
+                heads.append(m["head"])
+            # the mark of a labelled edge covers its label; the mark of an unlabelled edge is a point
+            label = page.evaluate("""() => {
+                const g = document.querySelector('.lt-bbv-edge[data-key="1->3:true"]');
+                const a = g.querySelector('.lt-bbv-edge-label').getBBox(), b = g.querySelector('.lt-bbv-edge-mark').getBBox();
+                const r = document.querySelector('.lt-bbv-edge[data-key="14->1:goto"] .lt-bbv-edge-mark').getBBox();
+                return {inside: a.x >= b.x - 1 && a.x + a.width <= b.x + b.width + 1 && a.y >= b.y - 1 && a.y + a.height <= b.y + b.height + 1,
+                        point: r.width === 0 && r.height === 0};
+            }""")
+            assert label == {"inside": True, "point": True}
+            # the same geometry on a fresh load of each step, in the preview and in print mode
+            paths = []
+            for i in range(len(targets)):
+                page.goto(out.as_uri() + f"#/parts/{i}")
+                page.wait_for_timeout(400)
+                m = page.evaluate(PARTS_JS, ["parts/p", targets[i]])
+                assert abs(m["head"]["x"] - heads[i]["x"]) < 1 and abs(m["head"]["y"] - heads[i]["y"]) < 1, i
+                paths.append(page.evaluate("document.querySelector('.lt-slide:not([hidden]) .lt-arrow-line').getAttribute('d')"))
+            page.goto(out.as_uri() + "?preview")
+            page.wait_for_timeout(300)
+            for i in (2, 1):
+                page.evaluate(f"window.postMessage({{lattice: 'preview', slide: 'parts', step: {i}}}, '*')")
+                page.wait_for_timeout(300)
+                assert page.evaluate("document.querySelector('.lt-slide:not([hidden]) .lt-arrow-line').getAttribute('d')") == paths[i]
+            page.goto(out.as_uri() + "?print")
+            page.wait_for_timeout(300)
+            plan = {"title": "t", "pageOf": {}, "sections": [],
+                    "pages": [{"slide": "parts", "step": i, "n": i + 1} for i in (3, 0, 2)]}
+            assert page.evaluate("plan => Lattice.print(plan)", plan) == 3
+            printed = page.evaluate("""() => Array.from(document.querySelectorAll('#lt-print-pages .lt-arrow-line'))
+                                       .map(e => e.getAttribute('d'))""")
+            assert printed == [paths[3], paths[0], paths[2]]
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
+RUN_PARTS_DECK = """
+# Run {#run}
+
+```bbv-anim {#t program="find.bbv" height=520 panel_at=below}
+```
+
+```arrow {#v}
+to: t.A2
+angle: 0
+```
+
+```arrow {#b color=muted}
+to: t.B
+angle: 0
+```
+
+```arrow {#w color=ink}
+to: t.B1
+angle: 180
+```
+"""
+
+
+def test_arrow_follows_versions_of_a_run(tmp_path):
+    """Spec 8.9 and 9.5: hidden while its version is not drawn, on it while it glides, around all versions of a block."""
+    import shutil
+    from pathlib import Path
+
+    shutil.copy(Path(__file__).resolve().parent.parent / "user_manual" / "programs" / "find.bbv", tmp_path)
+    src = tmp_path / "talk.md"
+    src.write_text(RUN_PARTS_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type in ("error", "warning") else None)
+            page.goto(out.as_uri())
+            page.wait_for_timeout(400)
+            vid = page.evaluate("""() => {
+                const d = JSON.parse(document.getElementById('lt-data-run/t').textContent);
+                const out = {};
+                for (const [k, v] of Object.entries(d.tables.versions)) out[v.label] = k;
+                return out;
+            }""")
+            a2 = f'.lt-bbv-node[data-vid="{vid["A2"]}"]'
+            blocks_b = f'.lt-bbv-node[data-vid="{vid["B1"]}"], .lt-bbv-node[data-vid="{vid["B2"]}"]'
+            assert not page.evaluate(PARTS_JS, ["run/v", a2])["shown"]  # A2 does not exist at frame 0
+            page.goto(out.as_uri() + "#/run/22")
+            page.wait_for_timeout(400)
+            m = page.evaluate(PARTS_JS, ["run/v", a2])
+            assert m["shown"] and _near_box(m), m
+            # frames 23 to 24 move B1: halfway through the glide the head is still beside the moving node
+            b1 = f'.lt-bbv-node[data-vid="{vid["B1"]}"]'
+            page.goto(out.as_uri() + "#/run/23")
+            page.wait_for_timeout(400)
+            before = page.evaluate(PARTS_JS, ["run/w", b1])["box"]
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(170)
+            mid = page.evaluate(PARTS_JS, ["run/w", b1])
+            page.wait_for_timeout(600)
+            end = page.evaluate(PARTS_JS, ["run/w", b1])
+            assert abs(end["box"]["x"] - before["x"]) > 5, "B1 should move between frames 23 and 24"
+            assert 2 < abs(mid["box"]["x"] - before["x"]) < abs(end["box"]["x"] - before["x"]) - 2, "not halfway"
+            assert _near_box(mid, gap=20) and _near_box(end), (mid, end)
+            # a block names all its drawn versions: the head is beside the box around B1 and B2
+            m = page.evaluate(PARTS_JS, ["run/b", blocks_b])
+            assert m["shown"] and _near_box(m), m
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors

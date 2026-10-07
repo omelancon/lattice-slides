@@ -182,6 +182,7 @@ def render_slide_components(deck: Deck, slide: Slide, cache: Cache, palette: dic
         if result.positions > 1 and comp_cls.runtime is None:
             diags.error("LT047", f"{b.name} has several positions but no runtime", b.loc)
 
+    parts = _resolve_parts(slide, blocks, results, diags)
     _check_ids(slide, blocks, results, diags)
 
     # substitute placeholders, register instances
@@ -231,6 +232,7 @@ def render_slide_components(deck: Deck, slide: Slide, cache: Cache, palette: dic
                 diags.error("LT033", f"component {blk.name!r} needs an #id to be used in a timeline", blk.loc)
     slide.tracks = tracks
     compile_steps(slide, diags)
+    _check_part_positions(slide, parts, diags)
 
 
 def _check_ids(slide: Slide, blocks, results, diags: Diagnostics) -> None:
@@ -281,6 +283,95 @@ def _check_arrow_targets(slide: Slide, blocks, results, diags: Diagnostics) -> N
             problem = _list_end_problem(outline, ref, path, bullet)
             if problem:
                 diags.error("LT063", f"arrow: step {i + 1}, `{end}`: {problem}", b.loc)
+
+
+def _resolve_parts(slide: Slide, blocks, results, diags: Diagnostics) -> list[tuple]:
+    """Arrow ends written `COMP.NAME` (spec 8.9): a component of the slide names the part through its `part`
+    hook, which gives the selector the runtime measures; an element name (`li.done`) keeps the end a CSS
+    selector; anything else is LT063. Returns the resolved parts, for the check of their positions."""
+    from .components.base import Part
+    from .components.visual import arrow_parts, is_element_name
+
+    by_id = {b.id: b for b in blocks}
+    found = []
+    for b in blocks:
+        if b.name != "arrow" or b.index not in results:
+            continue
+        data = results[b.index].data or {}
+        for i, end, comp, name in arrow_parts(data):
+            step = data["steps"][i]
+            written = f"{comp}.{name}"
+            where = f"arrow: step {i + 1}, `{end}`: {written!r}"
+            target = by_id.get(comp)
+            if target is None:
+                if is_element_name(comp):  # a CSS selector after all
+                    step[end] = written
+                    del step[f"{end}_name"]
+                    continue
+                diags.error("LT063", f"{where}: no component with the id {comp!r} on this slide", b.loc)
+                continue
+            if step.get(f"{end}_anchor") == "bullet":
+                diags.error("LT063", f"{where}: a `bullet` anchor needs a list item, not a part of a component", b.loc)
+                continue
+            comp_cls = REGISTRY[target.name]
+            if not callable(getattr(comp_cls, "part", None)):
+                diags.error("LT063", f"{where}: component {comp!r} ({target.name}) names no parts", b.loc)
+                continue
+            if target.index not in results:
+                continue  # its render failed, already reported
+            try:
+                part = comp_cls().part(results[target.index], name)
+            except ComponentError as e:
+                diags.error("LT063", f"{where}: {e}", b.loc)
+                continue
+            except Exception as e:  # noqa: BLE001
+                diags.error("LT022", f"{where}: {target.name} failed to name a part: {type(e).__name__}: {e}", b.loc)
+                continue
+            if not isinstance(part, Part):
+                diags.error("LT047", f"{target.name}: part() must return a Part", b.loc)
+                continue
+            step[f"{end}_part"] = part.selector
+            if part.warning:
+                diags.warn("LT046", f"{where}: {part.warning}", b.loc)
+            found.append((b, i, end, target, part, written))
+    return found
+
+
+def _spans(values: list[int]) -> str:
+    """[5, 6, 7, 9] gives "5 to 7, 9"."""
+    out, k = [], 0
+    while k < len(values):
+        j = k
+        while j + 1 < len(values) and values[j + 1] == values[j] + 1:
+            j += 1
+        out.append(str(values[k]) if j == k else f"{values[k]} to {values[j]}")
+        k = j + 1
+    return ", ".join(out)
+
+
+def _check_part_positions(slide: Slide, parts: list[tuple], diags: Diagnostics) -> None:
+    """LT046 when an arrow step points at a part drawn at none of the slide steps that show that step (spec
+    8.9). A part drawn at some of them only is hidden at the others, silently."""
+    if not parts or not slide.positions:
+        return
+    col = {t.id: k for k, t in enumerate(slide.tracks)}
+
+    def pos(row, ident):
+        k = col.get(ident)
+        return row[k] if k is not None and k < len(row) else 0
+
+    for arrow, i, end, comp, part, written in parts:
+        if part.drawn is None:
+            continue
+        steps = [n for n, row in enumerate(slide.positions) if pos(row, arrow.id) == i]
+        if not steps:
+            continue  # this arrow step is never shown
+        frames = sorted({pos(slide.positions[n], comp.id) for n in steps})
+        if not any(0 <= f < len(part.drawn) and part.drawn[f] for f in frames):
+            which = f"slide step{'s' if len(steps) > 1 else ''} {_spans(steps)}"
+            diags.warn("LT046", f"arrow: step {i + 1}, `{end}`: {written!r} is drawn at none of the steps that show "
+                       f"this arrow step ({which}: position{'s' if len(frames) > 1 else ''} {_spans(frames)} of "
+                       f"{comp.id!r}), so the arrow never appears there", arrow.loc)
 
 
 def _list_end_problem(outline: "HtmlOutline", ref: str, path: list[int] | None, bullet: bool) -> str | None:

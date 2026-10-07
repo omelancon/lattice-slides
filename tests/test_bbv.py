@@ -865,3 +865,147 @@ def instance_data(html: str, instance: str) -> str:
     import re
 
     return re.search(rf'id="lt-data-{re.escape(instance)}">(.*?)</script>', html, re.S).group(1)
+
+
+# ------------------------------------------------------------ parts of the drawings as arrow ends (spec 8.9, 9.5)
+
+def _parts_deck(deck, arrow_body: str, comp: str = "bbv-cfg", extra: str = ""):
+    find = (PROGRAMS / "find.bbv").read_text(encoding="utf-8")
+    return deck({"talk.md": f"# A\n```{comp} {{#g program=\"find.bbv\"}}\n```\n{extra}\n```arrow {{#w}}\n{arrow_body}```\n",
+                 "find.bbv": find})
+
+
+def _steps(d):
+    return d.instances["a/w"]["data"]["steps"]
+
+
+def test_arrow_at_blocks_and_edges_of_a_cfg(deck):
+    root = _parts_deck(deck, "steps: [g.A, g.find/B, g.A->L, g.A->L:false, 'g.A->B:#t', g.F->G, g.J2->A:goto]\n")
+    for cache in (False, True, True):  # the second and third builds read the render results from the cache
+        d = build_deck(root, use_cache=cache)
+        assert not d.diagnostics.items, d.diagnostics.items
+        steps = _steps(d)
+        assert all(s["to"] == "g" for s in steps)
+        assert steps[0]["to_part"] == '.lt-bbv-node:is([data-vid="1"]):not(.lt-gone)'  # A is the first block
+        assert steps[1]["to_part"] == '.lt-bbv-node:is([data-vid="3"]):not(.lt-gone)'  # A, L, B
+        edge = '.lt-bbv-edge:is([data-key="1->2:false"]):not(.lt-gone) > .lt-bbv-edge-mark'
+        assert steps[2]["to_part"] == steps[3]["to_part"] == edge
+        assert '[data-key="1->3:true"]' in steps[4]["to_part"]  # #t is true
+        assert ":return" in steps[5]["to_part"] and ":goto" in steps[6]["to_part"]
+
+
+@pytest.mark.parametrize("ref, message", [
+    ("g.Z", "no block 'Z'; the blocks are A, L, B"),
+    ("g.A->E", "no edge A->E in this drawing; A goes to B (true), L (false)"),
+    ("g.A->L:goto", "no goto edge A->L in this drawing (its edges to L are false)"),
+    ("g.L->A", "no edge leaves L"),
+    ("h.A", "no component with the id 'h' on this slide"),
+    ("g.A:true", "a kind (`:true`) belongs to an edge"),
+    ("g.foo/A", "function 'foo' is not drawn here (drawn: find)"),
+    ("g.A->L:maybe", "unknown edge kind 'maybe'"),
+    ("c.x", "component 'c' (code) names no parts"),
+    ("{to: g.A, to_anchor: bullet}", "a `bullet` anchor needs a list item, not a part"),
+])
+def test_arrow_part_errors_are_lt063(deck, ref, message):
+    root = _parts_deck(deck, f"steps: [{ref}]\n", extra="```code {#c lang=python}\nx = 1\n```\n")
+    items = check_deck(root, use_cache=False).items
+    assert [x.code for x in items] == ["LT063"] and message in items[0].message, items
+
+
+def test_arrow_part_from_end_and_selectors(deck):
+    """Both ends may be parts; an element name keeps `li.done` a CSS selector, but a component id wins."""
+    root = _parts_deck(deck, "steps:\n  - {from: g.L, to: g.B}\n  - li.done\n  - map.A\n",
+                       extra="```bbv-cfg {#map program=\"find.bbv\"}\n```\n")
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items, d.diagnostics.items
+    s = _steps(d)
+    assert s[0]["from"] == "g" and '[data-vid="2"]' in s[0]["from_part"] and '[data-vid="3"]' in s[0]["to_part"]
+    assert s[1]["to"] == "li.done" and "to_part" not in s[1] and "to_name" not in s[1]
+    assert s[2]["to"] == "map" and "to_part" in s[2]
+
+
+def test_arrow_part_qualified_when_functions_share_a_block(deck):
+    prog = "function f(x)\nA:  call g(x) -> B\nB:  return #res\nfunction g(y)\nA:  return y\n"
+    root = deck({"talk.md": "# A\n```bbv-cfg {#g program=\"p.bbv\"}\n```\n```arrow {#w}\nsteps: [g.A]\n```\n",
+                 "p.bbv": prog})
+    items = check_deck(root, use_cache=False).items
+    assert [x.code for x in items] == ["LT063"] and "write f/A or g/A" in items[0].message
+    root.write_text("# A\n```bbv-cfg {#g program=\"p.bbv\"}\n```\n```arrow {#w}\nsteps: [g.g/A, g.f/A->B]\n```\n")
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items
+    assert '[data-vid="3"]' in _steps(d)[0]["to_part"] and '[data-key="1->2:return"]' in _steps(d)[1]["to_part"]
+
+
+def test_arrow_part_of_several_kinds_needs_a_kind():
+    from lattice.components.base import ComponentError, RenderResult
+    from lattice.components.bbv import _Drawing
+
+    versions = {v: {"label": n, "name": n, "block": f"f/{n}", "function": "f"} for v, n in (("1", "A"), ("2", "L"))}
+    data = {"tables": {"versions": versions, "program": {"functions": [{"name": "f", "blocks": [
+        {"name": "A"}, {"name": "L"}]}]}},
+        "frames": {"format": "full", "count": 1, "frames": [
+            {"nodes": {"1": {}, "2": {}}, "edges": {"1->2:true": {}, "1->2:false": {}}}]}}
+    drawing = _Drawing(RenderResult("", data))
+    with pytest.raises(ComponentError, match="several kinds .*write A->L:false or A->L:true"):
+        drawing.part("A->L")
+    assert drawing.part("A->L:#f").selector.count("data-key") == 1
+
+
+def test_arrow_at_versions_of_a_run(deck):
+    """bbv-anim (spec 9.5): a block names its versions, a label one version; `drawn` follows the frames."""
+    root = _parts_deck(deck, "steps: [g.B, g.A2, g.A->B, g.B2]\n", comp="bbv-anim",
+                       extra="```timeline\ng end\nw ..end\n```\n")
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items, d.diagnostics.items
+    steps = _steps(d)
+    versions = d.instances["a/g"]["data"]["tables"]["versions"]
+    vid = {v["label"]: k for k, v in versions.items()}
+    assert steps[0]["to_part"] == f'.lt-bbv-node:is([data-vid="{vid["B1"]}"],[data-vid="{vid["B2"]}"]):not(.lt-gone)'
+    assert steps[1]["to_part"] == f'.lt-bbv-node:is([data-vid="{vid["A2"]}"]):not(.lt-gone)'
+    assert f'[data-key="{vid["A1"]}->{vid["B1"]}:true"]' in steps[2]["to_part"]
+    assert f'[data-key="{vid["A2"]}->{vid["B2"]}:true"]' in steps[2]["to_part"]
+    from lattice.components.bbv import BbvAnim
+
+    result = d.instances["a/g"]
+    from lattice.components.base import RenderResult
+
+    part = BbvAnim().part(RenderResult("", result["data"], result["positions"]), "B2")
+    assert part.drawn is not None and not part.drawn[0] and part.drawn[-1]
+
+
+def test_arrow_at_a_version_never_shown_is_lt046(deck):
+    root = _parts_deck(deck, "steps: [g.B2, g.A1, g.B2]\n", comp="bbv-anim",
+                       extra="```timeline\nw 1\ng ..5\nw 2, g end\n```\n")
+    items = check_deck(root, use_cache=False).items
+    # step 1 is shown at slide step 0 only, where the run is at frame 0: B2 does not exist yet. Step 3 is shown
+    # at the last frame, where B2 is drawn. A part drawn at some of its steps only would be silent.
+    assert [x.code for x in items] == ["LT046"], items
+    assert "step 1" in items[0].message and "'g.B2' is drawn at none of the steps" in items[0].message
+    assert "slide step 0: position 0 of 'g'" in items[0].message
+
+
+def test_arrow_part_block_wins_over_a_version_label(deck):
+    prog = "function f(x)\nA:  if fixnum?(x) goto B else goto B1\nB:  return x\nB1: return x\n"
+    root = deck({"talk.md": "# A\n```bbv-anim {#g program=\"p.bbv\"}\n```\n```arrow {#w}\nsteps: [g.B1, g.B]\n```\n"
+                            "```timeline\ng end\nw 1\n```\n", "p.bbv": prog})
+    d = build_deck(root, use_cache=False)
+    items = d.diagnostics.items
+    assert [x.code for x in items] == ["LT046"] and "is a block and also a version of block 'B'" in items[0].message
+    versions = d.instances["a/g"]["data"]["tables"]["versions"]
+    block_b1 = {k for k, v in versions.items() if v["block"] == "f/B1"}
+    assert _steps(d)[0]["to_part"] == f'.lt-bbv-node:is([data-vid="{block_b1.pop()}"]):not(.lt-gone)'
+
+
+def test_arrow_at_blocks_of_an_analysis(deck):
+    sum_to_n = (Path(__file__).resolve().parent.parent / "user_manual" / "programs" / "sum-to-n.bbv").read_text()
+    root = deck({"talk.md": "# A\n```abstract-interp-anim {#ai program=\"s.bbv\"}\n```\n```arrow {#w}\n"
+                            "steps: [ai.B, 'ai.B->C:#t', ai.C->B, ai.B->D]\n```\n```timeline\nw 1, ai 3\nai ..end\nw ..end\n```\n",
+                 "s.bbv": sum_to_n})
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items, d.diagnostics.items
+    assert '[data-vid="2"]' in d.instances["a/w"]["data"]["steps"][0]["to_part"]
+    from lattice.components.base import RenderResult
+    from lattice.components.bbv import AbstractInterpAnim
+
+    r = d.instances["a/ai"]
+    assert AbstractInterpAnim().part(RenderResult("", r["data"], r["positions"]), "B->D").drawn is None  # fixed CFG

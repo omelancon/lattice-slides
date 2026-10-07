@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.25.0">
+<meta name="generator" content="lattice 0.26.0">
 <title>Getting started with Lattice</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -376,6 +376,7 @@ html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone
 .lt-bbv-edge.st-active path{stroke:var(--lt-active);stroke-width:3}
 .lt-bbv-edge.st-gone{opacity:.22}
 .lt-bbv-edge.lt-gone{opacity:0}
+.lt-bbv-edge-mark{fill:none;stroke:none;pointer-events:none}
 .lt-bbv-edge-label{font-family:var(--lt-font-code);font-size:12px;fill:var(--lt-muted);paint-order:stroke;stroke:var(--lt-bg);stroke-width:5px}
 .lt-animate .lt-bbv-node rect,.lt-animate .lt-bbv-node,.lt-animate .lt-bbv-edge,.lt-animate .lt-bbv-edge path{transition:stroke .3s,stroke-width .3s,opacity .3s,fill .3s}
 
@@ -757,7 +758,7 @@ and every index from <code>hi</code> on holds a value at least <code>target</cod
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.25.0","meta":{"title":"Getting started with Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"welcome","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["welcome","markdown","talk-3","code","the-graph","the-loop-invariant","termination","diagram","thanks","proof"],"slides":{"welcome":{"title":"Getting started with Lattice","label":"Getting started with Lattice","scope":"root","next":{"slide":"markdown"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":8},"notes":"<p>Press <code>p<\/code> to open this presenter view in another window. Both windows stay in sync.<\/p>\n"},"markdown":{"title":"Every # heading is a slide","label":"Every # heading is a slide","scope":"root","next":{"slide":"talk-3"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"talk.md","line":16},"notes":"<p>The next slide has no title at all: it was written as a bare <code>#<\/code>.<\/p>\n"},"talk-3":{"title":"","label":"talk-3","scope":"root","next":{"slide":"code"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":28}},"code":{"title":"Code, highlighted at build time","label":"Code, highlighted at build time","scope":"root","next":{"slide":"the-graph"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"arrows","kind":"component","instance":"code/arrows"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":43}},"the-graph":{"title":"Nothing here is linear","label":"Nothing here is linear","scope":"root","next":{"slide":"diagram"},"branches":[],"detours":["invariant-detour"],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":82},"stepDetours":{"2":{"id":"invariant-detour","blocking":false}},"notes":"<p>The detour is also a step of this slide (<code>at=1<\/code>): the Right after the first bullet enters it,\nand the Right after returning reveals the second bullet. Press <code>w<\/code> to enter it at any time.<\/p>\n"},"the-loop-invariant":{"title":"The loop invariant","label":"The loop invariant","scope":"invariant-detour","next":{"slide":"termination"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":92}},"termination":{"title":"Termination","label":"Termination","scope":"invariant-detour","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":98}},"diagram":{"title":"Diagrams from Graphviz","label":"Diagrams from Graphviz","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":111}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":124}},"proof":{"title":"Proof of correctness","label":"Proof of correctness","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"talk.md","line":128}}},"detours":{"invariant-detour":{"origin":"the-graph","entry":"the-loop-invariant","label":"Why binary search terminates","key":"w","slides":["the-loop-invariant","termination"]}},"instances":{"code/c1":{"component":"code","slide":"code","data":null},"code/arrows":{"component":"arrow","slide":"code","data":"lt-data-code/arrows"},"diagram/c1":{"component":"dot","slide":"diagram","data":null}},"tours":{"quick":["welcome","markdown","code","the-graph","thanks"]},"mainPath":["welcome","markdown","talk-3","code","the-graph","diagram","thanks"],"overview":{"nodes":{"welcome":{"x":94.0,"y":63.0,"w":172.0,"h":26.0,"label":"Getting started with Latt…"},"markdown":{"x":293.0,"y":63.0,"w":166.0,"h":26.0,"label":"Every # heading is a slide"},"talk-3":{"x":433.0,"y":63.0,"w":54.0,"h":26.0,"label":"talk-3"},"code":{"x":574.5,"y":63.0,"w":169.0,"h":26.0,"label":"Code, highlighted at buil…"},"the-graph":{"x":760.5,"y":63.0,"w":143.0,"h":26.0,"label":"Nothing here is linear"},"the-loop-invariant":{"x":940.5,"y":21.0,"w":121.0,"h":26.0,"label":"The loop invariant"},"termination":{"x":1092.5,"y":21.0,"w":87.0,"h":26.0,"label":"Termination"},"diagram":{"x":940.5,"y":63.0,"w":157.0,"h":26.0,"label":"Diagrams from Graphviz"},"thanks":{"x":1092.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"},"proof":{"x":1232.5,"y":82.0,"w":133.0,"h":26.0,"label":"Proof of correctness"}},"edges":[{"from":"welcome","to":"markdown","kind":"next","path":"M180.3,63.0 C187.9,63.0 195.6,63.0 203.3,63.0 L209.7,63.0"},{"from":"markdown","to":"talk-3","kind":"next","path":"M376.3,63.0 C384.4,63.0 392.3,63.0 399.4,63.0 L405.8,63.0"},{"from":"talk-3","to":"code","kind":"next","path":"M460.2,63.0 C467.2,63.0 475.0,63.0 483.3,63.0 L489.7,63.0"},{"from":"code","to":"the-graph","kind":"next","path":"M659.1,63.0 C666.9,63.0 674.8,63.0 682.5,63.0 L689.0,63.0"},{"from":"the-graph","to":"the-loop-invariant","kind":"detour","path":"M816.8,49.9 C836.4,45.3 858.4,40.1 878.3,35.4 L884.2,34.1"},{"from":"the-graph","to":"diagram","kind":"next","path":"M832.1,63.0 C839.9,63.0 847.9,63.0 855.9,63.0 L862.0,63.0"},{"from":"the-graph","to":"proof","kind":"link","path":"M813.6,76.0 C829.1,79.3 846.1,82.4 862.0,84.0 C965.0,94.6 1085.1,91.1 1159.7,87.0 L1165.9,86.6"},{"from":"the-loop-invariant","to":"termination","kind":"next","path":"M1001.2,21.0 C1014.8,21.0 1029.2,21.0 1042.3,21.0 L1048.6,21.0"},{"from":"diagram","to":"thanks","kind":"next","path":"M1019.1,63.0 C1032.3,63.0 1045.3,63.0 1056.6,63.0 L1062.7,63.0"}],"width":1307.0,"height":103.0},"hash":"0eae80e1097fda5f"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.26.0","meta":{"title":"Getting started with Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"welcome","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["welcome","markdown","talk-3","code","the-graph","the-loop-invariant","termination","diagram","thanks","proof"],"slides":{"welcome":{"title":"Getting started with Lattice","label":"Getting started with Lattice","scope":"root","next":{"slide":"markdown"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":8},"notes":"<p>Press <code>p<\/code> to open this presenter view in another window. Both windows stay in sync.<\/p>\n"},"markdown":{"title":"Every # heading is a slide","label":"Every # heading is a slide","scope":"root","next":{"slide":"talk-3"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"talk.md","line":16},"notes":"<p>The next slide has no title at all: it was written as a bare <code>#<\/code>.<\/p>\n"},"talk-3":{"title":"","label":"talk-3","scope":"root","next":{"slide":"code"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":28}},"code":{"title":"Code, highlighted at build time","label":"Code, highlighted at build time","scope":"root","next":{"slide":"the-graph"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"arrows","kind":"component","instance":"code/arrows"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":43}},"the-graph":{"title":"Nothing here is linear","label":"Nothing here is linear","scope":"root","next":{"slide":"diagram"},"branches":[],"detours":["invariant-detour"],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":82},"stepDetours":{"2":{"id":"invariant-detour","blocking":false}},"notes":"<p>The detour is also a step of this slide (<code>at=1<\/code>): the Right after the first bullet enters it,\nand the Right after returning reveals the second bullet. Press <code>w<\/code> to enter it at any time.<\/p>\n"},"the-loop-invariant":{"title":"The loop invariant","label":"The loop invariant","scope":"invariant-detour","next":{"slide":"termination"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":92}},"termination":{"title":"Termination","label":"Termination","scope":"invariant-detour","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":98}},"diagram":{"title":"Diagrams from Graphviz","label":"Diagrams from Graphviz","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":111}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":124}},"proof":{"title":"Proof of correctness","label":"Proof of correctness","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"talk.md","line":128}}},"detours":{"invariant-detour":{"origin":"the-graph","entry":"the-loop-invariant","label":"Why binary search terminates","key":"w","slides":["the-loop-invariant","termination"]}},"instances":{"code/c1":{"component":"code","slide":"code","data":null},"code/arrows":{"component":"arrow","slide":"code","data":"lt-data-code/arrows"},"diagram/c1":{"component":"dot","slide":"diagram","data":null}},"tours":{"quick":["welcome","markdown","code","the-graph","thanks"]},"mainPath":["welcome","markdown","talk-3","code","the-graph","diagram","thanks"],"overview":{"nodes":{"welcome":{"x":94.0,"y":63.0,"w":172.0,"h":26.0,"label":"Getting started with Latt…"},"markdown":{"x":293.0,"y":63.0,"w":166.0,"h":26.0,"label":"Every # heading is a slide"},"talk-3":{"x":433.0,"y":63.0,"w":54.0,"h":26.0,"label":"talk-3"},"code":{"x":574.5,"y":63.0,"w":169.0,"h":26.0,"label":"Code, highlighted at buil…"},"the-graph":{"x":760.5,"y":63.0,"w":143.0,"h":26.0,"label":"Nothing here is linear"},"the-loop-invariant":{"x":940.5,"y":21.0,"w":121.0,"h":26.0,"label":"The loop invariant"},"termination":{"x":1092.5,"y":21.0,"w":87.0,"h":26.0,"label":"Termination"},"diagram":{"x":940.5,"y":63.0,"w":157.0,"h":26.0,"label":"Diagrams from Graphviz"},"thanks":{"x":1092.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"},"proof":{"x":1232.5,"y":82.0,"w":133.0,"h":26.0,"label":"Proof of correctness"}},"edges":[{"from":"welcome","to":"markdown","kind":"next","path":"M180.3,63.0 C187.9,63.0 195.6,63.0 203.3,63.0 L209.7,63.0"},{"from":"markdown","to":"talk-3","kind":"next","path":"M376.3,63.0 C384.4,63.0 392.3,63.0 399.4,63.0 L405.8,63.0"},{"from":"talk-3","to":"code","kind":"next","path":"M460.2,63.0 C467.2,63.0 475.0,63.0 483.3,63.0 L489.7,63.0"},{"from":"code","to":"the-graph","kind":"next","path":"M659.1,63.0 C666.9,63.0 674.8,63.0 682.5,63.0 L689.0,63.0"},{"from":"the-graph","to":"the-loop-invariant","kind":"detour","path":"M816.8,49.9 C836.4,45.3 858.4,40.1 878.3,35.4 L884.2,34.1"},{"from":"the-graph","to":"diagram","kind":"next","path":"M832.1,63.0 C839.9,63.0 847.9,63.0 855.9,63.0 L862.0,63.0"},{"from":"the-graph","to":"proof","kind":"link","path":"M813.6,76.0 C829.1,79.3 846.1,82.4 862.0,84.0 C965.0,94.6 1085.1,91.1 1159.7,87.0 L1165.9,86.6"},{"from":"the-loop-invariant","to":"termination","kind":"next","path":"M1001.2,21.0 C1014.8,21.0 1029.2,21.0 1042.3,21.0 L1048.6,21.0"},{"from":"diagram","to":"thanks","kind":"next","path":"M1019.1,63.0 C1032.3,63.0 1045.3,63.0 1056.6,63.0 L1062.7,63.0"}],"width":1307.0,"height":103.0},"hash":"0162073a9aaa0dff"}</script>
 <script type="application/json" id="lt-data-code/arrows">{"steps":[{"to":".lt-line[data-line=\"3\"]","from":"emphasis","angle":null,"length":120,"label":"the loop"},{"to":".lt-line[data-line=\"4\"]","from":"emphasis","angle":null,"length":120,"label":"the midpoint"},{"to":".lt-line[data-line=\"9\"]","from":null,"angle":315.0,"length":120,"label":"the answer"}],"color":"var(--lt-detour)","width":4,"curve":0.2}</script>
 <script type="module">
 // Lattice runtime: navigation state machine (spec section 7) and component host (spec section 10).
@@ -1994,6 +1995,15 @@ window.Lattice = Lattice;
     }
     try { return section.querySelector(ref); } catch (e) { return null; }
   }
+  // The elements of a part of a component (spec 8.9): `selector`, built by the component at build time, inside
+  // the component's element. None drawn: no arrow at this position, and nothing to warn about.
+  function findPart(section, comp, selector, slideId) {
+    const host = section.querySelector(`[data-instance="${CSS.escape(`${slideId}/${comp}`)}"]`);
+    if (!host) return null;
+    let els = [];
+    try { els = Array.from(host.querySelectorAll(selector)); } catch (e) { return null; }
+    return els.length ? els : null;
+  }
   const isList = (e) => !!e && (e.tagName === "UL" || e.tagName === "OL");
   // An item of a list (spec 8.9): `[2]` is the second `li`, `[-1]` the last; a further index descends into
   // the first list nested in that item. The build has checked the path (LT063).
@@ -2037,6 +2047,17 @@ window.Lattice = Lattice;
     let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
     for (const p of parts) {
       const q = rect(p);
+      l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom);
+    }
+    return { x: (l - s.left) / scale, y: (t - s.top) / scale, w: (r - l) / scale, h: (b - t) / scale };
+  }
+  // Box of a part: the union of the boxes of its elements, each as drawn (an SVG group by its bounding box).
+  function partBox(els, section) {
+    const s = section.getBoundingClientRect();
+    const scale = s.width / section.offsetWidth || 1;
+    let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+    for (const e of els) {
+      const q = e.getBoundingClientRect();
       l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom);
     }
     return { x: (l - s.left) / scale, y: (t - s.top) / scale, w: (r - l) / scale, h: (b - t) / scale };
@@ -2133,23 +2154,39 @@ window.Lattice = Lattice;
   const written = (ref, path) => ref + (path ? path.map((n) => `[${n}]`).join("") : "");
   // The box an end is measured on, and its anchor: a `bullet` end is the left side of the item's marker.
   function endBox(el, anchor, section) {
+    if (Array.isArray(el)) return [partBox(el, section), anchor];
     if (anchor === "bullet") return el.tagName === "LI" ? [markerBox(el, section), 180] : [box(el, section), 180];
     return [box(el, section), anchor];
   }
 
   // An element of a collapsed column (spec 3.8), or of one collapsing, is not pointed at.
-  const shutAway = (el) => !!el.closest(".lt-col-shut, .lt-col-closing");
+  const shutAway = (el) => !!(Array.isArray(el) ? el[0] : el).closest(".lt-col-shut, .lt-col-closing");
 
   function geometry(inst, step) {
+    if (step.to_part) {
+      const els = findPart(inst.section, step.to, step.to_part, inst.slideId);
+      if (!els) return null; // not drawn at this position (spec 8.9)
+      return geometryAt(inst, step, els);
+    }
     const target = find(inst.section, step.to, inst.slideId, step.to_item);
     if (!target) {
       console.warn(`lattice: arrow target ${written(step.to, step.to_item)} not found on slide ${inst.slideId}`);
       return null;
     }
+    return geometryAt(inst, step, target);
+  }
+
+  function geometryAt(inst, step, target) {
     if (shutAway(target)) return null;
     const [tb, toAnchor] = endBox(target, step.to_anchor, inst.section);
     step = Object.assign({}, step, { to_anchor: toAnchor });
-    const from = step.from ? find(inst.section, step.from, inst.slideId, step.from_item) : null;
+    let from = null;
+    if (step.from_part) {
+      from = findPart(inst.section, step.from, step.from_part, inst.slideId);
+      if (!from) return null;
+    } else if (step.from) {
+      from = find(inst.section, step.from, inst.slideId, step.from_item);
+    }
     if (from && shutAway(from)) return null;
     let g, label;
     if (from) {

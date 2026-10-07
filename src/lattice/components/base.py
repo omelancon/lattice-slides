@@ -44,6 +44,14 @@ class RenderResult:
     anchors: list[str] = field(default_factory=list)   # element ids this instance defines for authors (8.10)
 
 
+@dataclass
+class Part:
+    """A named part of an instance, for arrows (spec 8.2 and 8.9): what the arrow measures, and where."""
+    selector: str                     # CSS selector of elements inside the component's element; their boxes are united
+    drawn: list[bool] | None = None   # per position, whether something of the part is drawn; None: at every position
+    warning: str | None = None        # a remark reported as LT046 at the arrow
+
+
 class Component:
     name: ClassVar[str] = ""
     version: ClassVar[str] = "1"
@@ -55,6 +63,9 @@ class Component:
 
     def render(self, block, opts: BaseModel, ctx: "RenderContext") -> RenderResult:  # pragma: no cover
         raise NotImplementedError
+
+    # Optional (spec 8.2): `def part(self, result: RenderResult, name: str) -> Part`, raising ComponentError
+    # when `name` denotes nothing. It reads the (possibly cached) result only.
 
 
 REGISTRY: dict[str, type[Component]] = {}

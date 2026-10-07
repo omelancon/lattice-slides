@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.25.0
+author: Lattice 0.26.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1322,6 +1322,37 @@ show: [label]
 - `clickable=off` turns clicks off; `clickable_show: [label, code]` picks among `label`, `context`, `code` and `after` (the exit context)
 :::
 ::::
+
+# Arrows at a CFG {#bbv-arrows .dense}
+
+:::: columns
+::: column {width=1fr}
+```bbv-cfg {#parts program="programs/find.bbv" height=470}
+show: [label]
+```
+:::
+::: column {width=1fr}
+````markdown
+```arrow {#parts-tour}
+steps:
+  - {to: parts.A, label: entry block}
+  - {to: "parts.A->L:#f", label: test fails}
+  - {to: parts.J2->A, label: back edge}
+  - {to: parts.F->G, label: call returns}
+```
+````
+
+`COMP.NAME` points at a part of the component `COMP`: a block, `find/B` when several drawn functions have a `B`, or an edge `A->L`. Add `:true` or `:false` (`#t`, `#f`), `:goto` or `:return` when two edges join the same blocks. An edge is pointed at its middle, beside its label. In `bbv-anim`, `B` is every drawn version of `B` and `B1` one version, hidden while it is not drawn; `abstract-interp-anim` names its blocks too. A name that does not exist fails the build (LT063).
+:::
+::::
+
+```arrow {#parts-tour}
+steps:
+  - {to: parts.A, label: entry block, angle: 160, length: 150}
+  - {to: "parts.A->L:#f", label: test fails, angle: 200, length: 110}
+  - {to: parts.J2->A, label: back edge, angle: 20, length: 70}
+  - {to: parts.F->G, label: call returns, angle: 200, length: 140}
+```
 
 # Versioning options {#bbv-options .dense}
 

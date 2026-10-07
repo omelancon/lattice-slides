@@ -7,6 +7,7 @@
   const PAD_X = 10, PAD_Y = 6, LABEL_H = 22, LINE_H = 16;
   const AFTER_HEAD = ";; after:";  // as layout.AFTER_HEAD, which sizes the enlarged block
   const ZOOM_PAD = 6;  // room around an enlarged block for its outline
+  const MARK_CH = 7.3, MARK_PAD = 3, MARK_H = 15;  // the box of an edge label: 12px monospace characters
   const STATES = ["default", "new", "gone", "active"];
   let uid = 0;
 
@@ -189,16 +190,19 @@
     n.afterEls.forEach((t) => { t.style.display = finished ? "" : "none"; });
   }
 
+  // An edge: its path, its label at the middle of the curve, and the mark an arrow at the edge measures
+  // (spec 9.5): invisible, at the middle of the curve, covering the label when there is one.
   function edge(inst, key) {
     if (inst.edges[key]) return inst.edges[key];
-    const g = svg("g", { class: "lt-bbv-edge" });
+    const g = svg("g", { class: "lt-bbv-edge", "data-key": key });
     const path = svg("path", {});
     const label = svg("text", { class: "lt-bbv-edge-label", "text-anchor": "middle", "dominant-baseline": "middle" });
-    g.append(path, label);
+    const mark = svg("rect", { class: "lt-bbv-edge-mark", width: 0, height: 0 });
+    g.append(path, label, mark);
     inst.gEdges.appendChild(g);
     const [src, rest] = key.split("->");
     const [dst, kind] = rest.split(":");
-    return (inst.edges[key] = { g, path, label, src, dst, kind });
+    return (inst.edges[key] = { g, path, label, mark, src, dst, kind, chars: 0 });
   }
 
   function anchors(inst, at, e) {
@@ -257,6 +261,12 @@
       e.path.setAttribute("d", r.d);
       e.label.setAttribute("x", r.mid[0]);
       e.label.setAttribute("y", r.mid[1]);
+      // the label's box from its length in the monospace font of .lt-bbv-edge-label (12px), not measured
+      const w = e.chars ? e.chars * MARK_CH + 2 * MARK_PAD : 0, h = e.chars ? MARK_H : 0;
+      e.mark.setAttribute("x", r.mid[0] - w / 2);
+      e.mark.setAttribute("y", r.mid[1] - h / 2);
+      e.mark.setAttribute("width", w);
+      e.mark.setAttribute("height", h);
     }
   }
 
@@ -335,6 +345,7 @@
       e.g.setAttribute("class", `lt-bbv-edge k-${e.kind} st-${state}`);
       e.path.setAttribute("marker-end", `url(#${inst.id}-${STATES.includes(state) ? state : "default"})`);
       e.label.textContent = st.label || (e.kind === "true" ? "#t" : e.kind === "false" ? "#f" : "");
+      e.chars = e.label.textContent.length;
     }
     for (const [key, e] of Object.entries(inst.edges)) if (!live.has(key)) e.g.setAttribute("class", "lt-bbv-edge lt-gone");
     const from = inst.at;
@@ -359,6 +370,9 @@
     renderPanel(inst, f.panel);
     inst.caption.innerHTML = richHTML(inst, f.caption || "");
     fitCaption(inst.caption);
+    // arrows at parts of the drawing (spec 8.9, 10.4) measure again, frame by frame while the nodes glide
+    inst.root.dispatchEvent(new CustomEvent("lt-relayout", { bubbles: true,
+      detail: moves ? { animate: true, follow: DURATION } : { animate: !!info.animate } }));
   }
 
   // The panel of Lattice.renderPanel, with version labels as chips and the ∪ / ∇ steps of a

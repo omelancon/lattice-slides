@@ -22,4 +22,5 @@ Documents kept as they were written, for the history behind features. They are n
 | `implementation-report-2026-10-06.md` | Lattice 0.22.0: `null` steps of `arrow`, a position without an arrow |
 | `implementation-report-2026-10-06-b.md` | Lattice 0.23.0: three quick skip presses go to the last or first step |
 | `implementation-report-2026-10-06-c.md` | Lattice 0.24.0: columns that change width (the `width` timeline cue, collapsed columns) |
+| `implementation-report-2026-10-06-d.md` | Lattice 0.25.0: `panel_at`, the panel beside or under the drawing at any width |
 | `thesis.pdf` | The thesis on basic block versioning that the 0.4.0 and 0.5.0 work follows |

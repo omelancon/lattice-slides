@@ -15,6 +15,15 @@
     }
     try { return section.querySelector(ref); } catch (e) { return null; }
   }
+  // The elements of a part of a component (spec 8.9): `selector`, built by the component at build time, inside
+  // the component's element. None drawn: no arrow at this position, and nothing to warn about.
+  function findPart(section, comp, selector, slideId) {
+    const host = section.querySelector(`[data-instance="${CSS.escape(`${slideId}/${comp}`)}"]`);
+    if (!host) return null;
+    let els = [];
+    try { els = Array.from(host.querySelectorAll(selector)); } catch (e) { return null; }
+    return els.length ? els : null;
+  }
   const isList = (e) => !!e && (e.tagName === "UL" || e.tagName === "OL");
   // An item of a list (spec 8.9): `[2]` is the second `li`, `[-1]` the last; a further index descends into
   // the first list nested in that item. The build has checked the path (LT063).
@@ -58,6 +67,17 @@
     let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
     for (const p of parts) {
       const q = rect(p);
+      l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom);
+    }
+    return { x: (l - s.left) / scale, y: (t - s.top) / scale, w: (r - l) / scale, h: (b - t) / scale };
+  }
+  // Box of a part: the union of the boxes of its elements, each as drawn (an SVG group by its bounding box).
+  function partBox(els, section) {
+    const s = section.getBoundingClientRect();
+    const scale = s.width / section.offsetWidth || 1;
+    let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+    for (const e of els) {
+      const q = e.getBoundingClientRect();
       l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom);
     }
     return { x: (l - s.left) / scale, y: (t - s.top) / scale, w: (r - l) / scale, h: (b - t) / scale };
@@ -154,23 +174,39 @@
   const written = (ref, path) => ref + (path ? path.map((n) => `[${n}]`).join("") : "");
   // The box an end is measured on, and its anchor: a `bullet` end is the left side of the item's marker.
   function endBox(el, anchor, section) {
+    if (Array.isArray(el)) return [partBox(el, section), anchor];
     if (anchor === "bullet") return el.tagName === "LI" ? [markerBox(el, section), 180] : [box(el, section), 180];
     return [box(el, section), anchor];
   }
 
   // An element of a collapsed column (spec 3.8), or of one collapsing, is not pointed at.
-  const shutAway = (el) => !!el.closest(".lt-col-shut, .lt-col-closing");
+  const shutAway = (el) => !!(Array.isArray(el) ? el[0] : el).closest(".lt-col-shut, .lt-col-closing");
 
   function geometry(inst, step) {
+    if (step.to_part) {
+      const els = findPart(inst.section, step.to, step.to_part, inst.slideId);
+      if (!els) return null; // not drawn at this position (spec 8.9)
+      return geometryAt(inst, step, els);
+    }
     const target = find(inst.section, step.to, inst.slideId, step.to_item);
     if (!target) {
       console.warn(`lattice: arrow target ${written(step.to, step.to_item)} not found on slide ${inst.slideId}`);
       return null;
     }
+    return geometryAt(inst, step, target);
+  }
+
+  function geometryAt(inst, step, target) {
     if (shutAway(target)) return null;
     const [tb, toAnchor] = endBox(target, step.to_anchor, inst.section);
     step = Object.assign({}, step, { to_anchor: toAnchor });
-    const from = step.from ? find(inst.section, step.from, inst.slideId, step.from_item) : null;
+    let from = null;
+    if (step.from_part) {
+      from = findPart(inst.section, step.from, step.from_part, inst.slideId);
+      if (!from) return null;
+    } else if (step.from) {
+      from = find(inst.section, step.from, inst.slideId, step.from_item);
+    }
     if (from && shutAway(from)) return null;
     let g, label;
     if (from) {

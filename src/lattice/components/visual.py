@@ -381,6 +381,20 @@ _ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 # an item of a list: `facts[2]`, `facts[-1]`, `facts[2][1]` (spec 8.9); not a CSS selector
 _ITEM_RE = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*)((?:\[-?\d+\])+)$")
 _THEME_COLORS = {"accent", "detour", "muted", "ink"}
+# a part of a component: `cfg.B`, `cfg.L->B:false` (spec 8.9); component ids have no dot
+_PART_RE = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*)\.(.+)$")
+# `li.done` stays a CSS selector: a head that names an HTML or SVG element is a type selector (spec 8.9)
+ELEMENT_NAMES = frozenset("""
+a abbr address area article aside audio b base bdi bdo blockquote body br button canvas caption cite code col
+colgroup data datalist dd del details dfn dialog div dl dt em embed fieldset figcaption figure footer form h1 h2
+h3 h4 h5 h6 head header hgroup hr html i iframe img input ins kbd label legend li link main map mark math menu
+meta meter nav noscript object ol optgroup option output p param picture pre progress q rp rt ruby s samp script
+search section select slot small source span strong style sub summary sup table tbody td template textarea tfoot
+th thead time title tr track u ul var video wbr
+svg g defs desc symbol use image switch foreignObject path rect circle ellipse line polyline polygon text tspan
+textPath marker pattern clipPath mask linearGradient radialGradient stop filter view animate animateMotion
+animateTransform set metadata
+""".split())
 
 
 def anchor_value(a: Anchor | None) -> float | str | None:
@@ -420,6 +434,8 @@ class Arrow(Component):
                 raise ComponentError(f"arrow: step {i + 1} has `from_anchor` but no `from`")
             to, to_item = split_item(e.to, i)
             frm, from_item = split_item(frm, i) if frm is not None else (None, None)
+            to, to_name = split_part(to) if not to_item else (to, None)
+            frm, from_name = split_part(frm) if frm is not None and not from_item else (frm, None)
             step = {
                 "to": to,
                 "from": frm,
@@ -437,6 +453,10 @@ class Arrow(Component):
                 step["to_item"] = to_item
             if from_item:
                 step["from_item"] = from_item
+            if to_name:  # resolved by the build once every component of the slide has rendered (render.py)
+                step["to_name"] = to_name
+            if from_name:
+                step["from_name"] = from_name
             steps.append(step)
         if opts.from_anchor is not None and not any(s and s["from"] for s in steps):
             raise ComponentError("arrow: `from_anchor` needs `from`")
@@ -463,6 +483,30 @@ def split_item(ref: str, i: int) -> tuple[str, list[int] | None]:
     return m.group(1), path
 
 
+def split_part(ref: str) -> tuple[str, str | None]:
+    """`cfg.L->B:false` gives ("cfg", "L->B:false"); any other reference is returned as it is. The build then
+    decides with the slide in hand (render.py, spec 8.9): a component id of the slide makes it a part, an HTML or
+    SVG element name (`li.done`) a CSS selector again, anything else is LT063."""
+    m = _PART_RE.match(ref)
+    return (m.group(1), m.group(2)) if m else (ref, None)
+
+
+def is_element_name(name: str) -> bool:
+    return name in ELEMENT_NAMES or name.lower() in ELEMENT_NAMES
+
+
+def arrow_parts(data: dict) -> list[tuple[int, str, str, str]]:
+    """The ends written `COMP.NAME`: (step, end, component id, name)."""
+    out = []
+    for i, s in enumerate(data.get("steps", [])):
+        if s is None:
+            continue
+        for end in ("to", "from"):
+            if s.get(f"{end}_name"):
+                out.append((i, end, s[end], s[f"{end}_name"]))
+    return out
+
+
 def arrow_targets(data: dict) -> list[str]:
     """Bare element ids an arrow refers to (for the build-time check of render.py); the list of an item
     path is checked with the path (`arrow_ends`)."""
@@ -472,7 +516,7 @@ def arrow_targets(data: dict) -> list[str]:
             continue
         for end in ("to", "from"):
             ref = s.get(end)
-            if ref and _ID_RE.match(ref) and not s.get(f"{end}_item"):
+            if ref and _ID_RE.match(ref) and not s.get(f"{end}_item") and not s.get(f"{end}_name"):
                 out.append(ref)
     return out
 
@@ -487,6 +531,6 @@ def arrow_ends(data: dict) -> list[tuple[int, str, str, list[int] | None, bool]]
         for end in ("to", "from"):
             ref, path = s.get(end), s.get(f"{end}_item")
             bullet = s.get(f"{end}_anchor") == "bullet"
-            if ref and (path or bullet):
+            if ref and (path or bullet) and not s.get(f"{end}_name"):  # a part: render.py checks its anchor
                 out.append((i, end, ref, path, bullet))
     return out

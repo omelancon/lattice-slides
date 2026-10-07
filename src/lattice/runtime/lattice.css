@@ -368,6 +368,7 @@ html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone
 .lt-bbv-edge.st-active path{stroke:var(--lt-active);stroke-width:3}
 .lt-bbv-edge.st-gone{opacity:.22}
 .lt-bbv-edge.lt-gone{opacity:0}
+.lt-bbv-edge-mark{fill:none;stroke:none;pointer-events:none}
 .lt-bbv-edge-label{font-family:var(--lt-font-code);font-size:12px;fill:var(--lt-muted);paint-order:stroke;stroke:var(--lt-bg);stroke-width:5px}
 .lt-animate .lt-bbv-node rect,.lt-animate .lt-bbv-node,.lt-animate .lt-bbv-edge,.lt-animate .lt-bbv-edge path{transition:stroke .3s,stroke-width .3s,opacity .3s,fill .3s}
 

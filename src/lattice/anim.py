@@ -98,6 +98,17 @@ def frame_store(frames: list[dict], max_full_bytes: int = 2 * 1024 * 1024, keyfr
             "keyframes": keyframes, "deltas": deltas}
 
 
+def frames_of(store: dict) -> list[dict]:
+    """The frames of a frame store (spec 9.3), full or keyframed, as full states."""
+    if store.get("format") != "keyframed":
+        return list(store.get("frames", []))
+    out: list[dict] = []
+    interval = store["interval"]
+    for i in range(store["count"]):
+        out.append(store["keyframes"][i // interval] if i % interval == 0 else apply_delta(out[-1], store["deltas"][i]))
+    return out
+
+
 class GraphTrace(Trace):
     """Trace over a graph. State: ``nodes``, ``edges``, ``panel``, ``caption``.
 
