@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-06, after 0.26.0 (`implementation-report-2026-10-06-e.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-06, after 0.26.1 (`implementation-report-2026-10-06-e.md`, section 4 for the patch). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
@@ -33,7 +33,7 @@ Updated 2026-10-06, after 0.26.0 (`implementation-report-2026-10-06-e.md`). Item
 - [ ] 0.18.0: watch the bug-fix slide of example 05 (`highlight=changed`) and the manual's "Highlights in a morph" on your screen. `changed` lights rows holding new tokens only, so at the last step of example 05 the line `self.order.remove(key)`, which survives from the old code, stays dimmed in the middle of the four-line band; `highlight: refresh` on that step would light the whole segment instead. Judge the timing too: old highlights fade out with the leaving tokens, the new ones in with the arriving tokens.
 - [ ] 0.25.0: `docs/implementation-report-2026-10-06-c.md` (0.24.0) is copied to `docs/archive/`; `git rm` it in `docs/`, and `git add` the new report. If 0.24.0 is not committed yet, also `git add` `src/lattice/columns.py`, `user_manual/programs/vsum.scm` and `user_manual/programs/vsum.bbv`.
 - [ ] 0.26.0: `docs/implementation-report-2026-10-06-d.md` (0.25.0) is copied to `docs/archive/`; `git rm` it in `docs/`, and `git add` the new report `implementation-report-2026-10-06-e.md`.
-- [ ] 0.26.0: switch `cfg-parts` in `src/preface.md` to `avg-graph.B`, `avg-graph.A->L` and the like (another session was waiting to do it), and look at the manual's "Arrows at a CFG" on your screen. Only Chromium was available here: the arrows at parts use `getBoundingClientRect` of SVG groups and of a zero-size `rect` (the mark of an unlabelled edge), worth a look in Firefox.
+- [ ] 0.26.0, updated in 0.26.1: look at the manual's "Arrows at a CFG" on your screen. `cfg-parts` in the defense's `src/preface.md` now uses `avg-graph.B`, `avg-graph.A->L` and `avg-graph.L`. Its arrow at the unlabelled edge `A->L` was drawn at the top left in Firefox (a mark without area); fixed in 0.26.1 and checked in Firefox and Chromium, with a test that needs Playwright's Firefox (`playwright install firefox`, otherwise it skips).
 - [ ] 0.26.0: the mark of a labelled edge is sized from the label's length (7.3 px per character of the 12 px code font, `MARK_CH` in `bbv.js`), not measured; if your code font is wider, an arrowhead may touch the end of a `[1] [2]` label.
 - [ ] 0.26.0: found while writing edge kinds, not changed: `if x goto L else goto L` draws a single `true` edge, because the program table gives both successors the kind `true` (`_program_table` in `trace.py`); `cfg.A->L:false` is then LT063. Say if you want it fixed (the two edges would then be drawn on top of each other).
 - [ ] 0.26.0: `test_columns_change_width_however_a_step_is_reached` failed on the first full run of the session twice (an arrow 3 px off after a skip playback), on the 0.25.0 sources as well, and passed on every rerun; a timing margin in the test, probably, to watch.

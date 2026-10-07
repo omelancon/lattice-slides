@@ -71,13 +71,25 @@
     }
     return { x: (l - s.left) / scale, y: (t - s.top) / scale, w: (r - l) / scale, h: (b - t) / scale };
   }
+  // The client box of an element of a part. Firefox gives an SVG element without area (the mark of an
+  // unlabelled edge, a point) an empty box at the origin, from getBoundingClientRect and getBBox alike, so
+  // such an element is placed from its own coordinates: a rect's x and y, mapped to the page by its CTM.
+  function clientBox(e) {
+    const q = e.getBoundingClientRect();
+    if (q.width || q.height || !(e instanceof SVGGraphicsElement)) return q;
+    const m = e.getScreenCTM();
+    if (!m) return q;
+    const b = e instanceof SVGRectElement ? { x: e.x.baseVal.value, y: e.y.baseVal.value } : e.getBBox();
+    const x = m.a * b.x + m.c * b.y + m.e, y = m.b * b.x + m.d * b.y + m.f;
+    return { left: x, top: y, right: x, bottom: y, width: 0, height: 0 };
+  }
   // Box of a part: the union of the boxes of its elements, each as drawn (an SVG group by its bounding box).
   function partBox(els, section) {
     const s = section.getBoundingClientRect();
     const scale = s.width / section.offsetWidth || 1;
     let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
     for (const e of els) {
-      const q = e.getBoundingClientRect();
+      const q = clientBox(e);
       l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom);
     }
     return { x: (l - s.left) / scale, y: (t - s.top) / scale, w: (r - l) / scale, h: (b - t) / scale };

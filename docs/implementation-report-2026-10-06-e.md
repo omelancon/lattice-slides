@@ -1,4 +1,4 @@
-# Implementation report: arrows at the parts of a CFG (Lattice 0.26.0, 2026-10-06)
+# Implementation report: arrows at the parts of a CFG (Lattice 0.26.0, 2026-10-06; patch 0.26.1, section 4)
 
 Pointing an arrow at a block or an edge of a versioning drawing meant a CSS selector into the runtime's SVG (`[data-instance="preface/avg-graph"] .lt-bbv-node[data-vid='4']`, the first `.lt-bbv-edge.k-goto`): an internal version number instead of the block's label, an edge found by its order in the page, and nothing the build could check. An arrow end may now name a part of a component, `COMP.NAME`: `cfg.B`, `cfg.A->L`, `cfg.L->B:false`, resolved and checked at build time. The rules are in spec 8.2 (the `part` hook), 8.9 (parts as arrow ends) and 9.5 (what the versioning drawings name), with 10.4, 12 and 15; the rationale is decision 35 of the design report. The design and Olivier's answers are in the project document `claude/v0.26-design.md`.
 
@@ -49,3 +49,13 @@ One refinement during the work: the design said a head that is an element name s
 - Instruction lines as targets (`cfg.B[2]`) and parts of the other animations are follow-ups (roadmap, "Later").
 - The manual's sample of an `arrow` block shows the red boxes of Pygments' `arrow` lexer, like the other arrow slides (todo).
 - `docs/implementation-report-2026-10-06-d.md` is copied to `docs/archive/`; the copy left in `docs/` needs a `git rm`.
+
+## 4. Patch 0.26.1: arrows at an unlabelled edge in Firefox
+
+Found on the defense deck (`src/preface.md`, the step "jump" of `cfg-parts`, `to: avg-graph.A->L`): in Firefox the arrow at an unlabelled edge was drawn at the top left of the slide, while Chromium placed it beside the edge. The arrows at blocks and at labelled edges were right in both browsers.
+
+- **Cause.** The mark of an unlabelled edge is a `rect` of size 0 (section 1). Firefox gives an SVG element without area an empty box at the origin, from `getBoundingClientRect` and from `getBBox` alike; Chromium reports the rect's position. `partBox` in `arrow.js` united those boxes, so the head aimed at the origin.
+- **Fix** (`arrow.js`, `clientBox`). The box of an element of a part is its `getBoundingClientRect`, unless it is an SVG element without area: then it is the point of its own coordinates (a rect's `x` and `y`; `getBBox` for another element) mapped to the page by `getScreenCTM`. Boxes with an area are measured as before, so blocks, labelled edges, code, list items and bullets are unchanged; in Chromium the mark of an unlabelled edge gives the same point as before.
+- **Test.** `test_arrow_at_an_unlabelled_edge_in_firefox` (`test_runtime.py`) builds the deck of `test_arrow_at_parts_of_a_cfg` and, in Firefox, checks the head beside the back edge `g.J2->A`, stepped to and loaded at that step, against the mark's position computed from its attributes and CTM (not from the box the browser reports). It fails on the 0.26.0 runtime (the head at y = 127, near the top of the slide) and passes with the fix. It skips, saying why, where Playwright's Firefox is not installed (optional in `docs/SKILL.md`, Setup).
+- **Verification.** `pytest -rs`: 328 passed, no skips, with Chromium and Firefox for Playwright installed. The defense deck's three arrows (`avg-graph.B`, `avg-graph.A->L`, `avg-graph.L`) checked in Firefox and Chromium at 1280x720 and 1920x1080, stepped to and loaded by URL. Examples and manual rebuilt; `scripts/check_docs.py` clean.
+- **Docs.** Version 0.26.1 (README, spec, design report, manual, this report); SKILL.md (the test in the suites table, a line in the pitfall on parts); todo. No rule changed, so spec section 15 has no row for this patch.

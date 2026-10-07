@@ -2187,6 +2187,54 @@ def test_arrow_at_parts_of_a_cfg(tmp_path):
     assert not errors
 
 
+def test_arrow_at_an_unlabelled_edge_in_firefox(tmp_path):
+    """Spec 8.9 and 9.5, in Firefox: the mark of an unlabelled edge has no area, and Firefox gives such an SVG
+    element an empty box at the origin; the head must still reach the middle of the edge (0.26.1)."""
+    import shutil
+    from pathlib import Path
+
+    shutil.copy(Path(__file__).resolve().parent.parent / "user_manual" / "programs" / "find.bbv", tmp_path)
+    src = tmp_path / "talk.md"
+    src.write_text(CFG_PARTS_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    # where the mark is, from its own coordinates rather than from the box the browser reports
+    mark_js = """() => {
+        const sec = document.querySelector('.lt-slide:not([hidden])');
+        const s = sec.getBoundingClientRect(), scale = s.width / sec.offsetWidth;
+        const r = sec.querySelector('.lt-bbv-edge[data-key="14->1:goto"] > .lt-bbv-edge-mark');
+        const m = r.getScreenCTM(), x = r.x.baseVal.value, y = r.y.baseVal.value;
+        const p = {x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f};
+        return {x: (p.x - s.left) / scale, y: (p.y - s.top) / scale, w: 0, h: 0};
+    }"""
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.firefox.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            # stepped to, and loaded at that step
+            for how in ("step", "load"):
+                if how == "step":
+                    page.goto(out.as_uri())
+                    page.wait_for_timeout(400)
+                    for _ in range(2):
+                        page.keyboard.press("ArrowRight")
+                        page.wait_for_timeout(500)
+                else:
+                    page.goto(out.as_uri() + "#/parts/2")
+                    page.wait_for_timeout(400)
+                m = page.evaluate(PARTS_JS, ["parts/p", '.lt-bbv-edge[data-key="14->1:goto"] > .lt-bbv-edge-mark'])
+                m["box"] = page.evaluate(mark_js)
+                assert m["shown"] and m["box"]["x"] > 50 and _near_box(m), (how, m)
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Firefox for Playwright is not installed (optional, docs/SKILL.md, Setup)")
+        raise
+    assert not errors
+
+
 RUN_PARTS_DECK = """
 # Run {#run}
 
