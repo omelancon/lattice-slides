@@ -2,10 +2,13 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-07, after 0.26.3 (`implementation-report-2026-10-06-e.md`, sections 5 to 7 for the patches). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-07, after 0.27.0 (`implementation-report-2026-10-07.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
+- [ ] 0.27.0: try two quick Shift+Right (Shift+Left) presses on your own slides and on the manual's "Checkpoints" and "Lambda versioning and abstract interpretation" (two runs, `lv` then `ai`). The window is 500 ms from the first press (`BURST_WINDOW_MS` in `lattice.js`); a lone press waits at a checkpoint for what is left of that window before going on to its ten steps, which shows as a short pause when the checkpoint is a few steps away. Say if the window should be shorter, or the pause is noticeable. Only Chromium was used for the runtime tests (Firefox ran the existing Firefox test).
+- [ ] 0.27.0: Home now plays to the first step of the slide; the start of the deck moved to Shift+Home. A deck of yours whose front matter binds `home` keeps its binding. A slide that mixes a trace with `code N, trace M` lines is split at those lines (decision 37); say if you would rather a step that moves the run's track continue the run.
+- [ ] 0.27.0: `docs/implementation-report-2026-10-06-e.md` (0.26) is copied to `docs/archive/`; `git rm` it in `docs/`, `git add` the new report `implementation-report-2026-10-07.md` and the archived copy; `git add -u` covers the rest.
 - [ ] 0.5: review of the two abstract interpretation slides of example 07 (contexts show every live variable, including `n`; see the 0.5.0 addendum of `archive/implementation-report.md`).
 - [ ] 0.6.0: a look at the arrow and at the Keybindings grid of the presenter view in Firefox (only Chromium was available in the session; the geometry uses `getBoundingClientRect`, `Range.getBoundingClientRect` and `getBBox`, which both engines support). Since 0.16.0 the arrows at bullets were checked in Firefox 142 (the runtime test and the manual slide).
 - [ ] 0.6.0: try the detour step of example 01 (`at=1` on the invariant detour of "Nothing here is linear") and the skip keys on a long animation (example 06 or 07) to judge the playback interval (30 to 90 ms per step, `playSteps` in `lattice.js`).
@@ -40,7 +43,6 @@ Updated 2026-10-07, after 0.26.3 (`implementation-report-2026-10-06-e.md`, secti
 - [ ] 0.26.2: nothing was committed; the changes are in the working tree (no new files). `git add -u` and commit when you have read them.
 - [ ] 0.26.3: the fix of `fx (-∞, ∞)` is in the working tree (no new files): `git add -u` and commit when you have read it. A fixnum with no interval now prints `fx`; say if you would rather see `fx [minfix, maxfix]`.
 - [ ] 0.25.0: `panel_at=below` on the defense's `findv` analysis needs a smaller `height` than 470 (the panel and caption then go under the drawing, and at 470 they reach the footer); `direction: LR` with `below` is the other way to use the whole row.
-- [ ] 0.23.0: try three quick Shift+Right (Shift+Left) presses on a long animation (example 07, or 06). The window is one second from the first press (`BURST_WINDOW_MS` in `lattice.js`), the first two presses still move ten steps each, and the playback to the end uses the `last-step` interval (30 to 90 ms per step), so 60 steps take about two seconds; say if the window or the playback should be shorter. Only Chromium was available here.
 - [ ] 0.21.0: the abstract interpreter widens at every join, as the thesis's figure 2 does, so a bound found by a test is kept only if a threshold sits on it (`maxfix-1` for the defense's `findv`). Widening only at loop heads (targets of back edges, plain union elsewhere) was prototyped and keeps such bounds with `[sign, maxfix]` alone; say if you want it as an option.
 - [ ] 0.20.0: a long CFG (the defense's `findv`, 11 blocks in 7 ranks) is drawn small in either direction, since block bands stack ranks in one line or one column; a layout that folds long chains (two columns of ranks) would make such drawings readable without clicking blocks.
 - [ ] 0.19.0: other attribute lines inside list items (an attribute line inside a block quote, or before a fenced block in an item, which stays a code block without a component) were left as before; say if you need them.
@@ -62,6 +64,8 @@ Navigation and presenter view:
 - [ ] Instruction lines of a versioning block as arrow targets (`cfg.B[2]`, reusing the item grammar); blocks, versions and edges are named since 0.26. In `bbv-anim` a version's code differs from its block's (removed tests, specialized calls), which needs its own rule.
 - [ ] Parts of the other animations through the `part` hook (0.26): `trace.A` for a node of `graph-anim` or `tree-anim`, a cell of `array-anim` or `grid-anim`.
 - [ ] Enlarged elements (0.15) for other components: graph and tree nodes, grid cells, code blocks, plots. The core layer and the `zoom(inst, key)` hook are generic; each runtime needs a click handler and a hook.
+- [ ] Checkpoints (0.27): an author override (a `checkpoint` line in the timeline, or `nocheckpoint`), ticks at the checkpoints on the presenter scrubber, a "twice Shift+Right: to step k" line in the moves list, and `pdf=checkpoints` to print a slide at each of its checkpoints.
+- [ ] Two global actions bound to one key (a deck rebinding `first-step: End`, say) are not reported: the later action in `DEFAULT_KEYS` order wins. A warning would need a new code.
 - [ ] Detour steps inside a tour: a detour step enters its detour as anywhere else and the tour successor applies only at the last step; decide whether a tour should be able to turn detour steps off.
 
 Code (0.12):

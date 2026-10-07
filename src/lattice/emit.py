@@ -112,6 +112,8 @@ def deck_json(deck: Deck, *, data_urls: bool = False) -> dict:
             entry["transition"] = s.transition
         if s.step_detours:
             entry["stepDetours"] = {str(k): v for k, v in sorted(s.step_detours.items())}
+        if s.checkpoints[:-1]:  # without the field, the last step is the only checkpoint (spec 6.5)
+            entry["checkpoints"] = s.checkpoints
         if s.column_states:
             entry["columns"] = s.column_states
         if s.notes_html:

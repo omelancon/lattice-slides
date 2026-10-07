@@ -388,6 +388,51 @@ def test_detour_steps(deck):
     assert select_steps("last", a.steps, set(a.step_detours)) == [4]
 
 
+
+# ---------------------------------------------------------------- checkpoints (spec 6.5)
+
+def checkpoint_slide(deck, timeline: str):
+    root = sugar_deck(deck, timeline)
+    if "detour" in timeline:
+        root.write_text(root.read_text() + "::: detour {#d1}\n# Inside\n:::\n")
+    return build_deck(root, use_cache=False).slides["a"]
+
+
+@pytest.mark.parametrize("timeline, expected", [
+    # runs of one kind end at a checkpoint; a step moving two tracks is a kind of its own; the follower `c`
+    # never counts; a non-blocking detour step does not split the run of `g`
+    ("reveal ..3\ng ..2\ndetour d1\ng ..end\nreveal ..+2\nreveal end, g 0", [3, 8, 10, 11]),
+    ("reveal ..3\ng ..2\ndetour d1 blocking\ng ..end\nreveal ..+2\nreveal end, g 0", [3, 5, 8, 10, 11]),
+    ("reveal ..3\ndetour d1\ng ..end", [3, 8]),            # between two runs: the step before the detour step
+    ("reveal ..3\ng ..end\ndetour d1", [3, 7, 8]),         # a detour step at the end: the last step is one too
+    ("reveal 2\nreveal 2\nreveal ..4\ng end", [4, 5]),    # a cue that changes nothing (LT030) splits nothing
+    ("reveal ..+2, g ..+2\nreveal ..end", [2, 6]),         # lockstep, then one track
+    ("g ..end\nreveal ..end", [4, 10]),
+])
+def test_checkpoints(deck, timeline, expected):
+    """Spec 6.5: the last step of each run of steps of one kind, and the last step."""
+    assert checkpoint_slide(deck, timeline).checkpoints == expected
+
+
+def test_checkpoints_of_simple_slides_and_detours_at_steps(deck):
+    root = deck({"talk.md": "# A\n{.reveal}\n- x\n- y\n- z\n\n# B\n"})
+    d = build_deck(root, use_cache=False)
+    assert d.slides["a"].checkpoints == [3] and d.slides["b"].checkpoints == [0]  # one track: the last step only
+    from lattice.emit import deck_json
+
+    slides = deck_json(d)["slides"]
+    assert "checkpoints" not in slides["a"] and "checkpoints" not in slides["b"]  # the default, left out
+    root = deck({"talk.md": DETOUR_STEPS})
+    d = build_deck(root, use_cache=False)
+    assert d.slides["a"].checkpoints == [1, 4]  # `at=1 blocking=true` ends the run before it
+    assert d.slides["b"].checkpoints == [3, 4]  # a non-blocking detour step is passed, a blocking one is not
+    assert deck_json(d)["slides"]["b"]["checkpoints"] == [3, 4]
+
+
+def test_checkpoints_with_width_cues(deck):
+    root = width_deck(deck, "reveal 1\nwidth l=0\ng ..end\nwidth l=1fr r=1fr, reveal end\nwidth l=1fr r=2fr")
+    assert build_deck(root, use_cache=False).slides["a"].checkpoints == [1, 2, 6, 7, 8]
+
 def test_detour_step_errors(deck):
     root = deck({"talk.md": """
         # A

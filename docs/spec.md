@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.26.3 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.27.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -29,6 +29,7 @@
 | **Position** | The state index of a track. Position 0 is the state shown on arrival at step 0. |
 | **Cue** | One slide step: an assignment of positions to tracks. |
 | **Detour step** | A step that enters a detour when NEXT arrives on it (section 6.4). |
+| **Checkpoint** | A step that ends a run of steps of the same kind, where two quick presses of a skip key stop (section 6.5). |
 | **Follower** | A component instance whose position is always equal to another track's position. |
 | **Frame store** | The serialized frames of an animation (section 9). |
 
@@ -421,6 +422,7 @@ class Slide:
     tracks: list[Track]
     positions: list[list[int]]    # positions[step][track_index]
     step_detours: dict[int, dict] # detour steps: step -> {"id": detour id, "blocking": bool} (6.4)
+    checkpoints: list[int]        # increasing; the last step is always one (6.5)
     column_states: list[dict[str, str]]  # positions of the columns track: column id -> CSS flex value (3.8, 6.1)
 
 class Detour:
@@ -595,7 +597,31 @@ A **detour step** is a step of a slide that, when reached with NEXT, enters one 
 - The row of a detour step is a copy of the row before it: nothing changes on the slide. It does not produce LT030.
 - `Slide.step_detours` maps each such step to its detour id and whether it is blocking; the deck JSON carries it as `stepDetours` (section 11.2).
 - The badge of a detour with `badge=step` or `badge=next` (section 3.9) is shown according to these steps; the runtime reads them from `stepDetours`. Like everything else on the slide, the badge depends only on the current step, however it was reached.
-- Runtime consequences are in section 7.2 (NEXT, PREV), 7.5 (preview and moves) and 11.5 (the PDF export skips detour steps when printing `all`). Reaching a detour step by any means other than NEXT (PREV, the scrubber, the URL hash, a sync) does not enter the detour: steps are positions, not events.
+- Runtime consequences are in section 7.2 (NEXT, PREV), 7.5 (preview and moves) and 11.5 (the PDF export skips detour steps when printing `all`). Reaching a detour step by any means other than NEXT (PREV, the scrubber, the URL hash, a sync) does not enter the detour: steps are positions, not events. How detour steps bound the runs of checkpoints is in section 6.5.
+
+### 6.5 Checkpoints
+
+The **checkpoints** of a slide are the steps where two quick presses of a skip key stop (section 7.6): the end of each run of steps that change the same tracks, so that a double press plays over one animation, one series of reveals or one series of arrow moves, and not over the next. They are computed at build time from the step table and do not depend on how a step is reached.
+
+- **Kind of a step.** Let `r_0 .. r_{n-1}` be the rows of the table of section 6.3 after the detour steps of section 6.4 are inserted, restricted to the independent tracks and the columns track (followers copy their leader and never count). For a step `i >= 1`, `changed(i)` is the set of tracks whose position differs between `r_{i-1}` and `r_i`. A step is **silent** when `changed(i)` is empty (a detour step, or a cue that changes nothing, warning LT030); otherwise its **kind** is `changed(i)`, compared as a set of track ids: a line that moves `trace` and `code` together has the kind `{trace, code}`, which differs from `{trace}`, and two components of the same type are two kinds.
+- **Groups.** A non-silent step continues the group of the previous non-silent step when both have the same kind and no blocking detour step lies between them. Silent steps belong to no group, so a non-blocking detour step inside a run of `trace` steps does not split it.
+- **Checkpoints.** The last step of each group, and the last step of the slide, `S - 1`. `Slide.checkpoints` holds them in increasing order; the deck JSON carries them as `checkpoints` when there is one before the last step (section 11.2), and a slide without that field has the last step as its only checkpoint.
+- **Targets.** From step `i`, `nextcp(x, i)` is the smallest checkpoint greater than `i`, and `prevcp(x, i)` the largest checkpoint smaller than `i`, or 0 when there is none; both are `i` itself at the last and first step. A checkpoint is never a detour step, except possibly `S - 1`, so `prevcp` never lands on a detour step (as PREV, section 7.2). When a detour step lies between two groups, the checkpoint that ends the first group is the step before it: a double press stops in front of the detour step, and NEXT then enters it.
+
+Example, with `cfg` an animation and `lbl` an arrow with steps:
+
+````markdown
+```timeline
+reveal ..3          # steps 1-3: {reveal}
+cfg 1..4            # steps 4-7: {cfg}
+detour heaps        # step 8: silent
+cfg ..8             # steps 9-12: {cfg}, the same group as 4-7
+lbl ..3             # steps 13-15: {lbl}
+lbl ..+1, cfg ..+1  # step 16: {lbl, cfg}
+```
+````
+
+The checkpoints are 3, 12, 15 and 16: from step 0 two quick presses of `skip-forward` stop at 3, then 12 (passing step 8 without entering the detour), 15 and 16; from 10, two quick presses of `skip-back` go to 3. With `detour heaps blocking`, step 7 is a checkpoint too.
 
 ---
 
@@ -630,7 +656,7 @@ Initial state: `cur = (start, 0)`, `H = []`, `tour = none` (subject to 7.4).
 | | else, `H` not empty | `e = pop(H)`, `go(e.slide, e.step)` |
 | | else, `pred(cur.slide)` is a slide `p` | `go(p, S(p) - 1)` without any push, so PREV keeps walking backward |
 | | else | no-op |
-| **SKIP(n)** (`skip-forward`: `n = 10`, `skip-back`: `n = -10`, `last-step` or three quick presses of `skip-forward` (section 7.6): to `S(cur.slide) - 1`, three quick presses of `skip-back`: to 0) | | `cur.step` moves by `n`, clamped to `0..S(cur.slide) - 1`, never leaving the slide and never touching `H`. The intermediate steps are played in rapid succession (single-step moves, so runtimes animate), and a new event cancels the playback. Detour steps passed on the way are not entered; a forward playback stops in front of a blocking detour step ("Cannot step detour") |
+| **SKIP(n)** (`skip-forward`: `n = 10`, `skip-back`: `n = -10`; `last-step`: to `S(cur.slide) - 1`; `first-step`: to 0; two quick presses of `skip-forward` (section 7.6): to `nextcp(cur.slide, cur.step)`, of `skip-back`: to `prevcp(cur.slide, cur.step)`, section 6.5) | | `cur.step` moves by `n`, clamped to `0..S(cur.slide) - 1`, never leaving the slide and never touching `H`. The intermediate steps are played in rapid succession (single-step moves, so runtimes animate), and a new event cancels the playback. Detour steps passed on the way are not entered; a forward playback stops in front of a blocking detour step ("Cannot step detour") |
 | **SKIP-DETOUR** | `detourstep(cur.slide, cur.step + 1)` is a detour step | `cur.step` moves past it and any detour steps directly following it (clamped to `S(cur.slide) - 1`), without entering them and without touching `H` |
 | | else | no-op |
 | **CHOOSE(k)** | `k` is a branch option key of `cur.slide`, target `t` | `push(forward)`, `go(t, 0)` |
@@ -678,7 +704,7 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 
 ### 7.5 Presenter view
 
-- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, a scrubber, a preview of what comes next, the available moves (what NEXT does, branch options, detours and the return target, each with its key), a **Keybindings** section listing every global action of section 7.6 with its keys (as bound by the deck, in smaller type than the moves, plus the three quick presses of the skip keys, the digit keys of branch options and detours, and the click that enlarges an element when the deck has components that offer it, section 7.7) and the notes.
+- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, a scrubber, a preview of what comes next, the available moves (what NEXT does, branch options, detours and the return target, each with its key), a **Keybindings** section listing every global action of section 7.6 with its keys (as bound by the deck, in smaller type than the moves, plus the two quick presses of the skip keys, the digit keys of branch options and detours, and the click that enlarges an element when the deck has components that offer it, section 7.7) and the notes.
 - The **scrubber** is a slider over the steps of the current slide, shown when the slide has more than one step. Moving it sets `cur.step` directly: it is not an event of section 7.2 and leaves `H` unchanged, and runtimes receive `animate: false` (section 10.1).
 - The **preview** shows what NEXT would show: the next step of the current slide (the entry slide of the detour when that step is a detour step, which the moves list names as "detour: label", marked "(blocking)" when it is, followed by the `skip-detour` key); at the last step, the slide NEXT moves to (tour successor, `next` slide at step 0, or the return target at the step it restores). At a branch point or at the end of the path it shows a label instead. The preview is a second copy of the document opened with `?preview`: a passive window that ignores keys and clicks, keeps no history or storage, does not join the `BroadcastChannel`, never animates, and renders the position the presenter window sends it with `postMessage`.
 - Audience and presenter windows share state over a `BroadcastChannel` named `lattice:<deck-hash>`. After every event, the window that handled it broadcasts `{cur, H, tour}`; the other window adopts it without re-running the event. Either window may drive. An enlarged element (section 7.7) is shared the same way: opening one broadcasts `{zoom: {instance, key}}` and closing one `{zoom: null}`, and the other window opens or closes its own copy.
@@ -692,6 +718,7 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 | `skip-forward` | `Shift+ArrowRight` |
 | `skip-back` | `Shift+ArrowLeft` |
 | `last-step` | `End` |
+| `first-step` | `Home` |
 | `skip-detour` | `Shift+ArrowDown` |
 | `enter-detour` | `ArrowDown` |
 | `return` | `ArrowUp`, `Backspace` |
@@ -700,9 +727,9 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 | `goto` | `g` |
 | `presenter` | `p` |
 | `tour` | `t` |
-| `home` | `Home` |
+| `home` | `Shift+Home` |
 
-**Three quick presses.** The third press of a `skip-forward` key within one second of the first (presses of that action only) performs SKIP to the last step instead of ten steps, like `last-step`; three presses of `skip-back` likewise perform SKIP to step 0. A later press still inside the window does the same, so a fourth quick press keeps the playback going rather than cutting it short. The auto-repeat of a held key (`KeyboardEvent.repeat`) does not count as a press, and any other action, or a slide key, starts the count again. The count follows the action, so it applies to whatever keys the deck binds to it.
+**Two quick presses.** The second press of a `skip-forward` key within 500 ms of the first (presses of that action only) performs SKIP to the next checkpoint (section 6.5) instead of ten steps; two presses of `skip-back` perform SKIP to the previous checkpoint. The checkpoint is taken from the **anchor**: the step before the first press, or, when the first press arrives during the playback of an earlier double press, the checkpoint that playback is heading to (so two double presses in a row go two checkpoints ahead). A first press plays its ten steps from the anchor (from the current step, unless a double press is still playing), and while its window is open its playback does not pass the checkpoint a second press would reach: it waits there, and goes on to its ten steps when the window closes without a second press, so a double press never plays back over steps it has just played. A later press still inside the window keeps the same target, so a third quick press keeps the playback going rather than cutting it short. The auto-repeat of a held key (`KeyboardEvent.repeat`) does not count as a press, and any other action, or a slide key, starts the count again. The count follows the action, so it applies to whatever keys the deck binds to it. `last-step` and `first-step` ignore checkpoints; like every SKIP, they stop in front of a blocking detour step on the way forward.
 
 Bindings are overridable in front matter under `keys`. A key is a `KeyboardEvent.key` value, optionally prefixed with `Shift+`; with Shift held, the `Shift+` binding is tried first, then the plain key (letters already arrive shifted, so `A` binds Shift+a). Slide-level keys (branch options and detours) never override global bindings: a collision is an error (LT018).
 
@@ -1211,6 +1238,7 @@ interface SlideJSON {
   positions: number[][];                   // [step][trackIndex]
   columns?: Record<string, string>[];      // positions of the columns track: column id -> CSS flex value (section 3.8)
   stepDetours?: Record<string, { id: string; blocking: boolean }>;  // detour steps (section 6.4)
+  checkpoints?: number[];                  // when one precedes the last step; default [steps - 1] (section 6.5)
   offpath: boolean;
   transition?: string;
   notes?: string;                          // HTML
@@ -1526,3 +1554,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.26 | Parts of a component as arrow ends (`COMP.NAME`), the `part` hook; blocks, versions and edges of the versioning drawings; the versioning drawings dispatch `lt-relayout`; LT063 covers parts | 8.2, 8.8, 8.9, 9.5, 10.4, 12 |
 | 0.26.2 | Fixes stated as rules: a change of the URL hash never animates; component samples in Markdown blocks; both edges of `if x goto L else goto L`; a versioning drawing without `height` fits the room left; columns at rest when a move ends; constants without `intervals`; LT065 for an attribute line before a detour | 3.9, 3.13, 7.4, 9.5, 10.1, 10.4, 12 |
 | 0.26.3 | Abstract interpretation prints `(-∞, ∞)` only for any integer (`fx` or `bg`) with no known interval; `fx` and `bg` alone print as their type | 9.6 |
+| 0.27 | Checkpoints; two quick presses of `skip-forward` or `skip-back` (within 500 ms) play to the next or previous checkpoint instead of three presses playing to the last or first step; the `first-step` binding (`Home`); `home` moves to `Shift+Home` | 1, 4, 6.5, 7.2, 7.5, 7.6, 11.2 |

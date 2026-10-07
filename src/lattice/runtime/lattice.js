@@ -131,29 +131,53 @@ const Lattice = (() => {
   // A step whose arrival through NEXT enters a detour (spec 6.4): { id, blocking }, or null.
   const stepDetour = (id, step) => (slide(id).stepDetours || {})[step] || null;
 
+  // Checkpoints (spec 6.5): the steps where two quick presses of a skip key stop, computed at build time.
+  // A slide without the field has its last step as its only checkpoint.
+  const checkpointsOf = (id) => slide(id).checkpoints || [steps(id) - 1];
+  function nextCheckpoint(id, step) {
+    const k = checkpointsOf(id).find((c) => c > step);
+    return k === undefined ? step : k;
+  }
+  function prevCheckpoint(id, step) {
+    const before = checkpointsOf(id).filter((c) => c < step);
+    return before.length ? before[before.length - 1] : 0;
+  }
+
   // Multi-step moves within a slide play the intermediate steps in rapid succession, so that
   // animations are seen rather than skipped (spec 7.2, SKIP). A new move cancels a running one.
   // Detour steps on the way are not entered; a blocking one stops the playback in front of it.
+  // `hold` ({ step, until }) keeps the playback from passing `step` before the time `until`: the first
+  // of two quick presses waits there for the second (spec 7.6). `checkpoint` marks a playback to a
+  // checkpoint, from which a following double press counts.
   let playTimer = null;
-  function playSteps(target) {
-    clearTimeout(playTimer);
+  let playing = null; // the playback under way: { slide, target, dir, checkpoint }
+  function playSteps(target, opts = {}) {
+    stopPlaying();
     const total = Math.abs(target - nav.cur.step);
     if (!total) return;
     const interval = Math.max(30, Math.min(90, 1000 / total));
+    const hold = opts.hold || null;
+    playing = { slide: nav.cur.slide, target, dir: Math.sign(target - nav.cur.step), checkpoint: !!opts.checkpoint };
     const tick = () => {
       const cur = nav.cur.step;
-      if (cur === target) return;
+      if (cur === target) { playing = null; return; }
       const dir = Math.sign(target - cur);
+      if (hold && cur === hold.step && performance.now() < hold.until) {
+        playTimer = setTimeout(tick, hold.until - performance.now());
+        return;
+      }
       const d = dir > 0 ? stepDetour(nav.cur.slide, cur + 1) : null;
-      if (d && d.blocking) return flash("Cannot step detour");
+      if (d && d.blocking) { playing = null; return flash("Cannot step detour"); }
       go(nav.cur.slide, cur + dir, { kind: "step", dir });
       if (nav.cur.step !== target) playTimer = setTimeout(tick, interval);
+      else playing = null;
     };
     tick();
   }
   function stopPlaying() {
     clearTimeout(playTimer);
     playTimer = null;
+    playing = null;
   }
 
   const actions = {
@@ -191,6 +215,7 @@ const Lattice = (() => {
     "skip-forward"() { playSteps(Math.min(nav.cur.step + 10, steps(nav.cur.slide) - 1)); },
     "skip-back"() { playSteps(Math.max(nav.cur.step - 10, 0)); },
     "last-step"() { playSteps(steps(nav.cur.slide) - 1); },
+    "first-step"() { playSteps(0); },
     "skip-detour"() {
       // Step over the detour step(s) that follow, without entering them (spec 7.2, SKIP-DETOUR).
       const cur = nav.cur;
@@ -848,6 +873,7 @@ const Lattice = (() => {
   const ACTION_LABELS = {
     next: "next step or slide", prev: "previous step, or undo the last move",
     "skip-forward": "10 steps forward", "skip-back": "10 steps back", "last-step": "last step of the slide",
+    "first-step": "first step of the slide",
     "skip-detour": "step over the next detour step",
     "enter-detour": "enter the first detour", return: "return from a detour or jump",
     overview: "overview", goto: "go to a slide", presenter: "presenter view", tour: "cycle through tours",
@@ -860,10 +886,10 @@ const Lattice = (() => {
       `<li><span class="lt-pp-kbd">${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("")}</span>` +
       `<span>${esc(ACTION_LABELS[action] || action)}</span></li>`);
     const fwd = (deck.keys["skip-forward"] || [])[0], back = (deck.keys["skip-back"] || [])[0];
-    if (fwd || back) { // three quick presses of a skip key (spec 7.6)
+    if (fwd || back) { // two quick presses of a skip key (spec 7.6)
       const kbds = [fwd, back].filter(Boolean).map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("");
-      const ends = [fwd && "last", back && "first"].filter(Boolean).join(" or ");
-      rows.push(`<li><span class="lt-pp-kbd">${kbds}×3</span><span>${ends} step of the slide (three presses within a second)</span></li>`);
+      const ends = [fwd && "next", back && "previous"].filter(Boolean).join(" or ");
+      rows.push(`<li><span class="lt-pp-kbd">${kbds}×2</span><span>${ends} checkpoint (two presses within half a second)</span></li>`);
     }
     rows.push(`<li><span class="lt-pp-kbd"><kbd>1</kbd>…<kbd>9</kbd></span><span>choose a branch option or a detour (slide keys)</span></li>`);
     if (Object.values(deck.instances).some((i) => registry[i.component] && registry[i.component].zoom)) {
@@ -1081,32 +1107,45 @@ const Lattice = (() => {
     }
     const s = slide(nav.cur.slide);
     const slideKey = s.branches.some((b) => b.key === e.key) || s.detours.some((d) => deck.detours[d].key === e.key);
-    if (slideKey) { stopPlaying(); burstTarget(null, e); actions.choose(e.key); e.preventDefault(); return; }
+    if (slideKey) { stopPlaying(); burstMove(null, e); actions.choose(e.key); e.preventDefault(); return; }
     // Bindings may name a shifted key as "Shift+ArrowRight"; a plain key still matches with Shift held
     // (letters already arrive shifted, as "A" for Shift+a).
     const map = keyMap();
     const action = (e.shiftKey && map[`Shift+${e.key}`]) || map[e.key];
     if (action && actions[action]) {
+      const move = burstMove(action, e); // before stopPlaying: it reads the playback under way
       stopPlaying();
-      const target = burstTarget(action, e);
-      if (target === null) actions[action](); else playSteps(target);
+      if (move === null) actions[action](); else playSteps(move.target, move);
       e.preventDefault();
     }
   }
 
-  // Three presses of `skip-forward` within a second play to the last step of the slide, three of
-  // `skip-back` to its first step (spec 7.6). The auto-repeat of a held key does not count, and any
-  // other action starts the count again. Returns the step to play to, or null for the plain action.
-  const BURST = { "skip-forward": () => steps(nav.cur.slide) - 1, "skip-back": () => 0 };
-  const BURST_PRESSES = 3, BURST_WINDOW_MS = 1000;
-  let burst = { action: null, times: [] };
-  function burstTarget(action, e) {
-    if (!BURST[action]) { burst = { action: null, times: [] }; return null; }
+  // Two presses of `skip-forward` within half a second play to the next checkpoint (spec 6.5), two of
+  // `skip-back` to the previous one (spec 7.6). The checkpoint is counted from the anchor: the step before
+  // the first press, or the target of a checkpoint playback still under way in the same direction. The
+  // first press plays its ten steps from the anchor, but waits at that checkpoint while the window is
+  // open, so that a second press never has to play back. Later presses in the window keep the target.
+  // The auto-repeat of a held key does not count, and any other action starts the count again.
+  // Returns null for the plain action, or the arguments of playSteps: { target, hold, checkpoint }.
+  const BURST = {
+    "skip-forward": { dir: 1, checkpoint: nextCheckpoint, plain: (id, s) => Math.min(s + 10, steps(id) - 1) },
+    "skip-back": { dir: -1, checkpoint: prevCheckpoint, plain: (id, s) => Math.max(s - 10, 0) },
+  };
+  const BURST_WINDOW_MS = 500;
+  let burst = { action: null };
+  function burstMove(action, e) {
+    const b = BURST[action];
+    if (!b) { burst = { action: null }; return null; }
     if (e.repeat) return null;
     const now = performance.now();
-    if (burst.action !== action) burst = { action, times: [] };
-    burst.times = burst.times.filter((t) => now - t < BURST_WINDOW_MS).concat(now);
-    return burst.times.length >= BURST_PRESSES ? BURST[action]() : null;
+    const id = nav.cur.slide;
+    if (burst.action === action && burst.slide === id && now - burst.start < BURST_WINDOW_MS) {
+      return { target: burst.target, checkpoint: true }; // the second press, or a later one in the window
+    }
+    const run = playing && playing.checkpoint && playing.slide === id && playing.dir === b.dir;
+    const anchor = run ? playing.target : nav.cur.step;
+    burst = { action, slide: id, start: now, target: b.checkpoint(id, anchor) };
+    return { target: b.plain(id, anchor), hold: { step: burst.target, until: now + BURST_WINDOW_MS } };
   }
 
   function onClick(e) {

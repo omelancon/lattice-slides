@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.26.3">
+<meta name="generator" content="lattice 0.27.0">
 <title>Getting started with Lattice</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -769,7 +769,7 @@ and every index from <code>hi</code> on holds a value at least <code>target</cod
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.26.3","meta":{"title":"Getting started with Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"welcome","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["welcome","markdown","talk-3","code","the-graph","the-loop-invariant","termination","diagram","thanks","proof"],"slides":{"welcome":{"title":"Getting started with Lattice","label":"Getting started with Lattice","scope":"root","next":{"slide":"markdown"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":8},"notes":"<p>Press <code>p<\/code> to open this presenter view in another window. Both windows stay in sync.<\/p>\n"},"markdown":{"title":"Every # heading is a slide","label":"Every # heading is a slide","scope":"root","next":{"slide":"talk-3"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"talk.md","line":16},"notes":"<p>The next slide has no title at all: it was written as a bare <code>#<\/code>.<\/p>\n"},"talk-3":{"title":"","label":"talk-3","scope":"root","next":{"slide":"code"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":28}},"code":{"title":"Code, highlighted at build time","label":"Code, highlighted at build time","scope":"root","next":{"slide":"the-graph"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"arrows","kind":"component","instance":"code/arrows"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":43}},"the-graph":{"title":"Nothing here is linear","label":"Nothing here is linear","scope":"root","next":{"slide":"diagram"},"branches":[],"detours":["invariant-detour"],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":82},"stepDetours":{"2":{"id":"invariant-detour","blocking":false}},"notes":"<p>The detour is also a step of this slide (<code>at=1<\/code>): the Right after the first bullet enters it,\nand the Right after returning reveals the second bullet. Press <code>w<\/code> to enter it at any time.<\/p>\n"},"the-loop-invariant":{"title":"The loop invariant","label":"The loop invariant","scope":"invariant-detour","next":{"slide":"termination"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":92}},"termination":{"title":"Termination","label":"Termination","scope":"invariant-detour","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":98}},"diagram":{"title":"Diagrams from Graphviz","label":"Diagrams from Graphviz","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":111}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":124}},"proof":{"title":"Proof of correctness","label":"Proof of correctness","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"talk.md","line":128}}},"detours":{"invariant-detour":{"origin":"the-graph","entry":"the-loop-invariant","label":"Why binary search terminates","key":"w","slides":["the-loop-invariant","termination"]}},"instances":{"code/c1":{"component":"code","slide":"code","data":null},"code/arrows":{"component":"arrow","slide":"code","data":"lt-data-code/arrows"},"diagram/c1":{"component":"dot","slide":"diagram","data":null}},"tours":{"quick":["welcome","markdown","code","the-graph","thanks"]},"mainPath":["welcome","markdown","talk-3","code","the-graph","diagram","thanks"],"overview":{"nodes":{"welcome":{"x":94.0,"y":63.0,"w":172.0,"h":26.0,"label":"Getting started with Latt…"},"markdown":{"x":293.0,"y":63.0,"w":166.0,"h":26.0,"label":"Every # heading is a slide"},"talk-3":{"x":433.0,"y":63.0,"w":54.0,"h":26.0,"label":"talk-3"},"code":{"x":574.5,"y":63.0,"w":169.0,"h":26.0,"label":"Code, highlighted at buil…"},"the-graph":{"x":760.5,"y":63.0,"w":143.0,"h":26.0,"label":"Nothing here is linear"},"the-loop-invariant":{"x":940.5,"y":21.0,"w":121.0,"h":26.0,"label":"The loop invariant"},"termination":{"x":1092.5,"y":21.0,"w":87.0,"h":26.0,"label":"Termination"},"diagram":{"x":940.5,"y":63.0,"w":157.0,"h":26.0,"label":"Diagrams from Graphviz"},"thanks":{"x":1092.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"},"proof":{"x":1232.5,"y":82.0,"w":133.0,"h":26.0,"label":"Proof of correctness"}},"edges":[{"from":"welcome","to":"markdown","kind":"next","path":"M180.3,63.0 C187.9,63.0 195.6,63.0 203.3,63.0 L209.7,63.0"},{"from":"markdown","to":"talk-3","kind":"next","path":"M376.3,63.0 C384.4,63.0 392.3,63.0 399.4,63.0 L405.8,63.0"},{"from":"talk-3","to":"code","kind":"next","path":"M460.2,63.0 C467.2,63.0 475.0,63.0 483.3,63.0 L489.7,63.0"},{"from":"code","to":"the-graph","kind":"next","path":"M659.1,63.0 C666.9,63.0 674.8,63.0 682.5,63.0 L689.0,63.0"},{"from":"the-graph","to":"the-loop-invariant","kind":"detour","path":"M816.8,49.9 C836.4,45.3 858.4,40.1 878.3,35.4 L884.2,34.1"},{"from":"the-graph","to":"diagram","kind":"next","path":"M832.1,63.0 C839.9,63.0 847.9,63.0 855.9,63.0 L862.0,63.0"},{"from":"the-graph","to":"proof","kind":"link","path":"M813.6,76.0 C829.1,79.3 846.1,82.4 862.0,84.0 C965.0,94.6 1085.1,91.1 1159.7,87.0 L1165.9,86.6"},{"from":"the-loop-invariant","to":"termination","kind":"next","path":"M1001.2,21.0 C1014.8,21.0 1029.2,21.0 1042.3,21.0 L1048.6,21.0"},{"from":"diagram","to":"thanks","kind":"next","path":"M1019.1,63.0 C1032.3,63.0 1045.3,63.0 1056.6,63.0 L1062.7,63.0"}],"width":1307.0,"height":103.0},"hash":"81b56429f5fc3a08"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.27.0","meta":{"title":"Getting started with Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"welcome","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["welcome","markdown","talk-3","code","the-graph","the-loop-invariant","termination","diagram","thanks","proof"],"slides":{"welcome":{"title":"Getting started with Lattice","label":"Getting started with Lattice","scope":"root","next":{"slide":"markdown"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":8},"notes":"<p>Press <code>p<\/code> to open this presenter view in another window. Both windows stay in sync.<\/p>\n"},"markdown":{"title":"Every # heading is a slide","label":"Every # heading is a slide","scope":"root","next":{"slide":"talk-3"},"branches":[],"detours":[],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3],[4]],"offpath":false,"source":{"file":"talk.md","line":16},"notes":"<p>The next slide has no title at all: it was written as a bare <code>#<\/code>.<\/p>\n"},"talk-3":{"title":"","label":"talk-3","scope":"root","next":{"slide":"code"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":28}},"code":{"title":"Code, highlighted at build time","label":"Code, highlighted at build time","scope":"root","next":{"slide":"the-graph"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"arrows","kind":"component","instance":"code/arrows"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":43}},"the-graph":{"title":"Nothing here is linear","label":"Nothing here is linear","scope":"root","next":{"slide":"diagram"},"branches":[],"detours":["invariant-detour"],"steps":5,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":82},"stepDetours":{"2":{"id":"invariant-detour","blocking":false}},"notes":"<p>The detour is also a step of this slide (<code>at=1<\/code>): the Right after the first bullet enters it,\nand the Right after returning reveals the second bullet. Press <code>w<\/code> to enter it at any time.<\/p>\n"},"the-loop-invariant":{"title":"The loop invariant","label":"The loop invariant","scope":"invariant-detour","next":{"slide":"termination"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":92}},"termination":{"title":"Termination","label":"Termination","scope":"invariant-detour","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":98}},"diagram":{"title":"Diagrams from Graphviz","label":"Diagrams from Graphviz","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":111}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":124}},"proof":{"title":"Proof of correctness","label":"Proof of correctness","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"talk.md","line":128}}},"detours":{"invariant-detour":{"origin":"the-graph","entry":"the-loop-invariant","label":"Why binary search terminates","key":"w","slides":["the-loop-invariant","termination"]}},"instances":{"code/c1":{"component":"code","slide":"code","data":null},"code/arrows":{"component":"arrow","slide":"code","data":"lt-data-code/arrows"},"diagram/c1":{"component":"dot","slide":"diagram","data":null}},"tours":{"quick":["welcome","markdown","code","the-graph","thanks"]},"mainPath":["welcome","markdown","talk-3","code","the-graph","diagram","thanks"],"overview":{"nodes":{"welcome":{"x":94.0,"y":63.0,"w":172.0,"h":26.0,"label":"Getting started with Latt…"},"markdown":{"x":293.0,"y":63.0,"w":166.0,"h":26.0,"label":"Every # heading is a slide"},"talk-3":{"x":433.0,"y":63.0,"w":54.0,"h":26.0,"label":"talk-3"},"code":{"x":574.5,"y":63.0,"w":169.0,"h":26.0,"label":"Code, highlighted at buil…"},"the-graph":{"x":760.5,"y":63.0,"w":143.0,"h":26.0,"label":"Nothing here is linear"},"the-loop-invariant":{"x":940.5,"y":21.0,"w":121.0,"h":26.0,"label":"The loop invariant"},"termination":{"x":1092.5,"y":21.0,"w":87.0,"h":26.0,"label":"Termination"},"diagram":{"x":940.5,"y":63.0,"w":157.0,"h":26.0,"label":"Diagrams from Graphviz"},"thanks":{"x":1092.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"},"proof":{"x":1232.5,"y":82.0,"w":133.0,"h":26.0,"label":"Proof of correctness"}},"edges":[{"from":"welcome","to":"markdown","kind":"next","path":"M180.3,63.0 C187.9,63.0 195.6,63.0 203.3,63.0 L209.7,63.0"},{"from":"markdown","to":"talk-3","kind":"next","path":"M376.3,63.0 C384.4,63.0 392.3,63.0 399.4,63.0 L405.8,63.0"},{"from":"talk-3","to":"code","kind":"next","path":"M460.2,63.0 C467.2,63.0 475.0,63.0 483.3,63.0 L489.7,63.0"},{"from":"code","to":"the-graph","kind":"next","path":"M659.1,63.0 C666.9,63.0 674.8,63.0 682.5,63.0 L689.0,63.0"},{"from":"the-graph","to":"the-loop-invariant","kind":"detour","path":"M816.8,49.9 C836.4,45.3 858.4,40.1 878.3,35.4 L884.2,34.1"},{"from":"the-graph","to":"diagram","kind":"next","path":"M832.1,63.0 C839.9,63.0 847.9,63.0 855.9,63.0 L862.0,63.0"},{"from":"the-graph","to":"proof","kind":"link","path":"M813.6,76.0 C829.1,79.3 846.1,82.4 862.0,84.0 C965.0,94.6 1085.1,91.1 1159.7,87.0 L1165.9,86.6"},{"from":"the-loop-invariant","to":"termination","kind":"next","path":"M1001.2,21.0 C1014.8,21.0 1029.2,21.0 1042.3,21.0 L1048.6,21.0"},{"from":"diagram","to":"thanks","kind":"next","path":"M1019.1,63.0 C1032.3,63.0 1045.3,63.0 1056.6,63.0 L1062.7,63.0"}],"width":1307.0,"height":103.0},"hash":"4804093d9e2e19e0"}</script>
 <script type="application/json" id="lt-data-code/arrows">{"steps":[{"to":".lt-line[data-line=\"3\"]","from":"emphasis","angle":null,"length":120,"label":"the loop"},{"to":".lt-line[data-line=\"4\"]","from":"emphasis","angle":null,"length":120,"label":"the midpoint"},{"to":".lt-line[data-line=\"9\"]","from":null,"angle":315.0,"length":120,"label":"the answer"}],"color":"var(--lt-detour)","width":4,"curve":0.2}</script>
 <script type="module">
 // Lattice runtime: navigation state machine (spec section 7) and component host (spec section 10).
@@ -905,29 +905,53 @@ const Lattice = (() => {
   // A step whose arrival through NEXT enters a detour (spec 6.4): { id, blocking }, or null.
   const stepDetour = (id, step) => (slide(id).stepDetours || {})[step] || null;
 
+  // Checkpoints (spec 6.5): the steps where two quick presses of a skip key stop, computed at build time.
+  // A slide without the field has its last step as its only checkpoint.
+  const checkpointsOf = (id) => slide(id).checkpoints || [steps(id) - 1];
+  function nextCheckpoint(id, step) {
+    const k = checkpointsOf(id).find((c) => c > step);
+    return k === undefined ? step : k;
+  }
+  function prevCheckpoint(id, step) {
+    const before = checkpointsOf(id).filter((c) => c < step);
+    return before.length ? before[before.length - 1] : 0;
+  }
+
   // Multi-step moves within a slide play the intermediate steps in rapid succession, so that
   // animations are seen rather than skipped (spec 7.2, SKIP). A new move cancels a running one.
   // Detour steps on the way are not entered; a blocking one stops the playback in front of it.
+  // `hold` ({ step, until }) keeps the playback from passing `step` before the time `until`: the first
+  // of two quick presses waits there for the second (spec 7.6). `checkpoint` marks a playback to a
+  // checkpoint, from which a following double press counts.
   let playTimer = null;
-  function playSteps(target) {
-    clearTimeout(playTimer);
+  let playing = null; // the playback under way: { slide, target, dir, checkpoint }
+  function playSteps(target, opts = {}) {
+    stopPlaying();
     const total = Math.abs(target - nav.cur.step);
     if (!total) return;
     const interval = Math.max(30, Math.min(90, 1000 / total));
+    const hold = opts.hold || null;
+    playing = { slide: nav.cur.slide, target, dir: Math.sign(target - nav.cur.step), checkpoint: !!opts.checkpoint };
     const tick = () => {
       const cur = nav.cur.step;
-      if (cur === target) return;
+      if (cur === target) { playing = null; return; }
       const dir = Math.sign(target - cur);
+      if (hold && cur === hold.step && performance.now() < hold.until) {
+        playTimer = setTimeout(tick, hold.until - performance.now());
+        return;
+      }
       const d = dir > 0 ? stepDetour(nav.cur.slide, cur + 1) : null;
-      if (d && d.blocking) return flash("Cannot step detour");
+      if (d && d.blocking) { playing = null; return flash("Cannot step detour"); }
       go(nav.cur.slide, cur + dir, { kind: "step", dir });
       if (nav.cur.step !== target) playTimer = setTimeout(tick, interval);
+      else playing = null;
     };
     tick();
   }
   function stopPlaying() {
     clearTimeout(playTimer);
     playTimer = null;
+    playing = null;
   }
 
   const actions = {
@@ -965,6 +989,7 @@ const Lattice = (() => {
     "skip-forward"() { playSteps(Math.min(nav.cur.step + 10, steps(nav.cur.slide) - 1)); },
     "skip-back"() { playSteps(Math.max(nav.cur.step - 10, 0)); },
     "last-step"() { playSteps(steps(nav.cur.slide) - 1); },
+    "first-step"() { playSteps(0); },
     "skip-detour"() {
       // Step over the detour step(s) that follow, without entering them (spec 7.2, SKIP-DETOUR).
       const cur = nav.cur;
@@ -1622,6 +1647,7 @@ const Lattice = (() => {
   const ACTION_LABELS = {
     next: "next step or slide", prev: "previous step, or undo the last move",
     "skip-forward": "10 steps forward", "skip-back": "10 steps back", "last-step": "last step of the slide",
+    "first-step": "first step of the slide",
     "skip-detour": "step over the next detour step",
     "enter-detour": "enter the first detour", return: "return from a detour or jump",
     overview: "overview", goto: "go to a slide", presenter: "presenter view", tour: "cycle through tours",
@@ -1634,10 +1660,10 @@ const Lattice = (() => {
       `<li><span class="lt-pp-kbd">${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("")}</span>` +
       `<span>${esc(ACTION_LABELS[action] || action)}</span></li>`);
     const fwd = (deck.keys["skip-forward"] || [])[0], back = (deck.keys["skip-back"] || [])[0];
-    if (fwd || back) { // three quick presses of a skip key (spec 7.6)
+    if (fwd || back) { // two quick presses of a skip key (spec 7.6)
       const kbds = [fwd, back].filter(Boolean).map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("");
-      const ends = [fwd && "last", back && "first"].filter(Boolean).join(" or ");
-      rows.push(`<li><span class="lt-pp-kbd">${kbds}×3</span><span>${ends} step of the slide (three presses within a second)</span></li>`);
+      const ends = [fwd && "next", back && "previous"].filter(Boolean).join(" or ");
+      rows.push(`<li><span class="lt-pp-kbd">${kbds}×2</span><span>${ends} checkpoint, the end of an animation (two presses within half a second)</span></li>`);
     }
     rows.push(`<li><span class="lt-pp-kbd"><kbd>1</kbd>…<kbd>9</kbd></span><span>choose a branch option or a detour (slide keys)</span></li>`);
     if (Object.values(deck.instances).some((i) => registry[i.component] && registry[i.component].zoom)) {
@@ -1855,32 +1881,45 @@ const Lattice = (() => {
     }
     const s = slide(nav.cur.slide);
     const slideKey = s.branches.some((b) => b.key === e.key) || s.detours.some((d) => deck.detours[d].key === e.key);
-    if (slideKey) { stopPlaying(); burstTarget(null, e); actions.choose(e.key); e.preventDefault(); return; }
+    if (slideKey) { stopPlaying(); burstMove(null, e); actions.choose(e.key); e.preventDefault(); return; }
     // Bindings may name a shifted key as "Shift+ArrowRight"; a plain key still matches with Shift held
     // (letters already arrive shifted, as "A" for Shift+a).
     const map = keyMap();
     const action = (e.shiftKey && map[`Shift+${e.key}`]) || map[e.key];
     if (action && actions[action]) {
+      const move = burstMove(action, e); // before stopPlaying: it reads the playback under way
       stopPlaying();
-      const target = burstTarget(action, e);
-      if (target === null) actions[action](); else playSteps(target);
+      if (move === null) actions[action](); else playSteps(move.target, move);
       e.preventDefault();
     }
   }
 
-  // Three presses of `skip-forward` within a second play to the last step of the slide, three of
-  // `skip-back` to its first step (spec 7.6). The auto-repeat of a held key does not count, and any
-  // other action starts the count again. Returns the step to play to, or null for the plain action.
-  const BURST = { "skip-forward": () => steps(nav.cur.slide) - 1, "skip-back": () => 0 };
-  const BURST_PRESSES = 3, BURST_WINDOW_MS = 1000;
-  let burst = { action: null, times: [] };
-  function burstTarget(action, e) {
-    if (!BURST[action]) { burst = { action: null, times: [] }; return null; }
+  // Two presses of `skip-forward` within half a second play to the next checkpoint (spec 6.5), two of
+  // `skip-back` to the previous one (spec 7.6). The checkpoint is counted from the anchor: the step before
+  // the first press, or the target of a checkpoint playback still under way in the same direction. The
+  // first press plays its ten steps from the anchor, but waits at that checkpoint while the window is
+  // open, so that a second press never has to play back. Later presses in the window keep the target.
+  // The auto-repeat of a held key does not count, and any other action starts the count again.
+  // Returns null for the plain action, or the arguments of playSteps: { target, hold, checkpoint }.
+  const BURST = {
+    "skip-forward": { dir: 1, checkpoint: nextCheckpoint, plain: (id, s) => Math.min(s + 10, steps(id) - 1) },
+    "skip-back": { dir: -1, checkpoint: prevCheckpoint, plain: (id, s) => Math.max(s - 10, 0) },
+  };
+  const BURST_WINDOW_MS = 500;
+  let burst = { action: null };
+  function burstMove(action, e) {
+    const b = BURST[action];
+    if (!b) { burst = { action: null }; return null; }
     if (e.repeat) return null;
     const now = performance.now();
-    if (burst.action !== action) burst = { action, times: [] };
-    burst.times = burst.times.filter((t) => now - t < BURST_WINDOW_MS).concat(now);
-    return burst.times.length >= BURST_PRESSES ? BURST[action]() : null;
+    const id = nav.cur.slide;
+    if (burst.action === action && burst.slide === id && now - burst.start < BURST_WINDOW_MS) {
+      return { target: burst.target, checkpoint: true }; // the second press, or a later one in the window
+    }
+    const run = playing && playing.checkpoint && playing.slide === id && playing.dir === b.dir;
+    const anchor = run ? playing.target : nav.cur.step;
+    burst = { action, slide: id, start: now, target: b.checkpoint(id, anchor) };
+    return { target: b.plain(id, anchor), hold: { step: burst.target, until: now + BURST_WINDOW_MS } };
   }
 
   function onClick(e) {

@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.26.3. This README covers usage in brief. The rest:
+This is version 0.27.0. This README covers usage in brief. The rest:
 
 - [`user_manual/manual.md`](user_manual/manual.md) is the user manual, itself a Lattice deck (open
   [`user_manual/manual.html`](user_manual/manual.html)): every feature, with a live example of each.
@@ -165,8 +165,8 @@ the themes style are in spec section 9.1, and the program syntax in spec section
 |---|---|
 | Right, Space | Next step, then next slide |
 | Left | Undo the last move (history), or the previous slide when there is no history |
-| Shift+Right, Shift+Left | Ten steps forward or back on the slide, played quickly; pressed three times within a second, to the last or first step (spec section 7.6) |
-| End | Last step of the slide |
+| Shift+Right, Shift+Left | Ten steps forward or back on the slide, played quickly; pressed twice within half a second, to the next or previous checkpoint, the end of one animation or series of reveals (spec sections 6.5 and 7.6) |
+| End, Home | Last or first step of the slide |
 | Shift+Down | Step over the next detour step without entering it |
 | Down | Enter the slide's first detour |
 | Up, Backspace | Return to where the current detour or jump started |
@@ -174,7 +174,7 @@ the themes style are in spec section 9.1, and the program syntax in spec section
 | `o` / `g` | Overview (a map of the slide graph plus an outline) / go to a slide by name |
 | `p` | Open the synchronized presenter view (notes, moves, all keybindings, timer, a preview of what comes next and a step scrubber) |
 | `t` | Cycle through tours |
-| Home | Back to the start, clearing history |
+| Shift+Home | Back to the start, clearing history |
 | Click a block | Enlarge a block of a versioning or abstract interpretation drawing; any key or a click outside closes it, without moving (spec section 7.7) |
 
 The URL keeps the position (`#/slide-id/step`), and a reload restores the history. Keys can be
@@ -232,7 +232,7 @@ Rebuild them all, and the user manual, with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.26.3 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.27.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

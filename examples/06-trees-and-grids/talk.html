@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.26.3">
+<meta name="generator" content="lattice 0.27.0">
 <title>Trees and Grids</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -675,7 +675,7 @@ L_{i-1,j-1} + 1 &amp; \text{if } a_i = b_j \\
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.26.3","meta":{"title":"Trees and Grids","author":"Data structures, week 7","date":null,"aspect":"16:9","theme":"default"},"start":"trees-and-grids","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["trees-and-grids","balanced-search-trees","right-rotation","avl-insertions","maze","lcs","costs","thanks"],"slides":{"trees-and-grids":{"title":"Trees and Grids","label":"Trees and Grids","scope":"root","next":{"slide":"balanced-search-trees"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":8}},"balanced-search-trees":{"title":"Balanced search trees","label":"Balanced search trees","scope":"root","next":{"slide":"avl-insertions"},"branches":[],"detours":["rotations"],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":12}},"right-rotation":{"title":"A right rotation","label":"A right rotation","scope":"rotations","next":"back","branches":[],"detours":[],"steps":3,"tracks":[{"id":"rot","kind":"component","instance":"right-rotation/rot"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":20}},"avl-insertions":{"title":"AVL insertions","label":"AVL insertions","scope":"root","next":{"slide":"maze"},"branches":[],"detours":[],"steps":23,"tracks":[{"id":"code","kind":"component","instance":"avl-insertions/code","follow":"tree"},{"id":"tree","kind":"component","instance":"avl-insertions/tree"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22]],"offpath":false,"source":{"file":"talk.md","line":26},"notes":"<p>The trace calls the lab's own <code>insert<\/code> with a callback; the code on the left follows it.\nBadges are balance factors. The last insertion needs a double rotation.<\/p>\n"},"maze":{"title":"Breadth-first search in a maze","label":"Breadth-first search in a maze","scope":"root","next":{"slide":"lcs"},"branches":[],"detours":[],"steps":37,"tracks":[{"id":"bfs","kind":"component","instance":"maze/bfs"}],"positions":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19],[20],[21],[22],[23],[24],[25],[26],[27],[28],[29],[30],[31],[32],[33],[34],[35],[36]],"offpath":false,"source":{"file":"talk.md","line":45}},"lcs":{"title":"Longest common subsequence","label":"Longest common subsequence","scope":"root","next":{"slide":"costs"},"branches":[],"detours":[],"steps":44,"tracks":[{"id":"table","kind":"component","instance":"lcs/table"}],"positions":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19],[20],[21],[22],[23],[24],[25],[26],[27],[28],[29],[30],[31],[32],[33],[34],[35],[36],[37],[38],[39],[40],[41],[42],[43]],"offpath":false,"source":{"file":"talk.md","line":59}},"costs":{"title":"Costs","label":"Costs","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":78}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":86}}},"detours":{"rotations":{"origin":"balanced-search-trees","entry":"right-rotation","label":"Rotations up close","key":"r","slides":["right-rotation"]}},"instances":{"right-rotation/rot":{"component":"tree-anim","slide":"right-rotation","data":"lt-data-right-rotation/rot"},"avl-insertions/code":{"component":"code","slide":"avl-insertions","data":"lt-data-avl-insertions/code"},"avl-insertions/tree":{"component":"tree-anim","slide":"avl-insertions","data":"lt-data-avl-insertions/tree"},"maze/bfs":{"component":"grid-anim","slide":"maze","data":"lt-data-maze/bfs"},"lcs/table":{"component":"grid-anim","slide":"lcs","data":"lt-data-lcs/table"}},"tours":{"short":["trees-and-grids","avl-insertions","lcs","thanks"]},"mainPath":["trees-and-grids","balanced-search-trees","avl-insertions","maze","lcs","costs","thanks"],"overview":{"nodes":{"trees-and-grids":{"x":62.5,"y":63.0,"w":109.0,"h":26.0,"label":"Trees and Grids"},"balanced-search-trees":{"x":219.5,"y":63.0,"w":145.0,"h":26.0,"label":"Balanced search trees"},"right-rotation":{"x":375.0,"y":21.0,"w":106.0,"h":26.0,"label":"A right rotation"},"avl-insertions":{"x":375.0,"y":63.0,"w":102.0,"h":26.0,"label":"AVL insertions"},"maze":{"x":542.0,"y":63.0,"w":168.0,"h":26.0,"label":"Breadth-first search in a…"},"lcs":{"x":751.0,"y":63.0,"w":190.0,"h":26.0,"label":"Longest common subsequence"},"costs":{"x":903.0,"y":63.0,"w":54.0,"h":26.0,"label":"Costs"},"thanks":{"x":989.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"trees-and-grids","to":"balanced-search-trees","kind":"next","path":"M117.3,63.0 C124.9,63.0 132.8,63.0 140.7,63.0 L146.8,63.0"},{"from":"balanced-search-trees","to":"right-rotation","kind":"detour","path":"M268.2,49.9 C284.7,45.4 303.2,40.4 320.1,35.7 L326.3,34.1"},{"from":"balanced-search-trees","to":"avl-insertions","kind":"next","path":"M292.3,63.0 C300.8,63.0 309.3,63.0 317.5,63.0 L323.7,63.0"},{"from":"avl-insertions","to":"maze","kind":"next","path":"M426.4,63.0 C434.5,63.0 443.1,63.0 451.7,63.0 L457.8,63.0"},{"from":"maze","to":"lcs","kind":"next","path":"M626.0,63.0 C633.8,63.0 641.8,63.0 649.7,63.0 L655.8,63.0"},{"from":"lcs","to":"costs","kind":"next","path":"M846.1,63.0 C854.4,63.0 862.4,63.0 869.6,63.0 L875.9,63.0"},{"from":"costs","to":"thanks","kind":"next","path":"M930.3,63.0 C937.6,63.0 945.7,63.0 953.5,63.0 L959.9,63.0"}],"width":1027.0,"height":84.0},"hash":"4ff401ca4e7d57e8"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.27.0","meta":{"title":"Trees and Grids","author":"Data structures, week 7","date":null,"aspect":"16:9","theme":"default"},"start":"trees-and-grids","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["trees-and-grids","balanced-search-trees","right-rotation","avl-insertions","maze","lcs","costs","thanks"],"slides":{"trees-and-grids":{"title":"Trees and Grids","label":"Trees and Grids","scope":"root","next":{"slide":"balanced-search-trees"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":8}},"balanced-search-trees":{"title":"Balanced search trees","label":"Balanced search trees","scope":"root","next":{"slide":"avl-insertions"},"branches":[],"detours":["rotations"],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":12}},"right-rotation":{"title":"A right rotation","label":"A right rotation","scope":"rotations","next":"back","branches":[],"detours":[],"steps":3,"tracks":[{"id":"rot","kind":"component","instance":"right-rotation/rot"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":20}},"avl-insertions":{"title":"AVL insertions","label":"AVL insertions","scope":"root","next":{"slide":"maze"},"branches":[],"detours":[],"steps":23,"tracks":[{"id":"code","kind":"component","instance":"avl-insertions/code","follow":"tree"},{"id":"tree","kind":"component","instance":"avl-insertions/tree"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22]],"offpath":false,"source":{"file":"talk.md","line":26},"notes":"<p>The trace calls the lab's own <code>insert<\/code> with a callback; the code on the left follows it.\nBadges are balance factors. The last insertion needs a double rotation.<\/p>\n"},"maze":{"title":"Breadth-first search in a maze","label":"Breadth-first search in a maze","scope":"root","next":{"slide":"lcs"},"branches":[],"detours":[],"steps":37,"tracks":[{"id":"bfs","kind":"component","instance":"maze/bfs"}],"positions":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19],[20],[21],[22],[23],[24],[25],[26],[27],[28],[29],[30],[31],[32],[33],[34],[35],[36]],"offpath":false,"source":{"file":"talk.md","line":45}},"lcs":{"title":"Longest common subsequence","label":"Longest common subsequence","scope":"root","next":{"slide":"costs"},"branches":[],"detours":[],"steps":44,"tracks":[{"id":"table","kind":"component","instance":"lcs/table"}],"positions":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[11],[12],[13],[14],[15],[16],[17],[18],[19],[20],[21],[22],[23],[24],[25],[26],[27],[28],[29],[30],[31],[32],[33],[34],[35],[36],[37],[38],[39],[40],[41],[42],[43]],"offpath":false,"source":{"file":"talk.md","line":59}},"costs":{"title":"Costs","label":"Costs","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":78}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":86}}},"detours":{"rotations":{"origin":"balanced-search-trees","entry":"right-rotation","label":"Rotations up close","key":"r","slides":["right-rotation"]}},"instances":{"right-rotation/rot":{"component":"tree-anim","slide":"right-rotation","data":"lt-data-right-rotation/rot"},"avl-insertions/code":{"component":"code","slide":"avl-insertions","data":"lt-data-avl-insertions/code"},"avl-insertions/tree":{"component":"tree-anim","slide":"avl-insertions","data":"lt-data-avl-insertions/tree"},"maze/bfs":{"component":"grid-anim","slide":"maze","data":"lt-data-maze/bfs"},"lcs/table":{"component":"grid-anim","slide":"lcs","data":"lt-data-lcs/table"}},"tours":{"short":["trees-and-grids","avl-insertions","lcs","thanks"]},"mainPath":["trees-and-grids","balanced-search-trees","avl-insertions","maze","lcs","costs","thanks"],"overview":{"nodes":{"trees-and-grids":{"x":62.5,"y":63.0,"w":109.0,"h":26.0,"label":"Trees and Grids"},"balanced-search-trees":{"x":219.5,"y":63.0,"w":145.0,"h":26.0,"label":"Balanced search trees"},"right-rotation":{"x":375.0,"y":21.0,"w":106.0,"h":26.0,"label":"A right rotation"},"avl-insertions":{"x":375.0,"y":63.0,"w":102.0,"h":26.0,"label":"AVL insertions"},"maze":{"x":542.0,"y":63.0,"w":168.0,"h":26.0,"label":"Breadth-first search in a…"},"lcs":{"x":751.0,"y":63.0,"w":190.0,"h":26.0,"label":"Longest common subsequence"},"costs":{"x":903.0,"y":63.0,"w":54.0,"h":26.0,"label":"Costs"},"thanks":{"x":989.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"trees-and-grids","to":"balanced-search-trees","kind":"next","path":"M117.3,63.0 C124.9,63.0 132.8,63.0 140.7,63.0 L146.8,63.0"},{"from":"balanced-search-trees","to":"right-rotation","kind":"detour","path":"M268.2,49.9 C284.7,45.4 303.2,40.4 320.1,35.7 L326.3,34.1"},{"from":"balanced-search-trees","to":"avl-insertions","kind":"next","path":"M292.3,63.0 C300.8,63.0 309.3,63.0 317.5,63.0 L323.7,63.0"},{"from":"avl-insertions","to":"maze","kind":"next","path":"M426.4,63.0 C434.5,63.0 443.1,63.0 451.7,63.0 L457.8,63.0"},{"from":"maze","to":"lcs","kind":"next","path":"M626.0,63.0 C633.8,63.0 641.8,63.0 649.7,63.0 L655.8,63.0"},{"from":"lcs","to":"costs","kind":"next","path":"M846.1,63.0 C854.4,63.0 862.4,63.0 869.6,63.0 L875.9,63.0"},{"from":"costs","to":"thanks","kind":"next","path":"M930.3,63.0 C937.6,63.0 945.7,63.0 953.5,63.0 L959.9,63.0"}],"width":1027.0,"height":84.0},"hash":"877834357182c5bc"}</script>
 <script type="application/json" id="lt-data-right-rotation/rot">{"size":{"width":330,"height":230,"r":21},"frames":{"format":"full","count":3,"frames":[{"tree":{"root":"y","kids":{"y":["x","T3"],"x":["T1","T2"]}},"nodes":{"y":{"state":"error"}},"caption":"y leans left: its left subtree is two levels taller","pos":{"T1":[37.0,193],"x":[101.0,115],"T2":[165.0,193],"y":[229.0,37],"T3":[293.0,115]}},{"tree":{"root":"y","kids":{"y":["x","T3"],"x":["T1","T2"]}},"nodes":{"y":{"state":"default"},"x":{"state":"active"}},"caption":"x will become the root of this subtree","edges":{"y->x":{"state":"active"}},"pos":{"T1":[37.0,193],"x":[101.0,115],"T2":[165.0,193],"y":[229.0,37],"T3":[293.0,115]}},{"tree":{"root":"x","kids":{"x":["T1","y"],"y":["T2","T3"]}},"nodes":{"y":{"state":"path"},"x":{"state":"path"}},"caption":"T2 changes parent; the in-order sequence T1 x T2 y T3 is unchanged","edges":{"x->y":{"state":"active"}},"pos":{"T1":[37.0,115],"x":[101.0,37],"T2":[165.0,193],"y":[229.0,115],"T3":[293.0,193]}}]},"panel":null,"height":300}</script>
 <script type="application/json" id="lt-data-avl-insertions/code">{"steps":[[1],[3],[5],[3],[5],[5],[10],[3],[5],[5],[3],[5],[5],[5],[10],[3],[5],[5],[5],[10],[10],[3],[1]]}</script>
 <script type="application/json" id="lt-data-avl-insertions/tree">{"size":{"width":394,"height":308,"r":21},"frames":{"format":"full","count":23,"frames":[{"tree":{"root":null,"kids":{}},"caption":"An empty AVL tree","pos":{}},{"tree":{"root":"10","kids":{}},"caption":"10 inserted, every balance factor in [-1, 1]","nodes":{"10":{"state":"path","label":"0"}},"pos":{"10":[197.0,37]}},{"tree":{"root":"10","kids":{}},"caption":"Insert 20: compare with 10","nodes":{"10":{"state":"active","label":"0"}},"pos":{"10":[197.0,37]}},{"tree":{"root":"10","kids":{"10":[null,"20"]}},"caption":"20 inserted, every balance factor in [-1, 1]","nodes":{"10":{"state":"default","label":"-1"},"20":{"state":"path","label":"0"}},"pos":{"10":[165.0,37],"20":[229.0,115]}},{"tree":{"root":"10","kids":{"10":[null,"20"]}},"caption":"Insert 30: compare with 10","nodes":{"10":{"state":"active","label":"-1"},"20":{"state":"default","label":"0"}},"pos":{"10":[165.0,37],"20":[229.0,115]}},{"tree":{"root":"10","kids":{"10":[null,"20"]}},"caption":"Insert 30: compare with 20","nodes":{"10":{"state":"default","label":"-1"},"20":{"state":"active","label":"0"}},"pos":{"10":[165.0,37],"20":[229.0,115]}},{"tree":{"root":"10","kids":{"10":[null,"20"],"20":[null,"30"]}},"caption":"Insert 30: rotate left at 10 to restore the balance","nodes":{"10":{"state":"error","label":"-2"},"20":{"state":"default","label":"-1"},"30":{"state":"default","label":"0"}},"pos":{"10":[133.0,37],"20":[197.0,115],"30":[261.0,193]}},{"tree":{"root":"20","kids":{"20":["10","30"]}},"caption":"30 inserted, every balance factor in [-1, 1]","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"default","label":"0"},"30":{"state":"path","label":"0"}},"pos":{"10":[133.0,115],"20":[197.0,37],"30":[261.0,115]}},{"tree":{"root":"20","kids":{"20":["10","30"]}},"caption":"Insert 40: compare with 20","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"active","label":"0"},"30":{"state":"default","label":"0"}},"pos":{"10":[133.0,115],"20":[197.0,37],"30":[261.0,115]}},{"tree":{"root":"20","kids":{"20":["10","30"]}},"caption":"Insert 40: compare with 30","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"default","label":"0"},"30":{"state":"active","label":"0"}},"pos":{"10":[133.0,115],"20":[197.0,37],"30":[261.0,115]}},{"tree":{"root":"20","kids":{"20":["10","30"],"30":[null,"40"]}},"caption":"40 inserted, every balance factor in [-1, 1]","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"default","label":"-1"},"30":{"state":"default","label":"-1"},"40":{"state":"path","label":"0"}},"pos":{"10":[101.0,115],"20":[165.0,37],"30":[229.0,115],"40":[293.0,193]}},{"tree":{"root":"20","kids":{"20":["10","30"],"30":[null,"40"]}},"caption":"Insert 50: compare with 20","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"active","label":"-1"},"30":{"state":"default","label":"-1"},"40":{"state":"default","label":"0"}},"pos":{"10":[101.0,115],"20":[165.0,37],"30":[229.0,115],"40":[293.0,193]}},{"tree":{"root":"20","kids":{"20":["10","30"],"30":[null,"40"]}},"caption":"Insert 50: compare with 30","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"default","label":"-1"},"30":{"state":"active","label":"-1"},"40":{"state":"default","label":"0"}},"pos":{"10":[101.0,115],"20":[165.0,37],"30":[229.0,115],"40":[293.0,193]}},{"tree":{"root":"20","kids":{"20":["10","30"],"30":[null,"40"]}},"caption":"Insert 50: compare with 40","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"default","label":"-1"},"30":{"state":"default","label":"-1"},"40":{"state":"active","label":"0"}},"pos":{"10":[101.0,115],"20":[165.0,37],"30":[229.0,115],"40":[293.0,193]}},{"tree":{"root":"20","kids":{"20":["10","30"],"30":[null,"40"],"40":[null,"50"]}},"caption":"Insert 50: rotate left at 30 to restore the balance","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"default","label":"-2"},"30":{"state":"error","label":"-2"},"40":{"state":"default","label":"-1"},"50":{"state":"default","label":"0"}},"pos":{"10":[69.0,115],"20":[133.0,37],"30":[197.0,115],"40":[261.0,193],"50":[325.0,271]}},{"tree":{"root":"20","kids":{"20":["10","40"],"40":["30","50"]}},"caption":"50 inserted, every balance factor in [-1, 1]","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"default","label":"-1"},"30":{"state":"default","label":"0"},"40":{"state":"default","label":"0"},"50":{"state":"path","label":"0"}},"pos":{"10":[69.0,115],"20":[133.0,37],"30":[197.0,193],"40":[261.0,115],"50":[325.0,193]}},{"tree":{"root":"20","kids":{"20":["10","40"],"40":["30","50"]}},"caption":"Insert 25: compare with 20","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"active","label":"-1"},"30":{"state":"default","label":"0"},"40":{"state":"default","label":"0"},"50":{"state":"default","label":"0"}},"pos":{"10":[69.0,115],"20":[133.0,37],"30":[197.0,193],"40":[261.0,115],"50":[325.0,193]}},{"tree":{"root":"20","kids":{"20":["10","40"],"40":["30","50"]}},"caption":"Insert 25: compare with 40","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"default","label":"-1"},"30":{"state":"default","label":"0"},"40":{"state":"active","label":"0"},"50":{"state":"default","label":"0"}},"pos":{"10":[69.0,115],"20":[133.0,37],"30":[197.0,193],"40":[261.0,115],"50":[325.0,193]}},{"tree":{"root":"20","kids":{"20":["10","40"],"40":["30","50"]}},"caption":"Insert 25: compare with 30","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"default","label":"-1"},"30":{"state":"active","label":"0"},"40":{"state":"default","label":"0"},"50":{"state":"default","label":"0"}},"pos":{"10":[69.0,115],"20":[133.0,37],"30":[197.0,193],"40":[261.0,115],"50":[325.0,193]}},{"tree":{"root":"20","kids":{"20":["10","40"],"40":["30","50"],"30":["25",null]}},"caption":"Insert 25: rotate right at 40 to restore the balance","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"default","label":"-2"},"30":{"state":"default","label":"+1"},"40":{"state":"error","label":"+1"},"50":{"state":"default","label":"0"},"25":{"state":"default","label":"0"}},"pos":{"10":[37.0,115],"20":[101.0,37],"25":[165.0,271],"30":[229.0,193],"40":[293.0,115],"50":[357.0,193]}},{"tree":{"root":"20","kids":{"20":["10","30"],"30":["25","40"],"40":[null,"50"]}},"caption":"Insert 25: rotate left at 20 to restore the balance","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"error","label":"-2"},"30":{"state":"default","label":"-1"},"40":{"state":"default","label":"-1"},"50":{"state":"default","label":"0"},"25":{"state":"default","label":"0"}},"pos":{"10":[37.0,115],"20":[101.0,37],"25":[165.0,193],"30":[229.0,115],"40":[293.0,193],"50":[357.0,271]}},{"tree":{"root":"30","kids":{"30":["20","40"],"20":["10","25"],"40":[null,"50"]}},"caption":"25 inserted, every balance factor in [-1, 1]","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"default","label":"0"},"30":{"state":"default","label":"0"},"40":{"state":"default","label":"-1"},"50":{"state":"default","label":"0"},"25":{"state":"path","label":"0"}},"pos":{"10":[37.0,193],"20":[101.0,115],"25":[165.0,193],"30":[229.0,37],"40":[293.0,115],"50":[357.0,193]}},{"tree":{"root":"30","kids":{"30":["20","40"],"20":["10","25"],"40":[null,"50"]}},"caption":"Height stays logarithmic","nodes":{"10":{"state":"default","label":"0"},"20":{"state":"default","label":"0"},"30":{"state":"default","label":"0"},"40":{"state":"default","label":"-1"},"50":{"state":"default","label":"0"},"25":{"state":"default","label":"0"}},"pos":{"10":[37.0,193],"20":[101.0,115],"25":[165.0,193],"30":[229.0,37],"40":[293.0,115],"50":[357.0,193]}}]},"panel":null,"height":380}</script>
@@ -815,29 +815,53 @@ const Lattice = (() => {
   // A step whose arrival through NEXT enters a detour (spec 6.4): { id, blocking }, or null.
   const stepDetour = (id, step) => (slide(id).stepDetours || {})[step] || null;
 
+  // Checkpoints (spec 6.5): the steps where two quick presses of a skip key stop, computed at build time.
+  // A slide without the field has its last step as its only checkpoint.
+  const checkpointsOf = (id) => slide(id).checkpoints || [steps(id) - 1];
+  function nextCheckpoint(id, step) {
+    const k = checkpointsOf(id).find((c) => c > step);
+    return k === undefined ? step : k;
+  }
+  function prevCheckpoint(id, step) {
+    const before = checkpointsOf(id).filter((c) => c < step);
+    return before.length ? before[before.length - 1] : 0;
+  }
+
   // Multi-step moves within a slide play the intermediate steps in rapid succession, so that
   // animations are seen rather than skipped (spec 7.2, SKIP). A new move cancels a running one.
   // Detour steps on the way are not entered; a blocking one stops the playback in front of it.
+  // `hold` ({ step, until }) keeps the playback from passing `step` before the time `until`: the first
+  // of two quick presses waits there for the second (spec 7.6). `checkpoint` marks a playback to a
+  // checkpoint, from which a following double press counts.
   let playTimer = null;
-  function playSteps(target) {
-    clearTimeout(playTimer);
+  let playing = null; // the playback under way: { slide, target, dir, checkpoint }
+  function playSteps(target, opts = {}) {
+    stopPlaying();
     const total = Math.abs(target - nav.cur.step);
     if (!total) return;
     const interval = Math.max(30, Math.min(90, 1000 / total));
+    const hold = opts.hold || null;
+    playing = { slide: nav.cur.slide, target, dir: Math.sign(target - nav.cur.step), checkpoint: !!opts.checkpoint };
     const tick = () => {
       const cur = nav.cur.step;
-      if (cur === target) return;
+      if (cur === target) { playing = null; return; }
       const dir = Math.sign(target - cur);
+      if (hold && cur === hold.step && performance.now() < hold.until) {
+        playTimer = setTimeout(tick, hold.until - performance.now());
+        return;
+      }
       const d = dir > 0 ? stepDetour(nav.cur.slide, cur + 1) : null;
-      if (d && d.blocking) return flash("Cannot step detour");
+      if (d && d.blocking) { playing = null; return flash("Cannot step detour"); }
       go(nav.cur.slide, cur + dir, { kind: "step", dir });
       if (nav.cur.step !== target) playTimer = setTimeout(tick, interval);
+      else playing = null;
     };
     tick();
   }
   function stopPlaying() {
     clearTimeout(playTimer);
     playTimer = null;
+    playing = null;
   }
 
   const actions = {
@@ -875,6 +899,7 @@ const Lattice = (() => {
     "skip-forward"() { playSteps(Math.min(nav.cur.step + 10, steps(nav.cur.slide) - 1)); },
     "skip-back"() { playSteps(Math.max(nav.cur.step - 10, 0)); },
     "last-step"() { playSteps(steps(nav.cur.slide) - 1); },
+    "first-step"() { playSteps(0); },
     "skip-detour"() {
       // Step over the detour step(s) that follow, without entering them (spec 7.2, SKIP-DETOUR).
       const cur = nav.cur;
@@ -1532,6 +1557,7 @@ const Lattice = (() => {
   const ACTION_LABELS = {
     next: "next step or slide", prev: "previous step, or undo the last move",
     "skip-forward": "10 steps forward", "skip-back": "10 steps back", "last-step": "last step of the slide",
+    "first-step": "first step of the slide",
     "skip-detour": "step over the next detour step",
     "enter-detour": "enter the first detour", return: "return from a detour or jump",
     overview: "overview", goto: "go to a slide", presenter: "presenter view", tour: "cycle through tours",
@@ -1544,10 +1570,10 @@ const Lattice = (() => {
       `<li><span class="lt-pp-kbd">${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("")}</span>` +
       `<span>${esc(ACTION_LABELS[action] || action)}</span></li>`);
     const fwd = (deck.keys["skip-forward"] || [])[0], back = (deck.keys["skip-back"] || [])[0];
-    if (fwd || back) { // three quick presses of a skip key (spec 7.6)
+    if (fwd || back) { // two quick presses of a skip key (spec 7.6)
       const kbds = [fwd, back].filter(Boolean).map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("");
-      const ends = [fwd && "last", back && "first"].filter(Boolean).join(" or ");
-      rows.push(`<li><span class="lt-pp-kbd">${kbds}×3</span><span>${ends} step of the slide (three presses within a second)</span></li>`);
+      const ends = [fwd && "next", back && "previous"].filter(Boolean).join(" or ");
+      rows.push(`<li><span class="lt-pp-kbd">${kbds}×2</span><span>${ends} checkpoint, the end of an animation (two presses within half a second)</span></li>`);
     }
     rows.push(`<li><span class="lt-pp-kbd"><kbd>1</kbd>…<kbd>9</kbd></span><span>choose a branch option or a detour (slide keys)</span></li>`);
     if (Object.values(deck.instances).some((i) => registry[i.component] && registry[i.component].zoom)) {
@@ -1765,32 +1791,45 @@ const Lattice = (() => {
     }
     const s = slide(nav.cur.slide);
     const slideKey = s.branches.some((b) => b.key === e.key) || s.detours.some((d) => deck.detours[d].key === e.key);
-    if (slideKey) { stopPlaying(); burstTarget(null, e); actions.choose(e.key); e.preventDefault(); return; }
+    if (slideKey) { stopPlaying(); burstMove(null, e); actions.choose(e.key); e.preventDefault(); return; }
     // Bindings may name a shifted key as "Shift+ArrowRight"; a plain key still matches with Shift held
     // (letters already arrive shifted, as "A" for Shift+a).
     const map = keyMap();
     const action = (e.shiftKey && map[`Shift+${e.key}`]) || map[e.key];
     if (action && actions[action]) {
+      const move = burstMove(action, e); // before stopPlaying: it reads the playback under way
       stopPlaying();
-      const target = burstTarget(action, e);
-      if (target === null) actions[action](); else playSteps(target);
+      if (move === null) actions[action](); else playSteps(move.target, move);
       e.preventDefault();
     }
   }
 
-  // Three presses of `skip-forward` within a second play to the last step of the slide, three of
-  // `skip-back` to its first step (spec 7.6). The auto-repeat of a held key does not count, and any
-  // other action starts the count again. Returns the step to play to, or null for the plain action.
-  const BURST = { "skip-forward": () => steps(nav.cur.slide) - 1, "skip-back": () => 0 };
-  const BURST_PRESSES = 3, BURST_WINDOW_MS = 1000;
-  let burst = { action: null, times: [] };
-  function burstTarget(action, e) {
-    if (!BURST[action]) { burst = { action: null, times: [] }; return null; }
+  // Two presses of `skip-forward` within half a second play to the next checkpoint (spec 6.5), two of
+  // `skip-back` to the previous one (spec 7.6). The checkpoint is counted from the anchor: the step before
+  // the first press, or the target of a checkpoint playback still under way in the same direction. The
+  // first press plays its ten steps from the anchor, but waits at that checkpoint while the window is
+  // open, so that a second press never has to play back. Later presses in the window keep the target.
+  // The auto-repeat of a held key does not count, and any other action starts the count again.
+  // Returns null for the plain action, or the arguments of playSteps: { target, hold, checkpoint }.
+  const BURST = {
+    "skip-forward": { dir: 1, checkpoint: nextCheckpoint, plain: (id, s) => Math.min(s + 10, steps(id) - 1) },
+    "skip-back": { dir: -1, checkpoint: prevCheckpoint, plain: (id, s) => Math.max(s - 10, 0) },
+  };
+  const BURST_WINDOW_MS = 500;
+  let burst = { action: null };
+  function burstMove(action, e) {
+    const b = BURST[action];
+    if (!b) { burst = { action: null }; return null; }
     if (e.repeat) return null;
     const now = performance.now();
-    if (burst.action !== action) burst = { action, times: [] };
-    burst.times = burst.times.filter((t) => now - t < BURST_WINDOW_MS).concat(now);
-    return burst.times.length >= BURST_PRESSES ? BURST[action]() : null;
+    const id = nav.cur.slide;
+    if (burst.action === action && burst.slide === id && now - burst.start < BURST_WINDOW_MS) {
+      return { target: burst.target, checkpoint: true }; // the second press, or a later one in the window
+    }
+    const run = playing && playing.checkpoint && playing.slide === id && playing.dir === b.dir;
+    const anchor = run ? playing.target : nav.cur.step;
+    burst = { action, slide: id, start: now, target: b.checkpoint(id, anchor) };
+    return { target: b.plain(id, anchor), hold: { step: burst.target, until: now + BURST_WINDOW_MS } };
   }
 
   function onClick(e) {

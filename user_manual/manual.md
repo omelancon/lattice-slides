@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.26.3
+author: Lattice 0.27.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1458,14 +1458,14 @@ show: [label, context]
 |---|---|
 | Right, Space, PageDown | Next step, then next slide (`next`) |
 | Left, PageUp | Undo the last move; with nothing to undo, the previous slide (`prev`) |
-| Shift+Right, Shift+Left | Ten steps forward or back, played quickly; three in a second: all the way (`skip-forward`, `skip-back`) |
-| End | Last step of the slide (`last-step`) |
+| Shift+Right, Shift+Left | Ten steps; twice in half a second, the next or previous [[checkpoints\|checkpoint]] (`skip-forward`, `skip-back`) |
+| End, Home | Last or first step of the slide, played quickly (`last-step`, `first-step`) |
 | Down | Enter the slide's first detour (`enter-detour`) |
 | Shift+Down | Step over the next detour step without entering it (`skip-detour`) |
 | Up, Backspace | Return from the current detour or jump (`return`) |
 | 1 to 9, the slide's keys | Choose a branch option or a detour (`choose`) |
 | `o`, `g`, `p`, `t` | Overview, go to a slide, presenter view, next tour (`overview`, `goto`, `presenter`, `tour`) |
-| Home | Back to the start, clearing the history (`home`) |
+| Shift+Home | Back to the start, clearing the history (`home`) |
 | Click a block | Enlarge a block of a versioning drawing; any key or a click outside closes it |
 
 Rebind any action in the front matter, `keys: {next: [ArrowRight, n], presenter: P}`; a key is a `KeyboardEvent.key` name, optionally prefixed with `Shift+`.
@@ -1485,6 +1485,47 @@ Rebind any action in the front matter, `keys: {next: [ArrowRight, n], presenter:
 - The URL keeps the position, `#/slide-id/step`; a reload restores the history too, and a step beyond the last is clamped
 - Transitions follow the edge kind (`slide` along the path, `zoom` into a detour, `fade` on a link) and play in reverse on the way back
 - Slide keys (branch options, detours) must not collide with global keys: error LT018
+
+# Checkpoints: one animation at a time {#checkpoints .dense}
+
+:::: columns
+::: column {width=1fr}
+{#cp-keys .reveal}
+- Press **Shift+Right twice** within half a second: the slide plays to the next **checkpoint**, the end of a run of steps that move the same tracks
+- On this slide: these two bullets, then the sort, then the arrow's three moves, then the rest of this list
+- **Shift+Left twice** plays back to the previous checkpoint
+- A step that moves two tracks at once is a kind of its own; a non-blocking detour step is passed, a blocking one ends the run
+- End and Home ignore checkpoints; the build computes them from the step table (spec section 6.5)
+:::
+::: column {width=1fr}
+```array-anim {#cp-sort source="traces.py:bubble_trace"}
+values: [3, 1, 2]
+```
+:::
+::::
+
+```arrow {#cp-arrow color=detour}
+steps:
+  - null
+  - to: "cp-keys[1]"
+    to_anchor: bullet
+  - to: "cp-keys[2]"
+    to_anchor: bullet
+  - to: cp-sort
+    angle: 250
+    label: the arrow's moves, one run
+```
+
+```timeline
+reveal ..2
+cp-sort ..end
+cp-arrow ..end
+reveal ..end
+```
+
+::: notes
+Try it: from the first step, Shift+Right twice stops after the second bullet, then after the sort, then after the arrow, then at the end.
+:::
 
 # The presenter view {#presenter-view .dense}
 

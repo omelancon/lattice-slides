@@ -33,6 +33,7 @@ DEFAULT_KEYS: dict[str, list[str]] = {
     "skip-forward": ["Shift+ArrowRight"],
     "skip-back": ["Shift+ArrowLeft"],
     "last-step": ["End"],
+    "first-step": ["Home"],  # before `home`: a deck that still binds `home: Home` keeps it (the later action wins)
     "skip-detour": ["Shift+ArrowDown"],
     "enter-detour": ["ArrowDown"],
     "return": ["ArrowUp", "Backspace"],
@@ -40,7 +41,7 @@ DEFAULT_KEYS: dict[str, list[str]] = {
     "goto": ["g"],
     "presenter": ["p"],
     "tour": ["t"],
-    "home": ["Home"],
+    "home": ["Shift+Home"],
 }
 
 
@@ -185,6 +186,7 @@ class Slide:
     tracks: list[Track] = field(default_factory=list)
     positions: list[list[int]] = field(default_factory=lambda: [[]])
     step_detours: dict[int, dict] = field(default_factory=dict)  # step -> {"id", "blocking"} (spec 6.4)
+    checkpoints: list[int] = field(default_factory=lambda: [0])  # where two quick skip presses stop (spec 6.5)
     column_init: dict[str, str] = field(default_factory=dict)  # columns named by `width` cues: id -> flex at step 0
     column_states: list[dict[str, str]] = field(default_factory=list)  # positions of the columns track (spec 6.1)
 

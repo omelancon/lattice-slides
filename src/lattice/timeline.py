@@ -208,6 +208,7 @@ def compile_steps(slide: Slide, diags: Diagnostics) -> None:
             step_detours[k] = {"id": d.id, "blocking": d.blocking}
             inserted += 1
     slide.step_detours = step_detours
+    slide.checkpoints = checkpoints(table, step_detours)
 
     # `badge=step|next` ties a badge to a detour step (spec 3.9), checked for every badge of the detour,
     # placed or not; `at=` detours already reported by LT054 are left out so that one mistake gives one error.
@@ -233,6 +234,33 @@ def compile_steps(slide: Slide, diags: Diagnostics) -> None:
     if columns is not None:
         columns.positions = len(states)
         slide.column_states = states
+
+
+def checkpoints(table: list[dict[str, int]], step_detours: dict[int, dict]) -> list[int]:
+    """The checkpoints of a step table (spec 6.5): the last step of each run of steps of the same kind,
+    and the last step. A step's kind is the set of tracks it changes; the rows hold the independent
+    tracks and the columns track, never followers. A step that changes nothing (a detour step, an LT030
+    cue) belongs to no run, and a blocking detour step ends the run before it."""
+    last = len(table) - 1
+    found: list[int] = []
+    run_kind: frozenset[str] | None = None
+    run_end = 0
+    for i in range(1, len(table)):
+        d = step_detours.get(i)
+        if d is not None and d["blocking"]:
+            if run_kind is not None:
+                found.append(run_end)
+            run_kind = None
+            continue
+        kind = frozenset(t for t in table[i] if table[i][t] != table[i - 1].get(t))
+        if not kind:
+            continue
+        if run_kind is not None and kind != run_kind:
+            found.append(run_end)
+        run_kind, run_end = kind, i
+    if run_kind is not None and run_end != last:
+        found.append(run_end)
+    return sorted(set(found) | {last})
 
 
 def _value(p: TimelinePos, cur: int, last: int) -> int:
