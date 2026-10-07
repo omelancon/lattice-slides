@@ -10,6 +10,8 @@ This is version 0.25.0. This README covers usage in brief. The rest:
   [`user_manual/manual.html`](user_manual/manual.html)): every feature, with a live example of each.
 - [`docs/spec.md`](docs/spec.md) defines the syntax, navigation, components and output exactly.
 - [`docs/design-report.md`](docs/design-report.md) explains the design and holds the roadmap.
+- [`docs/USER_SKILL.md`](docs/USER_SKILL.md) onboards an AI agent that writes decks: the workflow, and a
+  map of every feature to its manual slide and spec section.
 - [`docs/SKILL.md`](docs/SKILL.md) is the starting point for contributors.
 
 ## Install

@@ -7,7 +7,7 @@ description: Onboarding and working rules for the Lattice codebase, a Python lib
 
 Lattice turns Markdown into one self-contained HTML deck whose slides form a graph. Python does all heavy work at build time (parsing, layout, plots, algorithm traces); the browser only replays precomputed states. Keep that split in mind: almost every design decision follows from it.
 
-This file is for contributors. It explains where things live, how to verify changes, and how to keep the documentation coherent. It deliberately does not repeat the authoring syntax or the contracts; it points to the document that owns each topic.
+This file is for contributors. It explains where things live, how to verify changes, and how to keep the documentation coherent. It deliberately does not repeat the authoring syntax or the contracts; it points to the document that owns each topic. Agents that write decks with Lattice, rather than change it, read `docs/USER_SKILL.md` instead; keeping that file current is part of every user-visible change (last section).
 
 ## Documentation map (read the owner, do not copy it)
 
@@ -17,6 +17,7 @@ This file is for contributors. It explains where things live, how to verify chan
 | `docs/spec.md` | The normative definition: grammar (section 3), Deck model (4), graph resolution (5), steps, timelines and detour steps (6), navigation state machine (7), Python component contract (8, the `arrow` component in 8.9, code segments in 8.10, `code-morph` in 8.11), frames (9), JS runtime contract (10), output format (11), diagnostics (12), changes since draft 1 (15) | Before changing behavior. The spec wins over every other document |
 | `docs/design-report.md` | Why: goals and non-goals, design rationale (section 3), technology choices (5), the roadmap (6) and the decisions table (7) | You are about to make a design choice, or want to know what is planned |
 | `docs/SKILL.md` (this file) | How to work on the code: structure, setup, verification, pitfalls, release and documentation upkeep | Always, first |
+| `docs/USER_SKILL.md` | The onboarding skill for agents that *use* Lattice to write decks: the model, the workflow, a map of every feature to its manual slide and spec section, the examples, the authoring pitfalls | You changed anything user-visible (a feature, an option, a command, a manual slide id, a spec section number, an example): update its feature map and pitfalls in the same change |
 | `user_manual/manual.md` | The user manual, a Lattice deck: every feature shown live, with its syntax, options and keys | You changed anything user-visible: the manual must show it (built like the examples, checked by the suite) |
 | `docs/todo.md` | What waits on Olivier (things to look at or decide) and small items left for later; larger plans belong to the roadmap | You finish a task (add what is left open) or look for something to do |
 | `docs/implementation-report-*.md` | The record of the latest release: what was built, decided and verified, and what was not | You need the history of a recent change; write a new one for each release (see the last section) |
@@ -84,7 +85,7 @@ examples/         seven decks with their built talk.html; they double as integra
 user_manual/      the user manual deck (manual.md, manual.html) with its demo sources and plugin
 scripts/          build_examples.py, snapshot.py (drive a deck in Chromium, take screenshots),
                   check_docs.py (mechanical documentation checks)
-docs/             this file, the spec, the design report, the todo list, the latest implementation report;
+docs/             this file, USER_SKILL.md (for deck authors), the spec, the design report, the todo list, the latest implementation report;
                   archive/ holds earlier plans, notes and reports
 ```
 
@@ -106,11 +107,11 @@ Each of these was decided deliberately; the reasoning is in the report (sections
 
 ## Common tasks
 
-**Add a built-in component.** Write the class in `components/` (spec 8.2), register it in `components/__init__.py`, add a runtime in `runtime/components/` if it has positions or interactivity (spec 10), add styles to `lattice.css` using theme custom properties, add a row to spec 8.8 and to the README components table, add a test, and use it in an example so the layout test covers it.
+**Add a built-in component.** Write the class in `components/` (spec 8.2), register it in `components/__init__.py`, add a runtime in `runtime/components/` if it has positions or interactivity (spec 10), add styles to `lattice.css` using theme custom properties, add a row to spec 8.8, to the README components table and to the components table of `docs/USER_SKILL.md`, add a test, and use it in an example so the layout test covers it.
 
 **Add a diagnostic.** Emit it through `diags.error` or `diags.warn` with a new code (a component's warning through `ctx.warn(msg, code)`, so that a cached build reports it again), add the row to spec section 12, and add a test asserting the code appears.
 
-**Change the syntax or semantics.** Change the spec section that owns the rule first, then the code, then the README summary if users see it. Add a row to the changelog table of spec section 15 pointing to that section.
+**Change the syntax or semantics.** Change the spec section that owns the rule first, then the code, then the README summary and `docs/USER_SKILL.md` if users see it (a new pitfall goes in its "Rules that bite"). Add a row to the changelog table of spec section 15 pointing to that section.
 
 **Add a theme property.** Define it in every file of `runtime/themes/`, and if Python components need it (plots), in the palette of `themes.py`.
 
@@ -182,11 +183,12 @@ Take the screenshot after the last edit, not before it. A column overlap once sh
 
 Do this after every major task (a feature, a fix that changes behavior, a release), not only when something looks wrong. Documentation drifts one small edit at a time, and each document is read by someone who trusts it.
 
-1. **Reread every document in full:** `README.md`, every file in `docs/` except `docs/archive/`, `user_manual/manual.md`, and any README inside `examples/`. Skimming misses contradictions; they hide in examples and tables.
-2. **Check each statement against the code and against its owner** in the documentation map above. The spec owns behavior; the report owns rationale and plans; the README owns user-facing usage; this file owns contributor workflow.
+1. **Reread every document in full:** `README.md`, every file in `docs/` except `docs/archive/` (`docs/USER_SKILL.md` included), `user_manual/manual.md`, and any README inside `examples/`. Skimming misses contradictions; they hide in examples and tables.
+2. **Check each statement against the code and against its owner** in the documentation map above. The spec owns behavior; the report owns rationale and plans; the README owns user-facing usage; this file owns contributor workflow; `docs/USER_SKILL.md` owns the onboarding of agents that write decks, and summarises the manual and the spec without adding facts of its own.
 3. **Remove duplication.** When a fact appears in two places, keep it in its owner and replace the other occurrence with a reference (for example "see spec section 7.6"). A user-facing summary in the README is acceptable only if it links to the owning section and adds no facts of its own.
 4. **Fix contradictions in place.** Update the text that is wrong rather than appending corrections elsewhere. Spec section 15 is a changelog table that points to the amended sections; it must not hold rules found nowhere else.
 5. **Keep statuses aligned.** The version in `src/lattice/__init__.py` and `pyproject.toml`, the version named in the README and at the top of the spec and the report, and the roadmap (report section 6) must agree. The spec does not keep its own list of planned features; section 14 points to the roadmap.
-6. **Check references.** Run `python scripts/check_docs.py`. It verifies that cited sections, repository paths, component names, CLI commands and flags exist, that the diagnostic codes in the code match spec section 12, and that versions agree. It cannot judge prose, so it complements steps 1 to 5 and does not replace them.
+6. **Check references.** Run `python scripts/check_docs.py`. It verifies, in every live document including `docs/USER_SKILL.md`, that cited sections, repository paths, component names, CLI commands and flags exist, that the manual slides it cites by id exist, that the diagnostic codes in the code match spec section 12, and that versions agree. It cannot judge prose, so it complements steps 1 to 5 and does not replace them.
 7. **Archive what is no longer current.** When a new implementation report is written, the previous one moves to `docs/archive/` (`git mv`) once its rules live in the spec, its reasons in the report and its open items in the todo; add it to `docs/archive/README.md`. Archived files are history: do not update them, and do not cite them from the live documents except as history.
-8. **Update this file** when the structure, setup, test suites or release steps change.
+8. **Update `docs/USER_SKILL.md`** whenever users see a change: a new or changed feature, option or command gets its row in the feature map (with its manual slide id and spec section), a renamed manual slide or renumbered spec section is followed there, a new example joins its examples table, and an authoring pitfall joins its "Rules that bite". It is the first file a deck-writing agent reads, so a stale row sends it to the wrong syntax; `check_docs.py` catches broken references, not missing features, so compare its feature map with the manual's slides.
+9. **Update this file** when the structure, setup, test suites or release steps change.
