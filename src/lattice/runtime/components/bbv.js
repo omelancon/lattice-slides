@@ -231,20 +231,32 @@
     return d;
   }
 
-  function route(inst, at, e) {
+  // Edges between the same two nodes (the two outcomes of `if x goto L else goto L`) are drawn side by side:
+  // `side` is -1, 0 or 1 (0 for a lone edge), across the direction of the drawing.
+  const PARALLEL_END = 8, PARALLEL_BEND = 26, PARALLEL_LANE = 10;
+
+  function route(inst, at, e, side = 0) {
     const p = anchors(inst, at, e);
     if (!p) return null;
     const lr = inst.box.direction === "LR";
+    if (side) {  // ends apart across the rank axis, so that both arrowheads show
+      if (lr) { p.sy += side * PARALLEL_END; p.ey += side * PARALLEL_END; }
+      else { p.sx += side * PARALLEL_END; p.ex += side * PARALLEL_END; }
+    }
     if (!p.back) {
-      const c1 = lr ? [p.sx + (p.ex - p.sx) / 2, p.sy] : [p.sx, p.sy + (p.ey - p.sy) / 2];
-      const c2 = lr ? [p.sx + (p.ex - p.sx) / 2, p.ey] : [p.ex, p.ey - (p.ey - p.sy) / 2];
+      const bend = side * PARALLEL_BEND;
+      const c1 = lr ? [p.sx + (p.ex - p.sx) / 2, p.sy + bend] : [p.sx + bend, p.sy + (p.ey - p.sy) / 2];
+      const c2 = lr ? [p.sx + (p.ex - p.sx) / 2, p.ey + bend] : [p.ex + bend, p.ey - (p.ey - p.sy) / 2];
       const mid = [(p.sx + 3 * c1[0] + 3 * c2[0] + p.ex) / 8, (p.sy + 3 * c1[1] + 3 * c2[1] + p.ey) / 8];
       return { d: `M${p.sx},${p.sy} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p.ex},${p.ey}`, mid };
     }
     // a back edge leaves along the rank axis, travels on the lane beside the function and comes back in
     const band = inst.box.bands[inst.T.versions[e.src].function] || { lane: 0 };
-    const lane = band.lane;
-    const out = 22;
+    // parallel back edges nest without crossing: the one whose ends lie toward the lane takes the inner lane
+    // and leaves and enters closer to its nodes
+    const toward = side * Math.sign(band.lane - (lr ? p.sy : p.sx));
+    const lane = band.lane - side * PARALLEL_LANE;
+    const out = 22 - toward * PARALLEL_LANE * 0.6;
     let pts;
     if (lr) pts = [[p.sx, p.sy], [p.sx + out, p.sy], [p.sx + out, lane], [p.ex - out, lane], [p.ex - out, p.ey], [p.ex, p.ey]];
     else pts = [[p.sx, p.sy], [p.sx, p.sy + out], [lane, p.sy + out], [lane, p.ey - out], [p.ex, p.ey - out], [p.ex, p.ey]];
@@ -252,11 +264,29 @@
     return { d: polyline(pts), mid };
   }
 
+  const KIND_ORDER = ["true", "goto", "return", "call", "false"];
+
+  // -1, 0 or 1 per drawn edge: the place of an edge among the drawn edges between the same two nodes
+  function sides(inst) {
+    const groups = {};
+    for (const [key, e] of Object.entries(inst.edges)) {
+      if (!e.g.classList.contains("lt-gone")) (groups[`${e.src}->${e.dst}`] ||= []).push(key);
+    }
+    const out = {};
+    for (const keys of Object.values(groups)) {
+      if (keys.length < 2) continue;
+      keys.sort((a, b) => KIND_ORDER.indexOf(inst.edges[a].kind) - KIND_ORDER.indexOf(inst.edges[b].kind));
+      keys.forEach((k, i) => { out[k] = (2 * i - (keys.length - 1)) / (keys.length - 1); });
+    }
+    return out;
+  }
+
   function place(inst, at) {
     for (const [vid, p] of Object.entries(at)) if (inst.nodes[vid]) inst.nodes[vid].g.setAttribute("transform", `translate(${p[0]},${p[1]})`);
-    for (const e of Object.values(inst.edges)) {
+    const side = sides(inst);
+    for (const [key, e] of Object.entries(inst.edges)) {
       if (e.g.classList.contains("lt-gone")) continue;
-      const r = route(inst, at, e);
+      const r = route(inst, at, e, side[key] || 0);
       if (!r) continue;
       e.path.setAttribute("d", r.d);
       e.label.setAttribute("x", r.mid[0]);
@@ -287,7 +317,8 @@
     const root = el.querySelector(".lt-bbv-anim");
     root.innerHTML = `<div class="lt-ga-main"><div class="lt-ga-canvas"></div><div class="lt-ga-panel" hidden></div></div><div class="lt-ga-caption"></div>`;
     const canvas = root.querySelector(".lt-ga-canvas");
-    if (data.height) canvas.style.height = `${data.height}px`;
+    // an explicit height is kept; without one the drawing takes up to its default and shrinks to the room it has
+    if (data.height) { canvas.style.height = `${data.height}px`; root.classList.add("lt-ga-sized"); }
     const box = data.box;
     const id = `bbv${++uid}`;
     const s = svg("svg", { viewBox: `0 0 ${box.width} ${box.height}`, class: "lt-ga-svg lt-bbv-svg", preserveAspectRatio: "xMidYMid meet" });
@@ -309,6 +340,7 @@
     s.append(gHead, gEdges, gNodes);
     canvas.appendChild(s);
     const caption = root.querySelector(".lt-ga-caption");
+    caption.hidden = data.captions === false; // a drawing without captions (a static CFG, `caption: none`) keeps no room for one
     if (typeof ResizeObserver !== "undefined") new ResizeObserver(() => fitCaption(caption)).observe(caption);
     const byLabel = {};
     for (const v of Object.values(data.tables.versions)) if (!(v.label in byLabel)) byLabel[v.label] = v.block;

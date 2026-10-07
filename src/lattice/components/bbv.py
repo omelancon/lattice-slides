@@ -331,7 +331,8 @@ class BbvAnim(_NamesParts, Component):
         cfg = ctx.frames_config
         data = {"box": box, "tables": trace.tables, "frames": frame_store(frames, cfg.max_full_bytes, cfg.keyframe_interval),
                 "show": show, "colors": _colors(trace.tables, ctx, opts.colors), "callEdges": opts.call_edges,
-                "panel": opts.panel, "height": opts.height, "algorithm": opts.algorithm}
+                "panel": opts.panel, "height": opts.height, "algorithm": opts.algorithm,
+                "captions": any(f.get("caption") for f in frames)}
         zoom = _zoom(opts, trace.tables["versions"], trace.frames)
         if zoom:
             data["zoom"] = zoom
@@ -386,7 +387,8 @@ class BbvCfg(_NamesParts, Component):
                 highlight.append(ids.get(key) if key else None)
         data = {"box": box, "tables": {"program": program_table, "versions": versions},
                 "frames": frame_store(frames), "show": show, "colors": _colors({"program": program_table}, ctx, opts.colors),
-                "callEdges": False, "panel": None, "height": opts.height, "highlight": highlight, "static": True}
+                "callEdges": False, "panel": None, "height": opts.height, "highlight": highlight, "static": True,
+                "captions": False}
         zoom = _zoom(opts, versions, [frame])
         if zoom:
             data["zoom"] = zoom
@@ -428,7 +430,8 @@ class AbstractInterpAnim(_NamesParts, Component):
             panel = [k for k in opts.panel if k != "history"] + (opts.history or [] if "history" in opts.panel else [])
         data = {"box": box, "tables": trace.tables, "frames": frame_store(frames, cfg.max_full_bytes, cfg.keyframe_interval),
                 "show": show, "colors": _colors(trace.tables, ctx, opts.colors), "callEdges": False,
-                "panel": panel, "height": opts.height, "algorithm": "absint", "static": True}
+                "panel": panel, "height": opts.height, "algorithm": "absint", "static": True,
+                "captions": any(f.get("caption") for f in frames)}
         zoom = _zoom(opts, trace.tables["versions"], trace.frames)
         if zoom:
             data["zoom"] = zoom

@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.26.1
+author: Lattice 0.26.2
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1697,6 +1697,7 @@ Lattice.component("stack-anim", {
 | LT034, LT035 | error | An include or a detour where it is not allowed (in a container, a list item, a quote); detour does not terminate |
 | LT041, LT042, LT043 | warning, error, error | Level-1 heading inside a container; no start slide; slide repeated in a tour |
 | LT064 | error | A column width that is not a fraction, a length or `0`; a `width` step naming no column of the slide |
+| LT065 | warning | An attribute line before a `::: detour`, which applies to nothing (a badge is not a fragment: use `badge=step` or `badge=next`) |
 
 # Components and steps {#diagnostics-steps .dense}
 

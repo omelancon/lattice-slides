@@ -260,7 +260,7 @@ const Lattice = (() => {
 
   // ------------------------------------------------------------------ rendering
   function transitionFor(how, target) {
-    if (!how || how.kind === "step" || how.kind === "sync" || how.kind === "scrub") return null;
+    if (!how || how.kind === "step" || how.kind === "sync" || how.kind === "scrub" || how.kind === "hash") return null;
     const back = (name) => (name === "zoom" ? "zoom-out" : name === "slide" ? "slide-back" : name);
     if (how.kind === "return") return "zoom-out";
     if (how.kind === "prev") return back(deck.transitions.next);
@@ -327,8 +327,13 @@ const Lattice = (() => {
   const columnsOf = (box) => Array.from(box.children).filter((c) => c.classList.contains("lt-column"));
   const columnInner = (col) => Array.from(col.children).find((c) => c.classList.contains("lt-column-in"));
 
+  // A column at rest: its final flex value, no transition. A move's transitions may still be running when its timer
+  // ends (they start at the next frame, which comes late on a busy page), and clearing `transition` does not stop
+  // them in Chromium: they are cancelled, or the box would keep moving after the arrows measured it.
   function restColumn(col, flex) {
     const shut = flex === SHUT;
+    const inner = columnInner(col);
+    for (const el of [col, inner]) if (el && el.getAnimations) el.getAnimations().forEach((a) => a.cancel());
     col.style.transition = "";
     col.style.marginLeft = "";
     col.style.marginRight = "";
@@ -337,7 +342,6 @@ const Lattice = (() => {
     col.classList.toggle("lt-col-shut", shut);
     col.inert = shut;
     col.ltShut = shut;
-    const inner = columnInner(col);
     if (inner) {
       inner.style.transition = "";
       inner.style.opacity = "";
@@ -483,8 +487,9 @@ const Lattice = (() => {
         sec.classList.add(`lt-anim-${tr}`);
       }
     }
-    // scrubbing, previews and printing never animate (spec 10.1)
-    const adjacent = sameSlide && Math.abs(prev.step - nav.cur.step) === 1 && !passive && !(how && how.kind === "scrub");
+    // scrubbing, a change of the URL hash, previews and printing never animate (spec 10.1)
+    const still = how && (how.kind === "scrub" || how.kind === "hash");
+    const adjacent = sameSlide && Math.abs(prev.step - nav.cur.step) === 1 && !passive && !still;
     applyStep(id, nav.cur.step, { sameSlide, fromStep: sameSlide ? prev.step : null, animate: adjacent, force: !sameSlide });
     updateHud();
     if (passive) return;
@@ -1197,7 +1202,7 @@ const Lattice = (() => {
     window.addEventListener("hashchange", () => {
       const h = parseHash();
       if (h && (h.slide !== nav.cur.slide || h.step !== nav.cur.step)) {
-        if (h.slide === nav.cur.slide) go(h.slide, h.step, { kind: "step", dir: 0 });
+        if (h.slide === nav.cur.slide) go(h.slide, h.step, { kind: "hash", dir: 0 }); // a jump: never animates
         else { push("excursion"); go(h.slide, h.step, { kind: "link", dir: 1 }); }
       }
     });

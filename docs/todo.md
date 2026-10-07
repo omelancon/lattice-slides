@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-06, after 0.26.1 (`implementation-report-2026-10-06-e.md`, section 4 for the patch). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-07, after 0.26.2 (`implementation-report-2026-10-06-e.md`, sections 5 and 6 for the patches). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
@@ -21,7 +21,6 @@ Updated 2026-10-06, after 0.26.1 (`implementation-report-2026-10-06-e.md`, secti
 - [ ] 0.12.0: try `code-morph` on one of your own bug fixes. The alignment keeps the longest common runs of tokens, so when two runs cross only one survives (in example 05, `del self.items[` fades out and back in while `self.order.pop(0)` glides); say whether that reads well or needs a smarter pairing.
 - [ ] 0.12.0: `mark=true` tints arriving tokens with `--lt-add-bg` for 1.6 s; it is off by default, as you asked. Look at it once in the manual ("Morphing named segments").
 - [ ] 0.12.1: the manual's "Extending Lattice: a plugin file" now shows each highlighted range (steps 1 and 2 used to show dimmed code only); look at it once, and at a PDF of a deck of yours with a long `code-steps`.
-- [ ] 0.13.0: with `intervals` off (the default), constants bound through `goto B(i=0)` and call arguments still enter the target context with their singleton (`b: fx {0}` in the operator entries of example 07's `fact`), while every other interval is stripped. Fixing it is one `without_range()` in `Goto` (`sbbv.py`) and in `specialize_call` (`lv.py`); it was left as is so that example 07 stays byte-identical. Say if you prefer the fix.
 - [ ] 0.13.0: the two `findv` slides of example 07 and the manual's "Intervals and vector lengths" were sized in Chromium at 1280x720; the `⟦x⟧` brackets come from the fallback font of the build machine, check them on yours (an ASCII `|x|` is a one-line change in `intervals.py` if they look wrong). The `findv` drawing is dense (24 versions of five context lines); since 0.15.0, `show: [label]` plus a click on a block (enlarged with its context, code and exit context) is the alternative.
 - [ ] 0.13.0: `checks` now counts every `if` left (the loop test, `if #res` and the overflow tests included), as agreed; the captions say "tests left". Say if you want the type tests counted apart.
 - [ ] 0.14.0: the examples and most of the manual still write containers with decreasing colon counts (`:::::` around `::::` around `:::`), which parse as before; only the manual's "Containers" slide and its new "Closing fences" detour use `:::` throughout and `::: /NAME`. Say if you want the examples and the manual rewritten in one style.
@@ -35,8 +34,10 @@ Updated 2026-10-06, after 0.26.1 (`implementation-report-2026-10-06-e.md`, secti
 - [ ] 0.26.0: `docs/implementation-report-2026-10-06-d.md` (0.25.0) is copied to `docs/archive/`; `git rm` it in `docs/`, and `git add` the new report `implementation-report-2026-10-06-e.md`.
 - [ ] 0.26.0, updated in 0.26.1: look at the manual's "Arrows at a CFG" on your screen. `cfg-parts` in the defense's `src/preface.md` now uses `avg-graph.B`, `avg-graph.A->L` and `avg-graph.L`. Its arrow at the unlabelled edge `A->L` was drawn at the top left in Firefox (a mark without area); fixed in 0.26.1 and checked in Firefox and Chromium, with a test that needs Playwright's Firefox (`playwright install firefox`, otherwise it skips).
 - [ ] 0.26.0: the mark of a labelled edge is sized from the label's length (7.3 px per character of the 12 px code font, `MARK_CH` in `bbv.js`), not measured; if your code font is wider, an arrowhead may touch the end of a `[1] [2]` label.
-- [ ] 0.26.0: found while writing edge kinds, not changed: `if x goto L else goto L` draws a single `true` edge, because the program table gives both successors the kind `true` (`_program_table` in `trace.py`); `cfg.A->L:false` is then LT063. Say if you want it fixed (the two edges would then be drawn on top of each other).
-- [ ] 0.26.0: `test_columns_change_width_however_a_step_is_reached` failed on the first full run of the session twice (an arrow 3 px off after a skip playback), on the 0.25.0 sources as well, and passed on every rerun; a timing margin in the test, probably, to watch.
+- [ ] 0.26.2: look at a CFG where both outcomes of an `if` go to one block (`if x goto L else goto L`, a test deck is in the report, section 6). The two edges are drawn side by side, `true` on the left (or above with `direction=LR`), their ends 16 px apart and their curves bent 26 px; two such back edges take lanes 10 px apart, nested so that they do not cross (`PARALLEL_*` in `bbv.js`). Say if they should sit closer or farther.
+- [ ] 0.26.2: a versioning drawing without `height` now shrinks to the room its component has (up to 430 px) instead of pushing its caption over what follows. No example or manual slide changed, but a slide of yours without `height` and with text under the drawing may now show it smaller; set `height=` where you want a fixed size. A `bbv-cfg` (and `caption: none`) no longer keeps 33 px for a caption it never shows.
+- [ ] 0.26.2: the layout test now also checks that nothing a component draws outside its box covers another block. It skips the drawing canvases, which are letterboxed: the `bfs` slide of example 02 has `height: 360` where only about 300 px are left, so its canvas box reaches over the bullets above it and over its caption, without painting there. Say if `height` on `graph-anim` and the other animations should become a maximum that shrinks when the room is short, as a versioning drawing without `height` now does.
+- [ ] 0.26.2: nothing was committed; the changes are in the working tree (no new files). `git add -u` and commit when you have read them.
 - [ ] 0.25.0: `panel_at=below` on the defense's `findv` analysis needs a smaller `height` than 470 (the panel and caption then go under the drawing, and at 470 they reach the footer); `direction: LR` with `below` is the other way to use the whole row.
 - [ ] 0.23.0: try three quick Shift+Right (Shift+Left) presses on a long animation (example 07, or 06). The window is one second from the first press (`BURST_WINDOW_MS` in `lattice.js`), the first two presses still move ten steps each, and the playback to the end uses the `last-step` interval (30 to 90 ms per step), so 60 steps take about two seconds; say if the window or the playback should be shorter. Only Chromium was available here.
 - [ ] 0.21.0: the abstract interpreter widens at every join, as the thesis's figure 2 does, so a bound found by a test is kept only if a threshold sits on it (`maxfix-1` for the defense's `findv`). Widening only at loop heads (targets of back edges, plain union elsewhere) was prototyped and keeps such bounds with `[sign, maxfix]` alone; say if you want it as an option.
@@ -44,13 +45,11 @@ Updated 2026-10-06, after 0.26.1 (`implementation-report-2026-10-06-e.md`, secti
 - [ ] 0.19.0: other attribute lines inside list items (an attribute line inside a block quote, or before a fenced block in an item, which stays a code block without a component) were left as before; say if you need them.
 
 - [ ] 0.24.0: watch the manual's "Columns that make room" on your screen (only Chromium was available here), and try a `width` cue on your own slide (the source, the analysis, the optimised code). Judge the motion: 600 ms ease-in-out by default (`duration` on `columns`), contents laid out at their final width at once, so the analysis slides in already at its size while the source fades out under the moving edge; a move that interrupts another takes 140 ms (`QUICK_COLUMNS_MS` in `lattice.js`). Continuous reflow (`resize=smooth`, drawings zooming as their column grows) was left out as agreed; say if you want it as an option.
-- [ ] 0.24.0: an animation without `height` in a column, with a paragraph below the columns, lets its caption overlap that paragraph (seen with an `abstract-interp-anim` in `direction=LR`; it happens on a static slide too, so it predates 0.24). `test_layout.py` checks spills out of columns and below the body, not overlaps between siblings. The manual slide sets `height=270`.
 
 ## Later, if wanted
 
 Authoring and parsing:
 - [ ] Container fences (0.14): a container opened in a list item ends with the item, as before, and its closing fence must be indented with the item: written at the left margin, it reports the container as never closed (LT062) and the fence as closing nothing (LT061). Accepting the margin fence would mean letting a fence end a list item, which CommonMark lists do not allow.
-- [ ] A `{.reveal}` line before a `::: detour` container is still ignored without a word (the badge is not a fragment). Either make the badge a fragment of the reveal track (a step-table change) or warn; `badge=step` covers the case that motivated it.
 
 Columns (0.24):
 - [ ] A duration per `width` cue, row heights or a `gap` that changes: the columns track would hold them without changing the model.
@@ -59,21 +58,16 @@ Columns (0.24):
 Navigation and presenter view:
 - [ ] Arrow labels: a `label_at` option (tail, middle, head). A label beside the middle of a `from` arrow can overlap text when the two boxes are close; `curve` moves it for now. A tail label near the slide edge is pushed back inside and then sits over its own line, which shows through the spaces of the label.
 - [ ] Ids on inline spans (`[text]{#id}`, the attrs plugin of mdit-py-plugins), so that an arrow can point at a word of a paragraph. List items are covered by `LIST[N]` since 0.16; an id on an item would then also take `bullet`.
-- [ ] The manual's samples of `arrow` blocks ("Arrows that move", "Arrow anchors", "Arrows at a CFG") show red error boxes: Pygments has an `arrow` lexer, which the Markdown lexer uses inside the sample fence.
 - [ ] Instruction lines of a versioning block as arrow targets (`cfg.B[2]`, reusing the item grammar); blocks, versions and edges are named since 0.26. In `bbv-anim` a version's code differs from its block's (removed tests, specialized calls), which needs its own rule.
 - [ ] Parts of the other animations through the `part` hook (0.26): `trace.A` for a node of `graph-anim` or `tree-anim`, a cell of `array-anim` or `grid-anim`.
 - [ ] Enlarged elements (0.15) for other components: graph and tree nodes, grid cells, code blocks, plots. The core layer and the `zoom(inst, key)` hook are generic; each runtime needs a click handler and a hook.
 - [ ] Detour steps inside a tour: a detour step enters its detour as anywhere else and the tour successor applies only at the last step; decide whether a tour should be able to turn detour steps off.
-
-Output:
-- [ ] matplotlib plots get random SVG ids at every build (`clip-path="url(#p...)"`), so rebuilding an unchanged deck changes its HTML (seen in examples 02 and 03 during the 0.12 cleanup). Setting matplotlib's `svg.hashsalt` in the plot component would make rebuilds byte-identical (report section 2, goal 6).
 
 Code (0.12):
 - [ ] A `code` following a `code-morph` still highlights nothing: the morph's `meta` could carry the rows it highlights (0.18.0, left out as only useful with a static copy beside the morph).
 - [ ] `diff-steps` could honour the per-version `lang` that `code-morph` reads (it ignores the key, as before).
 - [ ] Characters wider than one column (LT060): count East Asian wide characters as two columns instead of warning, if a deck ever needs them.
 - [ ] Character-level alignment of identifiers (`xs` to `xs2`): whole tokens are replaced today, by design.
-- [ ] A hash change to an adjacent step of the same slide is treated as a step and animates (the host's `hashchange` handler); harmless, but the spec says jumps do not animate.
 
 Basic block versioning and abstract interpretation (from `archive/todo.md`, plus 0.7; the Gambit importer, a Scheme front end, jump cascade removal and other traversal orders are on the roadmap):
 - [ ] A `code` panel key: the version of the current frame with its specialized code (removed tests struck through) listed in the panel, for slides that draw `show: [label, context]` (discussed on 2026-10-02, not needed yet since `show` covers it).

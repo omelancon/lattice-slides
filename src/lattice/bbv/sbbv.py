@@ -439,8 +439,8 @@ class Specializer:
             elif isinstance(instr, Goto):
                 target = fn.block(instr.target)
                 mapping: dict[str, str | Type] = {}
-                for k, a in instr.binds.items():
-                    mapping[k] = a.type if isinstance(a, Const) else a.name
+                for k, a in instr.binds.items():  # a constant through type_of: no singleton unless intervals are on
+                    mapping[k] = self.type_of(ctx, a) if isinstance(a, Const) else a.name
                 tctx = ctx.rename(mapping, target.params)
                 body.append(Line(instr.text, instr.line))
                 t = self.get_or_create(target, tctx)

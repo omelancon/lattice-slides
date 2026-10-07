@@ -244,6 +244,9 @@ class Plot(Component):
             "axes.facecolor": "none", "savefig.transparent": True, "axes.spines.top": False,
             "axes.spines.right": False, "axes.grid": True, "grid.color": pal["grid"], "grid.linewidth": 0.8,
             "legend.frameon": False, "lines.linewidth": 2.4, "lines.markersize": 6,
+            # ids of clip paths and the like come from this salt (random by default): the instance's seed keeps
+            # rebuilds byte-identical and two plots of one deck apart
+            "svg.hashsalt": f"lattice-{ctx.seed}",
         }
         with matplotlib.rc_context(rc):
             if opts.source:

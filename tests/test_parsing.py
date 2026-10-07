@@ -244,6 +244,19 @@ def test_reveal_with_errors(deck):
     assert "LT056" in codes(check_deck(root, use_cache=False))  # a badge is never a fragment
 
 
+def test_attribute_line_before_a_detour_is_reported(deck):
+    """Spec 3.9, LT065: a detour's badge is not a fragment, and an attribute line before the container applies to
+    nothing; it used to be dropped without a word."""
+    root = deck({"talk.md": "# A\n{.reveal}\n- x\n\n{.reveal}\n::: detour {#d}\n# In\n:::\n\n{#e .c}\n\n::: detour\n# In2\n:::\n"})
+    d = build_deck(root, use_cache=False)
+    items = d.diagnostics.items
+    assert [(x.code, x.loc.line) for x in items] == [("LT065", 6), ("LT065", 12)], items
+    assert "badge=step or badge=next" in items[0].message and "::detour-badge" in items[1].message
+    assert d.slides["a"].reveal_count == 1  # nothing changes otherwise: the badge is shown at every step
+    root.write_text("# A\n::: detour {#d}\n# In\n:::\n")
+    assert not check_deck(root, use_cache=False).items
+
+
 def test_container_typo_warning(deck):
     root = deck({"talk.md": "# A\n::: colums\nx\n:::\n"})
     assert "LT019" in codes(build_deck(root, use_cache=False).diagnostics)

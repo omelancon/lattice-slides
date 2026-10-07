@@ -58,7 +58,8 @@ class LambdaVersioning(Specializer):
             self.call_note = f"the callee is unknown, generic call{SEP}return point {ver(rp.label, rp.block.key)} receives {binding(RESULT, 'any')}"
             return [Line(instr.text, instr.line)], ctx
         binds = dict(zip(callee.params, instr.args))
-        mapping = {p: (a.type if isinstance(a, Const) else a.name) for p, a in binds.items()}
+        # a constant argument through type_of: no singleton interval unless intervals are on
+        mapping = {p: (self.type_of(ctx, a) if isinstance(a, Const) else a.name) for p, a in binds.items()}
         ectx = ctx.rename(mapping, callee.entry.params)
         created = self.get_version(callee.entry, ectx.restrict(callee.entry.params)) is None
         entry = self.get_or_create(callee.entry, ectx)

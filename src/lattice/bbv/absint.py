@@ -45,7 +45,7 @@ class AbstractInterpreter:
         self.history: dict[str, list[tuple[str, str]]] = {}  # "BLOCK.var" -> [(kind, value text)]
         self.steps = 0
         self.truncated = False
-        self.dead: set[tuple[str, str]] = set()  # edges found dead (src, dst)
+        self.dead: set[tuple[str, str, str]] = set()  # edges found dead (src, dst, kind)
 
     # ------------------------------------------------------------ helpers
     def refine(self, ctx: Context) -> Context:
@@ -174,10 +174,10 @@ class AbstractInterpreter:
 
     def propagate(self, src: Block, dst: Block, out: Context | None, kind: str, what: str) -> None:
         if out is None:
-            self.dead.add((src.name, dst.name))
+            self.dead.add((src.name, dst.name, kind))
             self.emit("propagate", src=src.name, dst=dst.name, edge=kind, result="dead", what=what, changes=[])
             return
-        self.dead.discard((src.name, dst.name))
+        self.dead.discard((src.name, dst.name, kind))
         old = self.contexts[dst.name]
         if old is None:
             self.contexts[dst.name] = out

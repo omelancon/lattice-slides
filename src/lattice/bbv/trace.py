@@ -6,7 +6,7 @@ them, an automatic caption and a panel. Static text (contexts, code) lives once 
 from __future__ import annotations
 
 from ..anim import Trace
-from .ir import RESULT, If, Program
+from .ir import RESULT, Program
 from .lv import LambdaVersioning
 from .rich import SEP, binding, code, context, join, op, tag, ty, var, ver
 from .sbbv import Specializer, Version
@@ -383,15 +383,7 @@ class VersioningTrace(Trace):
             fn = prog.function(name)
             blocks = []
             for b in fn.blocks.values():
-                edges = []
-                last = b.instrs[-1]
-                for t in b.successors():
-                    kind = "goto"
-                    if last.__class__.__name__ == "If":
-                        kind = "true" if t == last.then else "false"
-                    elif last.__class__.__name__ == "Call":
-                        kind = "return"
-                    edges.append({"to": t, "kind": kind})
+                edges = [{"to": t, "kind": kind} for t, kind in b.edges()]
                 blocks.append({"key": b.key, "name": b.name, "params": b.params,
                                "code": [{"text": i.text, "line": i.line} for i in b.instrs],
                                "edges": edges, "line": b.line})
@@ -490,16 +482,10 @@ class AbstractTrace(Trace):
                         best[i][1] = typ
         edges: dict[str, dict] = {}
         for name, block in self.fn.blocks.items():
-            last = block.instrs[-1]
-            for t in block.successors():
-                ek = "goto"
-                if isinstance(last, If):
-                    ek = "true" if t == last.then else "false"
-                elif last.__class__.__name__ == "Call":
-                    ek = "return"
+            for t, ek in block.edges():
                 key = f"{self.ids[name]}->{self.ids[t]}:{ek}"
                 e = {"kind": ek}
-                if (name, t) in ai.dead:
+                if (name, t, ek) in ai.dead:
                     e["state"] = "gone"
                 edges[key] = e
         # marks

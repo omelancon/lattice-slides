@@ -284,14 +284,25 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 /* the panel keeps a fixed width and the drawing its height, so that the drawing does not rescale as the
    queue grows and shrinks or as the caption wraps; the caption fits in the space left (bbv.js shrinks its text) */
 .lt-bbv-anim .lt-ga-panel{flex:0 0 clamp(150px,22%,260px);max-width:none}
-@container (max-width: 760px){ .lt-bbv-anim .lt-ga-panel{flex:none} }
+@container (max-width: 760px){
+  .lt-bbv-anim .lt-ga-panel{flex:none}
+  .lt-bbv-anim:not(.lt-ga-sized):not(.lt-panel-right) .lt-ga-canvas{flex:0 1 auto;max-height:none}
+}
 .lt-c-bbv-anim,.lt-c-bbv-cfg,.lt-c-abstract-interp-anim{flex:1 1 auto}
 .lt-bbv-anim .lt-ga-main{flex:none}
 .lt-bbv-anim .lt-ga-caption{flex:1 1 auto;min-height:33px;overflow:hidden}
+.lt-bbv-anim .lt-ga-caption[hidden]{display:none}
+/* without `height`, the drawing (430 px by default) shrinks when the component has less room, rather than
+   pushing its caption out of the component's box and over what follows; the caption claims only its minimum
+   from it, so the drawing's size does not depend on the caption's text */
+.lt-bbv-anim:not(.lt-ga-sized) .lt-ga-main{flex:0 1 auto;min-height:0}
+.lt-bbv-anim:not(.lt-ga-sized) .lt-ga-canvas{max-height:100%;min-height:80px}
+.lt-bbv-anim:not(.lt-ga-sized) .lt-ga-caption{flex:1 0 33px}
 /* panel_at (spec 8.8): `below` and `right` keep the panel in one place whatever the component's width
    (`auto` is the container query above: beside, and under the drawing below 760 px) */
 .lt-panel-below .lt-ga-main,.lt-panel-below .lt-aa-main{flex-direction:column;align-items:stretch;gap:12px}
 .lt-panel-below .lt-ga-canvas{flex:none}
+.lt-bbv-anim.lt-panel-below:not(.lt-ga-sized) .lt-ga-canvas{flex:0 1 auto;max-height:none}
 .lt-panel-below .lt-ga-panel,.lt-bbv-anim.lt-panel-below .lt-ga-panel{max-width:none;flex:none;flex-direction:row;flex-wrap:wrap;gap:12px 28px}
 @container (max-width: 760px){
   .lt-panel-right .lt-ga-main{flex-direction:row;align-items:center;gap:28px}

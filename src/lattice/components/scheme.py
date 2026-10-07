@@ -1,4 +1,4 @@
-"""A Pygments filter for Scheme: binding sites are variables, not calls (spec 3.13).
+"""Corrections to Pygments' highlighting (spec 3.13): binding sites in Scheme, and Lattice samples in Markdown.
 
 Pygments' Scheme lexer marks every symbol that directly follows ``(`` as ``Name.Function``, with no
 notion of context, so ``(let ((i 0)) ...)`` paints ``i`` as a call and ``(lambda (x) ...)`` paints
@@ -9,6 +9,9 @@ symbols that a binding form introduces as ``Name.Variable``: the head of each bi
 ``case-lambda`` clause. Procedure names keep the call colour: the head of ``(define (f ...))`` is
 already ``Name.Function``, and the name of a named ``let`` becomes one, like the calls it answers to.
 Nothing else in the stream changes.
+
+``LatticeMarkdownLexer`` shows the YAML body of a component sample inside a Markdown block as plain text
+instead of handing it to a Pygments lexer that happens to share the component's name (``arrow``).
 """
 from __future__ import annotations
 
@@ -17,7 +20,8 @@ from dataclasses import dataclass
 from pygments.filter import Filter
 from pygments.lexer import Lexer
 from pygments.lexers import get_lexer_by_name
-from pygments.token import Keyword, Name, Punctuation
+from pygments.lexers.markup import MarkdownLexer
+from pygments.token import Keyword, Name, Punctuation, String, Text, Whitespace
 from pygments.util import ClassNotFound
 
 # head of a form -> role of the list that follows it (after the name of a named let)
@@ -82,12 +86,51 @@ class SchemeBindingFilter(Filter):
             yield ttype, value
 
 
+class LatticeMarkdownLexer(MarkdownLexer):
+    """Pygments' Markdown lexer, reading the fences of a Lattice sample as Lattice does (spec 3.13).
+
+    Pygments hands the body of a fenced block to the lexer named by its info string. In a Lattice deck a
+    registered component name wins over a lexer of the same name, and a component that reads a YAML body
+    shares its name with an unrelated language only by accident (``arrow`` is also a Pygments lexer, whose
+    error tokens would paint the sample red). Such a body is shown as a plain block, like the samples of the
+    other components and of ``timeline``.
+    """
+
+    def _handle_codeblock(self, match):
+        from .base import REGISTRY  # late: the registry module imports the components that import this one
+
+        comp = REGISTRY.get(match.group("lang").strip())
+        if comp is None or comp.body != "yaml":
+            yield from super()._handle_codeblock(match)
+            return
+        yield match.start("initial"), String.Backtick, match.group("initial")
+        yield match.start("lang"), String.Backtick, match.group("lang")
+        if match.group("afterlang") is not None:
+            yield match.start("whitespace"), Whitespace, match.group("whitespace")
+            yield match.start("extra"), Text, match.group("extra")
+        yield match.start("newline"), Whitespace, match.group("newline")
+        yield match.start("code"), String, match.group("code")
+        yield match.start("terminator"), String.Backtick, match.group("terminator")
+
+
+# The rules of the parent name its callback directly, not through the class: point them at the override (the
+# lexer compiles its rules on first use, so they can be set after the class).
+LatticeMarkdownLexer.tokens = {
+    state: [(r[0], LatticeMarkdownLexer._handle_codeblock, *r[2:])
+            if isinstance(r, tuple) and len(r) > 1 and getattr(r[1], "__name__", "") == "_handle_codeblock" else r
+            for r in rules]
+    for state, rules in MarkdownLexer.tokens.items()}
+
+
 def lexer_for(lang: str) -> Lexer:
-    """The Pygments lexer of ``lang`` (``text`` when unknown); the Scheme lexer carries the filter."""
+    """The Pygments lexer of ``lang`` (``text`` when unknown); the Scheme lexer carries the filter, and
+    Markdown reads the fences of Lattice samples as Lattice does."""
     try:
         lexer = get_lexer_by_name(lang)
     except ClassNotFound:
         return get_lexer_by_name("text")
     if lexer.name == "Scheme":
         lexer.add_filter(SchemeBindingFilter())
+    elif isinstance(lexer, MarkdownLexer):
+        lexer = LatticeMarkdownLexer(**lexer.options)
     return lexer

@@ -226,6 +226,15 @@ class Block:
             return [last.ret]
         return []
 
+    def edges(self) -> list[tuple[str, str]]:
+        """The successors with the kind of their edge: ``true`` and ``false`` by position, so that an ``if``
+        whose two outcomes go to the same block has both edges."""
+        last = self.instrs[-1] if self.instrs else None
+        if isinstance(last, If):
+            return [(last.then, "true"), (last.otherwise, "false")]
+        kind = "return" if isinstance(last, Call) else "goto"
+        return [(t, kind) for t in self.successors()]
+
     def text_lines(self) -> list[str]:
         return [i.text for i in self.instrs]
 

@@ -373,7 +373,7 @@ def test_absint_dead_branches_and_types_only():
 
     ai = AbstractInterpreter(parse("function f(x: fx [1, 9])\nA:  if >(x, 0) goto B else goto C\nB:  return x\nC:  return 0\n"))
     ai.run()
-    assert ai.contexts["C"] is None and ("A", "C") in ai.dead and str(ai.contexts["B"].get("x")) == "fx [1, 9]"
+    assert ai.contexts["C"] is None and ("A", "C", "false") in ai.dead and str(ai.contexts["B"].get("x")) == "fx [1, 9]"
     # on find, abstract interpretation keeps p: any at the loop entry: the procedure? test stays
     ai = AbstractInterpreter(program("find.bbv"))
     ai.run()
@@ -777,7 +777,7 @@ def test_thresholds_may_name_the_fixnum_range():
     ai = AbstractInterpreter(prog, thresholds=["sign", "maxfix"])
     ai.run()
     assert str(ai.contexts["L"].get("i")) == "fx [0, maxfix]" and str(ai.contexts["M"].get("i")) == "fx [0, maxfix]"
-    assert ai.contexts["X"] is None and ("S", "X") in ai.dead  # the generic addition is never reached
+    assert ai.contexts["X"] is None and ("S", "X", "false") in ai.dead  # the generic addition is never reached
     ai = AbstractInterpreter(prog, thresholds="machine")
     ai.run()
     assert "bg" in str(ai.contexts["M"].get("i"))  # 2^63-1 is the next machine threshold after maxfix
@@ -829,7 +829,7 @@ def test_without_vector_bounds():
                                  vector_bounds=bounds)
         ai.run()
         assert str(ai.contexts["L"].get("i")) == "fx [0, maxfix]" and str(ai.contexts["P"].get("i")) == after_test
-        assert ai.contexts["O"] is None and ("T", "O") in ai.dead  # the overflow branch is never reached
+        assert ai.contexts["O"] is None and ("T", "O", "false") in ai.dead  # the overflow branch is never reached
     ai = AbstractInterpreter(parse(FINDV_OVF, prims), thresholds=["sign", "maxfix"], vector_bounds=False)
     ai.run()
     assert ai.contexts["O"] is not None  # P widened past maxfix-1: fx+? may overflow
@@ -1009,3 +1009,59 @@ def test_arrow_at_blocks_of_an_analysis(deck):
 
     r = d.instances["a/ai"]
     assert AbstractInterpAnim().part(RenderResult("", r["data"], r["positions"]), "B->D").drawn is None  # fixed CFG
+
+
+SAME_TARGET = "function f(x)\nA:  if fixnum?(x) goto L else goto L\nL:  return x\n"
+
+
+def test_both_outcomes_to_one_block_draw_two_edges(deck):
+    """`if x goto L else goto L` has a `true` and a `false` edge in every drawing (they used to be both `true`)."""
+    prog = parse(SAME_TARGET)
+    assert prog.function("f").blocks["A"].edges() == [("L", "true"), ("L", "false")]
+    root = deck({"talk.md": "# A\n```bbv-cfg {#g program=\"p.bbv\"}\n```\n"
+                            "```arrow {#w}\nsteps: ['g.A->L:#t', g.A->L:false]\n```\n", "p.bbv": SAME_TARGET})
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items, d.diagnostics.items
+    frame = d.instances["a/g"]["data"]["frames"]["frames"][0]
+    assert sorted(frame["edges"]) == ["1->2:false", "1->2:true"]
+    assert '[data-key="1->2:true"]' in _steps(d)[0]["to_part"] and '[data-key="1->2:false"]' in _steps(d)[1]["to_part"]
+    # without a kind, the two edges are of several kinds
+    root.write_text("# A\n```bbv-cfg {#g program=\"p.bbv\"}\n```\n```arrow {#w}\nsteps: [g.A->L]\n```\n")
+    items = check_deck(root, use_cache=False).items
+    assert [x.code for x in items] == ["LT063"] and "several kinds" in items[0].message
+
+
+def test_both_outcomes_to_one_block_in_an_analysis_and_a_run(deck):
+    from lattice.bbv.trace import AbstractTrace
+
+    prog = parse(SAME_TARGET)
+    ai = AbstractTrace(prog)
+    last = ai.frames[-1]["edges"]
+    assert {k.split(":")[1] for k in last} == {"true", "false"} and not any(e.get("state") == "gone" for e in last.values())
+    run = VersioningTrace(parse(SAME_TARGET), algorithm="sbbv")
+    kinds = {k.split(":")[1] for f in run.frames for k in f["edges"]}
+    assert {"true", "false"} <= kinds
+
+
+CONSTANTS = """function f(n: fx)
+A:  goto B(i=0)
+B:  call g(i, 1) -> C
+C:  return #res
+function g(x, k)
+E:  return k
+"""
+
+
+@pytest.mark.parametrize("algorithm", ["sbbv", "lv"])
+def test_constants_keep_no_singleton_without_intervals(algorithm):
+    """Spec 9.5: without `intervals`, contexts hold types only; a constant bound by `goto B(i=0)` or passed to a
+    call used to enter the target with its singleton (`i: fx {0}`). With intervals it keeps it."""
+    cls = Specializer if algorithm == "sbbv" else LambdaVersioning
+    for intervals, want_i, want_k in ((False, "fx", "fx"), (True, "fx {0}", "fx {1}")):
+        spec = cls(parse(CONSTANTS), limit=2, entry="f", intervals=intervals)
+        spec.run()
+        b = next(v for v in spec.final_versions() if v.block.name == "B")
+        assert str(b.context.get("i")) == want_i, (intervals, str(b.context))
+        if algorithm == "lv":
+            e = next(v for v in spec.final_versions() if v.block.name == "E" and not v.generic)
+            assert str(e.context.get("k")) == want_k, (intervals, str(e.context))

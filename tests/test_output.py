@@ -68,6 +68,36 @@ def test_plotly_bars_are_categorical(deck):
     assert d.requires == {"plotly"}
 
 
+def test_matplotlib_plots_rebuild_byte_identical(deck):
+    """Report section 2, goal 6: the ids matplotlib gives clip paths do not change from one build to the next."""
+    pytest.importorskip("matplotlib")
+    root = deck({"talk.md": """
+        # A
+        ```plot {data="d.csv" x=n y=ms group=algo}
+        ```
+
+        ```plot {data="d.csv" x=n y=ms group=algo}
+        ```
+    """, "d.csv": CSV})
+    first = build_deck(root, use_cache=False).slides["a"].body_html
+    second = build_deck(root, use_cache=False).slides["a"].body_html
+    assert "clip-path=\"url(#" in first
+    assert first == second
+    ids = re.findall(r'<clipPath id="([^"]+)"', first)
+    assert len(ids) == len(set(ids))  # two plots of one slide keep distinct ids
+
+
+def test_component_samples_in_markdown_are_not_lexed_as_another_language(deck):
+    """Spec 3.13: in a Markdown sample, an `arrow` fence is the component (a YAML body), not Pygments' Arrow
+    language, whose error tokens painted the sample red; other fences are highlighted as before."""
+    sample = "```arrow {to=x}\nsteps:\n  - a[1]\n  - {to: b, angle: 90}\n```\n\n```dot\ndigraph { a -> b }\n```\n"
+    root = deck({"talk.md": "# A\n\n````markdown\n" + sample + "````\n"})
+    html_ = build_deck(root, use_cache=False).slides["a"].body_html
+    assert 'class="err"' not in html_
+    assert "steps:" in html_ and "angle: 90" in html_
+    assert '<span class="k">digraph</span>' in html_  # dot is not a YAML component: Graphviz still highlights it
+
+
 def test_no_libraries_when_unused(deck):
     root = deck({"talk.md": "# A\nplain\n"})
     page = emit_html(build_deck(root, use_cache=False))

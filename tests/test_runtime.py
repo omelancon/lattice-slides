@@ -2007,6 +2007,42 @@ PROG = """source: |
   D:  return i
 panel: [worklist]"""
 
+def test_columns_settle_when_their_move_ends(tmp_path):
+    """Spec 3.8: when a move of columns ends, the columns are at their final widths and the arrows measure them
+    there, even if the browser started the move's transitions late (a busy page): they used to keep running past
+    the end of the move, and an arrow measured a column a few pixels short (the flaky skip playback of 0.24 to 0.26)."""
+    src = tmp_path / "talk.md"
+    src.write_text(COLS_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(f"{out.as_uri()}#/cols/6")
+            page.reload()
+            page.wait_for_timeout(250)
+            fresh = page.evaluate(COLS_GEOMETRY, "cols")
+            page.evaluate("location.hash = '#/cols/5'")
+            page.wait_for_timeout(250)
+            page.keyboard.press("ArrowRight")
+            # the move's transitions start 400 ms late, as on a busy page: they outlast the move (800 ms)
+            assert page.evaluate("""() => { const as = document.getAnimations().filter(a => a.effect && a.effect.target
+                && a.effect.target.closest('#s-cols .lt-columns')); as.forEach(a => { a.currentTime = -400; }); return as.length; }""")
+            page.wait_for_timeout(1000)
+            got = page.evaluate(COLS_GEOMETRY, "cols")
+            assert not any(col[7] for col in got["cols"])
+            assert _near(got, fresh, tol=0.5), (got, fresh)
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
 PANEL_DECK = f"""
 # Narrow {{#narrow}}
 
@@ -2306,6 +2342,124 @@ def test_arrow_follows_versions_of_a_run(tmp_path):
             # a block names all its drawn versions: the head is beside the box around B1 and B2
             m = page.evaluate(PARTS_JS, ["run/b", blocks_b])
             assert m["shown"] and _near_box(m), m
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
+PROBE_PLUGIN = '''
+from pathlib import Path
+from lattice import Component, RenderResult, register
+
+
+@register("probe")
+class Probe(Component):
+    body = "none"
+    runtime = str(Path(__file__).with_name("probe.js"))
+
+    def render(self, block, opts, ctx):
+        return RenderResult('<div class="probe"></div>', data={}, positions=4)
+'''
+
+PROBE_JS = """
+Lattice.component("probe", {
+  mount(el) { return {}; },
+  show(inst, position, info) { (window.__shows ||= []).push([position, info.animate]); },
+});
+"""
+
+
+def test_a_hash_change_to_an_adjacent_step_does_not_animate(tmp_path):
+    """Spec 7.2 and 10.1: a change of the URL hash is a jump, never animated, even to the next or previous step."""
+    (tmp_path / "lattice_plugins.py").write_text(PROBE_PLUGIN)
+    (tmp_path / "probe.js").write_text(PROBE_JS)
+    src = tmp_path / "talk.md"
+    src.write_text("# Probe {#pr}\n\n```probe {#p}\n```\n")
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(out.as_uri())
+            page.wait_for_timeout(200)
+
+            def shows_after(action):
+                page.evaluate("window.__shows = []")
+                action()
+                page.wait_for_timeout(120)
+                return page.evaluate("window.__shows")
+
+            assert shows_after(lambda: page.keyboard.press("ArrowRight")) == [[1, True]]  # a single step animates
+            assert shows_after(lambda: page.evaluate("location.hash = '#/pr/2'")) == [[2, False]]
+            assert shows_after(lambda: page.evaluate("location.hash = '#/pr/1'")) == [[1, False]]
+            assert shows_after(lambda: page.keyboard.press("ArrowLeft")) == [[0, True]]
+            assert page.evaluate("Lattice.state().H") == []  # a hash change on the same slide records nothing
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
+SAME_TARGET_DECK = """
+# Same target {#same}
+
+```bbv-cfg {#g height=420}
+source: |
+  function f(x)
+  A:  if fixnum?(x) goto L else goto L
+  L:  return x
+```
+
+```arrow {#p}
+steps:
+  - {to: "g.A->L:#t", angle: 180}
+  - {to: "g.A->L:#f", angle: 0}
+```
+"""
+
+
+def test_two_edges_between_the_same_blocks_are_drawn_apart(tmp_path):
+    """Spec 9.5: the `true` and `false` edges of `if x goto L else goto L` are both drawn, side by side, each with its
+    own label and mark, so that an arrow can point at either."""
+    src = tmp_path / "talk.md"
+    src.write_text(SAME_TARGET_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    geo = """() => Object.fromEntries(['true', 'false'].map(k => {
+        const g = document.querySelector(`.lt-bbv-edge[data-key="1->2:${k}"]`);
+        const l = g.querySelector('.lt-bbv-edge-label').getBBox(), m = g.querySelector('.lt-bbv-edge-mark').getBBox();
+        return [k, {d: g.querySelector('path').getAttribute('d'), label: g.querySelector('.lt-bbv-edge-label').textContent,
+                    lx: l.x + l.width / 2, mx: m.x + m.width / 2, my: m.y + m.height / 2, gone: g.classList.contains('lt-gone')}];
+    }))"""
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type in ("error", "warning") else None)
+            page.goto(out.as_uri())
+            page.wait_for_timeout(400)
+            g = page.evaluate(geo)
+            assert not g["true"]["gone"] and not g["false"]["gone"]
+            assert (g["true"]["label"], g["false"]["label"]) == ("#t", "#f")
+            assert g["true"]["d"] != g["false"]["d"]
+            assert g["false"]["mx"] - g["true"]["mx"] > 30  # true on the left, false on the right, labels apart
+            assert abs(g["true"]["lx"] - g["true"]["mx"]) < 1 and abs(g["false"]["lx"] - g["false"]["mx"]) < 1
+            for i, k in enumerate(("true", "false")):
+                if i:
+                    page.keyboard.press("ArrowRight")
+                    page.wait_for_timeout(500)
+                m = page.evaluate(PARTS_JS, ["same/p", f'.lt-bbv-edge[data-key="1->2:{k}"] > .lt-bbv-edge-mark'])
+                assert m["shown"] and _near_box(m), (k, m)
             browser.close()
     except Exception as e:
         if "Executable doesn't exist" in str(e):

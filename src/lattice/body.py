@@ -77,6 +77,8 @@ class BodyBuilder:
             if isinstance(g, tuple):
                 # the default badge, kept only if no ::detour-badge places this detour (default_badges)
                 out.append(f"\x00BADGE:{g[1].id}\x00")
+                if pending is not None:
+                    self.attr_line_before_detour(pending, g[1])
                 pending = None
                 continue
             t = g[0]
@@ -442,6 +444,16 @@ class BodyBuilder:
         slide.body_html = slide.body_html.replace("\x00BRANCH\x00", menu)
 
     # ------------------------------------------------------------------ detours
+    def attr_line_before_detour(self, pending: Attrs, d: Detour) -> None:
+        """An attribute line before a detour container applies to nothing: say so (LT065, spec 3.9)."""
+        if {"reveal", "reveal-with"} & set(pending.classes):
+            msg = ("a detour's badge is not a reveal fragment: the attribute line before this detour is ignored; "
+                   "badge=step or badge=next shows the badge with the detour's step")
+        else:
+            msg = ("the attribute line before this detour is ignored: a detour's id, label and badge go on its "
+                   "own line (::: detour {#id ...}), and a ::detour-badge may carry an id and classes")
+        self.d.warn("LT065", msg, d.loc)
+
     def detour_badge(self, d: Detour, mode: str | None, label: str, extra: dict[str, str] | None = None) -> str:
         key = f"<kbd>{html.escape(d.key)}</kbd>" if d.key else ""
         attrs = dict(extra or {})
