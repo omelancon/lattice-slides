@@ -52,6 +52,7 @@ class BbvAnimOptions(BbvCommonOptions):
     thresholds: str | list[int | str] = "machine"
     fixnum_bits: int = 61
     vector_bounds: bool = True  # vector lengths as symbolic bounds (with intervals)
+    paths: list | None = None  # frames after the run highlighting the versions of a path (spec 9.5)
 
 
 class BbvCfgOptions(BbvCommonOptions):
@@ -77,7 +78,7 @@ class AbstractInterpOptions(BbvCommonOptions):
 _KNOWN = {"program", "source", "functions", "show", "colors", "direction", "height", "prims", "algorithm", "limit", "limits",
           "heuristic", "entry", "events", "granularity", "until", "call_edges", "panel", "caption", "max_steps", "wrap",
           "thresholds", "narrowing", "fixnum_bits", "history", "intervals", "clickable", "clickable_show", "vector_bounds",
-          "panel_at"}
+          "panel_at", "paths"}
 
 
 def load_program(opts: BbvCommonOptions, ctx) -> Program:
@@ -321,7 +322,7 @@ class BbvAnim(_NamesParts, Component):
                                     events=opts.events, caption=opts.caption, until=opts.until,
                                     max_steps=opts.max_steps, granularity=opts.granularity,
                                     intervals=opts.intervals, thresholds=opts.thresholds, fixnum_bits=opts.fixnum_bits,
-                                    vector_bounds=opts.vector_bounds)
+                                    vector_bounds=opts.vector_bounds, paths=opts.paths)
         except (ProgramError, ValueError) as e:
             raise ComponentError(str(e)) from None
         if trace.spec.truncated:
@@ -383,6 +384,9 @@ class BbvCfg(_NamesParts, Component):
             count = ctx.leader.positions
             highlight = []
             for m in ctx.leader.meta or [{}] * count:
+                if m.get("blocks") is not None:  # a path frame (spec 9.5): every block of the path
+                    highlight.append([ids[k] for k in m["blocks"] if k in ids])
+                    continue
                 key = m.get("block")
                 highlight.append(ids.get(key) if key else None)
         data = {"box": box, "tables": {"program": program_table, "versions": versions},

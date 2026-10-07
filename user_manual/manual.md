@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.27.0
+author: Lattice 0.28.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1243,7 +1243,7 @@ def bfs_trace(g, start="A"):
 | `ArrayTrace` | cells | `compare`, `swap`, `pivot`, `sorted`, `done`, `dim` |
 | `GridTrace` | cells | `active`, `compare`, `frontier`, `visited`, `done`, `path`, `wall`, `start`, `goal`, `dim`, `error` |
 | `GridTrace` | arrows | `active`, `path`, `dim` |
-| `VersioningTrace` | nodes | states `queued`, `done`; marks `active`, `new`, `back`, `merge`, `merged`, `gone` |
+| `VersioningTrace` | nodes | states `queued`, `done`; marks `active`, `new`, `back`, `merge`, `merged`, `gone`, and `path`, `dim` in path frames |
 | `AbstractTrace` | nodes and edges | state `dead`; marks `changed`, `widened`; edge state `active` |
 
 A frame may also carry a `panel` (names to scalars, lists or mappings, drawn beside the animation when the block's `panel:` option names them) and a `caption`. Very large animations are stored as keyframes plus deltas automatically.
@@ -1254,7 +1254,7 @@ Three components run a build-time model of the techniques on a small program and
 
 {.reveal}
 - `bbv-anim`: Static Basic Block Versioning, or Lambda Versioning with `algorithm=lv`; versions appear as they are queued and specialized, merge, become unreachable, and for ΛV entry points and return points come and go across functions
-- `bbv-cfg`: the source CFG, as a static figure or following an animation to highlight the block being specialized
+- `bbv-cfg`: the source CFG, as a static figure or following an animation to highlight the block being specialized (or the blocks of a path)
 - `abstract-interp-anim`: the classical analysis on a fixed CFG, with intervals, widening at joins and narrowing at conditionals
 
 Programs are written in a small CFG language, next.
@@ -1362,11 +1362,70 @@ steps:
 | `algorithm`, `limit`, `limits: {f: 3, g: none}` | `sbbv` or `lv`; the version limit, overall or per function |
 | `heuristic` | The merge heuristic: `similarity`, `arithmetic` or `random` |
 | `entry`, `functions: [f, g]` | The function traversed first; the functions drawn, in that order (hidden ones are analysed, not drawn) |
-| `events`, `granularity=instruction`, `until` | Event kinds kept as frames; a frame per instruction; stop after N frames |
+| `events`, `granularity=instruction`, `until`, `paths` | Event kinds kept; one frame per instruction; stop after N; paths at the end |
 | `panel: [queue, versions, checks, merges, limit]`, `panel_at=below`, `caption=none` | Panel entries, and where the panel sits (`auto`, `right`, `below`); no captions |
 | `colors=none`, `direction=LR`, `wrap=4`, `call_edges`, `height`, `prims` | Fills off; block bands direction; versions per line; dotted call edges; drawing height; extra primitives (a predicate declared there can be tested in an `if`) |
 | `intervals=true`, `thresholds`, `fixnum_bits=61`, `vector_bounds=false` | Track integer intervals and vector lengths (merges widen with the thresholds of the abstract interpreter); the fixnum width; lengths as numbers instead of `⟦v⟧` |
 | `clickable=off`, `clickable_show` | No enlarging on click; what an enlarged block shows |
+
+# Paths through the versions {#bbv-paths}
+
+:::: columns
+::: column {width=1fr}
+```bbv-cfg {#psrc program="programs/polynomial.bbv" follow=prun height=400}
+show: [label]
+```
+:::
+::: column {width=5fr}
+```bbv-anim {#prun program="programs/polynomial.bbv" algorithm=sbbv heuristic=arithmetic limit=3 direction=LR height=400}
+show: [label, context]
+paths:
+  - input: {x: fl}
+  - input: {x: fx}
+```
+:::
+::::
+
+```arrow {#ponce}
+steps:
+  - null
+  - {to: prun.D1, to_anchor: bottom, angle: 290, length: 70, label: "(flonum? x) is tested once"}
+  - null
+```
+
+```timeline
+prun ..end-2
+prun end-1, ponce 1
+prun end, ponce end
+```
+
+# Writing a path {#bbv-paths-syntax .dense}
+
+:::: columns
+::: column {width=1fr}
+````markdown
+```bbv-anim {#prun program="p.bbv" algorithm=sbbv}
+paths:
+  - input: {x: fl}
+  - versions: [A1, B1, J1]
+    caption: "the fixnum way"
+    dim: false
+```
+````
+
+```markdown
+prun ..end-2
+prun end-1, ponce 1
+```
+:::
+::: column {width=1fr}
+- Each entry of `paths` adds a frame after the run: its versions and edges in green, the others faded (`dim: false` keeps them)
+- `input` maps parameters of the entry function to types; the path holds the versions whose context admits them, from the entry along `goto`, `#t` and `#f` edges (may reach, not must)
+- `versions` lists the labels instead; `caption` replaces the automatic one, which counts the tests left on the path
+- A following `bbv-cfg` lights every block of the path; arrows name its versions as usual; `end-1` in a timeline is the frame before the last
+- SBBV only, and not with `until` (spec 9.5)
+:::
+::::
 
 # Instruction by instruction, with the algorithm's listing {#bbv-instructions}
 
@@ -1442,7 +1501,7 @@ show: [label, context]
 :::: columns
 ::: column {width=1fr}
 - A node is a version: label (`A2`, starred for an entry point), `;;` context lines (variable, type, interval), code lines with removed tests struck through
-- Fill: the origin block; border: the current mark (amber active, teal new, red merge candidate or widened, green merged result); dashed: queued
+- Fill: the origin block; border: the current mark (amber active, teal new, red merge candidate or widened, green merged result or on a [[bbv-paths|path]]); dashed: queued
 - Edges: `goto`, `#t` and `#f` branches, dashed `[i]` return edges, dotted call edges with `call_edges`
 :::
 ::: column {width=1fr}

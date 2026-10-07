@@ -2573,3 +2573,64 @@ def test_two_edges_between_the_same_blocks_are_drawn_apart(tmp_path):
             pytest.skip("Chromium for Playwright is not installed")
         raise
     assert not errors
+
+
+def test_bbv_path_frames_mark_the_path_and_the_follower(tmp_path):
+    """Path frames (spec 9.5): versions and edges of the path marked `path`, the others `dim`; a following
+    `bbv-cfg` marks every block of the path; stepping back to the `done` frame clears both."""
+    from test_bbv import POLY
+
+    (tmp_path / "p.bbv").write_text(POLY)
+    src = tmp_path / "talk.md"
+    src.write_text("""# A {#a}
+```bbv-cfg {#src program="p.bbv" follow=run}
+show: [label]
+```
+```bbv-anim {#run program="p.bbv" algorithm=sbbv heuristic=arithmetic limit=3}
+show: [label]
+paths:
+  - input: {x: fl}
+```
+```arrow {#w}
+steps: [null, run.D1]
+```
+```timeline
+run ..end-1
+run end, w 1
+```
+""")
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    count = "document.querySelectorAll('%s').length"
+    run, cfg = ".lt-c-bbv-anim:not(.lt-bbv-cfg)", ".lt-bbv-cfg"
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+            for _ in range(2):  # a fresh load of the last step, then the same step reached from the one before
+                page.goto(out.as_uri() + "#/a/999")
+                page.reload()
+                page.wait_for_timeout(300)
+                if _:
+                    page.keyboard.press("ArrowLeft")
+                    page.wait_for_timeout(100)
+                    assert page.evaluate(count % f"{run} .lt-bbv-node.mk-path") == 0
+                    assert page.evaluate(count % f"{cfg} .lt-bbv-node.mk-path") == 0
+                    page.keyboard.press("ArrowRight")
+                    page.wait_for_timeout(300)
+                assert page.evaluate(count % f"{run} .lt-bbv-node.mk-path") == 6
+                assert page.evaluate(count % f"{run} .lt-bbv-node.mk-dim") == 13
+                assert page.evaluate(count % f"{run} .lt-bbv-edge.st-path") == 5
+                assert page.evaluate(count % f"{cfg} .lt-bbv-node.mk-path") == 6
+                assert page.evaluate("getComputedStyle(document.querySelector('.lt-bbv-node.mk-dim')).opacity") == "0.3"
+                assert "path" in page.evaluate("document.querySelector('.lt-c-bbv-anim .lt-ga-caption').textContent")
+                assert page.evaluate("document.querySelector('.lt-arrow-line').getAttribute('d')")  # the arrow at D1
+            assert not errors, errors
+            browser.close()
+    except Exception as e:  # browser not installed
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise

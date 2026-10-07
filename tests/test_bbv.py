@@ -1085,3 +1085,113 @@ def test_constants_keep_no_singleton_without_intervals(algorithm):
         if algorithm == "lv":
             e = next(v for v in spec.final_versions() if v.block.name == "E" and not v.generic)
             assert str(e.context.get("k")) == want_k, (intervals, str(e.context))
+
+
+# ------------------------------------------------------------ paths (spec 9.5)
+
+POLY = """function polynomial(x)
+A:  if fixnum?(x) goto B else goto D
+B:  y = fx*?(x, x)
+    if y goto J else goto C
+C:  y = ##*(x, x)
+    goto J
+D:  if flonum?(x) goto E else goto F
+E:  y = fl*(x, x)
+    goto J
+F:  y = ##*(x, x)
+    goto J
+J(y):  if fixnum?(y) goto K else goto M
+K:  r = fx+?(y, 1)
+    if r goto R else goto L
+R:  return r
+L:  return ##+(y, 1)
+M:  if flonum?(y) goto N else goto P
+N:  return fl+(y, 1.0)
+P:  return ##+(y, 1)
+"""
+
+
+def _poly_trace(paths, **kw):
+    return VersioningTrace(parse(POLY), algorithm="sbbv", limit=3, heuristic="arithmetic", paths=paths, **kw)
+
+
+def _marks(t, frame):
+    labels = {k: v["label"] for k, v in t.tables["versions"].items()}
+    return {labels[k]: n.get("mark") for k, n in frame["nodes"].items()}
+
+
+def test_path_by_input_walks_the_versions_an_input_may_reach():
+    t = _poly_trace([{"input": {"x": "fl"}}, {"input": {"x": "fx"}}])
+    done, fl, fx = t.frames[-3:]
+    assert t.meta[-3]["event"] == "done" and [m["event"] for m in t.meta[-2:]] == ["path", "path"]
+    marks = _marks(t, fl)
+    assert sorted(k for k, m in marks.items() if m == "path") == ["A1", "D1", "E1", "J3", "M1", "N1"]
+    assert all(m == "dim" for k, m in marks.items() if k not in ("A1", "D1", "E1", "J3", "M1", "N1"))
+    assert set(fl["nodes"]) == {k for k, n in done["nodes"].items() if n.get("mark") != "gone"}
+    states = {e.get("state") for e in fl["edges"].values()}
+    assert states == {"path", "dim"} and sum(e.get("state") == "path" for e in fl["edges"].values()) == 5
+    assert fl["panel"] == done["panel"]
+    assert plain(fl["caption"]) == "path x: fl · A1 → D1 → E1 → J3 → M1 → N1 · 2 tests"
+    assert t.meta[-2]["blocks"] == [f"polynomial/{b}" for b in "ADEJMN"] and t.meta[-2]["algo"] == []
+    # a fixnum may overflow: the path branches, so the chips are not read as a sequence
+    on = {k for k, m in _marks(t, fx).items() if m == "path"}
+    assert {"A1", "B1", "C1", "J1", "J5", "M2", "P1"} <= on and not on & {"D1", "E1", "J3", "N1"}
+    assert "→" not in plain(fx["caption"]) and plain(fx["caption"]).startswith("path x: fx · A1 B1")
+
+
+def test_path_by_versions_and_without_dimming():
+    t = _poly_trace([{"versions": ["A1", "D1", "F1"], "dim": False, "caption": "the generic way"}])
+    marks = _marks(t, t.frames[-1])
+    assert {k for k, m in marks.items() if m == "path"} == {"A1", "D1", "F1"}
+    assert all(m is None for k, m in marks.items() if k not in ("A1", "D1", "F1"))
+    assert {e.get("state") for e in t.frames[-1]["edges"].values()} == {"path", None}
+    assert t.frames[-1]["caption"] == "the generic way"
+    t = _poly_trace([{"versions": ["A1", "B1"]}], caption="none")
+    assert t.frames[-1]["caption"] == ""
+
+
+@pytest.mark.parametrize("paths, kw, message", [
+    ([{"input": {"z": "fl"}}], {}, "'z' is not a parameter of polynomial (its parameters: x)"),
+    ([{"input": {"x": "float"}}], {}, "cannot read the type 'float'"),
+    ([{"input": {"x": "fl"}, "versions": ["A1"]}], {}, "exactly one of input"),
+    ([{}], {}, "exactly one of input"),
+    ([{"input": {"x": "fl"}, "color": "red"}], {}, "unknown key(s) ['color']"),
+    ([{"versions": ["J2"]}], {}, "'J2' is not drawn at the end of the run"),
+    ([{"input": {"x": "⊥"}}], {}, "does not admit this input"),
+    ([{"versions": ["A1"], "dim": "no"}], {}, "dim is true or false"),
+    ([{"input": {"x": "fl"}}], {"until": 10}, "remove until"),
+    ([{"input": {"x": "fl"}}], {"algorithm": "lv"}, "not defined"),
+])
+def test_path_errors(paths, kw, message):
+    args = {"algorithm": "sbbv", "limit": 3, "heuristic": "arithmetic", **kw}
+    with pytest.raises(ValueError) as e:
+        VersioningTrace(parse(POLY), paths=paths, **args)
+    assert message in str(e.value)
+
+
+def test_paths_in_a_deck_with_a_follower_and_an_arrow(deck):
+    root = deck({"talk.md": """# A
+```bbv-cfg {#src program="p.bbv" follow=run}
+show: [label]
+```
+```bbv-anim {#run program="p.bbv" algorithm=sbbv heuristic=arithmetic limit=3}
+paths:
+  - input: {x: fl}
+```
+```arrow {#w}
+steps: [null, run.D1]
+```
+```timeline
+run ..end-1
+run end, w 1
+```
+""", "p.bbv": POLY})
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items, d.diagnostics.items
+    run = d.instances["a/run"]
+    hl = d.instances["a/src"]["data"]["highlight"]
+    assert len(hl) == run["positions"] and isinstance(hl[-1], list) and len(hl[-1]) == 6
+    assert all(not isinstance(h, list) for h in hl[:-1])
+    root.write_text(root.read_text().replace("{x: fl}", "{y: fl}"))
+    items = check_deck(root, use_cache=False).items
+    assert any(x.code == "LT022" and "paths[0]: input: 'y' is not a parameter" in x.message for x in items), items

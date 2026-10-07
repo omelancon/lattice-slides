@@ -2,13 +2,15 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-07, after 0.27.0 (`implementation-report-2026-10-07.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-07, after 0.28.0 (`implementation-report-2026-10-07-b.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
 - [ ] 0.27.0: try two quick Shift+Right (Shift+Left) presses on your own slides and on the manual's "Checkpoints" and "Lambda versioning and abstract interpretation" (two runs, `lv` then `ai`). The window is 500 ms from the first press (`BURST_WINDOW_MS` in `lattice.js`); a lone press waits at a checkpoint for what is left of that window before going on to its ten steps, which shows as a short pause when the checkpoint is a few steps away. Say if the window should be shorter, or the pause is noticeable. Only Chromium was used for the runtime tests (Firefox ran the existing Firefox test).
 - [ ] 0.27.0: Home now plays to the first step of the slide; the start of the deck moved to Shift+Home. A deck of yours whose front matter binds `home` keeps its binding. A slide that mixes a trace with `code N, trace M` lines is split at those lines (decision 37); say if you would rather a step that moves the run's track continue the run.
-- [ ] 0.27.0: `docs/implementation-report-2026-10-06-e.md` (0.26) is copied to `docs/archive/`; `git rm` it in `docs/`, `git add` the new report `implementation-report-2026-10-07.md` and the archived copy; `git add -u` covers the rest.
+- [ ] 0.28.0: `docs/implementation-report-2026-10-07.md` (0.27) is copied to `docs/archive/`; `git rm` it in `docs/`, `git add` the new report `implementation-report-2026-10-07-b.md`, the archived copy and `user_manual/programs/polynomial.bbv`; `git add -u` covers the rest.
+- [ ] 0.28.0: look at a path frame on your screen (the manual's "Paths through the versions" and your slide "SBBV: A first example"): versions and edges of the path in green (`--lt-good`, the colour of `graph-anim`'s `path`), the others at 30 % opacity, the `PATH` badge in green. Say if the faded versions should be lighter or darker, or the path another colour (it is also the colour of a merge result).
+- [ ] 0.28.0: an `input` path is a may-reach set read from the entry contexts on the parameters, so a variable computed on the way does not narrow it (for `x: fx`, both the fixnum and the overflow sides of `polynomial` are on the path, which is right there). Say if you meet a program where the over-approximation shows versions that no such input reaches; running the blocks' instructions again under the input would tighten it.
 - [ ] 0.5: review of the two abstract interpretation slides of example 07 (contexts show every live variable, including `n`; see the 0.5.0 addendum of `archive/implementation-report.md`).
 - [ ] 0.6.0: a look at the arrow and at the Keybindings grid of the presenter view in Firefox (only Chromium was available in the session; the geometry uses `getBoundingClientRect`, `Range.getBoundingClientRect` and `getBBox`, which both engines support). Since 0.16.0 the arrows at bullets were checked in Firefox 142 (the runtime test and the manual slide).
 - [ ] 0.6.0: try the detour step of example 01 (`at=1` on the invariant detour of "Nothing here is linear") and the skip keys on a long animation (example 06 or 07) to judge the playback interval (30 to 90 ms per step, `playSteps` in `lattice.js`).
@@ -75,6 +77,7 @@ Code (0.12):
 - [ ] Character-level alignment of identifiers (`xs` to `xs2`): whole tokens are replaced today, by design.
 
 Basic block versioning and abstract interpretation (from `archive/todo.md`, plus 0.7; the Gambit importer, a Scheme front end, jump cascade removal and other traversal orders are on the roadmap):
+- [ ] 0.28.0: paths with `algorithm: lv` (through entry points, call edges and return points matched to their call sites), and paths on `abstract-interp-anim` (the blocks an input may reach on the fixed CFG).
 - [ ] A `code` panel key: the version of the current frame with its specialized code (removed tests struck through) listed in the panel, for slides that draw `show: [label, context]` (discussed on 2026-10-02, not needed yet since `show` covers it).
 - [ ] The blog's backward-score heuristic, as another `heuristic` value.
 - [ ] Nicer edge routing when a wrapped rank puts a target on a second line (edges cross the first line).

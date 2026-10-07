@@ -8,7 +8,7 @@
   const AFTER_HEAD = ";; after:";  // as layout.AFTER_HEAD, which sizes the enlarged block
   const ZOOM_PAD = 6;  // room around an enlarged block for its outline
   const MARK_CH = 7.3, MARK_PAD = 3, MARK_H = 15;  // the box of an edge label: 12px monospace characters
-  const STATES = ["default", "new", "gone", "active"];
+  const STATES = ["default", "new", "gone", "active", "path", "dim"];
   let uid = 0;
 
   function svg(tag, attrs = {}, text) {
@@ -24,7 +24,7 @@
   const KEYWORDS = /(\b(?:if|goto|else|return|call|fail)\b|->|\[[^\]]*\])/;
   const TONES = { specialize: "active", "test kept": "active", test: "active", "test removed": "warn", merge: "warn",
     widen: "warn", "dead edge": "warn", fail: "warn", limit: "warn", done: "good", "fixed point": "good", exit: "good",
-    reached: "accent", union: "accent", entry: "accent", "return points": "accent" };
+    reached: "accent", union: "accent", entry: "accent", "return points": "accent", path: "good" };
   const esc = (t) => Lattice.esc(t);
 
   function plain(text) {
@@ -169,8 +169,10 @@
   // The state of a node in a frame: classes, entry star, the context of the frame (abstract
   // interpretation), the code specialized so far, and the exit context once the block is done.
   function nodeState(inst, n, vid, st, position) {
+    // a follower highlights the block of the frame, or every block of a path frame (spec 9.5)
     const hl = inst.highlight ? inst.highlight[position] : null;
-    const mark = hl != null ? (vid === hl ? "active" : "none") : (st.mark || "none");
+    const mark = Array.isArray(hl) ? (hl.includes(vid) ? "path" : "none")
+      : hl != null ? (vid === hl ? "active" : "none") : (st.mark || "none");
     n.g.setAttribute("class", `lt-bbv-node st-${st.state || "done"} mk-${mark}${n.origin}`);
     n.star.textContent = st.entry ? " ∗" : "";
     if (st.lines) {  // the context changes with the frame (abstract interpretation)

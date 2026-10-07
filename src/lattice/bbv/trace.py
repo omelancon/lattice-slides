@@ -10,6 +10,7 @@ from .ir import RESULT, Program
 from .lv import LambdaVersioning
 from .rich import SEP, binding, code, context, join, op, tag, ty, var, ver
 from .sbbv import Specializer, Version
+from .types import Type
 
 EVENTS = ["start", "dequeue", "must-merge", "merge", "specialize", "instruction", "entry", "exit", "return-points",
           "generic-entries", "done"]
@@ -41,7 +42,8 @@ class VersioningTrace(Trace):
                  entry: str | None = None, limits: dict | None = None, seed: int = 0, functions: list[str] | None = None,
                  events: list[str] | None = None, caption: str = "auto", until: int | None = None,
                  max_steps: int = 5000, granularity: str = "block", intervals: bool = False,
-                 thresholds="machine", fixnum_bits: int = 61, vector_bounds: bool = True):
+                 thresholds="machine", fixnum_bits: int = 61, vector_bounds: bool = True,
+                 paths: list[dict] | None = None):
         super().__init__({})
         self.program = program
         self.algorithm = algorithm
@@ -67,6 +69,8 @@ class VersioningTrace(Trace):
         self.spec.run()
         if not self.frames:  # every event filtered out: keep the final state
             self._push("done", {})
+        if paths:
+            self._add_paths(paths)
         self.finalize()
 
     # ------------------------------------------------------------ events
@@ -344,6 +348,129 @@ class VersioningTrace(Trace):
         else:
             meta["algo"] = algo.get(kind, [])
         return meta
+
+    # ------------------------------------------------------------ paths (spec 9.5)
+    PATH_KEYS = {"input", "versions", "caption", "dim"}
+
+    def _add_paths(self, paths: list[dict]) -> None:
+        """One ``path`` frame per entry of ``paths``, after the last frame: the versions an input goes
+        through (``input``) or the versions listed (``versions``), on the graph of the last frame."""
+        if self.algorithm == "lv":
+            raise ValueError("paths: paths through calls are not defined; use paths with algorithm sbbv")
+        if self.stopped:
+            raise ValueError("paths: the frames stop early (until), so they would not end on the final graph; "
+                             "remove until to use paths")
+        last = self.frames[-1]
+        drawn = {vid: n for vid, n in last["nodes"].items() if n.get("mark") != "gone"}
+        for i, entry in enumerate(paths):
+            where = f"paths[{i}]"
+            if not isinstance(entry, dict):
+                raise ValueError(f"{where}: a path is a mapping with input or versions")
+            unknown = set(entry) - self.PATH_KEYS
+            if unknown:
+                raise ValueError(f"{where}: unknown key(s) {sorted(unknown)}; use input, versions, caption, dim")
+            if ("input" in entry) == ("versions" in entry):
+                raise ValueError(f"{where}: give exactly one of input (parameter types) and versions (labels)")
+            if "input" in entry:
+                order, what = self._path_by_input(entry["input"], drawn, where)
+            else:
+                order, what = self._path_by_versions(entry["versions"], drawn, where)
+            self._push_path(order, what, drawn, last, entry, where)
+
+    def _path_by_input(self, given, drawn: dict, where: str) -> tuple[list[str], str]:
+        fn = self.spec.entry_function
+        if not isinstance(given, dict) or not given:
+            raise ValueError(f"{where}: input maps parameters of {fn.name} to types, such as {{x: fl}}")
+        types: dict[str, Type] = {}
+        for name, text in given.items():
+            name = str(name)
+            if name not in fn.params:
+                raise ValueError(f"{where}: input: {name!r} is not a parameter of {fn.name} "
+                                 f"(its parameters: {', '.join(fn.params) or 'none'})")
+            try:
+                t = Type.parse(str(text))
+            except (ValueError, KeyError) as e:
+                raise ValueError(f"{where}: input: {name}: cannot read the type {text!r} ({e})") from None
+            types[name] = t if self.spec.intervals else t.without_range()
+
+        def admits(vid: str) -> bool:
+            ctx = self.spec.by_id[int(vid)].context
+            return all(not ctx.get(n).intersection(t).is_bottom() for n, t in types.items())
+
+        root = next((r for r in self.spec.roots if r.function == fn.name), None)
+        start = str(self.spec.resolve(root).id) if root is not None else None
+        if start is None or start not in drawn or not admits(start):
+            raise ValueError(f"{where}: the entry version of {fn.name} does not admit this input, so the path is empty")
+        order, seen, todo = [], {start}, [start]
+        while todo:
+            vid = todo.pop(0)
+            order.append(vid)
+            for e in self.spec.by_id[int(vid)].edges:
+                dst = str(e.dst)
+                if e.kind in ("goto", "true", "false") and dst in drawn and dst not in seen and admits(dst):
+                    seen.add(dst)
+                    todo.append(dst)
+        what = " ".join(binding(n, t) for n, t in types.items())
+        return order, what
+
+    def _path_by_versions(self, labels, drawn: dict, where: str) -> tuple[list[str], str]:
+        if not isinstance(labels, list) or not labels:
+            raise ValueError(f"{where}: versions lists version labels, such as [A1, D1]")
+        by_label = {self.spec.by_id[int(vid)].label: vid for vid in drawn}
+        order = []
+        for label in labels:
+            label = str(label)
+            if label not in by_label:
+                raise ValueError(f"{where}: versions: {label!r} is not drawn at the end of the run "
+                                 f"(drawn: {', '.join(sorted(by_label))})")
+            if by_label[label] not in order:
+                order.append(by_label[label])
+        return order, "chosen versions"
+
+    def _push_path(self, order: list[str], what: str, drawn: dict, last: dict, entry: dict, where: str) -> None:
+        dim = entry.get("dim", True)
+        if not isinstance(dim, bool):
+            raise ValueError(f"{where}: dim is true or false")
+        on = set(order)
+        nodes = {}
+        for vid, n in drawn.items():
+            n = {k: v for k, v in n.items() if k != "mark"}
+            if vid in on:
+                n["mark"] = "path"
+            elif dim:
+                n["mark"] = "dim"
+            nodes[vid] = n
+        edges = {}
+        for key, e in last["edges"].items():
+            src, rest = key.split("->", 1)
+            dst = rest.split(":", 1)[0]
+            if src not in nodes or dst not in nodes:
+                continue
+            e = {k: v for k, v in e.items() if k != "state"}
+            if src in on and dst in on:
+                e["state"] = "path"
+            elif dim:
+                e["state"] = "dim"
+            edges[key] = e
+        tests = self._tests({vid: nodes[vid] for vid in order})
+        if "caption" in entry:
+            caption = str(entry["caption"] or "")
+        elif self.caption_mode == "auto":
+            outs = [sum(1 for k, e in edges.items() if e.get("state") == "path" and k.startswith(f"{v}->")) for v in order]
+            ins = [sum(1 for k, e in edges.items() if e.get("state") == "path" and k.split("->", 1)[1].split(":")[0] == v)
+                   for v in order]
+            chain = all(o <= 1 for o in outs) and all(i <= 1 for i in ins)  # one way through: read as a sequence
+            caption = join([f"{op('path')} {what}", (" → " if chain else " ").join(self._chip(int(v)) for v in order),
+                            f"{tests} test{'s' if tests != 1 else ''}"])
+        else:
+            caption = ""
+        self.frames.append({"nodes": nodes, "edges": edges, "panel": dict(last["panel"]), "caption": caption})
+        blocks = []
+        for vid in order:
+            key = self.spec.by_id[int(vid)].block.key
+            if key not in blocks:
+                blocks.append(key)
+        self.meta.append({"event": "path", "blocks": blocks, "function": self.spec.entry_function.name, "algo": []})
 
     # ------------------------------------------------------------ static tables
     def finalize(self) -> None:
