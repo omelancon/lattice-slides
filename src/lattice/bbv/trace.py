@@ -402,7 +402,8 @@ ABSINT_OPS = {"assign": "assign", "if": "test", "goto": "goto", "call": "call", 
 
 
 def context_lines(ctx) -> list[str]:
-    """Context lines for display: an integer with no known interval shows ``(-∞, ∞)``, as in the figures."""
+    """Context lines for display: any integer (``fx | bg``) with no known interval shows ``(-∞, ∞)``, as
+    in the figures (``absint.value_text``)."""
     from .absint import value_text
 
     out = []

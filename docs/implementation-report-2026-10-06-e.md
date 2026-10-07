@@ -1,4 +1,4 @@
-# Implementation report: arrows at the parts of a CFG (Lattice 0.26.0, 2026-10-06; patches 0.26.1 and 0.26.2, sections 5 and 6)
+# Implementation report: arrows at the parts of a CFG (Lattice 0.26.0, 2026-10-06; patches 0.26.1, 0.26.2 and 0.26.3, sections 5 to 7)
 
 Pointing an arrow at a block or an edge of a versioning drawing meant a CSS selector into the runtime's SVG (`[data-instance="preface/avg-graph"] .lt-bbv-node[data-vid='4']`, the first `.lt-bbv-edge.k-goto`): an internal version number instead of the block's label, an edge found by its order in the page, and nothing the build could check. An arrow end may now name a part of a component, `COMP.NAME`: `cfg.B`, `cfg.A->L`, `cfg.L->B:false`, resolved and checked at build time. The rules are in spec 8.2 (the `part` hook), 8.9 (parts as arrow ends) and 9.5 (what the versioning drawings name), with 10.4, 12 and 15; the rationale is decision 35 of the design report. The design and Olivier's answers are in the project document `claude/v0.26-design.md`.
 
@@ -84,3 +84,12 @@ Olivier picked nine bugs from `docs/todo.md`; the ninth (a collapsed column laid
 
 **Docs.** Spec 3.9, 3.13, 7.4, 9.5, 10.1, 10.4, 12 (LT065) and a 0.26.2 row in 15; design report (roadmap, decision 36); SKILL.md (highest code LT065, structure, tests table, pitfalls on intervals, columns and the drawing's size); USER_SKILL.md (two rules that bite); README and manual (version, LT065); todo. Nothing was committed: the changes are in the working tree, with no new files.
 
+## 7. Patch 0.26.3: a fixnum printed as `fx (-∞, ∞)` (2026-10-07)
+
+The defense's slide "Narrowing of Outgoing Contexts" tests `fixnum?(x)` on `x: any`, and abstract interpretation showed the true branch as `x: fx (-∞, ∞)`. `value_text` (`bbv/absint.py`), which prints the contexts, the `history` panel and the union and widening captions, added `(-∞, ∞)` to every integer type with no interval, `fx` and `bg` alone included. A fixnum is bounded by the fixnum range and a bignum lies on two rays, so the suffix is now added only to `fx | bg`, the case of the figures (`n: fx | bg` in figure 4). `fx` and `bg` alone print as their type, as `!fx` already did. Only the display changed: joins, widening and narrowing work on the types, never on their text.
+
+The analysis was run, before and after, on every program shown by an `abstract-interp-anim` in the examples, the manual and the defense deck (`sum-to-n`, `fact-loop`, `vsum`, `findv-absint`, `union`, `narrow-cmp`, `narrow-type`): every `(-∞, ∞)` they print is on `fx | bg` and stays, except the true branch of `narrow-type`, now `x: fx`. Test: `test_absint_shows_infinite_bounds_only_for_any_integer` (fails on the 0.26.2 sources).
+
+**Verification.** `pytest -rs`: 339 passed, one skip (the optional Firefox test; Playwright's Firefox is not installed in this session), with Playwright 1.56 matched to the preinstalled Chromium. Examples and manual rebuilt; `lattice check --strict` passes on all of them; `scripts/check_docs.py` clean. The defense deck rebuilt and its narrowing slide checked on a screenshot.
+
+**Docs.** Spec 9.6 (the printing rule, in the paragraphs on abstract values and frames) and a 0.26.3 row in 15; design report (roadmap); SKILL.md (tests table); README, spec, design report and manual (version); todo.

@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.26.2. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.26.3. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -246,7 +246,7 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.25 (done).** `panel_at` on the animation components: the panel beside (`right`) or under (`below`) the drawing at any width, for a drawing that has the whole row after its column widened.
 
-**v0.26 (done).** Arrows at the parts of a component: blocks, versions and edges of `bbv-cfg`, `bbv-anim` and `abstract-interp-anim` by name (`cfg.B`, `cfg.A->L`, `cfg.L->B:false`), checked at build time, for labelling a CFG; the arrow follows a version as it glides. Patch 0.26.1 placed arrows at unlabelled edges in Firefox; patch 0.26.2 fixed eight items of the todo list (a hash change that animated, plots that changed at every build, `arrow` samples painted as errors, the two edges of `if x goto L else goto L`, columns that kept moving after a move, captions over the text below a drawing, constants that kept their singleton without intervals, and an attribute line before a detour ignored without a word).
+**v0.26 (done).** Arrows at the parts of a component: blocks, versions and edges of `bbv-cfg`, `bbv-anim` and `abstract-interp-anim` by name (`cfg.B`, `cfg.A->L`, `cfg.L->B:false`), checked at build time, for labelling a CFG; the arrow follows a version as it glides. Patch 0.26.1 placed arrows at unlabelled edges in Firefox; patch 0.26.2 fixed eight items of the todo list (a hash change that animated, plots that changed at every build, `arrow` samples painted as errors, the two edges of `if x goto L else goto L`, columns that kept moving after a move, captions over the text below a drawing, constants that kept their singleton without intervals, and an attribute line before a detour ignored without a word); patch 0.26.3 stopped abstract interpretation from printing a fixnum with no interval as `fx (-∞, ∞)`.
 
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".

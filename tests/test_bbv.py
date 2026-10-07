@@ -380,6 +380,26 @@ def test_absint_dead_branches_and_types_only():
     assert str(ai.contexts["A"].get("p")) == "any" and str(ai.contexts["D"].get("p")) == "proc"
 
 
+def test_absint_shows_infinite_bounds_only_for_any_integer():
+    from lattice.bbv.absint import value_text
+    from lattice.bbv.trace import AbstractTrace
+
+    # any integer with no interval: (-∞, ∞), as in figure 4
+    assert value_text(Type.of("fx", "bg")) == "fx | bg (-∞, ∞)"
+    # a fixnum is bounded and a bignum is two rays: neither is (-∞, ∞)
+    assert value_text(Type.of("fx")) == "fx" and value_text(Type.of("bg")) == "bg"
+    assert value_text(Type.parse("fx [0, 10]")) == "fx [0, 10]" and value_text(Type.of("fl")) == "fl"
+    # fixnum? on x: any gives a fixnum with no interval on the true branch
+    t = AbstractTrace(parse("function g(x)\nA:  if fixnum?(x) goto B else goto C\nB:  return x\nC:  fail\n"))
+    last = t.frames[-1]["nodes"]
+    lines = {t.tables["versions"][vid]["label"]: n["lines"] for vid, n in last.items()}
+    assert lines["B"] == ["x: fx"] and lines["C"] == ["x: !fx"]
+    assert not any("∞" in f["caption"] for f in t.frames)
+    # fact: i is any integer at the loop entry and keeps its (-∞, ∞)
+    fact = AbstractTrace(program("fact-loop.bbv"))
+    assert "i: fx | bg (-∞, ∞)" in fact.frames[-1]["nodes"]["2"]["lines"]
+
+
 def test_abstract_trace_frames():
     from lattice.bbv.trace import AbstractTrace
 

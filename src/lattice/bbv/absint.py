@@ -18,9 +18,11 @@ _INT = Type.of("fx", "bg")
 
 
 def value_text(t: Type) -> str:
-    """A type for display: an integer with no known interval shows ``(-∞, ∞)``, as in the figures."""
+    """A type for display: any integer (``fx | bg``) with no known interval shows ``(-∞, ∞)``, as in
+    the figures. ``fx`` alone is bounded by the fixnum range and ``bg`` alone is two rays, so neither
+    is ``(-∞, ∞)``: they show their type alone."""
     text = str(t)
-    if t.range is None and t.bits and t.subset(_INT):
+    if t.range is None and t.bits == _INT.bits:
         text += " (-∞, ∞)"
     return text
 

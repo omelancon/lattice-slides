@@ -2,7 +2,7 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-07, after 0.26.2 (`implementation-report-2026-10-06-e.md`, sections 5 and 6 for the patches). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-07, after 0.26.3 (`implementation-report-2026-10-06-e.md`, sections 5 to 7 for the patches). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
@@ -38,6 +38,7 @@ Updated 2026-10-07, after 0.26.2 (`implementation-report-2026-10-06-e.md`, secti
 - [ ] 0.26.2: a versioning drawing without `height` now shrinks to the room its component has (up to 430 px) instead of pushing its caption over what follows. No example or manual slide changed, but a slide of yours without `height` and with text under the drawing may now show it smaller; set `height=` where you want a fixed size. A `bbv-cfg` (and `caption: none`) no longer keeps 33 px for a caption it never shows.
 - [ ] 0.26.2: the layout test now also checks that nothing a component draws outside its box covers another block. It skips the drawing canvases, which are letterboxed: the `bfs` slide of example 02 has `height: 360` where only about 300 px are left, so its canvas box reaches over the bullets above it and over its caption, without painting there. Say if `height` on `graph-anim` and the other animations should become a maximum that shrinks when the room is short, as a versioning drawing without `height` now does.
 - [ ] 0.26.2: nothing was committed; the changes are in the working tree (no new files). `git add -u` and commit when you have read them.
+- [ ] 0.26.3: the fix of `fx (-∞, ∞)` is in the working tree (no new files): `git add -u` and commit when you have read it. A fixnum with no interval now prints `fx`; say if you would rather see `fx [minfix, maxfix]`.
 - [ ] 0.25.0: `panel_at=below` on the defense's `findv` analysis needs a smaller `height` than 470 (the panel and caption then go under the drawing, and at 470 they reach the footer); `direction: LR` with `below` is the other way to use the whole row.
 - [ ] 0.23.0: try three quick Shift+Right (Shift+Left) presses on a long animation (example 07, or 06). The window is one second from the first press (`BURST_WINDOW_MS` in `lattice.js`), the first two presses still move ten steps each, and the playback to the end uses the `last-step` interval (30 to 90 ms per step), so 60 steps take about two seconds; say if the window or the playback should be shorter. Only Chromium was available here.
 - [ ] 0.21.0: the abstract interpreter widens at every join, as the thesis's figure 2 does, so a bound found by a test is kept only if a threshold sits on it (`maxfix-1` for the defense's `findv`). Widening only at loop heads (targets of back edges, plain union elsewhere) was prototyped and keeps such bounds with `[sign, maxfix]` alone; say if you want it as an option.
