@@ -107,9 +107,9 @@ const Lattice = (() => {
     const d = detourOf(nav.cur.slide);
     return d ? d.origin : null;
   }
-  // Structural predecessor of a slide, for PREV when history is empty (spec 7.2): the tour predecessor,
-  // else the previous slide on the main path, else a slide whose `next` is this one (same scope first),
-  // else the slide whose branch leads here, else the origin of the detour this slide starts.
+  // Structural predecessor of a slide, for PREV (spec 7.1): the tour predecessor, else the previous slide
+  // on the main path, else a slide whose `next` is this one (same scope first), else the slide whose
+  // branch leads here, else the origin of the detour this slide starts.
   function predecessor(id) {
     if (nav.tour && deck.tours[nav.tour]) {
       const list = deck.tours[nav.tour];
@@ -128,6 +128,26 @@ const Lattice = (() => {
     if (d && d.entry === id) return d.origin;
     return null;
   }
+  // What PREV does from the current position (spec 7.2), without doing it: { slide, step, close } or null.
+  // `close` is the index in H of the excursion that PREV closes when it leaves a detour by its entry for
+  // the origin that excursion was started on; it then lands where RETURN would.
+  function prevMove() {
+    const cur = nav.cur;
+    if (cur.step > 0) {
+      let k = cur.step - 1;
+      while (k > 0 && stepDetour(cur.slide, k)) k--; // detour steps show nothing new going backward
+      return { slide: cur.slide, step: k, close: -1 };
+    }
+    const p = predecessor(cur.slide);
+    if (!p) return null;
+    const d = detourOf(cur.slide);
+    const i = topExcursion();
+    if (d && d.entry === cur.slide && d.origin === p && i >= 0 && nav.H[i].slide === p) {
+      return { slide: p, step: nav.H[i].step, close: i };
+    }
+    return { slide: p, step: steps(p) - 1, close: -1 };
+  }
+
   // A step whose arrival through NEXT enters a detour (spec 6.4): { id, blocking }, or null.
   const stepDetour = (id, step) => (slide(id).stepDetours || {})[step] || null;
 
@@ -198,19 +218,25 @@ const Lattice = (() => {
       flash("End of path");
     },
     prev() {
-      const cur = nav.cur;
-      if (cur.step > 0) {
-        let k = cur.step - 1;
-        while (k > 0 && stepDetour(cur.slide, k)) k--; // detour steps show nothing new going backward
-        return go(cur.slide, k, { kind: "step", dir: -1 });
+      // The structure only (spec 7.2): the previous step, else the predecessor slide, recorded as a
+      // `backward` entry so that UNDO can take it back. It never pops the history.
+      const m = prevMove();
+      if (!m) return flash("No previous slide");
+      if (m.slide === nav.cur.slide) return go(m.slide, m.step, { kind: "step", dir: -1 });
+      const entry = { slide: nav.cur.slide, step: nav.cur.step, kind: "backward" };
+      if (m.close >= 0) { // leaving a detour by its entry closes its excursion, as RETURN would
+        entry.closed = nav.H.slice(m.close);
+        nav.H = nav.H.slice(0, m.close);
       }
-      if (nav.H.length) {
-        const e = nav.H.pop();
-        return go(e.slide, e.step, { kind: e.kind === "excursion" ? "return" : "prev", dir: -1 });
-      }
-      const p = predecessor(cur.slide); // no history: walk the structure backward, without recording it
-      if (p) return go(p, steps(p) - 1, { kind: "prev", dir: -1 });
-      flash("No previous slide");
+      nav.H.push(entry);
+      go(m.slide, m.step, { kind: m.close >= 0 ? "return" : "prev", dir: -1 });
+    },
+    undo() {
+      // The history only (spec 7.2): back to the slide and step of the last recorded move, at once.
+      if (!nav.H.length) return flash("Nothing to undo");
+      const e = nav.H.pop();
+      if (e.closed) nav.H = nav.H.concat(e.closed); // reopen the detour a PREV closed
+      go(e.slide, e.step, undoHow(e));
     },
     "skip-forward"() { playSteps(Math.min(nav.cur.step + 10, steps(nav.cur.slide) - 1)); },
     "skip-back"() { playSteps(Math.max(nav.cur.step - 10, 0)); },
@@ -282,6 +308,13 @@ const Lattice = (() => {
     },
     "enter-detour"() { actions.down(); },
   };
+
+  // The transition of an UNDO is the reverse of the move it takes back.
+  function undoHow(e) {
+    if (e.kind === "excursion") return { kind: "return", dir: -1 };
+    if (e.kind === "backward") return e.closed ? { kind: "detour", dir: 1 } : { kind: "next", dir: 1 };
+    return { kind: "prev", dir: -1 };
+  }
 
   // ------------------------------------------------------------------ rendering
   function transitionFor(how, target) {
@@ -871,7 +904,7 @@ const Lattice = (() => {
 
   // The Keybindings section of the presenter panel: every global action with its keys (spec 7.5).
   const ACTION_LABELS = {
-    next: "next step or slide", prev: "previous step, or undo the last move",
+    next: "next step or slide", prev: "previous step or slide", undo: "undo the last move (history)",
     "skip-forward": "10 steps forward", "skip-back": "10 steps back", "last-step": "last step of the slide",
     "first-step": "first step of the slide",
     "skip-detour": "step over the next detour step",
@@ -879,7 +912,7 @@ const Lattice = (() => {
     overview: "overview", goto: "go to a slide", presenter: "presenter view", tour: "cycle through tours",
     home: "start of the deck, clearing history",
   };
-  const KEY_NAMES = { " ": "Space", ArrowRight: "→", ArrowLeft: "←", ArrowUp: "↑", ArrowDown: "↓" };
+  const KEY_NAMES = { " ": "Space", ArrowRight: "→", ArrowLeft: "←", ArrowUp: "↑", ArrowDown: "↓", Backspace: "⌫" };
   const keyName = (k) => k.split("+").map((part) => KEY_NAMES[part] || part).join("+");
   function keybindingsList() {
     const rows = Object.entries(deck.keys).map(([action, keys]) =>
@@ -947,6 +980,14 @@ const Lattice = (() => {
     });
     const rt = returnTarget();
     if (rt && (topExcursion() >= 0 || detourOf(nav.cur.slide))) moves.push(`<li><kbd>\u2191</kbd> return to ${esc(label(rt))}</li>`);
+    // what Left and Backspace do: the structure and the history (spec 7.2, 7.5)
+    const pk = (deck.keys.prev || [])[0], uk = (deck.keys.undo || [])[0];
+    const pm = pk ? prevMove() : null;
+    if (pm) {
+      const what = pm.slide === nav.cur.slide ? `step ${pm.step + 1} of ${s.steps}` : `${pm.close >= 0 ? "leave the detour, to " : ""}${esc(label(pm.slide))}`;
+      moves.push(`<li><kbd>${esc(keyName(pk))}</kbd> ${what}</li>`);
+    }
+    if (uk && nav.H.length) moves.push(`<li><kbd>${esc(keyName(uk))}</kbd> undo: back to ${esc(label(nav.H[nav.H.length - 1].slide))}</li>`);
     $(".lt-pp-where", panel).textContent = `${s.label} \u00b7 step ${nav.cur.step + 1}/${s.steps}`;
     const scrub = $(".lt-pp-scrub", panel);
     scrub.hidden = s.steps < 2;

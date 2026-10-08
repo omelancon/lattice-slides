@@ -67,6 +67,18 @@ def test_key_collisions(deck):
     assert "LT018" in codes(check_deck(root, use_cache=False))
 
 
+def test_page_keys_are_free_and_backspace_is_global(deck):
+    """Spec 7.6: PageUp and PageDown are not bound since 0.29, so a slide may use them; Backspace is `undo`."""
+    for key, collides in (("PageDown", False), ("PageUp", False), ("Backspace", True)):
+        root = deck({"talk.md": f"""
+            # A
+            ::: detour {{key={key}}}
+            # D
+            :::
+        """})
+        assert ("LT018" in codes(check_deck(root, use_cache=False))) == collides, key
+
+
 def test_unreachable_warning(deck):
     root = deck({"talk.md": "# A {next=none}\n# B\n"})
     d = build_deck(root, use_cache=False)

@@ -23,6 +23,7 @@ DECK = """
 
 
 def test_spec_trace(tmp_path):
+    """Spec 7.3: Right, Down and Up as before; Left follows the structure and Backspace the history."""
     src = tmp_path / "talk.md"
     src.write_text(DECK)
     out = tmp_path / "talk.html"
@@ -40,19 +41,48 @@ def test_spec_trace(tmp_path):
                     page.keyboard.press(k)
                 return page.evaluate("Lattice.state()")
 
+            fwd = lambda slide, step: {"slide": slide, "step": step, "kind": "forward"}  # noqa: E731
+            exc = lambda slide, step: {"slide": slide, "step": step, "kind": "excursion"}  # noqa: E731
+            bwd = lambda slide, step: {"slide": slide, "step": step, "kind": "backward"}  # noqa: E731
             s = press("ArrowRight", "ArrowRight", "ArrowRight")
             assert s["cur"] == {"slide": "dijkstra", "step": 2}
             s = press("ArrowDown")
             assert s["cur"]["slide"] == "heap-what" and s["H"][-1]["kind"] == "excursion"
             s = press("ArrowRight", "ArrowRight")  # heap-ops, then back
             assert s["cur"] == {"slide": "dijkstra", "step": 2}
-            assert s["H"] == [{"slide": "intro", "step": 0, "kind": "forward"}]
+            assert s["H"] == [fwd("intro", 0)]
             s = press("ArrowLeft")
             assert s["cur"] == {"slide": "dijkstra", "step": 1}
             s = press("ArrowRight", "ArrowRight")
             assert s["cur"] == {"slide": "complexity", "step": 0}
+            assert s["H"] == [fwd("intro", 0), fwd("dijkstra", 2)]
             s = press("ArrowLeft")
             assert s["cur"] == {"slide": "dijkstra", "step": 2}  # backward lands on the last step
+            assert s["H"] == [fwd("intro", 0), fwd("dijkstra", 2), bwd("complexity", 0)]
+            s = press("Backspace")  # undoes the Left
+            assert s["cur"] == {"slide": "complexity", "step": 0}
+            assert s["H"] == [fwd("intro", 0), fwd("dijkstra", 2)]
+            s = press("ArrowLeft", "ArrowDown")
+            assert s["cur"] == {"slide": "heap-what", "step": 0}
+            assert s["H"] == [fwd("intro", 0), fwd("dijkstra", 2), bwd("complexity", 0), exc("dijkstra", 2)]
+            s = press("ArrowLeft")  # out of the detour by its entry: closes the excursion, as Up would
+            assert s["cur"] == {"slide": "dijkstra", "step": 2}
+            assert s["H"] == [fwd("intro", 0), fwd("dijkstra", 2), bwd("complexity", 0),
+                              dict(bwd("heap-what", 0), closed=[exc("dijkstra", 2)])]
+            assert "\u2191" not in page.inner_text("#lt-progress")  # no excursion left to return from
+            s = press("Backspace")  # back in, the excursion reopened
+            assert s["cur"] == {"slide": "heap-what", "step": 0}
+            assert s["H"] == [fwd("intro", 0), fwd("dijkstra", 2), bwd("complexity", 0), exc("dijkstra", 2)]
+            s = press("ArrowUp")
+            assert s["cur"] == {"slide": "dijkstra", "step": 2}
+            assert s["H"] == [fwd("intro", 0), fwd("dijkstra", 2), bwd("complexity", 0)]
+            s = press("Backspace")  # Up removed the detour from the history: back to complexity
+            assert s["cur"] == {"slide": "complexity", "step": 0}
+            s = press("Backspace", "Backspace")
+            assert s["cur"] == {"slide": "intro", "step": 0} and s["H"] == []
+            s = press("Backspace")  # nothing to undo
+            assert s["cur"] == {"slide": "intro", "step": 0} and s["H"] == []
+            assert page.inner_text("#lt-flash") == "Nothing to undo"
             browser.close()
     except Exception as e:  # browser not installed
         if "Executable doesn't exist" in str(e):
@@ -61,10 +91,18 @@ def test_spec_trace(tmp_path):
     assert not errors
 
 
-def test_prev_without_history_walks_the_structure(tmp_path):
-    """Spec 7.2, PREV: with an empty history, Left goes to the structural predecessor without recording it."""
+LINK_DECK = DECK + """
+# Backup {offpath=true}
+
+Back to [[dijkstra]].
+"""
+
+
+def test_left_walks_the_structure_and_backspace_the_history(tmp_path):
+    """Spec 7.2: PREV goes to the structural predecessor whatever the history holds, and records the move;
+    UNDO pops the history at once, from any step; PageUp and PageDown are not bound; Backspace is not RETURN."""
     src = tmp_path / "talk.md"
-    src.write_text(DECK)
+    src.write_text(LINK_DECK)
     out = tmp_path / "talk.html"
     assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
     try:
@@ -81,20 +119,86 @@ def test_prev_without_history_walks_the_structure(tmp_path):
             page = open_at("#/complexity/0")
             page.keyboard.press("ArrowLeft")
             s = page.evaluate("Lattice.state()")
-            assert s["cur"] == {"slide": "dijkstra", "step": 2} and s["H"] == []  # last step, nothing pushed
+            assert s["cur"] == {"slide": "dijkstra", "step": 2}
+            assert s["H"] == [{"slide": "complexity", "step": 0, "kind": "backward"}]
             for _ in range(3):
                 page.keyboard.press("ArrowLeft")
             s = page.evaluate("Lattice.state()")
-            assert s["cur"] == {"slide": "intro", "step": 0} and s["H"] == []
+            assert s["cur"] == {"slide": "intro", "step": 0} and len(s["H"]) == 2
             page.keyboard.press("ArrowLeft")  # the start has no predecessor
             assert page.evaluate("Lattice.state().cur") == {"slide": "intro", "step": 0}
-            page.keyboard.press("ArrowRight")  # a forward move records history again
+            assert page.inner_text("#lt-flash") == "No previous slide"
+            page.keyboard.press("ArrowRight")  # Right, then Left: Left walks the structure, never pops
             page.keyboard.press("ArrowLeft")
             s = page.evaluate("Lattice.state()")
-            assert s["cur"] == {"slide": "intro", "step": 0} and s["H"] == []
-            page = open_at("#/heap-what/0")  # the entry of a detour: back to its origin
+            assert s["cur"] == {"slide": "intro", "step": 0}
+            assert [e["kind"] for e in s["H"]] == ["backward", "backward", "forward", "backward"]
+            page.keyboard.press("Backspace")  # undoes that Left
+            assert page.evaluate("Lattice.state().cur") == {"slide": "dijkstra", "step": 0}
+            page.keyboard.press("ArrowRight")
+            page.keyboard.press("Backspace")  # from the middle of a slide: leaves it at once
+            s = page.evaluate("Lattice.state()")
+            assert s["cur"] == {"slide": "intro", "step": 0} and len(s["H"]) == 2
+            page.keyboard.press("Backspace")
+            page.keyboard.press("Backspace")
+            s = page.evaluate("Lattice.state()")
+            assert s["cur"] == {"slide": "complexity", "step": 0} and s["H"] == []  # where the deck was opened
+
+            page = open_at("#/heap-what/0")  # a deep link into a detour: no excursion, Left goes to its origin
             page.keyboard.press("ArrowLeft")
-            assert page.evaluate("Lattice.state().cur") == {"slide": "dijkstra", "step": 2}
+            s = page.evaluate("Lattice.state()")
+            assert s["cur"] == {"slide": "dijkstra", "step": 2}
+            assert s["H"] == [{"slide": "heap-what", "step": 0, "kind": "backward"}]
+
+            page = open_at("#/dijkstra/2")  # Backspace is not RETURN: inside a detour it undoes the last move
+            page.keyboard.press("ArrowDown")
+            page.keyboard.press("ArrowRight")
+            page.keyboard.press("Backspace")
+            s = page.evaluate("Lattice.state()")
+            assert s["cur"] == {"slide": "heap-what", "step": 0}
+            assert s["H"] == [{"slide": "dijkstra", "step": 2, "kind": "excursion"}]
+            page.keyboard.press("ArrowUp")  # Up still returns
+            assert page.evaluate("Lattice.state()")["cur"] == {"slide": "dijkstra", "step": 2}
+
+            page = open_at("#/complexity/0")  # a link is an excursion: Left follows the structure, Backspace goes back
+            page.evaluate("Lattice.actions().jump('backup')")
+            page.keyboard.press("ArrowLeft")  # an off path slide has no predecessor
+            assert page.evaluate("Lattice.state().cur") == {"slide": "backup", "step": 0}
+            page.keyboard.press("Backspace")
+            s = page.evaluate("Lattice.state()")
+            assert s["cur"] == {"slide": "complexity", "step": 0} and s["H"] == []
+
+            page = open_at("#/dijkstra/1")  # PageUp and PageDown are not bound
+            page.keyboard.press("PageDown")
+            page.keyboard.press("PageUp")
+            s = page.evaluate("Lattice.state()")
+            assert s["cur"] == {"slide": "dijkstra", "step": 1} and s["H"] == []
+            assert page.evaluate("Lattice.state().tour") is None
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
+def test_a_deck_may_keep_backspace_on_return(tmp_path):
+    """Spec 7.6: a deck that binds `return: [ArrowUp, Backspace]` keeps Backspace on RETURN (the later action wins)."""
+    src = tmp_path / "talk.md"
+    src.write_text("---\nkeys:\n  return: [ArrowUp, Backspace]\n---\n" + DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(out.as_uri() + "#/dijkstra/2")
+            for k in ("ArrowDown", "ArrowRight", "Backspace"):  # heap-ops, then RETURN rather than UNDO
+                page.keyboard.press(k)
+            s = page.evaluate("Lattice.state()")
+            assert s["cur"] == {"slide": "dijkstra", "step": 2} and s["H"] == []
             browser.close()
     except Exception as e:
         if "Executable doesn't exist" in str(e):
@@ -637,7 +741,10 @@ def test_presenter_preview_and_scrubber(tmp_path):
             assert "Shift+\u2192" in keys and "End" in keys and "presenter view" in keys and "Space" in keys
             assert "\u00d72" in keys and "next or previous checkpoint" in keys  # spec 7.6
             assert "Shift+Home" in keys and "first step of the slide" in keys
+            assert "\u232b" in keys and "undo the last move" in keys and "PageUp" not in keys  # spec 7.6
             assert page.is_hidden(".lt-pp-scrub")
+            moves = page.inner_text(".lt-pp-moves")  # at the start: no previous slide, nothing to undo
+            assert "\u2190" not in moves and "\u232b" not in moves
             page.keyboard.press("ArrowRight")
             assert page.is_visible(".lt-pp-scrub")
             assert previewed({"slide": "steps", "step": 1}) == {"slide": "steps", "step": 1}
@@ -645,6 +752,8 @@ def test_presenter_preview_and_scrubber(tmp_path):
             s = page.evaluate("Lattice.state()")
             assert s["cur"] == {"slide": "steps", "step": 3}
             assert s["H"] == [{"slide": "intro", "step": 0, "kind": "forward"}]  # scrubbing is not history
+            moves = page.inner_text(".lt-pp-moves")  # spec 7.5: what Left and Backspace do
+            assert "\u2190 step 3 of 4" in moves and "\u232b undo: back to Intro" in moves
             assert previewed({"slide": "last", "step": 0}) == {"slide": "last", "step": 0}
             assert preview.locator("#lt-hud").is_hidden()
             page.keyboard.press("ArrowRight")

@@ -48,7 +48,7 @@ Renders are cached in `.lattice-cache/` next to the root file. When a result loo
 - **Scope**: the root deck or a detour. `next` edges stay inside a scope; the **main path** follows them from the start slide.
 - **Track**: something on a slide that changes with steps: the reveal track (fragments), each component with several positions (an animation, `code-steps`, a moving `arrow`, `code-morph`), and the widths of named columns. A **follower** (`follow=ID`) copies its leader's position.
 - **Step**: one row of the slide's table of track positions. With one independent track, Right just advances it; with two or more, a `timeline` block orders them.
-- **Excursion**: a detour, a link, go-to or the overview. Up returns from it; Left undoes the last move (spec section 7.2).
+- **Excursion**: a detour, a link, go-to or the overview. Up returns from it; Backspace undoes the last move, and Left walks the structure backward (spec section 7.2).
 
 ## Feature map
 
@@ -120,9 +120,9 @@ A fenced block whose name is a registered component renders it; any other name i
 
 | Feature | Where |
 |---|---|
-| Keys (Right, Left, Shift+Right skips, Down, Up, End, Home, Shift+Home, `o`, `g`, `p`, `t`), rebinding with `keys:` | manual `presenting-keys`, spec section 7.6 |
+| Keys (Right, Left, Backspace, Shift+Right skips, Down, Up, End, Home, Shift+Home, `o`, `g`, `p`, `t`), rebinding with `keys:` | manual `presenting-keys`, spec section 7.6 |
 | Checkpoints: Shift+Right twice plays to the end of the current animation or series of reveals, Shift+Left twice back to the previous one (computed from the timeline) | manual `checkpoints`, spec section 6.5 |
-| History: Left undoes, Up returns from an excursion | manual `history`, spec section 7.2 |
+| Structure and history: Left walks the structure backward, Backspace undoes the last move, Up returns from an excursion | manual `history`, spec section 7.2 |
 | URL `#/slide-id/step`, transitions | manual `navigation-details`, spec section 7.4 |
 | Presenter view (`p`): notes, timer, scrubber, preview of the next step | manual `presenter-view`, spec section 7.5 |
 | Single file or directory output | manual `output`, spec sections 11.1 and 11.4 |

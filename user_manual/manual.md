@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.28.0
+author: Lattice 0.29.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -310,7 +310,7 @@ negative weights, go to [[bellman-ford]].
 :::: column {width=1fr}
 {.reveal}
 - `[[id]]` links to a slide or a detour (its entry slide); the default label is the target's title
-- Following a link is an excursion: Up (or Backspace) comes back to where you were
+- Following a link is an excursion: Up comes back to where you were
 - Notes go to the presenter view only; links in notes are clickable there
 - Write `\[[` for literal brackets; links are not recognized in code
 ::::
@@ -372,7 +372,7 @@ Every slide has at most one `next` edge. Without a `next=` attribute it is, in t
 
 This slide belongs to the detour declared on the previous slide. Press Right: the detour ends and you return to its origin, at the step you left.
 
-Up (or Backspace) returns at any time.
+Up returns at any time.
 :::
 
 # Branches {#branches}
@@ -402,7 +402,7 @@ Up (or Backspace) returns at any time.
 
 # Where the option landed {#branch-target}
 
-A branch choice is a forward move: Left goes back to the branch slide. One branch per slide, and its keys must be unique on the slide.
+A branch choice is a forward move: Backspace takes it back to the branch slide. One branch per slide, and its keys must be unique on the slide.
 
 Off-path slides, tours and the overview complete the picture, next.
 
@@ -1515,27 +1515,28 @@ show: [label, context]
 
 | Key | Action |
 |---|---|
-| Right, Space, PageDown | Next step, then next slide (`next`) |
-| Left, PageUp | Undo the last move; with nothing to undo, the previous slide (`prev`) |
+| Right, Space | Next step, then next slide (`next`) |
+| Left | Previous step, then the previous slide of the structure (`prev`) |
+| Backspace | Undo the last move, back along the [[history\|history]] (`undo`) |
 | Shift+Right, Shift+Left | Ten steps; twice in half a second, the next or previous [[checkpoints\|checkpoint]] (`skip-forward`, `skip-back`) |
 | End, Home | Last or first step of the slide, played quickly (`last-step`, `first-step`) |
 | Down | Enter the slide's first detour (`enter-detour`) |
 | Shift+Down | Step over the next detour step without entering it (`skip-detour`) |
-| Up, Backspace | Return from the current detour or jump (`return`) |
+| Up | Return from the current detour or jump (`return`) |
 | 1 to 9, the slide's keys | Choose a branch option or a detour (`choose`) |
 | `o`, `g`, `p`, `t` | Overview, go to a slide, presenter view, next tour (`overview`, `goto`, `presenter`, `tour`) |
 | Shift+Home | Back to the start, clearing the history (`home`) |
 | Click a block | Enlarge a block of a versioning drawing; any key or a click outside closes it |
 
-Rebind any action in the front matter, `keys: {next: [ArrowRight, n], presenter: P}`; a key is a `KeyboardEvent.key` name, optionally prefixed with `Shift+`.
+Rebind actions in the front matter: `keys: {next: [ArrowRight, n]}` (`KeyboardEvent.key` names)
 
-# Left and Up: the history {#history}
+# Left, Backspace and Up: structure and history {#history}
 
 {.reveal}
-- Lattice keeps a **history** of moves. Left undoes the last one, like a browser's back button: after a branch choice it goes back to the branch slide
+- **Left** walks the deck's structure backward: the previous step, then the last step of the previous slide of the tour, of the main path, or of the slide leading here, wherever you came from
+- Lattice keeps a **history** of the moves between slides, Left included. **Backspace** undoes the last one at once, like a browser's back button: after a link or a branch choice it goes back to where you were
 - Entering a detour, following a link, go-to and the overview are **excursions**: Up undoes the whole excursion at once and lands where it started, at the step you left
-- A detour's last slide returns by itself, and so does a slide with `next=back`
-- With no history (a deck opened on a deep link), Left walks the structure backward: the previous slide of the tour, of the main path, or the slide leading here
+- A detour's last slide returns by itself, and so does a slide with `next=back`; Left from a detour's first slide leaves it the same way (Backspace goes back in)
 
 # Detour steps, the URL and transitions {#navigation-details}
 

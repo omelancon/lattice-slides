@@ -25,4 +25,5 @@ Documents kept as they were written, for the history behind features. They are n
 | `implementation-report-2026-10-06-d.md` | Lattice 0.25.0: `panel_at`, the panel beside or under the drawing at any width |
 | `implementation-report-2026-10-06-e.md` | Lattice 0.26.0 to 0.26.3: arrows at the parts of a CFG (blocks, versions, edges), and the fixes of the 0.26 patches |
 | `implementation-report-2026-10-07.md` | Lattice 0.27.0: checkpoints for fast navigation (two quick skip presses), Home and Shift+Home |
+| `implementation-report-2026-10-07-b.md` | Lattice 0.28.0: paths through the versions in `bbv-anim` |
 | `thesis.pdf` | The thesis on basic block versioning that the 0.4.0 and 0.5.0 work follows |

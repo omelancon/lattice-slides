@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.28.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.29.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -597,7 +597,7 @@ A **detour step** is a step of a slide that, when reached with NEXT, enters one 
 - The row of a detour step is a copy of the row before it: nothing changes on the slide. It does not produce LT030.
 - `Slide.step_detours` maps each such step to its detour id and whether it is blocking; the deck JSON carries it as `stepDetours` (section 11.2).
 - The badge of a detour with `badge=step` or `badge=next` (section 3.9) is shown according to these steps; the runtime reads them from `stepDetours`. Like everything else on the slide, the badge depends only on the current step, however it was reached.
-- Runtime consequences are in section 7.2 (NEXT, PREV), 7.5 (preview and moves) and 11.5 (the PDF export skips detour steps when printing `all`). Reaching a detour step by any means other than NEXT (PREV, the scrubber, the URL hash, a sync) does not enter the detour: steps are positions, not events. How detour steps bound the runs of checkpoints is in section 6.5.
+- Runtime consequences are in section 7.2 (NEXT, PREV), 7.5 (preview and moves) and 11.5 (the PDF export skips detour steps when printing `all`). Reaching a detour step by any means other than NEXT (PREV, UNDO, the scrubber, the URL hash, a sync) does not enter the detour: steps are positions, not events. How detour steps bound the runs of checkpoints is in section 6.5.
 
 ### 6.5 Checkpoints
 
@@ -632,7 +632,7 @@ The checkpoints are 3, 12, 15 and 16: from step 0 two quick presses of `skip-for
 ```text
 cur   = (slide, step)                          current position
 H     = [ Entry ]                              history stack, top = last element
-Entry = (slide, step, kind)                    kind in { forward, excursion }
+Entry = (slide, step, kind [, closed])         kind in { forward, excursion, backward }
 tour  = tour name or none
 S(x)  = number of steps of slide x
 ```
@@ -640,6 +640,8 @@ S(x)  = number of steps of slide x
 Initial state: `cur = (start, 0)`, `H = []`, `tour = none` (subject to 7.4).
 
 `push(k)` means: append `(cur.slide, cur.step, k)` to `H`. `go(x, i)` means: set `cur = (x, i)` and render.
+
+`H` records every move that changes slide, and nothing else: NEXT and CHOOSE record `forward` entries, excursions `excursion` entries, PREV `backward` entries. Moves within a slide (steps, SKIP, the scrubber, a change of the URL hash to another step) are never recorded. The optional `closed` of a `backward` entry holds the entries a PREV removed when it left a detour (section 7.2); UNDO puts them back.
 
 `pred(x)`, the **structural predecessor** of a slide, is the first of: the slide before `x` in the active tour; the slide before `x` on the main path; a slide whose `next` is `x` (one in the same scope first, then document order); a slide with a branch option targeting `x`; the origin of the detour whose entry is `x`; else none. `detourstep(x, i)` is the detour of the detour step `i` of `x` (section 6.4), or none; it may be blocking.
 
@@ -653,9 +655,11 @@ Initial state: `cur = (start, 0)`, `H = []`, `tour = none` (subject to 7.4).
 | | else, `next(cur.slide)` is `back` | **RETURN** |
 | | else | no-op (end-of-path indicator) |
 | **PREV** | `cur.step > 0` | `cur.step -= 1`, repeated while `cur.step > 0` and it is a detour step |
-| | else, `H` not empty | `e = pop(H)`, `go(e.slide, e.step)` |
-| | else, `pred(cur.slide)` is a slide `p` | `go(p, S(p) - 1)` without any push, so PREV keeps walking backward |
-| | else | no-op |
+| | else, `cur.slide` is the entry of a detour `D`, `pred(cur.slide) = origin(D)`, and the topmost excursion entry of `H`, `e = H[i]`, is on `origin(D)` | leaves the detour as RETURN would: `b = (cur.slide, cur.step, backward, closed = H[i:])`, `H = H[0:i] + [b]`, `go(e.slide, e.step)` |
+| | else, `pred(cur.slide)` is a slide `p` | `push(backward)`, `go(p, S(p) - 1)` |
+| | else | no-op ("No previous slide") |
+| **UNDO** | `H` not empty | `e = pop(H)`; if `e` has `closed`, append its entries to `H`; `go(e.slide, e.step)` |
+| | else | no-op ("Nothing to undo") |
 | **SKIP(n)** (`skip-forward`: `n = 10`, `skip-back`: `n = -10`; `last-step`: to `S(cur.slide) - 1`; `first-step`: to 0; two quick presses of `skip-forward` (section 7.6): to `nextcp(cur.slide, cur.step)`, of `skip-back`: to `prevcp(cur.slide, cur.step)`, section 6.5) | | `cur.step` moves by `n`, clamped to `0..S(cur.slide) - 1`, never leaving the slide and never touching `H`. The intermediate steps are played in rapid succession (single-step moves, so runtimes animate), and a new event cancels the playback. Detour steps passed on the way are not entered; a forward playback stops in front of a blocking detour step ("Cannot step detour") |
 | **SKIP-DETOUR** | `detourstep(cur.slide, cur.step + 1)` is a detour step | `cur.step` moves past it and any detour steps directly following it (clamped to `S(cur.slide) - 1`), without entering them and without touching `H` |
 | | else | no-op |
@@ -673,11 +677,14 @@ Initial state: `cur = (start, 0)`, `H = []`, `tour = none` (subject to 7.4).
 
 Consequences, stated for clarity:
 
-- Branch choices are forward moves: PREV after a choice returns to the branch slide.
-- RETURN discards the excursion from history: PREV afterwards continues from what preceded the origin.
-- Every forward move leaves a slide at its last step, so PREV into it restores that last step. Excursions store the step they were started from and restore it.
-- The structural fallback only applies when history does not know the origin (after a reload with a deep link, or inside a tour). Likewise PREV falls back to `pred` only when `H` is empty (a deck opened on a deep link, or after HOME); since nothing is pushed, Right afterwards pushes a forward entry as usual and Left then pops it.
-- A detour step entered through NEXT records the excursion at that step, so RETURN lands on it and the next NEXT performs the following step. PREV never lands on a detour step.
+- PREV follows the structure and UNDO follows the history; neither falls back on the other. PREV moves the same way whatever `H` holds (a deck opened on a deep link, or after HOME, included), and UNDO never moves when `H` is empty.
+- Branch choices are forward moves: UNDO after a choice returns to the branch slide. PREV goes to `pred`, which may be another slide at a merge point or after a jump; UNDO always goes back to where the presenter came from.
+- RETURN discards the excursion from history: UNDO afterwards continues from what preceded the origin, and does not go back into the detour.
+- Every forward move leaves a slide at its last step, so UNDO into it restores that last step; PREV also lands on the last step of the slide it moves to. Excursions store the step they were started from and restore it.
+- UNDO leaves the current slide at once, whatever its step: steps are not history (`first-step` rewinds the slide).
+- PREV out of the entry of a detour closes the detour like RETURN when the latest excursion was started on its origin, so RETURN later never lands on a slide the presenter has already left; UNDO reopens it exactly. Without such an excursion (a deep link, a link into the detour), PREV goes to `pred` as usual.
+- The structural fallback of RETURN only applies when history does not know the origin (after a reload with a deep link, or inside a tour).
+- A detour step entered through NEXT records the excursion at that step, so RETURN and UNDO land on it and the next NEXT performs the following step. PREV never lands on a detour step.
 
 ### 7.3 Worked trace
 
@@ -693,6 +700,16 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 | NEXT (`next = back`) | (dijkstra, 2) | [(intro,0,fwd)] |
 | PREV | (dijkstra, 1) | [(intro,0,fwd)] |
 | NEXT, NEXT | (complexity, 0) | [(intro,0,fwd), (dijkstra,2,fwd)] |
+| PREV | (dijkstra, 2) | [(intro,0,fwd), (dijkstra,2,fwd), (complexity,0,bwd)] |
+| UNDO | (complexity, 0) | [(intro,0,fwd), (dijkstra,2,fwd)] |
+| PREV | (dijkstra, 2) | [..., (dijkstra,2,fwd), (complexity,0,bwd)] |
+| DOWN | (heap-what, 0) | [..., (complexity,0,bwd), (dijkstra,2,exc)] |
+| PREV (out of the detour) | (dijkstra, 2) | [..., (complexity,0,bwd), (heap-what,0,bwd, closed = [(dijkstra,2,exc)])] |
+| UNDO (back in) | (heap-what, 0) | [..., (complexity,0,bwd), (dijkstra,2,exc)] |
+| RETURN | (dijkstra, 2) | [(intro,0,fwd), (dijkstra,2,fwd), (complexity,0,bwd)] |
+| UNDO | (complexity, 0) | [(intro,0,fwd), (dijkstra,2,fwd)] |
+| UNDO, UNDO | (intro, 0) | [] |
+| UNDO | (intro, 0) | [] (no-op: "Nothing to undo") |
 
 ### 7.4 URL and persistence
 
@@ -704,7 +721,7 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 
 ### 7.5 Presenter view
 
-- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, a scrubber, a preview of what comes next, the available moves (what NEXT does, branch options, detours and the return target, each with its key), a **Keybindings** section listing every global action of section 7.6 with its keys (as bound by the deck, in smaller type than the moves, plus the two quick presses of the skip keys, the digit keys of branch options and detours, and the click that enlarges an element when the deck has components that offer it, section 7.7) and the notes.
+- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel with a timer (click to reset), the slide and step, a scrubber, a preview of what comes next, the available moves (what NEXT does, what PREV does, branch options, detours, the return target and the slide UNDO goes back to, each with its key), a **Keybindings** section listing every global action of section 7.6 with its keys (as bound by the deck, in smaller type than the moves, plus the two quick presses of the skip keys, the digit keys of branch options and detours, and the click that enlarges an element when the deck has components that offer it, section 7.7) and the notes.
 - The **scrubber** is a slider over the steps of the current slide, shown when the slide has more than one step. Moving it sets `cur.step` directly: it is not an event of section 7.2 and leaves `H` unchanged, and runtimes receive `animate: false` (section 10.1).
 - The **preview** shows what NEXT would show: the next step of the current slide (the entry slide of the detour when that step is a detour step, which the moves list names as "detour: label", marked "(blocking)" when it is, followed by the `skip-detour` key); at the last step, the slide NEXT moves to (tour successor, `next` slide at step 0, or the return target at the step it restores). At a branch point or at the end of the path it shows a label instead. The preview is a second copy of the document opened with `?preview`: a passive window that ignores keys and clicks, keeps no history or storage, does not join the `BroadcastChannel`, never animates, and renders the position the presenter window sends it with `postMessage`.
 - Audience and presenter windows share state over a `BroadcastChannel` named `lattice:<deck-hash>`. After every event, the window that handled it broadcasts `{cur, H, tour}`; the other window adopts it without re-running the event. Either window may drive. An enlarged element (section 7.7) is shared the same way: opening one broadcasts `{zoom: {instance, key}}` and closing one `{zoom: null}`, and the other window opens or closes its own copy.
@@ -713,15 +730,16 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 
 | Action | Keys |
 |---|---|
-| `next` | `ArrowRight`, `Space`, `PageDown` |
-| `prev` | `ArrowLeft`, `PageUp` |
+| `next` | `ArrowRight`, `Space` |
+| `prev` | `ArrowLeft` |
+| `undo` | `Backspace` |
 | `skip-forward` | `Shift+ArrowRight` |
 | `skip-back` | `Shift+ArrowLeft` |
 | `last-step` | `End` |
 | `first-step` | `Home` |
 | `skip-detour` | `Shift+ArrowDown` |
 | `enter-detour` | `ArrowDown` |
-| `return` | `ArrowUp`, `Backspace` |
+| `return` | `ArrowUp` |
 | `choose` | digits `1`..`9` and custom keys from the slide |
 | `overview` | `o` |
 | `goto` | `g` |
@@ -1565,3 +1583,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.26.3 | Abstract interpretation prints `(-∞, ∞)` only for any integer (`fx` or `bg`) with no known interval; `fx` and `bg` alone print as their type | 9.6 |
 | 0.27 | Checkpoints; two quick presses of `skip-forward` or `skip-back` (within 500 ms) play to the next or previous checkpoint instead of three presses playing to the last or first step; the `first-step` binding (`Home`); `home` moves to `Shift+Home` | 1, 4, 6.5, 7.2, 7.5, 7.6, 11.2 |
 | 0.28 | Paths in `bbv-anim`: `paths` (by `input` types or by `versions`) adds `path` frames after the run, the `path` and `dim` marks and edge states; a following `bbv-cfg` highlights the blocks of a path (`meta[i]["blocks"]`) | 8.8, 9.5 |
+| 0.29 | PREV follows the structure only, whatever the history, and records its slide changes (`backward` entries); PREV out of a detour's entry closes its excursion; the UNDO event and the `undo` binding (`Backspace`) walk the history back; `return` is bound to `ArrowUp` only; `PageUp` and `PageDown` are no longer bound; the presenter's moves list names PREV and UNDO | 7.1, 7.2, 7.3, 7.5, 7.6 |

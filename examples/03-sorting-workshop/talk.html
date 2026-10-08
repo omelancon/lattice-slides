@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.28.0">
+<meta name="generator" content="lattice 0.29.0">
 <title>Sorting, your way</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -1404,7 +1404,7 @@ L 467.085547 214.094484
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.28.0","meta":{"title":"Sorting, your way","author":"Workshop","date":null,"aspect":"16:9","theme":"dark"},"start":"sorting-your-way","keys":{"next":["ArrowRight"," ","PageDown"],"prev":["ArrowLeft","PageUp"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"return":["ArrowUp","Backspace"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["sorting-your-way","pick","bubble","insertion","quick","the-recursion-tree","compare","done"],"slides":{"sorting-your-way":{"title":"Sorting, your way","label":"Sorting, your way","scope":"root","next":{"slide":"pick"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":9}},"pick":{"title":"Pick an algorithm","label":"Pick an algorithm","scope":"root","next":null,"branches":[{"target":"bubble","key":"1","label":"Bubble sort"},{"target":"insertion","key":"2","label":"Insertion sort"},{"target":"quick","key":"3","label":"Quicksort"}],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":13},"notes":"<p>Let the room vote. Press 1, 2 or 3, or click a card.<\/p>\n"},"bubble":{"title":"Bubble sort","label":"Bubble sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":27,"tracks":[{"id":"src","kind":"component","instance":"bubble/src","follow":"bars"},{"id":"bars","kind":"component","instance":"bubble/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26]],"offpath":false,"source":{"file":"talk.md","line":27}},"insertion":{"title":"Insertion sort","label":"Insertion sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":25,"tracks":[{"id":"src","kind":"component","instance":"insertion/src","follow":"bars"},{"id":"bars","kind":"component","instance":"insertion/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24]],"offpath":false,"source":{"file":"talk.md","line":41}},"quick":{"title":"Quicksort","label":"Quicksort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":["quick-detour-1"],"steps":34,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"bars","kind":"component","instance":"quick/bars"}],"positions":[[0,0],[1,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12],[2,13],[2,14],[2,15],[2,16],[2,17],[2,18],[2,19],[2,20],[2,21],[2,22],[2,23],[2,24],[2,25],[2,26],[2,27],[2,28],[2,29],[2,30],[2,31]],"offpath":false,"source":{"file":"talk.md","line":56},"checkpoints":[2,33]},"the-recursion-tree":{"title":"The recursion tree","label":"The recursion tree","scope":"quick-detour-1","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":73}},"compare":{"title":"How many comparisons?","label":"How many comparisons?","scope":"root","next":{"slide":"done"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":87}},"done":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":94}}},"detours":{"quick-detour-1":{"origin":"quick","entry":"the-recursion-tree","label":"The recursion tree","key":"r","slides":["the-recursion-tree"]}},"instances":{"bubble/src":{"component":"code","slide":"bubble","data":"lt-data-bubble/src"},"bubble/bars":{"component":"array-anim","slide":"bubble","data":"lt-data-bubble/bars"},"insertion/src":{"component":"code","slide":"insertion","data":"lt-data-insertion/src"},"insertion/bars":{"component":"array-anim","slide":"insertion","data":"lt-data-insertion/bars"},"quick/bars":{"component":"array-anim","slide":"quick","data":"lt-data-quick/bars"},"the-recursion-tree/c1":{"component":"dot","slide":"the-recursion-tree","data":null},"compare/c1":{"component":"plot","slide":"compare","data":null}},"tours":{"bubble-only":["sorting-your-way","pick","bubble","compare","done"]},"mainPath":["sorting-your-way","pick"],"overview":{"nodes":{"sorting-your-way":{"x":67.0,"y":63.0,"w":118.0,"h":26.0,"label":"Sorting, your way"},"pick":{"x":215.0,"y":63.0,"w":118.0,"h":26.0,"label":"Pick an algorithm"},"bubble":{"x":352.0,"y":21.0,"w":84.0,"h":26.0,"label":"Bubble sort"},"insertion":{"x":352.0,"y":63.0,"w":96.0,"h":26.0,"label":"Insertion sort"},"quick":{"x":352.0,"y":105.0,"w":73.0,"h":26.0,"label":"Quicksort"},"the-recursion-tree":{"x":510.0,"y":105.0,"w":124.0,"h":26.0,"label":"The recursion tree"},"compare":{"x":510.0,"y":63.0,"w":160.0,"h":26.0,"label":"How many comparisons?"},"done":{"x":649.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"sorting-your-way","to":"pick","kind":"next","path":"M126.1,63.0 C133.7,63.0 141.5,63.0 149.2,63.0 L155.6,63.0"},{"from":"pick","to":"bubble","kind":"branch","path":"M258.0,49.9 C272.6,45.4 289.1,40.3 304.1,35.6 L310.0,33.8"},{"from":"pick","to":"insertion","kind":"branch","path":"M274.0,63.0 C281.9,63.0 289.8,63.0 297.6,63.0 L304.0,63.0"},{"from":"pick","to":"quick","kind":"branch","path":"M258.0,76.1 C274.4,81.2 293.1,87.0 309.5,92.1 L315.4,93.9"},{"from":"bubble","to":"compare","kind":"next","path":"M394.4,32.1 C412.8,37.1 434.7,43.0 454.4,48.3 L460.5,49.9"},{"from":"insertion","to":"compare","kind":"next","path":"M400.2,63.0 C407.7,63.0 415.7,63.0 423.8,63.0 L429.9,63.0"},{"from":"quick","to":"the-recursion-tree","kind":"detour","path":"M388.8,105.0 C404.6,105.0 423.6,105.0 441.8,105.0 L448.0,105.0"},{"from":"quick","to":"compare","kind":"next","path":"M388.6,95.2 C401.6,91.7 416.5,87.6 430.0,84.0 C437.6,81.9 445.7,79.8 453.6,77.7 L459.7,76.1"},{"from":"compare","to":"done","kind":"next","path":"M590.2,63.0 C598.5,63.0 606.6,63.0 614.0,63.0 L620.0,63.0"}],"width":687.0,"height":126.0},"hash":"46cd4709a0b83630"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.29.0","meta":{"title":"Sorting, your way","author":"Workshop","date":null,"aspect":"16:9","theme":"dark"},"start":"sorting-your-way","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["sorting-your-way","pick","bubble","insertion","quick","the-recursion-tree","compare","done"],"slides":{"sorting-your-way":{"title":"Sorting, your way","label":"Sorting, your way","scope":"root","next":{"slide":"pick"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":9}},"pick":{"title":"Pick an algorithm","label":"Pick an algorithm","scope":"root","next":null,"branches":[{"target":"bubble","key":"1","label":"Bubble sort"},{"target":"insertion","key":"2","label":"Insertion sort"},{"target":"quick","key":"3","label":"Quicksort"}],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":13},"notes":"<p>Let the room vote. Press 1, 2 or 3, or click a card.<\/p>\n"},"bubble":{"title":"Bubble sort","label":"Bubble sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":27,"tracks":[{"id":"src","kind":"component","instance":"bubble/src","follow":"bars"},{"id":"bars","kind":"component","instance":"bubble/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26]],"offpath":false,"source":{"file":"talk.md","line":27}},"insertion":{"title":"Insertion sort","label":"Insertion sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":25,"tracks":[{"id":"src","kind":"component","instance":"insertion/src","follow":"bars"},{"id":"bars","kind":"component","instance":"insertion/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24]],"offpath":false,"source":{"file":"talk.md","line":41}},"quick":{"title":"Quicksort","label":"Quicksort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":["quick-detour-1"],"steps":34,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"bars","kind":"component","instance":"quick/bars"}],"positions":[[0,0],[1,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12],[2,13],[2,14],[2,15],[2,16],[2,17],[2,18],[2,19],[2,20],[2,21],[2,22],[2,23],[2,24],[2,25],[2,26],[2,27],[2,28],[2,29],[2,30],[2,31]],"offpath":false,"source":{"file":"talk.md","line":56},"checkpoints":[2,33]},"the-recursion-tree":{"title":"The recursion tree","label":"The recursion tree","scope":"quick-detour-1","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":73}},"compare":{"title":"How many comparisons?","label":"How many comparisons?","scope":"root","next":{"slide":"done"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":87}},"done":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":94}}},"detours":{"quick-detour-1":{"origin":"quick","entry":"the-recursion-tree","label":"The recursion tree","key":"r","slides":["the-recursion-tree"]}},"instances":{"bubble/src":{"component":"code","slide":"bubble","data":"lt-data-bubble/src"},"bubble/bars":{"component":"array-anim","slide":"bubble","data":"lt-data-bubble/bars"},"insertion/src":{"component":"code","slide":"insertion","data":"lt-data-insertion/src"},"insertion/bars":{"component":"array-anim","slide":"insertion","data":"lt-data-insertion/bars"},"quick/bars":{"component":"array-anim","slide":"quick","data":"lt-data-quick/bars"},"the-recursion-tree/c1":{"component":"dot","slide":"the-recursion-tree","data":null},"compare/c1":{"component":"plot","slide":"compare","data":null}},"tours":{"bubble-only":["sorting-your-way","pick","bubble","compare","done"]},"mainPath":["sorting-your-way","pick"],"overview":{"nodes":{"sorting-your-way":{"x":67.0,"y":63.0,"w":118.0,"h":26.0,"label":"Sorting, your way"},"pick":{"x":215.0,"y":63.0,"w":118.0,"h":26.0,"label":"Pick an algorithm"},"bubble":{"x":352.0,"y":21.0,"w":84.0,"h":26.0,"label":"Bubble sort"},"insertion":{"x":352.0,"y":63.0,"w":96.0,"h":26.0,"label":"Insertion sort"},"quick":{"x":352.0,"y":105.0,"w":73.0,"h":26.0,"label":"Quicksort"},"the-recursion-tree":{"x":510.0,"y":105.0,"w":124.0,"h":26.0,"label":"The recursion tree"},"compare":{"x":510.0,"y":63.0,"w":160.0,"h":26.0,"label":"How many comparisons?"},"done":{"x":649.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"sorting-your-way","to":"pick","kind":"next","path":"M126.1,63.0 C133.7,63.0 141.5,63.0 149.2,63.0 L155.6,63.0"},{"from":"pick","to":"bubble","kind":"branch","path":"M258.0,49.9 C272.6,45.4 289.1,40.3 304.1,35.6 L310.0,33.8"},{"from":"pick","to":"insertion","kind":"branch","path":"M274.0,63.0 C281.9,63.0 289.8,63.0 297.6,63.0 L304.0,63.0"},{"from":"pick","to":"quick","kind":"branch","path":"M258.0,76.1 C274.4,81.2 293.1,87.0 309.5,92.1 L315.4,93.9"},{"from":"bubble","to":"compare","kind":"next","path":"M394.4,32.1 C412.8,37.1 434.7,43.0 454.4,48.3 L460.5,49.9"},{"from":"insertion","to":"compare","kind":"next","path":"M400.2,63.0 C407.7,63.0 415.7,63.0 423.8,63.0 L429.9,63.0"},{"from":"quick","to":"the-recursion-tree","kind":"detour","path":"M388.8,105.0 C404.6,105.0 423.6,105.0 441.8,105.0 L448.0,105.0"},{"from":"quick","to":"compare","kind":"next","path":"M388.6,95.2 C401.6,91.7 416.5,87.6 430.0,84.0 C437.6,81.9 445.7,79.8 453.6,77.7 L459.7,76.1"},{"from":"compare","to":"done","kind":"next","path":"M590.2,63.0 C598.5,63.0 606.6,63.0 614.0,63.0 L620.0,63.0"}],"width":687.0,"height":126.0},"hash":"bd03324ca5d702b6"}</script>
 <script type="application/json" id="lt-data-bubble/src">{"steps":[[1],[6],[7],[6],[7],[6],[7],[6],[6],[7],[9],[6],[6],[7],[6],[6],[7],[9],[6],[6],[6],[7],[9],[6],[6],[9],[10]]}</script>
 <script type="application/json" id="lt-data-bubble/bars">{"frames":{"format":"full","count":27,"frames":[{"values":[5,1,4,2,8,3],"caption":"Unsorted input","marks":{}},{"values":[5,1,4,2,8,3],"caption":"Compare 5 and 1","pointers":{"i":0},"marks":{"0":"compare","1":"compare"}},{"values":[1,5,4,2,8,3],"caption":"Out of order: swap","pointers":{"i":0},"marks":{"0":"swap","1":"swap"}},{"values":[1,5,4,2,8,3],"caption":"Compare 5 and 4","pointers":{"i":1},"marks":{"1":"compare","2":"compare"}},{"values":[1,4,5,2,8,3],"caption":"Out of order: swap","pointers":{"i":1},"marks":{"1":"swap","2":"swap"}},{"values":[1,4,5,2,8,3],"caption":"Compare 5 and 2","pointers":{"i":2},"marks":{"2":"compare","3":"compare"}},{"values":[1,4,2,5,8,3],"caption":"Out of order: swap","pointers":{"i":2},"marks":{"2":"swap","3":"swap"}},{"values":[1,4,2,5,8,3],"caption":"Compare 5 and 8","pointers":{"i":3},"marks":{"3":"compare","4":"compare"}},{"values":[1,4,2,5,8,3],"caption":"Compare 8 and 3","pointers":{"i":4},"marks":{"4":"compare","5":"compare"}},{"values":[1,4,2,5,3,8],"caption":"Out of order: swap","pointers":{"i":4},"marks":{"4":"swap","5":"swap"}},{"values":[1,4,2,5,3,8],"caption":"8 has bubbled to its final place","pointers":{},"cells":{"5":"sorted"},"marks":{}},{"values":[1,4,2,5,3,8],"caption":"Compare 1 and 4","pointers":{"i":0},"cells":{"5":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,4,2,5,3,8],"caption":"Compare 4 and 2","pointers":{"i":1},"cells":{"5":"sorted"},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,4,5,3,8],"caption":"Out of order: swap","pointers":{"i":1},"cells":{"5":"sorted"},"marks":{"1":"swap","2":"swap"}},{"values":[1,2,4,5,3,8],"caption":"Compare 4 and 5","pointers":{"i":2},"cells":{"5":"sorted"},"marks":{"2":"compare","3":"compare"}},{"values":[1,2,4,5,3,8],"caption":"Compare 5 and 3","pointers":{"i":3},"cells":{"5":"sorted"},"marks":{"3":"compare","4":"compare"}},{"values":[1,2,4,3,5,8],"caption":"Out of order: swap","pointers":{"i":3},"cells":{"5":"sorted"},"marks":{"3":"swap","4":"swap"}},{"values":[1,2,4,3,5,8],"caption":"5 has bubbled to its final place","pointers":{},"cells":{"5":"sorted","4":"sorted"},"marks":{}},{"values":[1,2,4,3,5,8],"caption":"Compare 1 and 2","pointers":{"i":0},"cells":{"5":"sorted","4":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,2,4,3,5,8],"caption":"Compare 2 and 4","pointers":{"i":1},"cells":{"5":"sorted","4":"sorted"},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,4,3,5,8],"caption":"Compare 4 and 3","pointers":{"i":2},"cells":{"5":"sorted","4":"sorted"},"marks":{"2":"compare","3":"compare"}},{"values":[1,2,3,4,5,8],"caption":"Out of order: swap","pointers":{"i":2},"cells":{"5":"sorted","4":"sorted"},"marks":{"2":"swap","3":"swap"}},{"values":[1,2,3,4,5,8],"caption":"4 has bubbled to its final place","pointers":{},"cells":{"5":"sorted","4":"sorted","3":"sorted"},"marks":{}},{"values":[1,2,3,4,5,8],"caption":"Compare 1 and 2","pointers":{"i":0},"cells":{"5":"sorted","4":"sorted","3":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,2,3,4,5,8],"caption":"Compare 2 and 3","pointers":{"i":1},"cells":{"5":"sorted","4":"sorted","3":"sorted"},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,3,4,5,8],"caption":"3 has bubbled to its final place","pointers":{},"cells":{"5":"sorted","4":"sorted","3":"sorted","2":"sorted"},"marks":{}},{"values":[1,2,3,4,5,8],"caption":"No swap in a full pass: done early","pointers":{},"cells":{"5":"sorted","4":"sorted","3":"sorted","2":"sorted","0":"sorted","1":"sorted"},"marks":{}}]},"panel":null}</script>
 <script type="application/json" id="lt-data-insertion/src">{"steps":[[1],[3],[5],[6],[8],[3],[5],[6],[8],[3],[5],[6],[5],[6],[8],[3],[8],[3],[5],[6],[5],[6],[5],[6],[8]]}</script>
@@ -1520,9 +1520,9 @@ const Lattice = (() => {
     const d = detourOf(nav.cur.slide);
     return d ? d.origin : null;
   }
-  // Structural predecessor of a slide, for PREV when history is empty (spec 7.2): the tour predecessor,
-  // else the previous slide on the main path, else a slide whose `next` is this one (same scope first),
-  // else the slide whose branch leads here, else the origin of the detour this slide starts.
+  // Structural predecessor of a slide, for PREV (spec 7.1): the tour predecessor, else the previous slide
+  // on the main path, else a slide whose `next` is this one (same scope first), else the slide whose
+  // branch leads here, else the origin of the detour this slide starts.
   function predecessor(id) {
     if (nav.tour && deck.tours[nav.tour]) {
       const list = deck.tours[nav.tour];
@@ -1541,6 +1541,26 @@ const Lattice = (() => {
     if (d && d.entry === id) return d.origin;
     return null;
   }
+  // What PREV does from the current position (spec 7.2), without doing it: { slide, step, close } or null.
+  // `close` is the index in H of the excursion that PREV closes when it leaves a detour by its entry for
+  // the origin that excursion was started on; it then lands where RETURN would.
+  function prevMove() {
+    const cur = nav.cur;
+    if (cur.step > 0) {
+      let k = cur.step - 1;
+      while (k > 0 && stepDetour(cur.slide, k)) k--; // detour steps show nothing new going backward
+      return { slide: cur.slide, step: k, close: -1 };
+    }
+    const p = predecessor(cur.slide);
+    if (!p) return null;
+    const d = detourOf(cur.slide);
+    const i = topExcursion();
+    if (d && d.entry === cur.slide && d.origin === p && i >= 0 && nav.H[i].slide === p) {
+      return { slide: p, step: nav.H[i].step, close: i };
+    }
+    return { slide: p, step: steps(p) - 1, close: -1 };
+  }
+
   // A step whose arrival through NEXT enters a detour (spec 6.4): { id, blocking }, or null.
   const stepDetour = (id, step) => (slide(id).stepDetours || {})[step] || null;
 
@@ -1611,19 +1631,25 @@ const Lattice = (() => {
       flash("End of path");
     },
     prev() {
-      const cur = nav.cur;
-      if (cur.step > 0) {
-        let k = cur.step - 1;
-        while (k > 0 && stepDetour(cur.slide, k)) k--; // detour steps show nothing new going backward
-        return go(cur.slide, k, { kind: "step", dir: -1 });
+      // The structure only (spec 7.2): the previous step, else the predecessor slide, recorded as a
+      // `backward` entry so that UNDO can take it back. It never pops the history.
+      const m = prevMove();
+      if (!m) return flash("No previous slide");
+      if (m.slide === nav.cur.slide) return go(m.slide, m.step, { kind: "step", dir: -1 });
+      const entry = { slide: nav.cur.slide, step: nav.cur.step, kind: "backward" };
+      if (m.close >= 0) { // leaving a detour by its entry closes its excursion, as RETURN would
+        entry.closed = nav.H.slice(m.close);
+        nav.H = nav.H.slice(0, m.close);
       }
-      if (nav.H.length) {
-        const e = nav.H.pop();
-        return go(e.slide, e.step, { kind: e.kind === "excursion" ? "return" : "prev", dir: -1 });
-      }
-      const p = predecessor(cur.slide); // no history: walk the structure backward, without recording it
-      if (p) return go(p, steps(p) - 1, { kind: "prev", dir: -1 });
-      flash("No previous slide");
+      nav.H.push(entry);
+      go(m.slide, m.step, { kind: m.close >= 0 ? "return" : "prev", dir: -1 });
+    },
+    undo() {
+      // The history only (spec 7.2): back to the slide and step of the last recorded move, at once.
+      if (!nav.H.length) return flash("Nothing to undo");
+      const e = nav.H.pop();
+      if (e.closed) nav.H = nav.H.concat(e.closed); // reopen the detour a PREV closed
+      go(e.slide, e.step, undoHow(e));
     },
     "skip-forward"() { playSteps(Math.min(nav.cur.step + 10, steps(nav.cur.slide) - 1)); },
     "skip-back"() { playSteps(Math.max(nav.cur.step - 10, 0)); },
@@ -1695,6 +1721,13 @@ const Lattice = (() => {
     },
     "enter-detour"() { actions.down(); },
   };
+
+  // The transition of an UNDO is the reverse of the move it takes back.
+  function undoHow(e) {
+    if (e.kind === "excursion") return { kind: "return", dir: -1 };
+    if (e.kind === "backward") return e.closed ? { kind: "detour", dir: 1 } : { kind: "next", dir: 1 };
+    return { kind: "prev", dir: -1 };
+  }
 
   // ------------------------------------------------------------------ rendering
   function transitionFor(how, target) {
@@ -2284,7 +2317,7 @@ const Lattice = (() => {
 
   // The Keybindings section of the presenter panel: every global action with its keys (spec 7.5).
   const ACTION_LABELS = {
-    next: "next step or slide", prev: "previous step, or undo the last move",
+    next: "next step or slide", prev: "previous step or slide", undo: "undo the last move (history)",
     "skip-forward": "10 steps forward", "skip-back": "10 steps back", "last-step": "last step of the slide",
     "first-step": "first step of the slide",
     "skip-detour": "step over the next detour step",
@@ -2292,7 +2325,7 @@ const Lattice = (() => {
     overview: "overview", goto: "go to a slide", presenter: "presenter view", tour: "cycle through tours",
     home: "start of the deck, clearing history",
   };
-  const KEY_NAMES = { " ": "Space", ArrowRight: "→", ArrowLeft: "←", ArrowUp: "↑", ArrowDown: "↓" };
+  const KEY_NAMES = { " ": "Space", ArrowRight: "→", ArrowLeft: "←", ArrowUp: "↑", ArrowDown: "↓", Backspace: "⌫" };
   const keyName = (k) => k.split("+").map((part) => KEY_NAMES[part] || part).join("+");
   function keybindingsList() {
     const rows = Object.entries(deck.keys).map(([action, keys]) =>
@@ -2360,6 +2393,14 @@ const Lattice = (() => {
     });
     const rt = returnTarget();
     if (rt && (topExcursion() >= 0 || detourOf(nav.cur.slide))) moves.push(`<li><kbd>\u2191</kbd> return to ${esc(label(rt))}</li>`);
+    // what Left and Backspace do: the structure and the history (spec 7.2, 7.5)
+    const pk = (deck.keys.prev || [])[0], uk = (deck.keys.undo || [])[0];
+    const pm = pk ? prevMove() : null;
+    if (pm) {
+      const what = pm.slide === nav.cur.slide ? `step ${pm.step + 1} of ${s.steps}` : `${pm.close >= 0 ? "leave the detour, to " : ""}${esc(label(pm.slide))}`;
+      moves.push(`<li><kbd>${esc(keyName(pk))}</kbd> ${what}</li>`);
+    }
+    if (uk && nav.H.length) moves.push(`<li><kbd>${esc(keyName(uk))}</kbd> undo: back to ${esc(label(nav.H[nav.H.length - 1].slide))}</li>`);
     $(".lt-pp-where", panel).textContent = `${s.label} \u00b7 step ${nav.cur.step + 1}/${s.steps}`;
     const scrub = $(".lt-pp-scrub", panel);
     scrub.hidden = s.steps < 2;

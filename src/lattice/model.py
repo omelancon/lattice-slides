@@ -28,15 +28,16 @@ class BuildConfig(BaseModel):
 DEFAULT_TRANSITIONS = {"next": "slide", "branch": "slide", "detour": "zoom", "link": "fade"}
 
 DEFAULT_KEYS: dict[str, list[str]] = {
-    "next": ["ArrowRight", " ", "PageDown"],
-    "prev": ["ArrowLeft", "PageUp"],
+    "next": ["ArrowRight", " "],
+    "prev": ["ArrowLeft"],
     "skip-forward": ["Shift+ArrowRight"],
     "skip-back": ["Shift+ArrowLeft"],
     "last-step": ["End"],
     "first-step": ["Home"],  # before `home`: a deck that still binds `home: Home` keeps it (the later action wins)
     "skip-detour": ["Shift+ArrowDown"],
     "enter-detour": ["ArrowDown"],
-    "return": ["ArrowUp", "Backspace"],
+    "undo": ["Backspace"],  # before `return`: a deck that still binds `return: [ArrowUp, Backspace]` keeps it
+    "return": ["ArrowUp"],
     "overview": ["o"],
     "goto": ["g"],
     "presenter": ["p"],
