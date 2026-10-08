@@ -30,8 +30,8 @@ DEFAULT_TRANSITIONS = {"next": "slide", "branch": "slide", "detour": "zoom", "li
 DEFAULT_KEYS: dict[str, list[str]] = {
     "next": ["ArrowRight", " "],
     "prev": ["ArrowLeft"],
-    "skip-forward": ["Shift+ArrowRight"],
-    "skip-back": ["Shift+ArrowLeft"],
+    "next-checkpoint": ["Shift+ArrowRight"],
+    "prev-checkpoint": ["Shift+ArrowLeft"],
     "last-step": ["End"],
     "first-step": ["Home"],  # before `home`: a deck that still binds `home: Home` keeps it (the later action wins)
     "skip-detour": ["Shift+ArrowDown"],
@@ -44,6 +44,17 @@ DEFAULT_KEYS: dict[str, list[str]] = {
     "tour": ["t"],
     "home": ["Shift+Home"],
 }
+
+# Former action names still accepted under `keys:` (spec 7.6): the ten-step skips became the checkpoint keys in 0.30.
+KEY_ALIASES = {"skip-forward": "next-checkpoint", "skip-back": "prev-checkpoint"}
+
+
+def key_bindings(overrides: dict[str, str | list[str]]) -> dict[str, list[str]]:
+    """The deck's bindings, action -> keys: the defaults with the front matter's `keys` applied."""
+    keys = {a: list(k) for a, k in DEFAULT_KEYS.items()}
+    for action, k in overrides.items():
+        keys[KEY_ALIASES.get(action, action)] = [k] if isinstance(k, str) else list(k)
+    return keys
 
 
 class FrontMatter(BaseModel):
@@ -187,7 +198,7 @@ class Slide:
     tracks: list[Track] = field(default_factory=list)
     positions: list[list[int]] = field(default_factory=lambda: [[]])
     step_detours: dict[int, dict] = field(default_factory=dict)  # step -> {"id", "blocking"} (spec 6.4)
-    checkpoints: list[int] = field(default_factory=lambda: [0])  # where two quick skip presses stop (spec 6.5)
+    checkpoints: list[int] = field(default_factory=lambda: [0])  # where the checkpoint keys stop (spec 6.5)
     column_init: dict[str, str] = field(default_factory=dict)  # columns named by `width` cues: id -> flex at step 0
     column_states: list[dict[str, str]] = field(default_factory=list)  # positions of the columns track (spec 6.1)
 

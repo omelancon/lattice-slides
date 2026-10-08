@@ -17,7 +17,7 @@ from pygments.formatters import HtmlFormatter
 from . import __version__
 from .components.base import REGISTRY
 from .graphs import overview_layout
-from .model import DEFAULT_KEYS, DEFAULT_TRANSITIONS, Deck
+from .model import DEFAULT_TRANSITIONS, Deck, key_bindings
 from .themes import get_theme
 
 RUNTIME = resources.files("lattice") / "runtime"
@@ -83,9 +83,7 @@ class Media:
 
 
 def deck_json(deck: Deck, *, data_urls: bool = False) -> dict:
-    keys = {a: list(k) for a, k in DEFAULT_KEYS.items()}
-    for action, k in deck.meta.keys.items():
-        keys[action] = [k] if isinstance(k, str) else list(k)
+    keys = key_bindings(deck.meta.keys)
     transitions = {**DEFAULT_TRANSITIONS, **deck.meta.transitions}
     slides = {}
     for s in deck.slides.values():

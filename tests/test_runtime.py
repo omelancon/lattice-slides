@@ -210,8 +210,8 @@ def test_a_deck_may_keep_backspace_on_return(tmp_path):
 SKIP_DECK = "# Intro\n\n# Many\n{.reveal}\n" + "".join(f"- item {i}\n" for i in range(14)) + "\n# Last\n"
 
 
-def test_skip_keys_play_steps_within_the_slide(tmp_path):
-    """Spec 7.2, SKIP: Shift+arrows move ten steps, End goes to the last step, all clamped to the slide."""
+def test_checkpoint_keys_play_steps_within_the_slide(tmp_path):
+    """Spec 7.2, SKIP: with one track the last step is the only checkpoint; Shift+arrows play there, clamped."""
     src = tmp_path / "talk.md"
     src.write_text(SKIP_DECK)
     out = tmp_path / "talk.html"
@@ -232,18 +232,17 @@ def test_skip_keys_play_steps_within_the_slide(tmp_path):
                 return page.evaluate("Lattice.state()")
 
             page.keyboard.press("Shift+ArrowRight")
-            assert page.evaluate("Lattice.state().cur")["step"] < 10  # the steps are played, not jumped
-            s = settle({"slide": "many", "step": 10})
-            assert s["cur"] == {"slide": "many", "step": 10} and s["H"] == []
-            page.keyboard.press("Shift+ArrowRight")
-            assert settle({"slide": "many", "step": 14})["cur"] == {"slide": "many", "step": 14}  # clamped
-            page.keyboard.press("Shift+ArrowLeft")
-            assert settle({"slide": "many", "step": 4})["cur"] == {"slide": "many", "step": 4}
-            page.keyboard.press("End")
-            assert settle({"slide": "many", "step": 14})["cur"] == {"slide": "many", "step": 14}
-            page.keyboard.press("Shift+ArrowRight")  # at the last step: stays on the slide
+            assert page.evaluate("Lattice.state().cur")["step"] < 14  # the steps are played, not jumped
+            s = settle({"slide": "many", "step": 14})
+            assert s["cur"] == {"slide": "many", "step": 14} and s["H"] == []
+            page.keyboard.press("Shift+ArrowRight")  # at the last checkpoint: stays on the slide
             page.wait_for_timeout(200)
             assert page.evaluate("Lattice.state().cur") == {"slide": "many", "step": 14}
+            page.keyboard.press("Shift+ArrowLeft")
+            assert settle({"slide": "many", "step": 0})["cur"] == {"slide": "many", "step": 0}
+            page.keyboard.press("Shift+ArrowLeft")  # at the first step: stays
+            page.wait_for_timeout(200)
+            assert page.evaluate("Lattice.state()")["cur"] == {"slide": "many", "step": 0}
             browser.close()
     except Exception as e:
         if "Executable doesn't exist" in str(e):
@@ -253,7 +252,7 @@ def test_skip_keys_play_steps_within_the_slide(tmp_path):
 
 
 VERSIONS = "".join(f'  - code: "a = {k}\\n"\n' for k in range(6))
-BURST_DECK = (
+CHECKPOINT_DECK = (
     "# Intro\n\n# Many\n{.reveal}\n" + "".join(f"- item {i}\n" for i in range(14))
     + "\n```diff-steps {#d lang=python}\nversions:\n" + VERSIONS + "```\n\n"
     + "```timeline\nreveal ..3\nd ..end\nreveal ..end\n```\n\n"   # checkpoints 3, 8 and 19 (spec 6.5)
@@ -262,11 +261,11 @@ BURST_DECK = (
 )
 
 
-def test_two_quick_skips_go_to_checkpoints(tmp_path):
-    """Spec 6.5 and 7.6: two presses of a skip key within half a second play to the next (or previous)
-    checkpoint; slower presses, another key in between and auto-repeat keep moving ten steps at a time."""
+def test_checkpoint_keys_go_to_checkpoints(tmp_path):
+    """Spec 6.5 and 7.6: one press of Shift+Right (Shift+Left) plays to the next (previous) checkpoint; a press
+    during the playback counts from its target; holding the keys moves one checkpoint; old names still bind."""
     src = tmp_path / "talk.md"
-    src.write_text(BURST_DECK)
+    src.write_text(CHECKPOINT_DECK)
     out = tmp_path / "talk.html"
     assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
     try:
@@ -281,13 +280,13 @@ def test_two_quick_skips_go_to_checkpoints(tmp_path):
                 page.reload()
 
             def settle():
-                """The position once playback has stopped (unchanged for 600 ms, longer than a hold)."""
+                """The position once playback has stopped (unchanged for 400 ms)."""
                 seen = []
                 for _ in range(100):
                     seen.append(page.evaluate("Lattice.state().cur"))
                     if len(seen) >= 3 and seen[-1] == seen[-2] == seen[-3]:
                         return seen[-1]
-                    page.wait_for_timeout(300)
+                    page.wait_for_timeout(200)
                 return seen[-1]
 
             def step():
@@ -301,77 +300,112 @@ def test_two_quick_skips_go_to_checkpoints(tmp_path):
                 return {"slide": "many", "step": i}
 
             open_at("#/many/0")
-            press("Shift+ArrowRight", "Shift+ArrowRight")
+            press("Shift+ArrowRight")
             assert step() < 3  # the steps are played, not jumped
             assert settle() == many(3)
             for target in (8, 19, 19):  # from checkpoint to checkpoint; at the last step it stays
-                press("Shift+ArrowRight", "Shift+ArrowRight")
+                press("Shift+ArrowRight")
                 assert settle() == many(target)
             for target in (8, 3, 0, 0):
-                press("Shift+ArrowLeft", "Shift+ArrowLeft")
+                press("Shift+ArrowLeft")
                 assert settle() == many(target)
             assert page.evaluate("Lattice.state().H") == []  # never leaves the slide nor touches history
 
-            # a lone press waits at the checkpoint while the window is open, then plays its ten steps
-            press("Shift+ArrowRight")
-            page.wait_for_timeout(380)
-            assert step() == 3
-            assert settle() == many(10)
-
-            # a press after the window is a first press again: ten steps, from where the slide is
-            press("Shift+ArrowRight")
-            page.wait_for_timeout(600)
-            press("Shift+ArrowRight")
-            assert settle() == many(19)
+            # a press during the playback of the same action counts from its target: two checkpoints ahead
             open_at("#/many/0")
-            press("Shift+ArrowRight")
-            page.wait_for_timeout(600)  # past the window: the playback has gone on from 3
-            press("Shift+ArrowRight")
-            s = settle()["step"]
-            assert s > 8  # not a double press: it waited at 8 and went on
-
-            # a double press during the playback of another counts from that playback's checkpoint
+            press("Shift+ArrowRight", "Shift+ArrowRight")
+            assert settle() == many(8)
             open_at("#/many/19")
-            press("Shift+ArrowLeft", "Shift+ArrowLeft")  # eleven steps back to 8, about one second
-            page.wait_for_timeout(550)
+            press("Shift+ArrowLeft")  # eleven steps back to 8, about one second
+            page.wait_for_timeout(300)
             assert 8 < step() < 19
-            press("Shift+ArrowLeft", "Shift+ArrowLeft")
+            press("Shift+ArrowLeft")
             assert settle() == many(3)
 
-            # a third quick press keeps the target rather than cutting the playback short
+            # the other direction counts from where the slide is
+            open_at("#/many/3")
+            press("Shift+ArrowRight")  # toward 8
+            page.wait_for_timeout(200)
+            mid = step()
+            assert 3 < mid < 8
+            press("Shift+ArrowLeft")
+            assert settle() == many(3)
+
+            # another key stops the playback where it is, and the next press counts from there
             open_at("#/many/8")
-            press("Shift+ArrowRight", "Shift+ArrowRight", "Shift+ArrowRight")
+            press("Shift+ArrowRight", "ArrowLeft")
+            here = settle()["step"]
+            assert 8 <= here < 19
+            press("Shift+ArrowRight")
             assert settle() == many(19)
 
-            # another key or a direction change in between starts the count again
-            open_at("#/many/0")
-            press("Shift+ArrowRight", "ArrowRight", "Shift+ArrowRight")
-            assert settle()["step"] > 10
-            open_at("#/many/8")
-            press("Shift+ArrowRight", "Shift+ArrowLeft")
-            assert settle() == many(0)  # a lone Shift+Left: it waited at 8, then went ten steps back
-
-            # holding the keys: the auto-repeat is not a quick succession of presses
+            # holding the keys: the auto-repeat is ignored, one checkpoint only
             open_at("#/many/0")
             page.keyboard.down("Shift")
-            for _ in range(2):
+            for _ in range(4):
                 page.keyboard.down("ArrowRight")  # repeat=true after the first
             page.keyboard.up("ArrowRight")
             page.keyboard.up("Shift")
-            assert settle()["step"] > 3
-            open_at("#/many/0")
-            press("Shift+ArrowRight", "Shift+ArrowRight")  # two real presses still work
             assert settle() == many(3)
 
-            # a blocking detour step ends a run: the double press stops in front of it, cleanly
+            # a blocking detour step ends a run: the press stops in front of it, cleanly
             open_at("#/blocked/0")
-            press("Shift+ArrowRight", "Shift+ArrowRight")
+            press("Shift+ArrowRight")
             assert settle() == {"slide": "blocked", "step": 2}
-            press("Shift+ArrowRight", "Shift+ArrowRight")  # at that checkpoint: blocked, as any SKIP
+            press("Shift+ArrowRight")  # at that checkpoint: blocked, as any SKIP
             assert settle() == {"slide": "blocked", "step": 2}
+            assert page.inner_text("#lt-flash") == "Cannot step detour"
             press("Shift+ArrowDown")
-            press("Shift+ArrowRight", "Shift+ArrowRight")
+            press("Shift+ArrowRight")
             assert settle() == {"slide": "blocked", "step": 5}
+
+            # the names before 0.30 still bind the checkpoint actions
+            src.write_text("---\nkeys: {skip-forward: n, skip-back: N}\n---\n" + CHECKPOINT_DECK)
+            assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+            open_at("#/many/0")
+            press("n")
+            assert settle() == many(3)
+            press("N")
+            assert settle() == many(0)
+            assert page.evaluate("Lattice.state().cur") == many(0)
+            keys = page.evaluate("JSON.parse(document.getElementById('lt-deck').textContent).keys")
+            assert keys["next-checkpoint"] == ["n"] and "skip-forward" not in keys
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
+
+
+def test_presenter_names_the_checkpoints(tmp_path):
+    """Spec 7.5: the moves list names the steps Shift+Right and Shift+Left reach and the kinds of those steps."""
+    src = tmp_path / "talk.md"
+    src.write_text(CHECKPOINT_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1600, "height": 800})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+
+            def moves_at(hash_):
+                page.goto(out.as_uri() + "?presenter" + hash_)
+                page.reload()
+                page.wait_for_timeout(200)
+                return page.inner_text(".lt-pp-moves").split("\n")
+
+            fwd, back = "Shift+\u2192", "Shift+\u2190"
+            m = moves_at("#/many/0")
+            assert f"{fwd} checkpoint: step 4 of 20 (reveal)" in m and not any(back in x for x in m)
+            m = moves_at("#/many/3")
+            assert f"{fwd} checkpoint: step 9 of 20 (diff-steps)" in m and f"{back} checkpoint: step 1 of 20" in m
+            m = moves_at("#/many/19")
+            assert f"{back} checkpoint: step 9 of 20 (diff-steps)" in m and not any(fwd in x for x in m)
+            m = moves_at("#/blocked/2")
+            assert f"{fwd} stopped by a blocking detour step" in m
             browser.close()
     except Exception as e:
         if "Executable doesn't exist" in str(e):
@@ -384,7 +418,7 @@ def test_end_home_and_shift_home(tmp_path):
     """Spec 7.6: End and Home play to the last and first step, ignoring checkpoints and keeping history;
     Shift+Home goes to the start of the deck and clears it."""
     src = tmp_path / "talk.md"
-    src.write_text(BURST_DECK)
+    src.write_text(CHECKPOINT_DECK)
     out = tmp_path / "talk.html"
     assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
     try:
@@ -419,7 +453,7 @@ def test_end_home_and_shift_home(tmp_path):
             assert s["cur"] == {"slide": "intro", "step": 0} and s["H"] == []
 
             # a deck that still binds `home: Home` keeps it: `home` comes after `first-step`
-            src.write_text("---\nkeys: {home: Home}\n---\n" + BURST_DECK)
+            src.write_text("---\nkeys: {home: Home}\n---\n" + CHECKPOINT_DECK)
             assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
             page.goto(out.as_uri() + "#/many/5")
             page.reload()
@@ -504,13 +538,14 @@ def test_detour_step_enters_and_returns(tmp_path):
             assert page.evaluate("Lattice.state()")["cur"] == {"slide": "dijkstra", "step": 4}
             # a blocking detour step stops a multi-step in front of it, and still enters with Right
             page.goto(out.as_uri() + "#/blocked/0")
-            page.keyboard.press("Shift+ArrowRight")
+            page.keyboard.press("Shift+ArrowRight")  # the checkpoint in front of it: reached cleanly
             page.wait_for_timeout(600)
             assert page.evaluate("Lattice.state().cur") == {"slide": "blocked", "step": 1}
-            assert page.inner_text("#lt-flash") == "Cannot step detour"
+            assert page.evaluate("(document.getElementById('lt-flash') || {}).textContent || ''") != "Cannot step detour"
             page.keyboard.press("End")
             page.wait_for_timeout(300)
             assert page.evaluate("Lattice.state().cur") == {"slide": "blocked", "step": 1}
+            assert page.inner_text("#lt-flash") == "Cannot step detour"
             assert press("Shift+ArrowDown")["cur"] == {"slide": "blocked", "step": 3}  # the explicit skip works
             assert press("ArrowLeft", "ArrowRight")["cur"] == {"slide": "inside-the-wall", "step": 0}
             browser.close()
@@ -739,7 +774,8 @@ def test_presenter_preview_and_scrubber(tmp_path):
             assert previewed({"slide": "steps", "step": 0}) == {"slide": "steps", "step": 0}
             keys = page.inner_text(".lt-pp-keys")  # spec 7.5: every global binding is listed
             assert "Shift+\u2192" in keys and "End" in keys and "presenter view" in keys and "Space" in keys
-            assert "\u00d72" in keys and "next or previous checkpoint" in keys  # spec 7.6
+            assert "next checkpoint" in keys and "previous checkpoint" in keys and "\u00d72" not in keys  # spec 7.6
+            assert "10 steps" not in keys
             assert "Shift+Home" in keys and "first step of the slide" in keys
             assert "\u232b" in keys and "undo the last move" in keys and "PageUp" not in keys  # spec 7.6
             assert page.is_hidden(".lt-pp-scrub")

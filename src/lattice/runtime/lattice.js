@@ -151,12 +151,27 @@ const Lattice = (() => {
   // A step whose arrival through NEXT enters a detour (spec 6.4): { id, blocking }, or null.
   const stepDetour = (id, step) => (slide(id).stepDetours || {})[step] || null;
 
-  // Checkpoints (spec 6.5): the steps where two quick presses of a skip key stop, computed at build time.
+  // Checkpoints (spec 6.5): the steps where the checkpoint keys stop, computed at build time.
   // A slide without the field has its last step as its only checkpoint.
   const checkpointsOf = (id) => slide(id).checkpoints || [steps(id) - 1];
+  const CHECKPOINT_KEYS = new Set(["next-checkpoint", "prev-checkpoint"]); // the actions that move to them
   function nextCheckpoint(id, step) {
     const k = checkpointsOf(id).find((c) => c > step);
     return k === undefined ? step : k;
+  }
+  // The kind of step `i` of a slide (spec 6.5) as the presenter names it: the types of the tracks that change
+  // on arrival there (followers left out), `reveal`, `columns` or a component name; "" for a silent step or 0.
+  function stepKind(id, i) {
+    const sl = slide(id);
+    const a = sl.positions[i - 1], b = sl.positions[i];
+    if (!a || !b) return "";
+    const names = [];
+    sl.tracks.forEach((t, j) => {
+      if (t.follow || a[j] === b[j]) return;
+      const name = t.kind === "component" ? ((deck.instances[t.instance] || {}).component || t.id) : t.kind;
+      if (!names.includes(name)) names.push(name);
+    });
+    return names.join(" + ");
   }
   function prevCheckpoint(id, step) {
     const before = checkpointsOf(id).filter((c) => c < step);
@@ -166,26 +181,19 @@ const Lattice = (() => {
   // Multi-step moves within a slide play the intermediate steps in rapid succession, so that
   // animations are seen rather than skipped (spec 7.2, SKIP). A new move cancels a running one.
   // Detour steps on the way are not entered; a blocking one stops the playback in front of it.
-  // `hold` ({ step, until }) keeps the playback from passing `step` before the time `until`: the first
-  // of two quick presses waits there for the second (spec 7.6). `checkpoint` marks a playback to a
-  // checkpoint, from which a following double press counts.
+  // `action` names the action that started the playback, from which the checkpoint keys count.
   let playTimer = null;
-  let playing = null; // the playback under way: { slide, target, dir, checkpoint }
-  function playSteps(target, opts = {}) {
+  let playing = null; // the playback under way: { slide, target, action }
+  function playSteps(target, action = null) {
     stopPlaying();
     const total = Math.abs(target - nav.cur.step);
     if (!total) return;
     const interval = Math.max(30, Math.min(90, 1000 / total));
-    const hold = opts.hold || null;
-    playing = { slide: nav.cur.slide, target, dir: Math.sign(target - nav.cur.step), checkpoint: !!opts.checkpoint };
+    playing = { slide: nav.cur.slide, target, action };
     const tick = () => {
       const cur = nav.cur.step;
       if (cur === target) { playing = null; return; }
       const dir = Math.sign(target - cur);
-      if (hold && cur === hold.step && performance.now() < hold.until) {
-        playTimer = setTimeout(tick, hold.until - performance.now());
-        return;
-      }
       const d = dir > 0 ? stepDetour(nav.cur.slide, cur + 1) : null;
       if (d && d.blocking) { playing = null; return flash("Cannot step detour"); }
       go(nav.cur.slide, cur + dir, { kind: "step", dir });
@@ -198,6 +206,12 @@ const Lattice = (() => {
     clearTimeout(playTimer);
     playTimer = null;
     playing = null;
+  }
+
+  // The anchor of a checkpoint key (spec 7.6): the target of a playback that the same action started on
+  // this slide and that is still under way, else the current step. Read before the playback is stopped.
+  function checkpointAnchor(action) {
+    return playing && playing.action === action && playing.slide === nav.cur.slide ? playing.target : nav.cur.step;
   }
 
   const actions = {
@@ -238,8 +252,8 @@ const Lattice = (() => {
       if (e.closed) nav.H = nav.H.concat(e.closed); // reopen the detour a PREV closed
       go(e.slide, e.step, undoHow(e));
     },
-    "skip-forward"() { playSteps(Math.min(nav.cur.step + 10, steps(nav.cur.slide) - 1)); },
-    "skip-back"() { playSteps(Math.max(nav.cur.step - 10, 0)); },
+    "next-checkpoint"(anchor = nav.cur.step) { playSteps(nextCheckpoint(nav.cur.slide, anchor), "next-checkpoint"); },
+    "prev-checkpoint"(anchor = nav.cur.step) { playSteps(prevCheckpoint(nav.cur.slide, anchor), "prev-checkpoint"); },
     "last-step"() { playSteps(steps(nav.cur.slide) - 1); },
     "first-step"() { playSteps(0); },
     "skip-detour"() {
@@ -905,7 +919,8 @@ const Lattice = (() => {
   // The Keybindings section of the presenter panel: every global action with its keys (spec 7.5).
   const ACTION_LABELS = {
     next: "next step or slide", prev: "previous step or slide", undo: "undo the last move (history)",
-    "skip-forward": "10 steps forward", "skip-back": "10 steps back", "last-step": "last step of the slide",
+    "next-checkpoint": "next checkpoint", "prev-checkpoint": "previous checkpoint",
+    "last-step": "last step of the slide",
     "first-step": "first step of the slide",
     "skip-detour": "step over the next detour step",
     "enter-detour": "enter the first detour", return: "return from a detour or jump",
@@ -918,12 +933,6 @@ const Lattice = (() => {
     const rows = Object.entries(deck.keys).map(([action, keys]) =>
       `<li><span class="lt-pp-kbd">${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("")}</span>` +
       `<span>${esc(ACTION_LABELS[action] || action)}</span></li>`);
-    const fwd = (deck.keys["skip-forward"] || [])[0], back = (deck.keys["skip-back"] || [])[0];
-    if (fwd || back) { // two quick presses of a skip key (spec 7.6)
-      const kbds = [fwd, back].filter(Boolean).map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("");
-      const ends = [fwd && "next", back && "previous"].filter(Boolean).join(" or ");
-      rows.push(`<li><span class="lt-pp-kbd">${kbds}×2</span><span>${ends} checkpoint (two presses within half a second)</span></li>`);
-    }
     rows.push(`<li><span class="lt-pp-kbd"><kbd>1</kbd>…<kbd>9</kbd></span><span>choose a branch option or a detour (slide keys)</span></li>`);
     if (Object.values(deck.instances).some((i) => registry[i.component] && registry[i.component].zoom)) {
       rows.push(`<li><span class="lt-pp-kbd"><kbd>click</kbd></span><span>enlarge a block; any key or click closes it</span></li>`);
@@ -973,6 +982,17 @@ const Lattice = (() => {
     else if (nav.cur.step < s.steps - 1) moves.push(`<li><kbd>\u2192</kbd> step ${nav.cur.step + 2} of ${s.steps}</li>`);
     else if (nt && nt.slide) moves.push(`<li><kbd>\u2192</kbd> ${nt.kind === "back" ? "return to " : ""}${esc(label(nt.slide))}</li>`);
     else moves.push(`<li><kbd>\u2192</kbd> end of path</li>`);
+    for (const action of CHECKPOINT_KEYS) { // where Shift+Right and Shift+Left stop, and what moves there (spec 7.5)
+      const k = (deck.keys[action] || [])[0];
+      const fwd = action === "next-checkpoint";
+      const t = fwd ? nextCheckpoint(nav.cur.slide, nav.cur.step) : prevCheckpoint(nav.cur.slide, nav.cur.step);
+      if (!k || t === nav.cur.step) continue;
+      let blocked = false;
+      for (let i = nav.cur.step + 1; fwd && i <= t; i++) if ((stepDetour(nav.cur.slide, i) || {}).blocking) blocked = true;
+      const kind = stepKind(nav.cur.slide, t);
+      const what = blocked ? "stopped by a blocking detour step" : `checkpoint: step ${t + 1} of ${s.steps}${kind ? ` (${esc(kind)})` : ""}`;
+      moves.push(`<li><kbd>${esc(keyName(k))}</kbd> ${what}</li>`);
+    }
     for (const b of s.branches) moves.push(`<li><kbd>${esc(b.key)}</kbd> ${esc(b.label || label(b.target))}</li>`);
     s.detours.forEach((dId, i) => {
       const d = deck.detours[dId];
@@ -1148,45 +1168,22 @@ const Lattice = (() => {
     }
     const s = slide(nav.cur.slide);
     const slideKey = s.branches.some((b) => b.key === e.key) || s.detours.some((d) => deck.detours[d].key === e.key);
-    if (slideKey) { stopPlaying(); burstMove(null, e); actions.choose(e.key); e.preventDefault(); return; }
+    if (slideKey) { stopPlaying(); actions.choose(e.key); e.preventDefault(); return; }
     // Bindings may name a shifted key as "Shift+ArrowRight"; a plain key still matches with Shift held
     // (letters already arrive shifted, as "A" for Shift+a).
     const map = keyMap();
     const action = (e.shiftKey && map[`Shift+${e.key}`]) || map[e.key];
     if (action && actions[action]) {
-      const move = burstMove(action, e); // before stopPlaying: it reads the playback under way
-      stopPlaying();
-      if (move === null) actions[action](); else playSteps(move.target, move);
       e.preventDefault();
+      if (CHECKPOINT_KEYS.has(action)) {
+        if (e.repeat) return; // holding the keys moves one checkpoint (spec 7.6)
+        const anchor = checkpointAnchor(action); // before stopPlaying: it reads the playback under way
+        stopPlaying();
+        return actions[action](anchor);
+      }
+      stopPlaying();
+      actions[action]();
     }
-  }
-
-  // Two presses of `skip-forward` within half a second play to the next checkpoint (spec 6.5), two of
-  // `skip-back` to the previous one (spec 7.6). The checkpoint is counted from the anchor: the step before
-  // the first press, or the target of a checkpoint playback still under way in the same direction. The
-  // first press plays its ten steps from the anchor, but waits at that checkpoint while the window is
-  // open, so that a second press never has to play back. Later presses in the window keep the target.
-  // The auto-repeat of a held key does not count, and any other action starts the count again.
-  // Returns null for the plain action, or the arguments of playSteps: { target, hold, checkpoint }.
-  const BURST = {
-    "skip-forward": { dir: 1, checkpoint: nextCheckpoint, plain: (id, s) => Math.min(s + 10, steps(id) - 1) },
-    "skip-back": { dir: -1, checkpoint: prevCheckpoint, plain: (id, s) => Math.max(s - 10, 0) },
-  };
-  const BURST_WINDOW_MS = 500;
-  let burst = { action: null };
-  function burstMove(action, e) {
-    const b = BURST[action];
-    if (!b) { burst = { action: null }; return null; }
-    if (e.repeat) return null;
-    const now = performance.now();
-    const id = nav.cur.slide;
-    if (burst.action === action && burst.slide === id && now - burst.start < BURST_WINDOW_MS) {
-      return { target: burst.target, checkpoint: true }; // the second press, or a later one in the window
-    }
-    const run = playing && playing.checkpoint && playing.slide === id && playing.dir === b.dir;
-    const anchor = run ? playing.target : nav.cur.step;
-    burst = { action, slide: id, start: now, target: b.checkpoint(id, anchor) };
-    return { target: b.plain(id, anchor), hold: { step: burst.target, until: now + BURST_WINDOW_MS } };
   }
 
   function onClick(e) {

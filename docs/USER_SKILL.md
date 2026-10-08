@@ -37,7 +37,7 @@ In the feature map below, **manual `id`** means the slide with that id in `user_
    python scripts/snapshot.py talk.html /tmp/shots "ArrowRight*3" --presenter   # the presenter view
    ```
 
-   It presses the keys, prints the navigation state after each (`{slide, step}`), saves `NN.png` for the presses listed in `--shots` (all of them by default) and reports JavaScript errors. It always opens the deck at its start slide, so count presses from there: a slide with `n` steps needs `n` presses to leave it (`lattice graph` lists the main path). Two timing traps: it waits 450 ms after a press, while a `code-morph` step or a change of column widths moves for 600 ms by default, so shoot one press later (append a key that does nothing, such as `Shift`, and list that one in `--shots`); and `End`, `Home` or Shift+Right *play* the steps quickly rather than jump, and the next key cancels the playback, so press `ArrowRight` the right number of times instead (`Home` goes to the first step of the slide; the start of the deck is `Shift+Home`). A human can open any position directly with `talk.html#/slide-id/step` (steps from 0).
+   It presses the keys, prints the navigation state after each (`{slide, step}`), saves `NN.png` for the presses listed in `--shots` (all of them by default) and reports JavaScript errors. It always opens the deck at its start slide, so count presses from there: a slide with `n` steps needs `n` presses to leave it (`lattice graph` lists the main path). Two timing traps: it waits 450 ms after a press, while a `code-morph` step or a change of column widths moves for 600 ms by default, so shoot one press later (append a key that does nothing, such as `Shift`, and list that one in `--shots`); and `End`, `Home`, Shift+Right or Shift+Left *play* the steps quickly rather than jump, and the next key cancels the playback, so press `ArrowRight` the right number of times instead (`Home` goes to the first step of the slide; the start of the deck is `Shift+Home`). A human can open any position directly with `talk.html#/slide-id/step` (steps from 0).
 7. **PDF**, if asked: `lattice pdf talk.md -o talk.pdf [--tour NAME] [--steps first|last|all] [--no-appendix]`, and the per-slide `pdf="0,3,end"` attribute (manual `pdf-export`, spec section 11.5). Inspect pages with `pdftoppm -png`.
 
 Renders are cached in `.lattice-cache/` next to the root file. When a result looks stale (after updating Lattice, or editing a file a trace imports indirectly), pass `--no-cache`.
@@ -69,7 +69,7 @@ Renders are cached in `.lattice-cache/` next to the root file. When a result loo
 |---|---|---|
 | Main path and `next` resolution | implicit successor in the same scope, or `next=` | manual `the-graph`, spec section 5.2 |
 | Detours | `::: detour {#id label=... key=k}` holding slides; the last one returns to the origin | manual `detours`, spec section 3.9 |
-| A detour as a step of its slide | `at=N` on the detour, or a `detour ID` line in a timeline; `blocking` stops the skip keys | manual `navigation-details` and `timelines`, spec section 6.4 |
+| A detour as a step of its slide | `at=N` on the detour, or a `detour ID` line in a timeline; `blocking` stops the checkpoint keys | manual `navigation-details` and `timelines`, spec section 6.4 |
 | Badges that wait or move | `badge=next`, `badge=step`, `badge=false`; `::detour-badge{ref=id}` placed in a column or item | manual `badge-steps`, `placed-badges`, `badge-inheritance`, spec section 3.9 |
 | Branches | `::: branch {layout=cards}` holding one list of `[[target\|label]] {key=k} description`; give each option `next=` to converge | manual `branches`, spec section 3.10 |
 | Links | `[[id]]`, `[[id\|label]]` (an excursion; Up comes back) | manual `links-and-notes`, spec section 3.7 |
@@ -120,8 +120,8 @@ A fenced block whose name is a registered component renders it; any other name i
 
 | Feature | Where |
 |---|---|
-| Keys (Right, Left, Backspace, Shift+Right skips, Down, Up, End, Home, Shift+Home, `o`, `g`, `p`, `t`), rebinding with `keys:` | manual `presenting-keys`, spec section 7.6 |
-| Checkpoints: Shift+Right twice plays to the end of the current animation or series of reveals, Shift+Left twice back to the previous one (computed from the timeline) | manual `checkpoints`, spec section 6.5 |
+| Keys (Right, Left, Backspace, Shift+Right and Shift+Left checkpoints, Down, Up, End, Home, Shift+Home, `o`, `g`, `p`, `t`), rebinding with `keys:` | manual `presenting-keys`, spec section 7.6 |
+| Checkpoints: Shift+Right plays to the end of the current animation or series of reveals, Shift+Left back to the previous one (computed from the timeline) | manual `checkpoints`, spec section 6.5 |
 | Structure and history: Left walks the structure backward, Backspace undoes the last move, Up returns from an excursion | manual `history`, spec section 7.2 |
 | URL `#/slide-id/step`, transitions | manual `navigation-details`, spec section 7.4 |
 | Presenter view (`p`): notes, timer, scrubber, preview of the next step | manual `presenter-view`, spec section 7.5 |
@@ -165,7 +165,7 @@ These are the mistakes that build cleanly or produce a confusing error. Each one
 - **Branch options converge only if told to.** A branch slide has no `next`, so the main path ends there (slides after it are reached only through the options). Give every option an explicit `next=` to the slide where they meet; an explicit `next` wins over every implicit rule, `offpath=true` included (spec section 5.2). Check with `lattice graph`.
 - **Multi-line `code-morph` replacements keep indentation only from the start of a line.** A segment whose replacement spans several lines should start at the indentation of its own line; for one that starts mid-line, the further lines of the replacement are shown exactly as written in the YAML, with no indentation added (spec section 8.11). Only a screenshot shows this.
 - **DOT keywords** (`graph`, `node`, `edge`, `digraph`, `subgraph`, `strict`) cannot be bare node names in `dot` blocks or `.dot` files.
-- **A line of the timeline that moves two tracks is a step of its own kind.** Checkpoints (spec section 6.5) end every run of steps that move the same tracks, so `code 2, trace 5` in the middle of a trace splits it in two for Shift+Right pressed twice; let a follower (`follow=`) move with the trace instead when the code only tracks it.
+- **A line of the timeline that moves two tracks is a step of its own kind.** Checkpoints (spec section 6.5) end every run of steps that move the same tracks, so `code 2, trace 5` in the middle of a trace splits it in two for Shift+Right; let a follower (`follow=`) move with the trace instead when the code only tracks it.
 - **Step numbers differ by audience:** the URL and `pdf=` count from 0, the HUD and the presenter view from 1.
 - **Columns are meant to contain their content** (a table wider than its column scrolls inside it), so a column holding too much is a layout problem that only a screenshot shows. An animation narrower than 760 px puts its panel below the drawing (except `array-anim`) unless `panel_at=right`. Big animations need a `height=` or a column that makes room (`width` cues); check the screenshot.
 - **Name the closing fences of long containers** (`::: /column`, `::: /detour`): a forgotten fence otherwise swallows the following slides, and the name turns that into error LT061 at the right line.

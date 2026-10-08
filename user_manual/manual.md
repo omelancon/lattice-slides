@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.29.0
+author: Lattice 0.30.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -475,7 +475,7 @@ reveal +1         # relative move
 {.reveal}
 - One line per step (several for a range `a..b`); a line sets the tracks it names, the others keep their position
 - Positions: absolute `3`, relative `+1` or `-1`, `end` or `end-2`; `#` starts a comment
-- A `detour ID` line is a **detour step**: Right enters that detour there and, after the return, continues the slide; `blocking` also stops the skip keys
+- A `detour ID` line is a **detour step**: Right enters that detour there and, after the return, continues the slide; `blocking` also stops Shift+Right
 - Without a timeline, `at=2` on a detour inserts a detour step after step 2
 :::
 ::::
@@ -1518,7 +1518,7 @@ show: [label, context]
 | Right, Space | Next step, then next slide (`next`) |
 | Left | Previous step, then the previous slide of the structure (`prev`) |
 | Backspace | Undo the last move, back along the [[history\|history]] (`undo`) |
-| Shift+Right, Shift+Left | Ten steps; twice in half a second, the next or previous [[checkpoints\|checkpoint]] (`skip-forward`, `skip-back`) |
+| Shift+Right, Shift+Left | The next or previous [[checkpoints\|checkpoint]], the end of one animation or series (`next-checkpoint`, `prev-checkpoint`) |
 | End, Home | Last or first step of the slide, played quickly (`last-step`, `first-step`) |
 | Down | Enter the slide's first detour (`enter-detour`) |
 | Shift+Down | Step over the next detour step without entering it (`skip-detour`) |
@@ -1541,7 +1541,7 @@ Rebind actions in the front matter: `keys: {next: [ArrowRight, n]}` (`KeyboardEv
 # Detour steps, the URL and transitions {#navigation-details}
 
 {.reveal}
-- A **detour step** (`at=` or a `detour` timeline line) enters its detour only when Right arrives on it; Left skips over it, and the skip keys roll over it unless it is `blocking`
+- A **detour step** (`at=` or a `detour` timeline line) enters its detour only when Right arrives on it; Left skips over it, and Shift+Right, End and Home roll over it unless it is `blocking`
 - The URL keeps the position, `#/slide-id/step`; a reload restores the history too, and a step beyond the last is clamped
 - Transitions follow the edge kind (`slide` along the path, `zoom` into a detour, `fade` on a link) and play in reverse on the way back
 - Slide keys (branch options, detours) must not collide with global keys: error LT018
@@ -1551,9 +1551,9 @@ Rebind actions in the front matter: `keys: {next: [ArrowRight, n]}` (`KeyboardEv
 :::: columns
 ::: column {width=1fr}
 {#cp-keys .reveal}
-- Press **Shift+Right twice** within half a second: the slide plays to the next **checkpoint**, the end of a run of steps that move the same tracks
+- Press **Shift+Right**: the slide plays to the next **checkpoint**, the end of a run of steps that move the same tracks
 - On this slide: these two bullets, then the sort, then the arrow's three moves, then the rest of this list
-- **Shift+Left twice** plays back to the previous checkpoint
+- **Shift+Left** plays back to the previous checkpoint; holding either key moves one checkpoint only
 - A step that moves two tracks at once is a kind of its own; a non-blocking detour step is passed, a blocking one ends the run
 - End and Home ignore checkpoints; the build computes them from the step table (spec section 6.5)
 :::
@@ -1584,7 +1584,7 @@ reveal ..end
 ```
 
 ::: notes
-Try it: from the first step, Shift+Right twice stops after the second bullet, then after the sort, then after the arrow, then at the end.
+Try it: from the first step, Shift+Right stops after the second bullet, then after the sort, then after the arrow, then at the end. The presenter's moves list names each checkpoint and its kind.
 :::
 
 # The presenter view {#presenter-view .dense}

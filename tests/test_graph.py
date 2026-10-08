@@ -102,3 +102,22 @@ def test_tours(deck):
     d = build_deck(root, use_cache=False)
     assert d.tours["short"] == ["a", "d1", "d2", "c"]
     assert d.tours["all"] == ["a", "c"]
+
+
+def test_old_skip_names_bind_the_checkpoint_keys(deck):
+    """Spec 7.6: `skip-forward` and `skip-back` in `keys:` are aliases of the checkpoint actions since 0.30."""
+    from lattice.model import key_bindings
+
+    keys = key_bindings({"skip-forward": "n", "skip-back": ["N", "b"]})
+    assert keys["next-checkpoint"] == ["n"] and keys["prev-checkpoint"] == ["N", "b"]
+    assert "skip-forward" not in keys and "skip-back" not in keys
+    root = deck({"talk.md": """
+        ---
+        keys: {skip-forward: n}
+        ---
+        # A
+        ::: detour {key=n}
+        # D
+        :::
+    """})
+    assert "LT018" in codes(check_deck(root, use_cache=False))

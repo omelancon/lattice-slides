@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.29.0">
+<meta name="generator" content="lattice 0.30.0">
 <title>Sorting, your way</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -1404,7 +1404,7 @@ L 467.085547 214.094484
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.29.0","meta":{"title":"Sorting, your way","author":"Workshop","date":null,"aspect":"16:9","theme":"dark"},"start":"sorting-your-way","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"skip-forward":["Shift+ArrowRight"],"skip-back":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["sorting-your-way","pick","bubble","insertion","quick","the-recursion-tree","compare","done"],"slides":{"sorting-your-way":{"title":"Sorting, your way","label":"Sorting, your way","scope":"root","next":{"slide":"pick"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":9}},"pick":{"title":"Pick an algorithm","label":"Pick an algorithm","scope":"root","next":null,"branches":[{"target":"bubble","key":"1","label":"Bubble sort"},{"target":"insertion","key":"2","label":"Insertion sort"},{"target":"quick","key":"3","label":"Quicksort"}],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":13},"notes":"<p>Let the room vote. Press 1, 2 or 3, or click a card.<\/p>\n"},"bubble":{"title":"Bubble sort","label":"Bubble sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":27,"tracks":[{"id":"src","kind":"component","instance":"bubble/src","follow":"bars"},{"id":"bars","kind":"component","instance":"bubble/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26]],"offpath":false,"source":{"file":"talk.md","line":27}},"insertion":{"title":"Insertion sort","label":"Insertion sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":25,"tracks":[{"id":"src","kind":"component","instance":"insertion/src","follow":"bars"},{"id":"bars","kind":"component","instance":"insertion/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24]],"offpath":false,"source":{"file":"talk.md","line":41}},"quick":{"title":"Quicksort","label":"Quicksort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":["quick-detour-1"],"steps":34,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"bars","kind":"component","instance":"quick/bars"}],"positions":[[0,0],[1,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12],[2,13],[2,14],[2,15],[2,16],[2,17],[2,18],[2,19],[2,20],[2,21],[2,22],[2,23],[2,24],[2,25],[2,26],[2,27],[2,28],[2,29],[2,30],[2,31]],"offpath":false,"source":{"file":"talk.md","line":56},"checkpoints":[2,33]},"the-recursion-tree":{"title":"The recursion tree","label":"The recursion tree","scope":"quick-detour-1","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":73}},"compare":{"title":"How many comparisons?","label":"How many comparisons?","scope":"root","next":{"slide":"done"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":87}},"done":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":94}}},"detours":{"quick-detour-1":{"origin":"quick","entry":"the-recursion-tree","label":"The recursion tree","key":"r","slides":["the-recursion-tree"]}},"instances":{"bubble/src":{"component":"code","slide":"bubble","data":"lt-data-bubble/src"},"bubble/bars":{"component":"array-anim","slide":"bubble","data":"lt-data-bubble/bars"},"insertion/src":{"component":"code","slide":"insertion","data":"lt-data-insertion/src"},"insertion/bars":{"component":"array-anim","slide":"insertion","data":"lt-data-insertion/bars"},"quick/bars":{"component":"array-anim","slide":"quick","data":"lt-data-quick/bars"},"the-recursion-tree/c1":{"component":"dot","slide":"the-recursion-tree","data":null},"compare/c1":{"component":"plot","slide":"compare","data":null}},"tours":{"bubble-only":["sorting-your-way","pick","bubble","compare","done"]},"mainPath":["sorting-your-way","pick"],"overview":{"nodes":{"sorting-your-way":{"x":67.0,"y":63.0,"w":118.0,"h":26.0,"label":"Sorting, your way"},"pick":{"x":215.0,"y":63.0,"w":118.0,"h":26.0,"label":"Pick an algorithm"},"bubble":{"x":352.0,"y":21.0,"w":84.0,"h":26.0,"label":"Bubble sort"},"insertion":{"x":352.0,"y":63.0,"w":96.0,"h":26.0,"label":"Insertion sort"},"quick":{"x":352.0,"y":105.0,"w":73.0,"h":26.0,"label":"Quicksort"},"the-recursion-tree":{"x":510.0,"y":105.0,"w":124.0,"h":26.0,"label":"The recursion tree"},"compare":{"x":510.0,"y":63.0,"w":160.0,"h":26.0,"label":"How many comparisons?"},"done":{"x":649.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"sorting-your-way","to":"pick","kind":"next","path":"M126.1,63.0 C133.7,63.0 141.5,63.0 149.2,63.0 L155.6,63.0"},{"from":"pick","to":"bubble","kind":"branch","path":"M258.0,49.9 C272.6,45.4 289.1,40.3 304.1,35.6 L310.0,33.8"},{"from":"pick","to":"insertion","kind":"branch","path":"M274.0,63.0 C281.9,63.0 289.8,63.0 297.6,63.0 L304.0,63.0"},{"from":"pick","to":"quick","kind":"branch","path":"M258.0,76.1 C274.4,81.2 293.1,87.0 309.5,92.1 L315.4,93.9"},{"from":"bubble","to":"compare","kind":"next","path":"M394.4,32.1 C412.8,37.1 434.7,43.0 454.4,48.3 L460.5,49.9"},{"from":"insertion","to":"compare","kind":"next","path":"M400.2,63.0 C407.7,63.0 415.7,63.0 423.8,63.0 L429.9,63.0"},{"from":"quick","to":"the-recursion-tree","kind":"detour","path":"M388.8,105.0 C404.6,105.0 423.6,105.0 441.8,105.0 L448.0,105.0"},{"from":"quick","to":"compare","kind":"next","path":"M388.6,95.2 C401.6,91.7 416.5,87.6 430.0,84.0 C437.6,81.9 445.7,79.8 453.6,77.7 L459.7,76.1"},{"from":"compare","to":"done","kind":"next","path":"M590.2,63.0 C598.5,63.0 606.6,63.0 614.0,63.0 L620.0,63.0"}],"width":687.0,"height":126.0},"hash":"bd03324ca5d702b6"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.30.0","meta":{"title":"Sorting, your way","author":"Workshop","date":null,"aspect":"16:9","theme":"dark"},"start":"sorting-your-way","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"next-checkpoint":["Shift+ArrowRight"],"prev-checkpoint":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["sorting-your-way","pick","bubble","insertion","quick","the-recursion-tree","compare","done"],"slides":{"sorting-your-way":{"title":"Sorting, your way","label":"Sorting, your way","scope":"root","next":{"slide":"pick"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":9}},"pick":{"title":"Pick an algorithm","label":"Pick an algorithm","scope":"root","next":null,"branches":[{"target":"bubble","key":"1","label":"Bubble sort"},{"target":"insertion","key":"2","label":"Insertion sort"},{"target":"quick","key":"3","label":"Quicksort"}],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":13},"notes":"<p>Let the room vote. Press 1, 2 or 3, or click a card.<\/p>\n"},"bubble":{"title":"Bubble sort","label":"Bubble sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":27,"tracks":[{"id":"src","kind":"component","instance":"bubble/src","follow":"bars"},{"id":"bars","kind":"component","instance":"bubble/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26]],"offpath":false,"source":{"file":"talk.md","line":27}},"insertion":{"title":"Insertion sort","label":"Insertion sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":25,"tracks":[{"id":"src","kind":"component","instance":"insertion/src","follow":"bars"},{"id":"bars","kind":"component","instance":"insertion/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24]],"offpath":false,"source":{"file":"talk.md","line":41}},"quick":{"title":"Quicksort","label":"Quicksort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":["quick-detour-1"],"steps":34,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"bars","kind":"component","instance":"quick/bars"}],"positions":[[0,0],[1,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12],[2,13],[2,14],[2,15],[2,16],[2,17],[2,18],[2,19],[2,20],[2,21],[2,22],[2,23],[2,24],[2,25],[2,26],[2,27],[2,28],[2,29],[2,30],[2,31]],"offpath":false,"source":{"file":"talk.md","line":56},"checkpoints":[2,33]},"the-recursion-tree":{"title":"The recursion tree","label":"The recursion tree","scope":"quick-detour-1","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":73}},"compare":{"title":"How many comparisons?","label":"How many comparisons?","scope":"root","next":{"slide":"done"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":87}},"done":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":94}}},"detours":{"quick-detour-1":{"origin":"quick","entry":"the-recursion-tree","label":"The recursion tree","key":"r","slides":["the-recursion-tree"]}},"instances":{"bubble/src":{"component":"code","slide":"bubble","data":"lt-data-bubble/src"},"bubble/bars":{"component":"array-anim","slide":"bubble","data":"lt-data-bubble/bars"},"insertion/src":{"component":"code","slide":"insertion","data":"lt-data-insertion/src"},"insertion/bars":{"component":"array-anim","slide":"insertion","data":"lt-data-insertion/bars"},"quick/bars":{"component":"array-anim","slide":"quick","data":"lt-data-quick/bars"},"the-recursion-tree/c1":{"component":"dot","slide":"the-recursion-tree","data":null},"compare/c1":{"component":"plot","slide":"compare","data":null}},"tours":{"bubble-only":["sorting-your-way","pick","bubble","compare","done"]},"mainPath":["sorting-your-way","pick"],"overview":{"nodes":{"sorting-your-way":{"x":67.0,"y":63.0,"w":118.0,"h":26.0,"label":"Sorting, your way"},"pick":{"x":215.0,"y":63.0,"w":118.0,"h":26.0,"label":"Pick an algorithm"},"bubble":{"x":352.0,"y":21.0,"w":84.0,"h":26.0,"label":"Bubble sort"},"insertion":{"x":352.0,"y":63.0,"w":96.0,"h":26.0,"label":"Insertion sort"},"quick":{"x":352.0,"y":105.0,"w":73.0,"h":26.0,"label":"Quicksort"},"the-recursion-tree":{"x":510.0,"y":105.0,"w":124.0,"h":26.0,"label":"The recursion tree"},"compare":{"x":510.0,"y":63.0,"w":160.0,"h":26.0,"label":"How many comparisons?"},"done":{"x":649.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"sorting-your-way","to":"pick","kind":"next","path":"M126.1,63.0 C133.7,63.0 141.5,63.0 149.2,63.0 L155.6,63.0"},{"from":"pick","to":"bubble","kind":"branch","path":"M258.0,49.9 C272.6,45.4 289.1,40.3 304.1,35.6 L310.0,33.8"},{"from":"pick","to":"insertion","kind":"branch","path":"M274.0,63.0 C281.9,63.0 289.8,63.0 297.6,63.0 L304.0,63.0"},{"from":"pick","to":"quick","kind":"branch","path":"M258.0,76.1 C274.4,81.2 293.1,87.0 309.5,92.1 L315.4,93.9"},{"from":"bubble","to":"compare","kind":"next","path":"M394.4,32.1 C412.8,37.1 434.7,43.0 454.4,48.3 L460.5,49.9"},{"from":"insertion","to":"compare","kind":"next","path":"M400.2,63.0 C407.7,63.0 415.7,63.0 423.8,63.0 L429.9,63.0"},{"from":"quick","to":"the-recursion-tree","kind":"detour","path":"M388.8,105.0 C404.6,105.0 423.6,105.0 441.8,105.0 L448.0,105.0"},{"from":"quick","to":"compare","kind":"next","path":"M388.6,95.2 C401.6,91.7 416.5,87.6 430.0,84.0 C437.6,81.9 445.7,79.8 453.6,77.7 L459.7,76.1"},{"from":"compare","to":"done","kind":"next","path":"M590.2,63.0 C598.5,63.0 606.6,63.0 614.0,63.0 L620.0,63.0"}],"width":687.0,"height":126.0},"hash":"5ef1011b7cbd2751"}</script>
 <script type="application/json" id="lt-data-bubble/src">{"steps":[[1],[6],[7],[6],[7],[6],[7],[6],[6],[7],[9],[6],[6],[7],[6],[6],[7],[9],[6],[6],[6],[7],[9],[6],[6],[9],[10]]}</script>
 <script type="application/json" id="lt-data-bubble/bars">{"frames":{"format":"full","count":27,"frames":[{"values":[5,1,4,2,8,3],"caption":"Unsorted input","marks":{}},{"values":[5,1,4,2,8,3],"caption":"Compare 5 and 1","pointers":{"i":0},"marks":{"0":"compare","1":"compare"}},{"values":[1,5,4,2,8,3],"caption":"Out of order: swap","pointers":{"i":0},"marks":{"0":"swap","1":"swap"}},{"values":[1,5,4,2,8,3],"caption":"Compare 5 and 4","pointers":{"i":1},"marks":{"1":"compare","2":"compare"}},{"values":[1,4,5,2,8,3],"caption":"Out of order: swap","pointers":{"i":1},"marks":{"1":"swap","2":"swap"}},{"values":[1,4,5,2,8,3],"caption":"Compare 5 and 2","pointers":{"i":2},"marks":{"2":"compare","3":"compare"}},{"values":[1,4,2,5,8,3],"caption":"Out of order: swap","pointers":{"i":2},"marks":{"2":"swap","3":"swap"}},{"values":[1,4,2,5,8,3],"caption":"Compare 5 and 8","pointers":{"i":3},"marks":{"3":"compare","4":"compare"}},{"values":[1,4,2,5,8,3],"caption":"Compare 8 and 3","pointers":{"i":4},"marks":{"4":"compare","5":"compare"}},{"values":[1,4,2,5,3,8],"caption":"Out of order: swap","pointers":{"i":4},"marks":{"4":"swap","5":"swap"}},{"values":[1,4,2,5,3,8],"caption":"8 has bubbled to its final place","pointers":{},"cells":{"5":"sorted"},"marks":{}},{"values":[1,4,2,5,3,8],"caption":"Compare 1 and 4","pointers":{"i":0},"cells":{"5":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,4,2,5,3,8],"caption":"Compare 4 and 2","pointers":{"i":1},"cells":{"5":"sorted"},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,4,5,3,8],"caption":"Out of order: swap","pointers":{"i":1},"cells":{"5":"sorted"},"marks":{"1":"swap","2":"swap"}},{"values":[1,2,4,5,3,8],"caption":"Compare 4 and 5","pointers":{"i":2},"cells":{"5":"sorted"},"marks":{"2":"compare","3":"compare"}},{"values":[1,2,4,5,3,8],"caption":"Compare 5 and 3","pointers":{"i":3},"cells":{"5":"sorted"},"marks":{"3":"compare","4":"compare"}},{"values":[1,2,4,3,5,8],"caption":"Out of order: swap","pointers":{"i":3},"cells":{"5":"sorted"},"marks":{"3":"swap","4":"swap"}},{"values":[1,2,4,3,5,8],"caption":"5 has bubbled to its final place","pointers":{},"cells":{"5":"sorted","4":"sorted"},"marks":{}},{"values":[1,2,4,3,5,8],"caption":"Compare 1 and 2","pointers":{"i":0},"cells":{"5":"sorted","4":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,2,4,3,5,8],"caption":"Compare 2 and 4","pointers":{"i":1},"cells":{"5":"sorted","4":"sorted"},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,4,3,5,8],"caption":"Compare 4 and 3","pointers":{"i":2},"cells":{"5":"sorted","4":"sorted"},"marks":{"2":"compare","3":"compare"}},{"values":[1,2,3,4,5,8],"caption":"Out of order: swap","pointers":{"i":2},"cells":{"5":"sorted","4":"sorted"},"marks":{"2":"swap","3":"swap"}},{"values":[1,2,3,4,5,8],"caption":"4 has bubbled to its final place","pointers":{},"cells":{"5":"sorted","4":"sorted","3":"sorted"},"marks":{}},{"values":[1,2,3,4,5,8],"caption":"Compare 1 and 2","pointers":{"i":0},"cells":{"5":"sorted","4":"sorted","3":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,2,3,4,5,8],"caption":"Compare 2 and 3","pointers":{"i":1},"cells":{"5":"sorted","4":"sorted","3":"sorted"},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,3,4,5,8],"caption":"3 has bubbled to its final place","pointers":{},"cells":{"5":"sorted","4":"sorted","3":"sorted","2":"sorted"},"marks":{}},{"values":[1,2,3,4,5,8],"caption":"No swap in a full pass: done early","pointers":{},"cells":{"5":"sorted","4":"sorted","3":"sorted","2":"sorted","0":"sorted","1":"sorted"},"marks":{}}]},"panel":null}</script>
 <script type="application/json" id="lt-data-insertion/src">{"steps":[[1],[3],[5],[6],[8],[3],[5],[6],[8],[3],[5],[6],[5],[6],[8],[3],[8],[3],[5],[6],[5],[6],[5],[6],[8]]}</script>
@@ -1564,12 +1564,27 @@ const Lattice = (() => {
   // A step whose arrival through NEXT enters a detour (spec 6.4): { id, blocking }, or null.
   const stepDetour = (id, step) => (slide(id).stepDetours || {})[step] || null;
 
-  // Checkpoints (spec 6.5): the steps where two quick presses of a skip key stop, computed at build time.
+  // Checkpoints (spec 6.5): the steps where the checkpoint keys stop, computed at build time.
   // A slide without the field has its last step as its only checkpoint.
   const checkpointsOf = (id) => slide(id).checkpoints || [steps(id) - 1];
+  const CHECKPOINT_KEYS = new Set(["next-checkpoint", "prev-checkpoint"]); // the actions that move to them
   function nextCheckpoint(id, step) {
     const k = checkpointsOf(id).find((c) => c > step);
     return k === undefined ? step : k;
+  }
+  // The kind of step `i` of a slide (spec 6.5) as the presenter names it: the types of the tracks that change
+  // on arrival there (followers left out), `reveal`, `columns` or a component name; "" for a silent step or 0.
+  function stepKind(id, i) {
+    const sl = slide(id);
+    const a = sl.positions[i - 1], b = sl.positions[i];
+    if (!a || !b) return "";
+    const names = [];
+    sl.tracks.forEach((t, j) => {
+      if (t.follow || a[j] === b[j]) return;
+      const name = t.kind === "component" ? ((deck.instances[t.instance] || {}).component || t.id) : t.kind;
+      if (!names.includes(name)) names.push(name);
+    });
+    return names.join(" + ");
   }
   function prevCheckpoint(id, step) {
     const before = checkpointsOf(id).filter((c) => c < step);
@@ -1579,26 +1594,19 @@ const Lattice = (() => {
   // Multi-step moves within a slide play the intermediate steps in rapid succession, so that
   // animations are seen rather than skipped (spec 7.2, SKIP). A new move cancels a running one.
   // Detour steps on the way are not entered; a blocking one stops the playback in front of it.
-  // `hold` ({ step, until }) keeps the playback from passing `step` before the time `until`: the first
-  // of two quick presses waits there for the second (spec 7.6). `checkpoint` marks a playback to a
-  // checkpoint, from which a following double press counts.
+  // `action` names the action that started the playback, from which the checkpoint keys count.
   let playTimer = null;
-  let playing = null; // the playback under way: { slide, target, dir, checkpoint }
-  function playSteps(target, opts = {}) {
+  let playing = null; // the playback under way: { slide, target, action }
+  function playSteps(target, action = null) {
     stopPlaying();
     const total = Math.abs(target - nav.cur.step);
     if (!total) return;
     const interval = Math.max(30, Math.min(90, 1000 / total));
-    const hold = opts.hold || null;
-    playing = { slide: nav.cur.slide, target, dir: Math.sign(target - nav.cur.step), checkpoint: !!opts.checkpoint };
+    playing = { slide: nav.cur.slide, target, action };
     const tick = () => {
       const cur = nav.cur.step;
       if (cur === target) { playing = null; return; }
       const dir = Math.sign(target - cur);
-      if (hold && cur === hold.step && performance.now() < hold.until) {
-        playTimer = setTimeout(tick, hold.until - performance.now());
-        return;
-      }
       const d = dir > 0 ? stepDetour(nav.cur.slide, cur + 1) : null;
       if (d && d.blocking) { playing = null; return flash("Cannot step detour"); }
       go(nav.cur.slide, cur + dir, { kind: "step", dir });
@@ -1611,6 +1619,12 @@ const Lattice = (() => {
     clearTimeout(playTimer);
     playTimer = null;
     playing = null;
+  }
+
+  // The anchor of a checkpoint key (spec 7.6): the target of a playback that the same action started on
+  // this slide and that is still under way, else the current step. Read before the playback is stopped.
+  function checkpointAnchor(action) {
+    return playing && playing.action === action && playing.slide === nav.cur.slide ? playing.target : nav.cur.step;
   }
 
   const actions = {
@@ -1651,8 +1665,8 @@ const Lattice = (() => {
       if (e.closed) nav.H = nav.H.concat(e.closed); // reopen the detour a PREV closed
       go(e.slide, e.step, undoHow(e));
     },
-    "skip-forward"() { playSteps(Math.min(nav.cur.step + 10, steps(nav.cur.slide) - 1)); },
-    "skip-back"() { playSteps(Math.max(nav.cur.step - 10, 0)); },
+    "next-checkpoint"(anchor = nav.cur.step) { playSteps(nextCheckpoint(nav.cur.slide, anchor), "next-checkpoint"); },
+    "prev-checkpoint"(anchor = nav.cur.step) { playSteps(prevCheckpoint(nav.cur.slide, anchor), "prev-checkpoint"); },
     "last-step"() { playSteps(steps(nav.cur.slide) - 1); },
     "first-step"() { playSteps(0); },
     "skip-detour"() {
@@ -2318,7 +2332,8 @@ const Lattice = (() => {
   // The Keybindings section of the presenter panel: every global action with its keys (spec 7.5).
   const ACTION_LABELS = {
     next: "next step or slide", prev: "previous step or slide", undo: "undo the last move (history)",
-    "skip-forward": "10 steps forward", "skip-back": "10 steps back", "last-step": "last step of the slide",
+    "next-checkpoint": "next checkpoint", "prev-checkpoint": "previous checkpoint",
+    "last-step": "last step of the slide",
     "first-step": "first step of the slide",
     "skip-detour": "step over the next detour step",
     "enter-detour": "enter the first detour", return: "return from a detour or jump",
@@ -2331,12 +2346,6 @@ const Lattice = (() => {
     const rows = Object.entries(deck.keys).map(([action, keys]) =>
       `<li><span class="lt-pp-kbd">${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("")}</span>` +
       `<span>${esc(ACTION_LABELS[action] || action)}</span></li>`);
-    const fwd = (deck.keys["skip-forward"] || [])[0], back = (deck.keys["skip-back"] || [])[0];
-    if (fwd || back) { // two quick presses of a skip key (spec 7.6)
-      const kbds = [fwd, back].filter(Boolean).map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join("");
-      const ends = [fwd && "next", back && "previous"].filter(Boolean).join(" or ");
-      rows.push(`<li><span class="lt-pp-kbd">${kbds}×2</span><span>${ends} checkpoint (two presses within half a second)</span></li>`);
-    }
     rows.push(`<li><span class="lt-pp-kbd"><kbd>1</kbd>…<kbd>9</kbd></span><span>choose a branch option or a detour (slide keys)</span></li>`);
     if (Object.values(deck.instances).some((i) => registry[i.component] && registry[i.component].zoom)) {
       rows.push(`<li><span class="lt-pp-kbd"><kbd>click</kbd></span><span>enlarge a block; any key or click closes it</span></li>`);
@@ -2386,6 +2395,17 @@ const Lattice = (() => {
     else if (nav.cur.step < s.steps - 1) moves.push(`<li><kbd>\u2192</kbd> step ${nav.cur.step + 2} of ${s.steps}</li>`);
     else if (nt && nt.slide) moves.push(`<li><kbd>\u2192</kbd> ${nt.kind === "back" ? "return to " : ""}${esc(label(nt.slide))}</li>`);
     else moves.push(`<li><kbd>\u2192</kbd> end of path</li>`);
+    for (const action of CHECKPOINT_KEYS) { // where Shift+Right and Shift+Left stop, and what moves there (spec 7.5)
+      const k = (deck.keys[action] || [])[0];
+      const fwd = action === "next-checkpoint";
+      const t = fwd ? nextCheckpoint(nav.cur.slide, nav.cur.step) : prevCheckpoint(nav.cur.slide, nav.cur.step);
+      if (!k || t === nav.cur.step) continue;
+      let blocked = false;
+      for (let i = nav.cur.step + 1; fwd && i <= t; i++) if ((stepDetour(nav.cur.slide, i) || {}).blocking) blocked = true;
+      const kind = stepKind(nav.cur.slide, t);
+      const what = blocked ? "stopped by a blocking detour step" : `checkpoint: step ${t + 1} of ${s.steps}${kind ? ` (${esc(kind)})` : ""}`;
+      moves.push(`<li><kbd>${esc(keyName(k))}</kbd> ${what}</li>`);
+    }
     for (const b of s.branches) moves.push(`<li><kbd>${esc(b.key)}</kbd> ${esc(b.label || label(b.target))}</li>`);
     s.detours.forEach((dId, i) => {
       const d = deck.detours[dId];
@@ -2561,45 +2581,22 @@ const Lattice = (() => {
     }
     const s = slide(nav.cur.slide);
     const slideKey = s.branches.some((b) => b.key === e.key) || s.detours.some((d) => deck.detours[d].key === e.key);
-    if (slideKey) { stopPlaying(); burstMove(null, e); actions.choose(e.key); e.preventDefault(); return; }
+    if (slideKey) { stopPlaying(); actions.choose(e.key); e.preventDefault(); return; }
     // Bindings may name a shifted key as "Shift+ArrowRight"; a plain key still matches with Shift held
     // (letters already arrive shifted, as "A" for Shift+a).
     const map = keyMap();
     const action = (e.shiftKey && map[`Shift+${e.key}`]) || map[e.key];
     if (action && actions[action]) {
-      const move = burstMove(action, e); // before stopPlaying: it reads the playback under way
-      stopPlaying();
-      if (move === null) actions[action](); else playSteps(move.target, move);
       e.preventDefault();
+      if (CHECKPOINT_KEYS.has(action)) {
+        if (e.repeat) return; // holding the keys moves one checkpoint (spec 7.6)
+        const anchor = checkpointAnchor(action); // before stopPlaying: it reads the playback under way
+        stopPlaying();
+        return actions[action](anchor);
+      }
+      stopPlaying();
+      actions[action]();
     }
-  }
-
-  // Two presses of `skip-forward` within half a second play to the next checkpoint (spec 6.5), two of
-  // `skip-back` to the previous one (spec 7.6). The checkpoint is counted from the anchor: the step before
-  // the first press, or the target of a checkpoint playback still under way in the same direction. The
-  // first press plays its ten steps from the anchor, but waits at that checkpoint while the window is
-  // open, so that a second press never has to play back. Later presses in the window keep the target.
-  // The auto-repeat of a held key does not count, and any other action starts the count again.
-  // Returns null for the plain action, or the arguments of playSteps: { target, hold, checkpoint }.
-  const BURST = {
-    "skip-forward": { dir: 1, checkpoint: nextCheckpoint, plain: (id, s) => Math.min(s + 10, steps(id) - 1) },
-    "skip-back": { dir: -1, checkpoint: prevCheckpoint, plain: (id, s) => Math.max(s - 10, 0) },
-  };
-  const BURST_WINDOW_MS = 500;
-  let burst = { action: null };
-  function burstMove(action, e) {
-    const b = BURST[action];
-    if (!b) { burst = { action: null }; return null; }
-    if (e.repeat) return null;
-    const now = performance.now();
-    const id = nav.cur.slide;
-    if (burst.action === action && burst.slide === id && now - burst.start < BURST_WINDOW_MS) {
-      return { target: burst.target, checkpoint: true }; // the second press, or a later one in the window
-    }
-    const run = playing && playing.checkpoint && playing.slide === id && playing.dir === b.dir;
-    const anchor = run ? playing.target : nav.cur.step;
-    burst = { action, slide: id, start: now, target: b.checkpoint(id, anchor) };
-    return { target: b.plain(id, anchor), hold: { step: burst.target, until: now + BURST_WINDOW_MS } };
   }
 
   function onClick(e) {

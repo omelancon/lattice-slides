@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import deque
 
-from .model import DEFAULT_KEYS, Deck, Edge, Slide
+from .model import Deck, Edge, Slide, key_bindings
 
 
 def resolve_target(deck: Deck, ident: str) -> str | None:
@@ -80,9 +80,7 @@ def resolve_graph(deck: Deck) -> None:
 
     # -- keys (3.11)
     global_keys = set()
-    bindings = dict(DEFAULT_KEYS)
-    for action, keys in deck.meta.keys.items():
-        bindings[action] = [keys] if isinstance(keys, str) else list(keys)
+    bindings = key_bindings(deck.meta.keys)
     for keys in bindings.values():
         global_keys.update(keys)
     for s in deck.slides.values():
