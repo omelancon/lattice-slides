@@ -2,12 +2,16 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-08, after 0.31.0 (`implementation-report-2026-10-08-b.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-08, after 0.32.0 (`implementation-report-2026-10-08-c.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
+- [ ] 0.32.0: look at the manual's "Bands of ranks" (`bbv-bands`) and at your two test cases on your screen (`implementation-report-2026-10-08-c.md` gives the blocks). Things to judge: gutter lanes 5 px apart and runs beside a rank up to 5 px apart (`GUTTER_STEP` in `layout.py`, `SLOT_STEP` in `bbv.js`); the label of an edge between bands 20 px into its run (`LABEL_AFTER`); the gap between bands (48 to 62 px, against 64 between functions).
+- [ ] 0.32.0: no git commit. `git add user_manual/programs/vector-print.bbv docs/implementation-report-2026-10-08-c.md docs/archive/implementation-report-2026-10-08-b.md`, and `git rm docs/implementation-report-2026-10-08-b.md` (the 0.31 report is copied to `docs/archive/`).
+- [ ] 0.32.0: `rank_wrap=auto` aims at the slide's content, since the build does not know a column's width; in a column, give `fit_aspect` or a count. The runtime choice of the count (your stretch goal) is on the roadmap; say if you want it next.
+- [ ] 0.32.0: only Chromium was available: check the banded drawings in Firefox once (the routes are SVG paths computed from positions, nothing measured).
 - [ ] 0.31.0: look at the manual's "Paths through calls" on your screen: the call edges and the return edges a path takes in green, and on a return edge the indices it was taken for in green and bold, the others faded to 35 % (`.lt-bbv-edge-lit`, `.lt-bbv-edge-unlit` in `lattice.css`). Say if the faded indices should stay readable at full ink instead.
-- [ ] 0.31.0: your slide "Example: polynomial and square" (`phd_defense/src/lv.md`, not touched): with `paths:` added, its timeline must stop the run before the path frames (`ex-lv ..end-3` for three paths, then `ex-lv end-2`, `end-1`, `end`), and its last arrows (`ex-idx-*`, `ex-notes 20` and `21`) must move to a step before them; `implementation-report-2026-10-08-b.md` gives the lines.
+- [ ] 0.31.0: your slide "Example: polynomial and square" (`phd_defense/src/lv.md`, not touched): with `paths:` added, its timeline must stop the run before the path frames (`ex-lv ..end-3` for three paths, then `ex-lv end-2`, `end-1`, `end`), and its last arrows (`ex-idx-*`, `ex-notes 20` and `21`) must move to a step before them; `archive/implementation-report-2026-10-08-b.md` gives the lines.
 - [ ] 0.31.0: `reads_exhausted: error` fails as soon as some branch of the may-path could read once more (a loop that reads until a test fails, with a short `reads`). Say if a third value that ends that branch of the path at the read (`stop`) would serve better.
 - [ ] 0.31.0: the recursion cap agreed in the design (`depth`, default 8) was replaced by summaries per activation, which match calls and returns at any depth (spec 9.5, design decision 41): a doubly recursive `fib` took 4 s per path at depth 8 with a stack. There is no `depth` key; say if you want one anyway.
 - [ ] 0.30.0: try Shift+Right and Shift+Left on your own slides and on the manual's "Checkpoints" and "Lambda versioning and abstract interpretation" (two runs, `lv` then `ai`), with the presenter view open: its moves list names the step each key reaches and its kind (`reveal`, `columns` or the component, `bbv-anim + arrow` for a line that moves both). Say if the kind should name the track id (`#cfg`) rather than the component type, which is ambiguous when a slide has two components of one type. `docs/implementation-report-2026-10-07-c.md` (0.29) is copied to `docs/archive/`: `git rm` it in `docs/`, `git add` the new report and the archived copy.
@@ -80,6 +84,8 @@ Code (0.12):
 - [ ] Character-level alignment of identifiers (`xs` to `xs2`): whole tokens are replaced today, by design.
 
 Basic block versioning and abstract interpretation (from `archive/todo.md`, plus 0.7; the Gambit importer, a Scheme front end, jump cascade removal and other traversal orders are on the roadmap):
+- [ ] 0.32.0: an edge between two bands that are not neighbours (three bands or more) passes the bands between them on one line beyond the ends of their ranks, shared by every such edge; give it lanes if it shows up in a real deck.
+- [ ] 0.32.0: inside a band, an edge that skips ranks is still a curve that may cross a block of the ranks it skips (as without bands; seen in case A with `snake`, `N3 -> F1` past the corner of `D1`). The routing of edges between bands could serve them too.
 - [ ] 0.28.0: paths on `abstract-interp-anim` (the blocks an input may reach on the fixed CFG); the ΛV half of this item is done in 0.31.0.
 - [ ] A `code` panel key: the version of the current frame with its specialized code (removed tests struck through) listed in the panel, for slides that draw `show: [label, context]` (discussed on 2026-10-02, not needed yet since `show` covers it).
 - [ ] The blog's backward-score heuristic, as another `heuristic` value.

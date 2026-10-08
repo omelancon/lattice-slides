@@ -146,7 +146,7 @@ def render_slide_components(deck: Deck, slide: Slide, cache: Cache, palette: dic
         instance = f"{slide.id}/{b.id}"
         key = cache_key([__version__, LIB_HASH, b.name, comp_cls.version, comp_cls.__module__,
                          opts.model_dump(mode="json"), b.body, str(b.file_dir),
-                         keys.get(leader.index) if leader else None, palette])
+                         keys.get(leader.index) if leader else None, palette, deck.meta.aspect])
         hit = cache.get(key)
         if hit is not None:
             result, deps, warnings = hit

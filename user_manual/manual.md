@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.31.0
+author: Lattice 0.32.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1358,15 +1358,32 @@ steps:
 
 | Option | Meaning |
 |---|---|
-| `program="f.bbv"`, `program="f.py:fn"`, `source:` | The program: a file, a Python function returning a `Program` or its text, or the text in the body |
-| `algorithm`, `limit`, `limits: {f: 3, g: none}` | `sbbv` or `lv`; the version limit, overall or per function |
-| `heuristic` | The merge heuristic: `similarity`, `arithmetic` or `random` |
-| `entry`, `functions: [f, g]` | The function traversed first; the functions drawn, in that order (hidden ones are analysed, not drawn) |
-| `events`, `granularity=instruction`, `until`, `paths` | Event kinds kept; one frame per instruction; stop after N; [[bbv-paths|paths]] at the end (by `input`, `reads` or `versions`) |
+| `program="f.bbv"`, `program="f.py:fn"`, `source:` | The program: a file, a Python function returning it, or its text |
+| `algorithm`, `limit`, `limits: {f: 3, g: none}`, `heuristic` | `sbbv` or `lv`; the version limit, overall or per function; the merge heuristic (`similarity`, `arithmetic`, `random`) |
+| `entry`, `functions: [f, g]` | The function traversed first; the functions drawn, in order |
+| `events`, `granularity=instruction`, `until`, `paths` | Event kinds kept; one frame per instruction; stop after N; paths at the end |
 | `panel: [queue, versions, checks, merges, limit]`, `panel_at=below`, `caption=none` | Panel entries, and where the panel sits (`auto`, `right`, `below`); no captions |
 | `colors=none`, `direction=LR`, `wrap=4`, `call_edges`, `height`, `prims` | Fills off; block bands direction; versions per line; dotted call edges; drawing height; extra primitives (a predicate declared there can be tested in an `if`) |
-| `intervals=true`, `thresholds`, `fixnum_bits=61`, `vector_bounds=false` | Track integer intervals and vector lengths (merges widen with the thresholds of the abstract interpreter); the fixnum width; lengths as numbers instead of `⟦v⟧` |
+| `intervals=true`, `thresholds`, `fixnum_bits=61`, `vector_bounds=false` | Integer intervals and vector lengths (merges widen with the thresholds); the fixnum width; lengths as numbers, not `⟦v⟧` |
 | `clickable=off`, `clickable_show` | No enlarging on click; what an enlarged block shows |
+| `rank_wrap=2` or `auto`, `rank_wraps`, `rank_flow`, `fit_aspect` | Cut the ranks into bands laid side by side: [[bbv-bands]] |
+
+# Bands of ranks {#bbv-bands .dense}
+
+:::: columns
+::: column {width=5fr}
+```bbv-anim {#bands program="programs/vector-print.bbv" algorithm=sbbv heuristic=arithmetic limit=2 intervals=true vector_bounds=false direction=LR rank_wrap=2 height=450}
+show: [label, context]
+thresholds: [0, 1, maxfix-1, maxfix]
+```
+:::
+::: column {width=2fr}
+- `rank_wrap=2` cuts the ten ranks of this loop into two bands, one under the other (`TB`: columns side by side), so its text stays readable
+- `rank_wraps: {f: 3}` for one function; `rank_flow=snake` turns every second band back
+- `auto` picks the count that draws largest in the slide; `fit_aspect="3:2"` in a column
+- Edges between bands run in the gaps and gutters, never across a block (spec 9.5)
+:::
+::::
 
 # Paths through the versions {#bbv-paths}
 

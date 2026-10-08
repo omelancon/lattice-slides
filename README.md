@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.31.0. This README covers usage in brief. The rest:
+This is version 0.32.0. This README covers usage in brief. The rest:
 
 - [`user_manual/manual.md`](user_manual/manual.md) is the user manual, itself a Lattice deck (open
   [`user_manual/manual.html`](user_manual/manual.html)): every feature, with a live example of each.
@@ -111,8 +111,8 @@ code language.
 | ` ```array-anim {source="sorts.py:bubble"} ` + `values: [...]` | Animated array from an `ArrayTrace` |
 | ` ```tree-anim {source="avl.py:avl_trace"} ` + `values: [...]` | Animated tree from a `TreeTrace`: insertions, deletions and rotations, nodes glide to their new places |
 | ` ```grid-anim {source="grids.py:lcs_trace"} ` | Animated grid from a `GridTrace`: mazes, dynamic programming tables with headers and arrows |
-| ` ```bbv-anim {program="find.bbv" algorithm=sbbv limit=2} ` + `show: [label, context]` | Basic block versioning step by step: the specialized CFG of a small program grows, merges and settles (`algorithm=lv` for Lambda Versioning with entry and return points; `intervals=true` tracks integer intervals and vector lengths, so bound checks and overflow checks disappear); `show` picks what the nodes draw (default: label, context and code), captions name the operation, the versions and the types of each step; a click enlarges a block with everything it holds, exit context included (`clickable=off` to disable, `clickable_show` to choose); `paths:` adds frames after the run that highlight the versions an input may go through (`input: {x: fl}`, the values returned by `read()` with `reads: [fl]`, across calls under ΛV) or a list of versions |
-| ` ```bbv-cfg {program="find.bbv" follow=trace} ` | The source CFG of that program; following an animation, it highlights the block being specialized, or every block of a path |
+| ` ```bbv-anim {program="find.bbv" algorithm=sbbv limit=2} ` + `show: [label, context]` | Basic block versioning step by step: the specialized CFG of a small program grows, merges and settles (`algorithm=lv` for Lambda Versioning with entry and return points; `intervals=true` tracks integer intervals and vector lengths, so bound checks and overflow checks disappear); `show` picks what the nodes draw (default: label, context and code), captions name the operation, the versions and the types of each step; a click enlarges a block with everything it holds, exit context included (`clickable=off` to disable, `clickable_show` to choose); `paths:` adds frames after the run that highlight the versions an input may go through (`input: {x: fl}`, the values returned by `read()` with `reads: [fl]`, across calls under ΛV) or a list of versions; `rank_wrap=2` (or `auto`, `rank_wraps: {f: 2}`, `rank_flow=snake`) cuts the ranks of a long function into bands laid side by side, so that the drawing takes the shape of its box |
+| ` ```bbv-cfg {program="find.bbv" follow=trace} ` | The source CFG of that program; following an animation, it highlights the block being specialized, or every block of a path; `rank_wrap` as on `bbv-anim`, the leader's bands kept |
 | ` ```abstract-interp-anim {program="sum-to-n.bbv"} ` + `history: [B.i]` | Abstract interpretation over the fixed CFG: contexts with types and intervals grow by union with widening and are narrowed at conditionals, until a fixed point; the panel can show the widening chain of a variable |
 | ` ```plot {data="bench.csv" x=n y=ms group=algo logy=true} ` | Chart from a CSV with matplotlib (static SVG), or `backend=vega` / `backend=plotly` for interactive charts; also `source="file.py:fn"` or a raw `spec:` |
 | ` ```diff-steps {lang=python context=3} ` + `versions: [...]` | Step through versions of a file; each step marks added and removed lines |
@@ -233,7 +233,7 @@ Rebuild them all, and the user manual, with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.31.0 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.32.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

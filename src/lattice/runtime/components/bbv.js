@@ -280,6 +280,228 @@
     return { d: polyline(pts), mid };
   }
 
+  // ---- bands of ranks (spec 9.5): the ranks of a function cut into bands laid side by side. Edges are routed
+  // in the frame of the drawing: `a` across (the rank axis: y in TB, x in LR), `l` along (the packing axis).
+  const EXIT_RANK = 0.35, EXIT_LINE = 0.35;  // where an edge runs in the gap after a rank or a line, as a fraction of it
+  // the runs of several edges in one such gap take slots of their own, in this part of the gap (fractions of it,
+  // from the rank or line they leave or reach), at most SLOT_STEP apart
+  const SLOT_NEAR = 0.1, SLOT_FAR = 0.45, SLOT_STEP = 5;
+  const LABEL_AFTER = 20;  // the label of an edge between bands: this far along its run toward the gutter, at most
+
+  function banded(inst, e) {
+    const rw = inst.box.rankWrap;
+    if (!rw) return null;
+    const fa = inst.T.versions[e.src].function, fb = inst.T.versions[e.dst].function;
+    return fa === fb && rw[fa] ? rw[fa] : null;
+  }
+
+  // A node in the frame of the drawing: across start and size, along start and size
+  function frameBox(inst, at, vid) {
+    const p = at[vid], n = inst.nodes[vid];
+    if (!p || !n) return null;
+    return inst.box.direction === "LR" ? { a: p[0], as: n.w, l: p[1], ls: n.h } : { a: p[1], as: n.h, l: p[0], ls: n.w };
+  }
+
+  function pt(inst, a, l) {
+    return inst.box.direction === "LR" ? [a, l] : [l, a];
+  }
+
+  // The free gaps before and after the line of every node of a banded function (between two lines of a wrapped
+  // rank, or before and after the rank), read from the positions: an edge between bands runs along them.
+  function lineGaps(inst, at) {
+    const rw = inst.box.rankWrap;
+    const gapRank = inst.box.gaps.rank, gapLine = inst.box.gaps.line;
+    const nodes = (inst.frame && inst.frame.nodes) || {};
+    const ranks = {};
+    for (const vid of Object.keys(at)) {
+      const v = inst.T.versions[vid];
+      const fw = v && rw[v.function];
+      if (!fw || !inst.nodes[vid] || (nodes[vid] && nodes[vid].mark === "gone")) continue;
+      const b = frameBox(inst, at, vid);
+      const key = `${v.function}/${fw.blocks[v.name][1]}`;
+      const lines = (ranks[key] ||= []);
+      let line = lines.find((x) => Math.abs(x.start - b.a) < 0.5);
+      if (!line) lines.push((line = { start: b.a, end: b.a + b.as }));
+      line.end = Math.max(line.end, b.a + b.as);
+    }
+    for (const lines of Object.values(ranks)) lines.sort((x, y) => x.start - y.start);
+    return (vid) => {
+      const v = inst.T.versions[vid];
+      const fw = rw[v.function];
+      const [, rank, start, end] = fw.blocks[v.name];
+      const lines = ranks[`${v.function}/${rank}`] || [];
+      const b = frameBox(inst, at, vid);
+      const i = b ? lines.findIndex((x) => Math.abs(x.start - b.a) < 0.5) : -1;
+      // a gap: the edge of the line or rank it borders, its width, which way it lies, where a lone run goes
+      const gap = (at, room, dir, frac) => ({ at, room, dir, mid: at + dir * frac * room });
+      if (i < 0) return { before: gap(start, gapRank, -1, EXIT_RANK), after: gap(end, gapRank, 1, EXIT_RANK) };
+      return { before: i === 0 ? gap(start, gapRank, -1, EXIT_RANK) : gap(lines[i].start, gapLine, -1, EXIT_LINE),
+        after: i === lines.length - 1 ? gap(end, gapRank, 1, EXIT_RANK) : gap(lines[i].end, gapLine, 1, EXIT_LINE) };
+    };
+  }
+
+  // An edge inside one band: as without bands, along the band's own direction (a band running backwards
+  // swaps the sides of its nodes), its back edges on the band's lane
+  function routeInBand(inst, at, e, side, fw) {
+    const A = frameBox(inst, at, e.src), B = frameBox(inst, at, e.dst);
+    if (!A || !B) return null;
+    const band = fw.bands[fw.blocks[inst.T.versions[e.src].name][0]];
+    const s = band.flip ? -1 : 1;
+    let sa = s > 0 ? A.a + A.as : A.a, ea = s > 0 ? B.a : B.a + B.as;
+    let sl = A.l + A.ls / 2, el = B.l + B.ls / 2;
+    if (side) { sl += side * PARALLEL_END; el += side * PARALLEL_END; }
+    const back = s > 0 ? B.a < A.a + A.as / 2 : B.a + B.as > A.a + A.as / 2;
+    if (!back) {
+      const bend = side * PARALLEL_BEND, ma = sa + (ea - sa) / 2;
+      const p0 = pt(inst, sa, sl), c1 = pt(inst, ma, sl + bend), c2 = pt(inst, ma, el + bend), p3 = pt(inst, ea, el);
+      const mid = [(p0[0] + 3 * c1[0] + 3 * c2[0] + p3[0]) / 8, (p0[1] + 3 * c1[1] + 3 * c2[1] + p3[1]) / 8];
+      return { d: `M${p0[0]},${p0[1]} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p3[0]},${p3[1]}`, mid };
+    }
+    const toward = side * Math.sign(band.lane - sl);
+    const lane = band.lane - side * PARALLEL_LANE;
+    const out = 22 - toward * PARALLEL_LANE * 0.6;
+    const pts = [[sa, sl], [sa + s * out, sl], [sa + s * out, lane], [ea - s * out, lane], [ea - s * out, el], [ea, el]];
+    return { d: polyline(pts.map(([a, l]) => pt(inst, a, l))), mid: pt(inst, (sa + ea) / 2, lane) };
+  }
+
+  // The course of an edge between two bands, in the frame of the drawing, before its gutter lanes are known:
+  // its ends, the gaps it runs along, its gutters (forward edges use the gutter after their band, backward
+  // ones the gutter before it) and, across bands in between, the end of the ranks it passes by.
+  function course(inst, at, e, side, fw, gaps) {
+    const A = frameBox(inst, at, e.src), B = frameBox(inst, at, e.dst);
+    if (!A || !B) return null;
+    const bs = fw.blocks[inst.T.versions[e.src].name][0], bd = fw.blocks[inst.T.versions[e.dst].name][0];
+    const fs = fw.bands[bs].flip, fd = fw.bands[bd].flip;
+    const gs = gaps(e.src), gd = gaps(e.dst);
+    const exitGap = fs ? gs.before : gs.after, entryGap = fd ? gd.after : gd.before;
+    const c = {
+      x0: [fs ? A.a : A.a + A.as, A.l + A.ls / 2 + side * PARALLEL_END],
+      exitGap, exitA: exitGap.mid,
+      y0: [fd ? B.a + B.as : B.a, B.l + B.ls / 2 + side * PARALLEL_END],
+      entryGap, entryA: entryGap.mid,
+      gOut: bd > bs ? bs : bs - 1, gIn: bd > bs ? bd - 1 : bd, right: bd > bs, side,
+    };
+    if (c.gOut !== c.gIn) {
+      const via = (t) => Math.abs(c.exitA - t) + Math.abs(c.entryA - t);
+      c.endA = via(fw.top) <= via(fw.bottom) ? fw.top : fw.bottom;
+    }
+    return c;
+  }
+
+  // Lanes of the gutters (spec 9.5): every target has its own lane, the edges that travel farthest nearest the
+  // band they leave; beyond the lanes of a gutter, the targets closest to each other share one.
+  function assignLanes(fw, uses) {
+    const lanes = {};
+    for (const [g, list] of Object.entries(uses)) {
+      const gut = fw.gutters[g];
+      const groups = {};
+      for (const u of list) {
+        const x = (groups[u.target] ||= { target: u.target, right: u.right, from: u.from, to: u.to, n: 0 });
+        x.from = (x.from * x.n + u.from) / (x.n + 1);
+        x.n += 1;
+      }
+      const sides = [Object.values(groups).filter((x) => x.right), Object.values(groups).filter((x) => !x.right)];
+      for (const xs of sides) {  // the farthest in the direction of travel first
+        const up = xs.reduce((t, x) => t + (x.to - x.from), 0) < 0;
+        xs.sort((p, q) => (up ? p.to - q.to : q.to - p.to) || (p.target < q.target ? -1 : 1));
+      }
+      const count = () => sides[0].length + sides[1].length;
+      while (count() > gut.lanes) {  // merge the two neighbours whose targets are closest
+        let best = null;
+        for (const xs of sides) {
+          for (let i = 0; i + 1 < xs.length; i++) {
+            const d = Math.abs(xs[i].to - xs[i + 1].to);
+            if (!best || d < best.d) best = { xs, i, d };
+          }
+        }
+        if (!best) break;
+        const [p, q] = best.xs.splice(best.i, 2);
+        best.xs.splice(best.i, 0, { ...p, members: [...(p.members || [p.target]), ...(q.members || [q.target])] });
+      }
+      const at = (k) => gut.at + k * gut.step;
+      sides[0].forEach((x, k) => { for (const t of x.members || [x.target]) lanes[`${g}/${t}`] = at(k); });
+      sides[1].forEach((x, k) => { for (const t of x.members || [x.target]) lanes[`${g}/${t}`] = at(gut.lanes - 1 - k); });
+    }
+    return lanes;
+  }
+
+  // The point at a distance along a polyline
+  function pointAt(points, dist) {
+    for (let i = 1; i < points.length; i++) {
+      const [ax, ay] = points[i - 1], [bx, by] = points[i];
+      const len = Math.hypot(bx - ax, by - ay);
+      if (dist <= len || i === points.length - 1) {
+        const k = len ? Math.min(1, dist / len) : 0;
+        return [ax + (bx - ax) * k, ay + (by - ay) * k];
+      }
+      dist -= len;
+    }
+    return points[0];
+  }
+
+  // Routes of the edges between bands of one function: leave the source on its usual side into the gap after
+  // its line, run along that gap to the gutter, along the gutter (passing bands in between beyond the ends of
+  // their ranks) to the gap before the target's line, and along it into the target. No node is crossed.
+  function routesBetweenBands(inst, at, keys, side) {
+    const gaps = lineGaps(inst, at);
+    const courses = {}, uses = {};
+    for (const key of keys) {
+      const e = inst.edges[key];
+      const fw = banded(inst, e);
+      const c = course(inst, at, e, side[key] || 0, fw, gaps);
+      if (!c) continue;
+      const fn = inst.T.versions[e.src].function;
+      courses[key] = { c, fw, fn };
+      const use = (g, from, to, right) => ((uses[fn] ||= {})[g] ||= []).push({ target: e.dst, from, to, right });
+      if (c.gOut === c.gIn) use(c.gOut, c.exitA, c.entryA, c.right);
+      else { use(c.gOut, c.exitA, c.endA, c.right); use(c.gIn, c.endA, c.entryA, c.right); }
+    }
+    const lanes = {};
+    for (const [fn, u] of Object.entries(uses)) lanes[fn] = assignLanes(inst.box.rankWrap[fn], u);
+    const shiftOf = (c) => c.side * 2;  // two edges between the same versions keep apart on their lane
+    for (const [key, { c, fn }] of Object.entries(courses)) {
+      const dst = inst.edges[key].dst;
+      c.l1 = lanes[fn][`${c.gOut}/${dst}`] + shiftOf(c);
+      c.l2 = lanes[fn][`${c.gIn}/${dst}`] + shiftOf(c);
+    }
+    // The runs in the gap after a source and before a target take slots too, so that no two edges share a
+    // segment there: every edge leaving a gap has its own slot, the edges into one target share theirs (as in
+    // the gutter); the run that travels farthest to its gutter lies farthest from the rank, so runs do not cross.
+    const slots = {};
+    const slot = (fn, g, id, dist, set) => {
+      const k = `${fn}|${g.dir}|${g.at.toFixed(1)}`;
+      ((slots[k] ||= { g, items: {} }).items[id] ||= { dist: 0, sets: [] });
+      const it = slots[k].items[id];
+      it.dist = Math.max(it.dist, dist);
+      it.sets.push(set);
+    };
+    for (const [key, { c, fn }] of Object.entries(courses)) {
+      slot(fn, c.exitGap, `out:${key}`, Math.abs(c.l1 - c.x0[1]), (a) => { c.exitA = a; });
+      slot(fn, c.entryGap, `in:${inst.edges[key].dst}`, Math.abs(c.l2 - c.y0[1]), (a) => { c.entryA = a; });
+    }
+    for (const { g, items } of Object.values(slots)) {
+      const list = Object.entries(items).sort((p, q) => p[1].dist - q[1].dist || (p[0] < q[0] ? -1 : 1));
+      if (list.length < 2) continue;  // a lone run keeps the middle of its part of the gap
+      const near = SLOT_NEAR * g.room, far = SLOT_FAR * g.room;
+      const step = Math.min(SLOT_STEP, (far - near) / (list.length - 1));
+      list.forEach(([, it], k) => { for (const set of it.sets) set(g.at + g.dir * (near + k * step)); });
+    }
+    const out = {};
+    for (const [key, { c }] of Object.entries(courses)) {
+      const l1 = c.l1, l2 = c.l2;
+      let pts = [c.x0, [c.exitA, c.x0[1]], [c.exitA, l1]];
+      if (c.gOut !== c.gIn) pts.push([c.endA, l1], [c.endA, l2]);
+      pts.push([c.entryA, l2], [c.entryA, c.y0[1]], c.y0);
+      const run = Math.abs(c.exitA - c.x0[0]), toward = Math.abs(l1 - c.x0[1]);
+      const mid = pointAt(pts, run + Math.min(toward / 2, LABEL_AFTER));  // just after the source
+      // a gap reached without moving along (a node at the end of its band) leaves a point twice: drop it
+      pts = pts.filter((q, i) => i === 0 || Math.hypot(q[0] - pts[i - 1][0], q[1] - pts[i - 1][1]) > 0.01);
+      pts = pts.map(([a, l]) => pt(inst, a, l));
+      out[key] = { d: polyline(pts), mid: pt(inst, mid[0], mid[1]) };
+    }
+    return out;
+  }
+
   const KIND_ORDER = ["true", "goto", "return", "call", "false"];
 
   // -1, 0 or 1 per drawn edge: the place of an edge among the drawn edges between the same two nodes
@@ -300,9 +522,21 @@
   function place(inst, at) {
     for (const [vid, p] of Object.entries(at)) if (inst.nodes[vid]) inst.nodes[vid].g.setAttribute("transform", `translate(${p[0]},${p[1]})`);
     const side = sides(inst);
+    const between = [];
+    if (inst.box.rankWrap) {  // edges between two bands of a function are routed together (their gutter lanes)
+      for (const [key, e] of Object.entries(inst.edges)) {
+        if (e.g.classList.contains("lt-gone")) continue;
+        const fw = banded(inst, e);
+        if (!fw) continue;
+        const v = inst.T.versions;
+        if (fw.blocks[v[e.src].name][0] !== fw.blocks[v[e.dst].name][0]) between.push(key);
+      }
+    }
+    const crossing = between.length ? routesBetweenBands(inst, at, between, side) : {};
     for (const [key, e] of Object.entries(inst.edges)) {
       if (e.g.classList.contains("lt-gone")) continue;
-      const r = route(inst, at, e, side[key] || 0);
+      const fw = inst.box.rankWrap ? banded(inst, e) : null;
+      const r = key in crossing ? crossing[key] : fw ? routeInBand(inst, at, e, side[key] || 0, fw) : route(inst, at, e, side[key] || 0);
       if (!r) continue;
       e.path.setAttribute("d", r.d);
       e.label.setAttribute("x", r.mid[0]);

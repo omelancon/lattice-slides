@@ -2849,3 +2849,225 @@ run end
         if "Executable doesn't exist" in str(e):
             pytest.skip("Chromium for Playwright is not installed")
         raise
+
+
+# ------------------------------------------------------------ bands of ranks (spec 9.5)
+
+BANDS_RUNTIME_DECK = """
+# A LR {#alr}
+```bbv-anim {#vp program="vp.bbv" algorithm=sbbv heuristic=arithmetic limit=2 intervals=true vector_bounds=false direction=LR height=480 rank_wrap=2}
+thresholds: [0, 1, maxfix-1, maxfix]
+```
+```arrow {#w}
+steps: [vp.J1, vp.I1->J1]
+```
+```timeline
+vp ..end-1
+vp end, w 0
+w 1
+```
+
+# A LR snake {#asnake}
+```bbv-anim {#vp program="vp.bbv" algorithm=sbbv heuristic=arithmetic limit=2 intervals=true vector_bounds=false direction=LR height=480 rank_wrap=2 rank_flow=snake}
+thresholds: [0, 1, maxfix-1, maxfix]
+paths:
+  - input: {v: vec}
+```
+
+# A TB 3 snake {#atb}
+```bbv-anim {#vp program="vp.bbv" algorithm=sbbv heuristic=arithmetic limit=2 intervals=true vector_bounds=false direction=TB height=480 rank_wrap=3 rank_flow=snake}
+thresholds: [0, 1, maxfix-1, maxfix]
+```
+
+# B TB {#btb}
+```bbv-anim {#fib program="fib.bbv" algorithm=lv heuristic=arithmetic limit=3 entry=main direction=TB}
+rank_wraps: {fib: 2}
+```
+
+# B LR snake {#blr}
+```bbv-anim {#fib program="fib.bbv" algorithm=lv heuristic=arithmetic limit=3 entry=main direction=LR rank_wrap=2 rank_flow=snake call_edges=true}
+show: [label, context]
+```
+"""
+
+CROSSINGS_JS = """([inst, keys]) => {
+    const sec = document.querySelector('.lt-slide:not([hidden])');
+    const wrap = sec.querySelector(`[data-instance="${inst}"]`);
+    const rects = Array.from(wrap.querySelectorAll('.lt-bbv-node'))
+        .filter(g => !g.classList.contains('lt-gone') && !g.classList.contains('mk-gone'))
+        .map(g => {
+            const m = /translate\\(([-\\d.e]+),([-\\d.e]+)\\)/.exec(g.getAttribute('transform'));
+            const r = g.querySelector('rect');
+            return {vid: g.dataset.vid, x: +m[1], y: +m[2], w: +r.getAttribute('width'), h: +r.getAttribute('height')};
+        });
+    const bad = new Set();
+    let checked = 0;
+    for (const k of keys) {
+        const g = wrap.querySelector(`.lt-bbv-edge[data-key="${k}"]`);
+        if (!g || g.classList.contains('lt-gone')) continue;
+        checked += 1;
+        const p = g.querySelector('path'), len = p.getTotalLength();
+        if (!(len > 0)) bad.add(k + ' empty');
+        for (let s = 0; s <= len; s += 2) {
+            const q = p.getPointAtLength(s);
+            for (const r of rects) {
+                if (q.x > r.x + 1 && q.x < r.x + r.w - 1 && q.y > r.y + 1 && q.y < r.y + r.h - 1) bad.add(`${k} crosses ${r.vid}`);
+            }
+        }
+    }
+    return {checked, bad: Array.from(bad)};
+}"""
+
+
+OVERLAPS_JS = """([inst, keys, full]) => {
+    // two edges between bands with different sources and targets never share a segment (spec 9.5): the points of
+    // one, away from its ends, that lie on the other, in runs longer than a crossing makes; inside a gutter that
+    // uses all its lanes (`full`: [axis, lo, hi]), the targets closest to each other share one by design
+    const sec = document.querySelector('.lt-slide:not([hidden])');
+    const wrap = sec.querySelector(`[data-instance="${inst}"]`);
+    const paths = [];
+    for (const k of keys) {
+        const g = wrap.querySelector(`.lt-bbv-edge[data-key="${k}"]`);
+        if (!g || g.classList.contains('lt-gone')) continue;
+        const p = g.querySelector('path'), len = p.getTotalLength(), pts = [];
+        for (let s = 0; s <= len; s += 1) { const q = p.getPointAtLength(s); pts.push([q.x, q.y, s, len]); }
+        const [src, rest] = k.split('->');
+        paths.push({k, src, dst: rest.split(':')[0], pts});
+    }
+    const bad = [];
+    for (const a of paths) {
+        for (const b of paths) {
+            if (a === b || a.src === b.src || a.dst === b.dst) continue;
+            let run = 0, longest = 0;
+            for (const [x, y, s, len] of a.pts) {
+                const inFull = full.some(([axis, lo, hi]) => (axis === 'x' ? x : y) > lo && (axis === 'x' ? x : y) < hi);
+                const on = !inFull && s > 24 && s < len - 24 && b.pts.some(([u, v]) => Math.abs(u - x) < 0.75 && Math.abs(v - y) < 0.75);
+                run = on ? run + 1 : 0;
+                longest = Math.max(longest, run);
+            }
+            if (longest > 6) bad.push(`${a.k} on ${b.k} (${longest})`);
+        }
+    }
+    return bad;
+}"""
+
+
+def _between_bands(data):
+    """The keys of the edges that join two bands of one function, over every frame."""
+    from lattice.anim import frames_of
+
+    rw = data["box"]["rankWrap"]
+    versions = data["tables"]["versions"]
+    keys = set()
+    for f in frames_of(data["frames"]):
+        for key in f.get("edges", {}):
+            src, rest = key.split("->", 1)
+            dst = rest.split(":", 1)[0]
+            a, b = versions[src], versions[dst]
+            fw = rw.get(a["function"])
+            if fw and a["function"] == b["function"] and fw["blocks"][a["name"]][0] != fw["blocks"][b["name"]][0]:
+                keys.add(key)
+    return sorted(keys)
+
+
+def test_edges_between_bands_cross_no_node(tmp_path):
+    """Spec 9.5: an edge between two bands runs in the gaps and gutters only, shares no segment with an edge of
+    another source and target, in both directions and flows,
+    on a fresh load, after an animated step and in print mode; arrows at a version and at such an edge find
+    them; a block of a banded drawing still enlarges."""
+    from pathlib import Path
+
+    from lattice.bbv.layout import GUTTER_LANES
+    from lattice.build import build_deck
+
+    root = Path(__file__).resolve().parent.parent
+    (tmp_path / "vp.bbv").write_text((root / "user_manual" / "programs" / "vector-print.bbv").read_text())
+    from test_bbv import FIB_CALL
+
+    (tmp_path / "fib.bbv").write_text(FIB_CALL)
+    src = tmp_path / "talk.md"
+    src.write_text(BANDS_RUNTIME_DECK)
+    deck = build_deck(src, use_cache=False)
+    assert not deck.diagnostics.items, deck.diagnostics.items
+    cases = []
+    for slide, inst in (("alr", "vp"), ("asnake", "vp"), ("atb", "vp"), ("btb", "fib"), ("blr", "fib")):
+        data = deck.instances[f"{slide}/{inst}"]["data"]
+        keys = _between_bands(data)
+        assert keys
+        full = []  # the gutters at their most lanes
+        for fw in data["box"]["rankWrap"].values():
+            for g, gut in enumerate(fw["gutters"]):
+                if gut["lanes"] >= GUTTER_LANES:
+                    full.append(["x" if data["box"]["direction"] == "TB" else "y", fw["bands"][g]["end"],
+                                 fw["bands"][g + 1]["start"]])
+        cases.append((slide, f"{slide}/{inst}", keys, deck.slides[slide].steps, full))
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type in ("error", "warning") else None)
+            page.goto(out.as_uri())
+            page.wait_for_timeout(300)
+            for slide, inst, keys, steps, full in cases:
+                for step in (steps // 3, steps - 2, steps - 1):
+                    page.evaluate(f"location.hash = '#/{slide}/{step}'")
+                    page.wait_for_timeout(250)
+                    r = page.evaluate(CROSSINGS_JS, [inst, keys])
+                    assert r["checked"] and not r["bad"], (slide, step, r)
+                    shared = page.evaluate(OVERLAPS_JS, [inst, keys, full])
+                    assert not shared, (slide, step, shared)
+                page.evaluate(f"location.hash = '#/{slide}/{steps // 2}'")
+                page.wait_for_timeout(250)
+                page.keyboard.press("ArrowRight")  # an animated step: nodes glide, then the edges rest in place
+                page.wait_for_timeout(700)
+                r = page.evaluate(CROSSINGS_JS, [inst, keys])
+                assert not r["bad"], (slide, "animated", r)
+            # a path frame lights edges between bands, routed the same way (checked above at its last step)
+            page.evaluate(f"location.hash = '#/asnake/{cases[1][3] - 1}'")
+            page.wait_for_timeout(300)
+            lit = page.evaluate("""(keys) => keys.filter(k => document.querySelector(
+                `.lt-slide:not([hidden]) .lt-bbv-edge.st-path[data-key="${k}"]`)).length""", cases[1][2])
+            assert lit >= 2
+            # arrows at a version and at an edge between bands, the edge's mark just after its source
+            data = deck.instances["alr/vp"]["data"]
+            vid = {v["label"]: k for k, v in data["tables"]["versions"].items()}
+            edge = next(k for k in cases[0][2] if k.startswith(f"{vid['I1']}->{vid['J1']}:"))
+            steps = cases[0][3]
+            for k, sel in enumerate((f'.lt-bbv-node[data-vid="{vid["J1"]}"]',
+                                     f'.lt-bbv-edge[data-key="{edge}"] > .lt-bbv-edge-mark')):
+                page.evaluate(f"location.hash = '#/alr/{steps - 2 + k}'")
+                page.wait_for_timeout(400)
+                m = page.evaluate(PARTS_JS, ["alr/w", sel])
+                assert m["shown"] and _near_box(m), (sel, m)
+            near = page.evaluate("""([src, key]) => {
+                const sec = document.querySelector('.lt-slide:not([hidden])');
+                const g = sec.querySelector(`.lt-bbv-node[data-vid="${src}"]`), r = g.querySelector('rect');
+                const t = /translate\\(([-\\d.e]+),([-\\d.e]+)\\)/.exec(g.getAttribute('transform'));
+                const m = sec.querySelector(`.lt-bbv-edge[data-key="${key}"] > .lt-bbv-edge-mark`);
+                const x = +m.getAttribute('x'), y = +m.getAttribute('y');
+                const dx = Math.max(+t[1] - x, 0, x - (+t[1] + +r.getAttribute('width')));
+                const dy = Math.max(+t[2] - y, 0, y - (+t[2] + +r.getAttribute('height')));
+                return Math.max(dx, dy);
+            }""", [vid["I1"], edge])
+            assert near < 70, near  # within the step out and the first 40 units of its run
+            # a block of a banded drawing enlarges
+            page.evaluate("location.hash = '#/btb/0'")
+            page.wait_for_timeout(300)
+            page.click('.lt-slide:not([hidden]) .lt-bbv-node:not(.lt-gone)')
+            page.wait_for_timeout(400)
+            assert page.evaluate("Lattice.zoomed()")
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(400)
+            # print mode draws the same routes
+            page.goto(out.as_uri() + "?print")
+            page.wait_for_timeout(600)
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors, errors

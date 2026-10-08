@@ -2,7 +2,7 @@
 ``bbv-cfg`` (the source CFG of a program, static or following an animation). Spec 8.8 and 9.1."""
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -32,6 +32,10 @@ class BbvCommonOptions(BaseModel):
     prims: dict | None = None
     clickable: bool = True  # a click on a block enlarges it (spec 9.5)
     clickable_show: list[str] | None = None  # what the enlarged block shows; default everything
+    rank_wrap: Any = 1  # bands of ranks (spec 9.5): an integer >= 1 or "auto"
+    rank_wraps: dict | None = None  # per function, over rank_wrap
+    rank_flow: Literal["restart", "snake"] = "restart"
+    fit_aspect: Any = None  # "W:H", the target aspect of `auto`
 
 
 class BbvAnimOptions(BbvCommonOptions):
@@ -78,7 +82,7 @@ class AbstractInterpOptions(BbvCommonOptions):
 _KNOWN = {"program", "source", "functions", "show", "colors", "direction", "height", "prims", "algorithm", "limit", "limits",
           "heuristic", "entry", "events", "granularity", "until", "call_edges", "panel", "caption", "max_steps", "wrap",
           "thresholds", "narrowing", "fixnum_bits", "history", "intervals", "clickable", "clickable_show", "vector_bounds",
-          "panel_at", "paths"}
+          "panel_at", "paths", "rank_wrap", "rank_wraps", "rank_flow", "fit_aspect"}
 
 
 def load_program(opts: BbvCommonOptions, ctx) -> Program:
@@ -137,6 +141,75 @@ def _zoom(opts: BbvCommonOptions, versions: dict, frames: list[dict]) -> dict | 
             w, h = node_size({**v, "context": st.get("lines", v["context"]), "after": st.get("after", v["after"])}, show)
             sizes[vid] = (max(sizes[vid][0], w), max(sizes[vid][1], h))
     return {"show": show, "sizes": {vid: list(s) for vid, s in sizes.items()}}
+
+
+SLIDE_PAD_X = 72  # the horizontal padding of .lt-slide (lattice.css)
+PANEL_GAP = 28  # the gap between the drawing and its panel (.lt-ga-main)
+DEFAULT_HEIGHT = 430  # the default height of the drawing (.lt-ga-canvas)
+
+
+def _count(value, what: str) -> int | str:
+    """A band count: an integer >= 1 or ``auto`` (spec 9.5)."""
+    if isinstance(value, str) and value.strip() == "auto":
+        return "auto"
+    if isinstance(value, str) and re.fullmatch(r"\s*\d+\s*", value):
+        value = int(value)
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 1:
+        return value
+    raise ComponentError(f"{what}: expected an integer >= 1 or auto, got {value!r}")
+
+
+def _bands(opts: BbvCommonOptions, prog: Program, ctx, panel: bool) -> dict:
+    """The keyword arguments of ``layout_frames`` for the bands of ranks, checked (spec 9.5)."""
+    wrap = _count(opts.rank_wrap, "rank_wrap")
+    wraps = None
+    if opts.rank_wraps is not None:
+        if not isinstance(opts.rank_wraps, dict):
+            raise ComponentError("rank_wraps: expected a mapping {FUNCTION: N | auto}")
+        wraps = {}
+        for name, value in opts.rank_wraps.items():
+            if name not in prog.functions:
+                raise ComponentError(f"rank_wraps: {name!r} is not a function of the program "
+                                     f"(functions: {', '.join(prog.functions)})")
+            wraps[name] = _count(value, f"rank_wraps: {name}")
+    auto = wrap == "auto" or any(v == "auto" for v in (wraps or {}).values())
+    height = float(opts.height or DEFAULT_HEIGHT)
+    fit = None
+    if opts.fit_aspect is not None:
+        m = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\s*", str(opts.fit_aspect)) \
+            if isinstance(opts.fit_aspect, str) else None
+        if not m or float(m.group(1)) <= 0 or float(m.group(2)) <= 0:
+            hint = " (in a YAML body, quote it: \"16:9\")" if isinstance(opts.fit_aspect, int) else ""
+            raise ComponentError(f"fit_aspect: expected two positive numbers W:H, got {opts.fit_aspect!r}{hint}")
+        if auto:
+            fit = (height * float(m.group(1)) / float(m.group(2)), height)
+        else:
+            ctx.warn("fit_aspect has no effect without rank_wrap=auto (or auto in rank_wraps)")
+    if auto and fit is None:
+        from ..emit import DESIGN_SIZES
+
+        aspect = getattr(ctx.meta, "aspect", "16:9")
+        width = float(DESIGN_SIZES.get(aspect, DESIGN_SIZES["16:9"])[0] - 2 * SLIDE_PAD_X)
+        if panel:  # the panel beside the drawing: clamp(150px, 22%, 260px) in lattice.css, and the gap
+            width -= min(max(150.0, 0.22 * width), 260.0) + PANEL_GAP
+        fit = (width, height)
+    cuts = None
+    leader = getattr(ctx, "leader", None)
+    if leader is not None and isinstance(leader.data, dict):
+        lead = (leader.data.get("box") or {}).get("rankWrap") or {}
+        cuts = {name: band["cut"] for name, band in lead.items()} or None
+    return {"rank_wrap": wrap, "rank_wraps": wraps, "rank_flow": opts.rank_flow, "fit": fit, "cuts": cuts}
+
+
+def _layout(tables: dict, frames: list[dict], show: list[str], opts: BbvCommonOptions, prog: Program, ctx,
+            panel: bool = False, call_edges: bool = False):
+    """``layout_frames`` with the options of the drawing; a clamped band count warns (LT046)."""
+    notes: list[str] = []
+    box, positions = layout_frames(tables, frames, show, _layout_fn(ctx), opts.direction, opts.wrap,
+                                   call_edges=call_edges, notes=notes, **_bands(opts, prog, ctx, panel))
+    for note in notes:
+        ctx.warn(note)
+    return box, positions
 
 
 def _layout_fn(ctx):
@@ -327,7 +400,8 @@ class BbvAnim(_NamesParts, Component):
             raise ComponentError(str(e)) from None
         if trace.spec.truncated:
             ctx.warn(f"bbv-anim: stopped after {opts.max_steps} steps without converging (raise max_steps or lower the limit)")
-        box, positions = layout_frames(trace.tables, trace.frames, show, _layout_fn(ctx), opts.direction, opts.wrap)
+        box, positions = _layout(trace.tables, trace.frames, show, opts, prog, ctx,
+                                 panel=bool(opts.panel) and opts.panel_at != "below", call_edges=opts.call_edges)
         frames = [{**f, "pos": p} for f, p in zip(trace.frames, positions)]
         cfg = ctx.frames_config
         data = {"box": box, "tables": trace.tables, "frames": frame_store(frames, cfg.max_full_bytes, cfg.keyframe_interval),
@@ -375,8 +449,7 @@ class BbvCfg(_NamesParts, Component):
                     key = f"{ids[b['key']]}->{ids[fn['name'] + '/' + e['to']]}:{e['kind']}"
                     edges[key] = {"kind": e["kind"]}
         frame = {"nodes": nodes, "edges": edges, "caption": "", "panel": {}}
-        box, positions = layout_frames({"program": program_table, "versions": versions}, [frame], show, _layout_fn(ctx),
-                                       opts.direction, opts.wrap)
+        box, positions = _layout({"program": program_table, "versions": versions}, [frame], show, opts, prog, ctx)
         frames = [{**frame, "pos": positions[0]}]
         highlight = None
         count = 1
@@ -426,12 +499,13 @@ class AbstractInterpAnim(_NamesParts, Component):
             raise ComponentError(str(e)) from None
         if trace.ai.truncated:
             ctx.warn(f"abstract-interp-anim: no fixed point after {opts.max_steps} steps (use thresholds for widening)")
-        box, positions = layout_frames(trace.tables, trace.frames, show, _layout_fn(ctx), opts.direction, opts.wrap)
-        frames = [{**f, "pos": p} for f, p in zip(trace.frames, positions)]
-        cfg = ctx.frames_config
         panel = None
         if opts.panel is not None:
             panel = [k for k in opts.panel if k != "history"] + (opts.history or [] if "history" in opts.panel else [])
+        box, positions = _layout(trace.tables, trace.frames, show, opts, prog, ctx,
+                                 panel=bool(panel) and opts.panel_at != "below")
+        frames = [{**f, "pos": p} for f, p in zip(trace.frames, positions)]
+        cfg = ctx.frames_config
         data = {"box": box, "tables": trace.tables, "frames": frame_store(frames, cfg.max_full_bytes, cfg.keyframe_interval),
                 "show": show, "colors": _colors(trace.tables, ctx, opts.colors), "callEdges": False,
                 "panel": panel, "height": opts.height, "algorithm": "absint", "static": True,

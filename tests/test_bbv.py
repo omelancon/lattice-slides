@@ -1502,3 +1502,264 @@ run end, w 2
     items = check_deck(root, use_cache=False).items
     assert any(x.code == "LT022" and "paths[1]: reads_exhausted: cannot read the type 'maybe'" in x.message
                for x in items), items
+
+
+# ------------------------------------------------------------ bands of ranks (spec 9.5)
+
+VECTOR_PRINT = (Path(__file__).resolve().parent.parent / "user_manual" / "programs" / "vector-print.bbv").read_text(
+    encoding="utf-8")
+VP_RUN = dict(algorithm="sbbv", heuristic="arithmetic", limit=2, intervals=True, vector_bounds=False,
+              thresholds=[0, 1, "maxfix-1", "maxfix"])
+FIB_CALL = """\
+function main()
+M:  n = read()
+    call fib(n) -> N
+N:  return #res
+
+function fib(n)
+A:  if fixnum?(n) goto B else goto C
+B:  if fx<=(n, 1) goto R else goto D
+C:  if ##<=(n, 1) goto R else goto D
+R:  return n
+D:  if fixnum?(n) goto E else goto F
+E:  n1 = fx-?(n, 1)
+    if n1 goto H else goto I
+F:  if flonum?(n) goto G else goto I
+G:  n1 = fl-(n, 1.0)
+    goto H
+I:  n1 = ##-(n, 1)
+    goto H
+H:  call fib(n1) -> J
+J:  a = #res
+    if fixnum?(n) goto K else goto L
+K:  n2 = fx-?(n, 2)
+    if n2 goto P else goto Q
+L:  if flonum?(n) goto O else goto Q
+O:  n2 = fl-(n, 2.0)
+    goto P
+Q:  n2 = ##-(n, 2)
+    goto P
+P:  call fib(n2) -> S
+S:  b = #res
+    if fixnum?(a) goto T else goto V
+T:  if fixnum?(b) goto U else goto V
+U:  r = fx+?(a, b)
+    if r goto W else goto Z
+W:  return r
+V:  if flonum?(a) goto X else goto Z
+X:  if flonum?(b) goto Y else goto Z
+Y:  return fl+(a, b)
+Z:  return ##+(a, b)
+"""
+FIB_RUN = dict(algorithm="lv", heuristic="arithmetic", limit=3, entry="main")
+SHOW = ["label", "context", "code"]
+
+
+def _graphviz():
+    from lattice.graphs import has_graphviz, layout
+
+    if not has_graphviz():
+        pytest.skip("Graphviz is needed for the ranks of the request's estimates")
+    return lambda g: layout(g, engine="dot", rankdir="TB", edge_labels=False)
+
+
+def _run(text, run):
+    return VersioningTrace(parse(text), **run)
+
+
+def _live(frame, pos):
+    return {vid: p for vid, p in pos.items() if frame["nodes"].get(vid, {}).get("mark") != "gone"}
+
+
+def _check_bands(t, box, positions, fn):
+    """No two live versions overlap in any frame, and every version stays in its band, inside its extent."""
+    sizes = box["sizes"]
+    rw = box["rankWrap"][fn]
+    tb = box["direction"] == "TB"
+    seen = {}
+    for f, pos in zip(t.frames, positions):
+        live = sorted(_live(f, pos).items())
+        for i, (a, pa) in enumerate(live):
+            for b, pb in live[i + 1:]:
+                assert not (pa[0] < pb[0] + sizes[b][0] and pb[0] < pa[0] + sizes[a][0]
+                            and pa[1] < pb[1] + sizes[b][1] and pb[1] < pa[1] + sizes[a][1]), (a, b)
+        for vid, p in live:
+            v = t.tables["versions"][vid]
+            if v["function"] != fn:
+                continue
+            k, _, start, end = rw["blocks"][v["name"]]
+            band = rw["bands"][k]
+            lo, hi = (p[0], p[0] + sizes[vid][0]) if tb else (p[1], p[1] + sizes[vid][1])
+            assert band["start"] - 0.1 <= lo and hi <= band["end"] + 0.1
+            q = p[1] if tb else p[0]
+            assert start - 0.1 <= q <= end + 0.1
+            seen.setdefault(vid, set()).add(k)
+    assert all(len(ks) == 1 for ks in seen.values())
+
+
+def test_cut_ranks_is_contiguous_and_balanced():
+    from lattice.bbv.layout import GAP_RANK, band_length, cut_ranks
+
+    exts = [40, 40, 200, 40, 40, 40, 40, 200]
+    assert cut_ranks(exts, 1) == [0]
+    assert cut_ranks(exts, 99) == list(range(8))  # clamped to the number of ranks
+    starts = cut_ranks(exts, 2)
+    assert starts[0] == 0 and len(starts) == 2
+    a, b = band_length(exts[:starts[1]]), band_length(exts[starts[1]:])
+    best = min(max(band_length(exts[:j]), band_length(exts[j:])) for j in range(1, 8))
+    assert max(a, b) == best
+    # among cuts of the same longest band, the most even one
+    assert cut_ranks([10, 10, 10, 100], 2) == [0, 3] and band_length([10, 10, 10]) == 30 + 2 * GAP_RANK
+
+
+def test_one_band_is_the_layout_without_bands():
+    lf = _graphviz()
+    t = _run(VECTOR_PRINT, VP_RUN)
+    plain_box, plain_pos = layout_frames(t.tables, t.frames, SHOW, lf, "LR", 4)
+    assert (plain_box["width"], plain_box["height"]) == (2753.4, 488.0)  # the request's figure for 0.31
+    for kw in ({"rank_wrap": 1}, {"rank_wraps": {"vprint": 1}}, {"rank_wrap": 1, "rank_flow": "snake"}):
+        box, pos = layout_frames(t.tables, t.frames, SHOW, lf, "LR", 4, **kw)
+        assert box == plain_box and pos == plain_pos and "rankWrap" not in box
+
+
+@pytest.mark.parametrize("flow", ["restart", "snake"])
+def test_bands_of_the_two_test_cases(flow):
+    """The acceptance of the request: within 10 % of its estimates, no overlap, every version in one band."""
+    lf = _graphviz()
+    a = _run(VECTOR_PRINT, VP_RUN)
+    box, pos = layout_frames(a.tables, a.frames, SHOW, lf, "LR", 4, rank_wrap=2, rank_flow=flow)
+    assert abs(box["width"] - 1412) / 1412 < 0.1 and abs(box["height"] - 888) / 888 < 0.1
+    assert len(box["rankWrap"]["vprint"]["bands"]) == 2
+    _check_bands(a, box, pos, "vprint")
+    b = _run(FIB_CALL, FIB_RUN)
+    box, pos = layout_frames(b.tables, b.frames, SHOW, lf, "TB", 4, rank_wraps={"fib": 2}, rank_flow=flow)
+    assert abs(box["width"] - 2889) / 2889 < 0.1 and abs(box["height"] - 1438) / 1438 < 0.1
+    assert "main" not in box["rankWrap"] and len(box["rankWrap"]["fib"]["bands"]) == 2
+    _check_bands(b, box, pos, "fib")
+    flips = [band["flip"] for band in box["rankWrap"]["fib"]["bands"]]
+    assert flips == ([False, True] if flow == "snake" else [False, False])
+
+
+def test_snake_bands_run_backwards():
+    lf = _graphviz()
+    t = _run(VECTOR_PRINT, VP_RUN)
+    box, _ = layout_frames(t.tables, t.frames, SHOW, lf, "TB", 4, rank_wrap=3, rank_flow="snake")
+    rw = box["rankWrap"]["vprint"]
+    by_band: dict[int, list] = {}
+    for k, rank, start, _end in sorted(rw["blocks"].values(), key=lambda x: x[1]):
+        by_band.setdefault(k, []).append(start)
+    assert by_band[0] == sorted(by_band[0]) and by_band[2] == sorted(by_band[2])
+    assert by_band[1] == sorted(by_band[1], reverse=True)  # its first rank at the bottom
+    assert [b["flip"] for b in rw["bands"]] == [False, True, False]
+
+
+def test_gutters_widen_with_their_lanes():
+    from lattice.bbv.layout import BAND_GAP, FUNCTION_GAP, GUTTER_LANES, gutter_gap
+
+    assert gutter_gap(1) == gutter_gap(2) == BAND_GAP and gutter_gap(GUTTER_LANES) <= FUNCTION_GAP
+    lf = _graphviz()
+    t = _run(FIB_CALL, FIB_RUN)
+    box, _ = layout_frames(t.tables, t.frames, SHOW, lf, "TB", 4, rank_wraps={"fib": 3})
+    rw = box["rankWrap"]["fib"]
+    for k, g in enumerate(rw["gutters"]):
+        assert 1 <= g["lanes"] <= GUTTER_LANES
+        gap = rw["bands"][k + 1]["start"] - rw["bands"][k]["end"]
+        assert gap == pytest.approx(gutter_gap(g["lanes"]), abs=0.2)
+        assert rw["bands"][k]["lane"] < g["at"] < rw["bands"][k + 1]["start"]
+
+
+def test_auto_takes_the_shape_of_the_box():
+    lf = _graphviz()
+    a = _run(VECTOR_PRINT, VP_RUN)
+    for d in ("LR", "TB"):  # the request's best rows
+        box, _ = layout_frames(a.tables, a.frames, SHOW, lf, d, 4, rank_wrap="auto", fit=(1136, 480))
+        assert len(box["rankWrap"]["vprint"]["bands"]) == 2
+    b = _run(FIB_CALL, FIB_RUN)
+    box, _ = layout_frames(b.tables, b.frames, SHOW, lf, "TB", 4, rank_wrap="auto", fit=(1136, 430))
+    assert len(box["rankWrap"]["fib"]["bands"]) == 2  # 3 bands scale 1 % more: fewer bands win
+    assert "main" not in box["rankWrap"]
+    box, _ = layout_frames(b.tables, b.frames, ["label", "context"], lf, "TB", 4, rank_wrap="auto", fit=(1136, 430))
+    assert len(box["rankWrap"]["fib"]["bands"]) == 3
+    tall, _ = layout_frames(a.tables, a.frames, SHOW, lf, "TB", 4, rank_wrap="auto", fit=(400, 1200))
+    assert "rankWrap" not in tall  # a tall box keeps one column
+
+
+BANDS_DECK = """# Bands {#b}
+```bbv-anim {#run program="vp.bbv" algorithm=sbbv heuristic=arithmetic limit=2 intervals=true vector_bounds=false direction=LR rank_wrap=2}
+thresholds: [0, 1, maxfix-1, maxfix]
+```
+```bbv-cfg {#src program="vp.bbv" follow=run direction=LR rank_wrap=2}
+```
+"""
+
+
+def test_band_options_in_a_deck_and_a_follower_takes_the_cut(deck):
+    root = deck({"talk.md": BANDS_DECK, "vp.bbv": VECTOR_PRINT})
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items, d.diagnostics.items
+    run, src = d.instances["b/run"]["data"]["box"], d.instances["b/src"]["data"]["box"]
+    assert run["rankWrap"]["vprint"]["cut"] == src["rankWrap"]["vprint"]["cut"]
+    # the same blocks in the same bands
+    assert {k: v[0] for k, v in run["rankWrap"]["vprint"]["blocks"].items()} == \
+        {k: v[0] for k, v in src["rankWrap"]["vprint"]["blocks"].items()}
+    # a follower with another count cuts on its own extents
+    other = deck({"talk.md": BANDS_DECK.replace("follow=run direction=LR rank_wrap=2", "follow=run direction=LR rank_wrap=3"),
+                  "vp.bbv": VECTOR_PRINT})
+    own = build_deck(other, use_cache=False).instances["b/src"]["data"]["box"]["rankWrap"]["vprint"]["cut"]
+    assert len(own) == 3 and own[0] == 0
+
+
+def test_band_options_errors_and_warnings(deck):
+    def items(attrs, body="", program=VECTOR_PRINT, comp="bbv-anim"):
+        root = deck({"talk.md": f"# A\n```{comp} {{program=\"p.bbv\" {attrs}}}\n{body}```\n", "p.bbv": program})
+        return check_deck(root, use_cache=False).items
+
+    for bad in ("rank_wrap=0", "rank_wrap=x", "rank_wrap=1.5", "rank_wrap=-2"):
+        found = items(bad)
+        assert any(x.code == "LT022" and "rank_wrap: expected an integer >= 1 or auto" in x.message for x in found), bad
+    found = items("", "rank_wraps: {nope: 2}\n")
+    assert any(x.code == "LT022" and "rank_wraps: 'nope' is not a function of the program" in x.message for x in found)
+    found = items("", "rank_wraps: {vprint: none}\n")
+    assert any(x.code == "LT022" and "rank_wraps: vprint: expected" in x.message for x in found)
+    found = items('fit_aspect="wide" rank_wrap=auto')
+    assert any(x.code == "LT022" and "fit_aspect: expected two positive numbers" in x.message for x in found)
+    found = items("rank_wrap=auto", "fit_aspect: 16:9\n")  # YAML reads 16:9 as a number
+    assert any(x.code == "LT022" and "quote it" in x.message for x in found)
+    assert any(x.code == "LT021" for x in items("rank_flow=zigzag"))
+    found = items("rank_wrap=40")
+    assert any(x.code == "LT046" and "rank_wrap=40" in x.message and "clamped" in x.message for x in found)
+    assert not [x for x in items("rank_wrap=4")]  # within the ranks: no warning
+    found = items("", "rank_wraps: {vprint: 30}\n")
+    assert any(x.code == "LT046" and "rank_wraps: vprint" in x.message for x in found)
+    found = items('fit_aspect="4:3"')
+    assert any(x.code == "LT046" and "fit_aspect has no effect" in x.message for x in found)
+    # a global count larger than a small function only: no warning
+    assert not [x for x in items("rank_wrap=3 algorithm=lv entry=main", program=FIB_CALL)]
+    # the same options on the other two drawings
+    assert not [x for x in items("rank_wrap=2 rank_flow=snake", comp="bbv-cfg")]
+    assert not [x for x in items("rank_wrap=auto", comp="abstract-interp-anim")]
+
+
+def test_auto_follows_the_deck_aspect_and_the_panel(deck):
+    """The target box of `auto`: the slide's content width (by the deck's aspect) less a panel beside the drawing,
+    by `height`; or `fit_aspect`."""
+
+    def bands(front, attrs, body="", cache=False):
+        root = deck({"talk.md": f"{front}# A\n```bbv-anim {{#r program=\"p.bbv\" algorithm=sbbv heuristic=arithmetic "
+                                f"limit=2 intervals=true vector_bounds=false {attrs}}}\n"
+                                f"thresholds: [0, 1, maxfix-1, maxfix]\n{body}```\n",
+                     "p.bbv": VECTOR_PRINT})
+        d = build_deck(root, use_cache=cache)
+        box = d.instances["a/r"]["data"]["box"]
+        return len(box.get("rankWrap", {}).get("vprint", {}).get("bands", [0]))
+
+    _graphviz()
+    assert bands("", "direction=TB rank_wrap=auto height=480") == 2
+    assert bands("", 'direction=TB rank_wrap=auto height=480 fit_aspect="1:3"') == 1
+    assert bands("", 'direction=LR rank_wrap=auto height=900') == 2  # 1136 px wide: 2 and 3 bands tie, 2 wins
+    assert bands('---\naspect: "4:3"\n---\n', 'direction=LR rank_wrap=auto height=900') == 3  # 880 px wide
+    assert bands("", 'direction=LR rank_wrap=auto height=900', "panel: [queue]\n") == 3  # the panel takes 278 px
+    assert bands("", 'direction=LR rank_wrap=auto height=900 panel_at=below', "panel: [queue]\n") == 2
+    # the aspect is part of the cache key
+    assert bands("", 'direction=LR rank_wrap=auto height=900', cache=True) == 2
+    assert bands('---\naspect: "4:3"\n---\n', 'direction=LR rank_wrap=auto height=900', cache=True) == 3
