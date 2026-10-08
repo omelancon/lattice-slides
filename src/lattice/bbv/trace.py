@@ -8,6 +8,7 @@ from __future__ import annotations
 from ..anim import Trace
 from .ir import RESULT, Program
 from .lv import LambdaVersioning
+from .paths import OVERFLOW, PathError, PathWalker
 from .rich import SEP, binding, code, context, join, op, tag, ty, var, ver
 from .sbbv import Specializer, Version
 from .types import Type
@@ -350,36 +351,58 @@ class VersioningTrace(Trace):
         return meta
 
     # ------------------------------------------------------------ paths (spec 9.5)
-    PATH_KEYS = {"input", "versions", "caption", "dim"}
+    PATH_KEYS = {"input", "reads", "reads_exhausted", "overflow", "versions", "caption", "dim"}
+    WALK_KEYS = {"input", "reads", "reads_exhausted", "overflow"}
 
     def _add_paths(self, paths: list[dict]) -> None:
-        """One ``path`` frame per entry of ``paths``, after the last frame: the versions an input goes
-        through (``input``) or the versions listed (``versions``), on the graph of the last frame."""
-        if self.algorithm == "lv":
-            raise ValueError("paths: paths through calls are not defined; use paths with algorithm sbbv")
+        """One ``path`` frame per entry of ``paths``, after the last frame: the versions a walk from the
+        entry goes through (``input``, ``reads``) or the versions listed (``versions``), on the graph
+        of the last frame."""
         if self.stopped:
             raise ValueError("paths: the frames stop early (until), so they would not end on the final graph; "
                              "remove until to use paths")
+        if not isinstance(paths, list):
+            raise ValueError("paths: a list of paths, each a mapping with input, reads or versions")
         last = self.frames[-1]
         drawn = {vid: n for vid, n in last["nodes"].items() if n.get("mark") != "gone"}
         for i, entry in enumerate(paths):
             where = f"paths[{i}]"
             if not isinstance(entry, dict):
-                raise ValueError(f"{where}: a path is a mapping with input or versions")
+                raise ValueError(f"{where}: a path is a mapping with input, reads or versions")
             unknown = set(entry) - self.PATH_KEYS
             if unknown:
-                raise ValueError(f"{where}: unknown key(s) {sorted(unknown)}; use input, versions, caption, dim")
-            if ("input" in entry) == ("versions" in entry):
-                raise ValueError(f"{where}: give exactly one of input (parameter types) and versions (labels)")
-            if "input" in entry:
-                order, what = self._path_by_input(entry["input"], drawn, where)
+                raise ValueError(f"{where}: unknown key(s) {sorted(unknown)}; use input, reads, reads_exhausted, "
+                                 f"overflow, versions, caption, dim")
+            walked = sorted(set(entry) & self.WALK_KEYS)
+            if "versions" in entry and walked:
+                raise ValueError(f"{where}: versions lists the path by hand; it does not combine with {', '.join(walked)}")
+            if "versions" not in entry and "input" not in entry and "reads" not in entry:
+                raise ValueError(f"{where}: give versions (labels), or input (parameter types) and/or reads "
+                                 f"(the types returned by read())")
+            if "versions" in entry:
+                order, edges, lit, chain, what = self._path_by_versions(entry["versions"], drawn, last, where)
             else:
-                order, what = self._path_by_versions(entry["versions"], drawn, where)
-            self._push_path(order, what, drawn, last, entry, where)
+                order, edges, lit, chain, what = self._path_by_walk(entry, drawn, where)
+            self._push_path(order, edges, lit, chain, what, drawn, last, entry, where)
 
-    def _path_by_input(self, given, drawn: dict, where: str) -> tuple[list[str], str]:
+    def _types(self, given, what: str, where: str) -> list[Type]:
+        if not isinstance(given, list) or not given:
+            raise ValueError(f"{where}: {what} lists types, such as [fx, fl]")
+        out = []
+        for text in given:
+            try:
+                t = Type.parse(str(text))
+            except (ValueError, KeyError) as e:
+                raise ValueError(f"{where}: {what}: cannot read the type {text!r} ({e})") from None
+            out.append(t if self.spec.intervals else t.without_range())
+        return out
+
+    def _path_by_walk(self, entry: dict, drawn: dict, where: str):
         fn = self.spec.entry_function
-        if not isinstance(given, dict) or not given:
+        given = entry.get("input", {})
+        if given is None:
+            given = {}
+        if not isinstance(given, dict):
             raise ValueError(f"{where}: input maps parameters of {fn.name} to types, such as {{x: fl}}")
         types: dict[str, Type] = {}
         for name, text in given.items():
@@ -392,42 +415,73 @@ class VersioningTrace(Trace):
             except (ValueError, KeyError) as e:
                 raise ValueError(f"{where}: input: {name}: cannot read the type {text!r} ({e})") from None
             types[name] = t if self.spec.intervals else t.without_range()
+        reads = self._types(entry["reads"], "reads", where) if entry.get("reads", []) != [] else []
+        ex = entry.get("reads_exhausted", "any")
+        if ex == "error":
+            exhausted = None
+        else:
+            exhausted = self._types(ex if isinstance(ex, list) else [ex], "reads_exhausted", where)
+        overflow = str(entry.get("overflow", "maybe"))
+        if overflow not in OVERFLOW:
+            raise ValueError(f"{where}: overflow is maybe, never or always")
+        walker = PathWalker(self.spec, inputs=types, reads=reads, exhausted=exhausted, overflow=overflow)
+        try:
+            w = walker.walk()
+        except PathError as e:
+            raise ValueError(f"{where}: {e}") from None
+        order = [str(v) for v in w.order if str(v) in drawn]
+        edges = {f"{s}->{d}:{k}" for s, d, k in w.edges}
+        lit = {f"{s}->{d}:return": xs for (s, d), xs in w.exits.items()}
+        on = set(order)
+        moves = [(str(a), str(b)) for a, b in w.transitions if str(a) in on and str(b) in on and a != b]
+        chain = all(sum(1 for a, _ in moves if a == v) <= 1 and sum(1 for _, b in moves if b == v) <= 1 for v in order)
+        what = [binding(n, t) for n, t in types.items()]
+        if reads:
+            what.append(f"{code('(read)')} → {', '.join(ty(str(t)) for t in reads)}")
+        if overflow != "maybe":
+            what.append(f"{tag('overflow')} {overflow}")
+        return order, edges, lit, chain, " ".join(what) or "the program"
 
-        def admits(vid: str) -> bool:
-            ctx = self.spec.by_id[int(vid)].context
-            return all(not ctx.get(n).intersection(t).is_bottom() for n, t in types.items())
-
-        root = next((r for r in self.spec.roots if r.function == fn.name), None)
-        start = str(self.spec.resolve(root).id) if root is not None else None
-        if start is None or start not in drawn or not admits(start):
-            raise ValueError(f"{where}: the entry version of {fn.name} does not admit this input, so the path is empty")
-        order, seen, todo = [], {start}, [start]
-        while todo:
-            vid = todo.pop(0)
-            order.append(vid)
-            for e in self.spec.by_id[int(vid)].edges:
-                dst = str(e.dst)
-                if e.kind in ("goto", "true", "false") and dst in drawn and dst not in seen and admits(dst):
-                    seen.add(dst)
-                    todo.append(dst)
-        what = " ".join(binding(n, t) for n, t in types.items())
-        return order, what
-
-    def _path_by_versions(self, labels, drawn: dict, where: str) -> tuple[list[str], str]:
+    def _path_by_versions(self, labels, drawn: dict, last: dict, where: str):
         if not isinstance(labels, list) or not labels:
             raise ValueError(f"{where}: versions lists version labels, such as [A1, D1]")
-        by_label = {self.spec.by_id[int(vid)].label: vid for vid in drawn}
+        by_label: dict[str, list[str]] = {}
+        for vid in drawn:
+            v = self.spec.by_id[int(vid)]
+            by_label.setdefault(v.label, []).append(vid)
+            by_label.setdefault(f"{v.function}/{v.label}", []).append(vid)
         order = []
         for label in labels:
             label = str(label)
             if label not in by_label:
+                plain_labels = sorted({self.spec.by_id[int(v)].label for v in drawn})
                 raise ValueError(f"{where}: versions: {label!r} is not drawn at the end of the run "
-                                 f"(drawn: {', '.join(sorted(by_label))})")
-            if by_label[label] not in order:
-                order.append(by_label[label])
-        return order, "chosen versions"
+                                 f"(drawn: {', '.join(plain_labels)})")
+            vids = by_label[label]
+            if len(vids) > 1:
+                names = " or ".join(f"{self.spec.by_id[int(v)].function}/{label}" for v in vids)
+                raise ValueError(f"{where}: versions: several drawn functions have a version {label!r}: write {names}")
+            if vids[0] not in order:
+                order.append(vids[0])
+        on = set(order)
+        edges, lit = set(), {}
+        for key, e in last["edges"].items():
+            src, rest = key.split("->", 1)
+            dst = rest.split(":", 1)[0]
+            if src in on and dst in on:
+                edges.add(key)
+                if e.get("exits"):
+                    lit[key] = {x for x in e["exits"] if str(x) in on}
+        moves = []  # as in a walk, a return edge reads as a move from its listed exits to the return point
+        for key in edges:
+            src, rest = key.split("->", 1)
+            dst = rest.split(":", 1)[0]
+            moves.extend((str(x), dst) for x in lit.get(key) or [src])
+        chain = all(sum(1 for a, _ in moves if a == v) <= 1 and sum(1 for _, b in moves if b == v) <= 1 for v in order)
+        return order, edges, lit, chain, "chosen versions"
 
-    def _push_path(self, order: list[str], what: str, drawn: dict, last: dict, entry: dict, where: str) -> None:
+    def _push_path(self, order: list[str], on_edges: set, lit: dict, chain: bool, what: str, drawn: dict, last: dict,
+                   entry: dict, where: str) -> None:
         dim = entry.get("dim", True)
         if not isinstance(dim, bool):
             raise ValueError(f"{where}: dim is true or false")
@@ -447,8 +501,10 @@ class VersioningTrace(Trace):
             if src not in nodes or dst not in nodes:
                 continue
             e = {k: v for k, v in e.items() if k != "state"}
-            if src in on and dst in on:
+            if key in on_edges:
                 e["state"] = "path"
+                if lit.get(key):
+                    e["lit_exits"] = sorted(lit[key])
             elif dim:
                 e["state"] = "dim"
             edges[key] = e
@@ -456,10 +512,6 @@ class VersioningTrace(Trace):
         if "caption" in entry:
             caption = str(entry["caption"] or "")
         elif self.caption_mode == "auto":
-            outs = [sum(1 for k, e in edges.items() if e.get("state") == "path" and k.startswith(f"{v}->")) for v in order]
-            ins = [sum(1 for k, e in edges.items() if e.get("state") == "path" and k.split("->", 1)[1].split(":")[0] == v)
-                   for v in order]
-            chain = all(o <= 1 for o in outs) and all(i <= 1 for i in ins)  # one way through: read as a sequence
             caption = join([f"{op('path')} {what}", (" → " if chain else " ").join(self._chip(int(v)) for v in order),
                             f"{tests} test{'s' if tests != 1 else ''}"])
         else:
@@ -502,6 +554,10 @@ class VersioningTrace(Trace):
                     labels = sorted({index.get(x, 0) for x in e.pop("exits")}) if index else []
                     if labels:
                         e["label"] = " ".join(f"[{i}]" for i in labels)
+                if "lit_exits" in e:  # the indices a path returned through (spec 9.5)
+                    lit = sorted({index.get(x, 0) for x in e.pop("lit_exits")}) if index else []
+                    if lit:
+                        e["lit"] = lit
 
     def _program_table(self) -> dict:
         prog = self.program

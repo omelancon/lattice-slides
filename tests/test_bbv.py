@@ -1153,14 +1153,23 @@ def test_path_by_versions_and_without_dimming():
 @pytest.mark.parametrize("paths, kw, message", [
     ([{"input": {"z": "fl"}}], {}, "'z' is not a parameter of polynomial (its parameters: x)"),
     ([{"input": {"x": "float"}}], {}, "cannot read the type 'float'"),
-    ([{"input": {"x": "fl"}, "versions": ["A1"]}], {}, "exactly one of input"),
-    ([{}], {}, "exactly one of input"),
+    ([{"input": {"x": "fl"}, "versions": ["A1"]}], {}, "it does not combine with input"),
+    ([{"versions": ["A1"], "overflow": "never"}], {}, "it does not combine with overflow"),
+    ([{}], {}, "give versions (labels), or input (parameter types) and/or reads"),
+    ([{"caption": "x"}], {}, "give versions (labels), or input"),
     ([{"input": {"x": "fl"}, "color": "red"}], {}, "unknown key(s) ['color']"),
+    ([{"input": ["x"]}], {}, "input maps parameters of polynomial to types"),
+    ([{"reads": "fl"}], {}, "reads lists types"),
+    ([{"reads": ["fl", "float"]}], {}, "reads: cannot read the type 'float'"),
+    ([{"reads": ["fl"], "reads_exhausted": []}], {}, "reads_exhausted lists types"),
+    ([{"reads": ["fl"], "reads_exhausted": "never"}], {}, "reads_exhausted: cannot read the type 'never'"),
+    ([{"input": {"x": "fx"}, "overflow": "sometimes"}], {}, "overflow is maybe, never or always"),
+    ([{"input": {"x": "fx"}, "depth": 3}], {}, "unknown key(s) ['depth']"),
+    ("x", {}, "paths: a list of paths"),
     ([{"versions": ["J2"]}], {}, "'J2' is not drawn at the end of the run"),
     ([{"input": {"x": "⊥"}}], {}, "does not admit this input"),
     ([{"versions": ["A1"], "dim": "no"}], {}, "dim is true or false"),
     ([{"input": {"x": "fl"}}], {"until": 10}, "remove until"),
-    ([{"input": {"x": "fl"}}], {"algorithm": "lv"}, "not defined"),
 ])
 def test_path_errors(paths, kw, message):
     args = {"algorithm": "sbbv", "limit": 3, "heuristic": "arithmetic", **kw}
@@ -1195,3 +1204,301 @@ run end, w 1
     root.write_text(root.read_text().replace("{x: fl}", "{y: fl}"))
     items = check_deck(root, use_cache=False).items
     assert any(x.code == "LT022" and "paths[0]: input: 'y' is not a parameter" in x.message for x in items), items
+
+
+
+# ------------------------------------------------------------ paths through calls (spec 9.5, 0.31)
+
+# The defense's polynomial and square, called from a main() that reads its argument.
+POLY_SQUARE = """function main()
+M:  x = read()
+    call polynomial(x) -> N
+N:  return #res
+
+function polynomial(x)
+A:  call square(x) -> B
+B:  y = #res
+    if fixnum?(y) goto C else goto F
+C:  if fixnum?(x) goto D else goto F
+D:  r = fx+?(y, x)
+    if r goto R else goto E
+R:  return r
+E:  return ##+(y, x)
+F:  if flonum?(y) goto G else goto J
+G:  if flonum?(x) goto H else goto J
+H:  return fl+(y, x)
+J:  return ##+(y, x)
+
+function square(x)
+S:  if fixnum?(x) goto T else goto V
+T:  y = fx*?(x, x)
+    if y goto U else goto W
+U:  return y
+W:  return ##*(x, x)
+V:  if flonum?(x) goto X else goto Z
+X:  return fl*(x, x)
+Z:  return ##*(x, x)
+"""
+
+FLONUM_WAY = ["M1", "A1", "S1", "V1", "X1", "B3", "F1", "G1", "H1", "N3"]
+
+
+def _lv_trace(paths, program=POLY_SQUARE, **kw):
+    args = {"algorithm": "lv", "limit": 3, "heuristic": "arithmetic", "entry": "main", **kw}
+    return VersioningTrace(parse(program), paths=paths, **args)
+
+
+def _on(t, frame):
+    labels = {k: v["label"] for k, v in t.tables["versions"].items()}
+    nodes = [labels[k] for k, n in frame["nodes"].items() if n.get("mark") == "path"]
+    edges = {}
+    for k, e in frame["edges"].items():
+        if e.get("state") == "path":
+            src, rest = k.split("->", 1)
+            edges[f"{labels[src]}->{labels[rest.split(':')[0]]}"] = (e["kind"], e.get("label"), e.get("lit"))
+    return nodes, edges
+
+
+def test_path_through_calls_by_reads():
+    """The request of the defense: the flonum returned by read() goes into square through its generic
+    entry, out at its flonum exit, back to polynomial's flonum return point, then to main's."""
+    t = _lv_trace([{"reads": ["fl"]}])
+    frame = t.frames[-1]
+    nodes, edges = _on(t, frame)
+    assert sorted(nodes) == sorted(FLONUM_WAY)
+    assert edges == {
+        "M1->A1": ("call", None, None), "A1->S1": ("call", None, None), "S1->V1": ("false", None, None),
+        "V1->X1": ("true", None, None), "A1->B3": ("return", "[2]", [2]), "B3->F1": ("goto", None, None),
+        "F1->G1": ("goto", None, None), "G1->H1": ("goto", None, None), "M1->N3": ("return", "[3]", [3]),
+    }
+    assert plain(frame["caption"]) == "path (read) → fl · " + " → ".join(FLONUM_WAY) + " · 2 tests"
+    assert {n.get("mark") for n in frame["nodes"].values()} == {"path", "dim"}
+    assert {e.get("state") for e in frame["edges"].values()} == {"path", "dim"}
+    meta = t.meta[-1]
+    assert meta["event"] == "path" and meta["function"] == "main" and meta["algo"] == []
+    assert meta["blocks"] == ["main/M", "polynomial/A", "square/S", "square/V", "square/X", "polynomial/B",
+                              "polynomial/F", "polynomial/G", "polynomial/H", "main/N"]
+
+
+def test_path_through_calls_matches_returns_to_their_call_site():
+    """A fixnum may overflow in square: both exits, then only the return points of their indices (B5 for
+    [1], not for [3]), and the fixnum side of polynomial; C2's flonum test cannot fail for this path."""
+    t = _lv_trace([{"reads": ["fx"]}])
+    nodes, edges = _on(t, t.frames[-1])
+    assert set(nodes) == {"M1", "A1", "S1", "T1", "U1", "W1", "B1", "B5", "C1", "C2", "F2", "D1", "J1", "R1", "E1",
+                          "N1", "N2"}
+    assert edges["A1->B5"] == ("return", "[1] [3]", [1]) and edges["A1->B1"] == ("return", "[0]", [0])
+    assert edges["M1->N1"] == ("return", "[0] [2] [4]", [0, 2]) and "M1->N3" not in edges
+    assert "C2->F3" not in edges and "V1" not in nodes and "F3" not in nodes
+    assert plain(t.frames[-1]["caption"]) == ("path (read) → fx · M1 A1 S1 T1 U1 W1 B1 B5 C1 C2 F2 D1 J1 R1 E1 N1 N2"
+                                              " · 5 tests")
+
+
+def test_path_overflow():
+    """overflow: never keeps the fixnum way where fx*? and fx+? do not overflow; always takes the
+    overflow branches only."""
+    t = _lv_trace([{"reads": ["fx"], "overflow": "never"}, {"reads": ["fx"], "overflow": "always"}])
+    never, always = (_on(t, f) for f in t.frames[-2:])
+    assert never[0] == ["M1", "A1", "S1", "T1", "U1", "B1", "C1", "D1", "R1", "N2"]
+    assert plain(t.frames[-2]["caption"]).startswith("path (read) → fx overflow never · M1 → A1 → S1 → T1 → U1")
+    assert "U1" not in always[0] and "R1" not in always[0] and {"W1", "E1"} <= set(always[0])
+
+
+def test_path_by_versions_through_calls():
+    """The same path written by hand: the same marks, edges and lit indices, read as one sequence."""
+    t = _lv_trace([{"reads": ["fl"]}, {"versions": FLONUM_WAY}])
+    walked, listed = t.frames[-2:]
+    assert _on(t, walked) == _on(t, listed)
+    assert plain(listed["caption"]) == "path chosen versions · " + " → ".join(FLONUM_WAY) + " · 2 tests"
+
+
+def test_path_input_is_optional_and_may_be_empty():
+    """A main() without parameters: no input, input: {} and reads: [] all walk every version reached."""
+    t = _lv_trace([{"input": {}}, {"reads": []}, {"input": None, "reads": []}])
+    done = t.frames[-4]
+    drawn = {k for k, n in done["nodes"].items() if n.get("mark") != "gone"}
+    for f in t.frames[-3:]:
+        assert {k for k, n in f["nodes"].items() if n.get("mark") == "path"} == drawn
+    assert plain(t.frames[-3]["caption"]).startswith("path the program · ")
+
+
+def test_path_walks_through_hidden_functions():
+    """square hidden: the walk goes through it and still returns to A1's flonum return point."""
+    t = _lv_trace([{"reads": ["fl"]}], functions=["main", "polynomial"])
+    nodes, edges = _on(t, t.frames[-1])
+    assert nodes == ["M1", "A1", "B3", "F1", "G1", "H1", "N3"]
+    assert edges["A1->B3"] == ("return", "[2]", [2]) and t.meta[-1]["blocks"][0] == "main/M"
+
+
+READ_LOOP = """function main()
+L:  x = read()
+    if fixnum?(x) goto L else goto E
+E:  return x
+"""
+
+
+@pytest.mark.parametrize("entry, reaches_e", [
+    ({"reads": ["fx", "fx", "fl"]}, True),
+    ({"reads": ["fx", "fx"], "reads_exhausted": "fx"}, False),
+    ({"reads": ["fx", "fx"], "reads_exhausted": ["fx"]}, False),
+    ({"reads": ["fx", "fx"], "reads_exhausted": ["fx", "fl"]}, True),
+    ({"reads": ["fx", "fx"]}, True),  # then any
+    ({"reads": ["fx", "fx", "fl"], "reads_exhausted": "error"}, True),
+])
+def test_reads_in_a_loop(entry, reaches_e):
+    """The same read() takes the next type at each iteration; then reads_exhausted, repeated."""
+    t = _lv_trace([entry], program=READ_LOOP)
+    nodes, _ = _on(t, t.frames[-1])
+    assert nodes[0] == "L1" and ("E1" in nodes) == reaches_e
+
+
+def test_reads_exhausted_error():
+    with pytest.raises(ValueError) as e:
+        _lv_trace([{"reads": ["fx", "fx"], "reads_exhausted": "error"}], program=READ_LOOP)
+    assert "paths[0]: reads_exhausted: error: the path may execute read() more than 2 times" in str(e.value)
+
+
+def test_path_input_and_reads_together():
+    program = """function main(n)
+M:  x = read()
+    if fixnum?(n) goto A else goto B
+A:  if fixnum?(x) goto C else goto B
+C:  return x
+B:  return n
+"""
+    t = _lv_trace([{"input": {"n": "fx"}, "reads": ["fl"]}], program=program)
+    nodes, _ = _on(t, t.frames[-1])
+    assert "A1" in nodes and "C1" not in nodes and any(n.startswith("B") for n in nodes)
+    assert plain(t.frames[-1]["caption"]).startswith("path n: fx (read) → fl · ")
+
+
+def test_path_narrows_values_computed_on_the_way():
+    """The 0.28 rule read the parameters only; the walk runs the blocks again, so y = x * x is a flonum
+    for a flonum x and the fixnum side of the test on y is left out (SBBV too)."""
+    program = """function f(x)
+A:  y = ##*(x, x)
+    if fixnum?(y) goto C else goto D
+C:  return y
+D:  return 0
+"""
+    t = VersioningTrace(parse(program), algorithm="sbbv", limit=3, paths=[{"input": {"x": "fl"}}])
+    assert plain(t.frames[-1]["caption"]) == "path x: fl · A1 → D1 · 1 test"
+
+
+def test_sbbv_path_follows_an_opaque_call():
+    program = """function f(x)
+A:  call g(x) -> B
+B:  if fixnum?(#res) goto C else goto D
+C:  return 1
+D:  return 2
+
+function g(x)
+G:  return x
+"""
+    t = VersioningTrace(parse(program), algorithm="sbbv", limit=3, paths=[{"input": {"x": "fx"}}])
+    nodes, edges = _on(t, t.frames[-1])
+    assert nodes == ["A1", "B1", "C1", "D1"] and edges["A1->B1"][0] == "return"
+    assert "G1" in {v["label"] for v in t.tables["versions"].values()}  # g is drawn, off the path
+
+
+FIB = """function main()
+M:  n = read()
+    call fib(n) -> N
+N:  return #res
+
+function fib(n)
+A:  if fixnum?(n) goto B else goto Z
+B:  if fx<(n, 2) goto R else goto C
+R:  return n
+C:  m = fx-(n, 1)
+    call fib(m) -> D
+D:  a = #res
+    k = fx-(n, 2)
+    call fib(k) -> E
+E:  b = #res
+    if fixnum?(a) goto F else goto G
+F:  if fixnum?(b) goto H else goto G
+H:  s = fx+?(a, b)
+    if s goto S else goto G
+S:  return s
+G:  return ##+(a, b)
+Z:  fail
+"""
+
+
+def test_path_through_recursion():
+    """Calls and returns stay matched at any depth (summaries per activation): a fixnum reaches the base
+    case and both recursive calls, a flonum stops at the type test; the walk is quick."""
+    import time
+
+    t0 = time.perf_counter()
+    t = _lv_trace([{"reads": ["fx"]}, {"reads": ["fl"]}, {"reads": ["fx"], "overflow": "never"}], program=FIB, limit=2)
+    assert time.perf_counter() - t0 < 2
+    fx, fl, never = (_on(t, f) for f in t.frames[-3:])
+    assert {"M1", "A1", "B1", "R1", "C1", "N1"} <= set(fx[0]) and "Z1" not in fx[0]
+    assert set(fl[0]) == {"M1", "A1", "Z1"}
+    assert set(never[0]) <= set(fx[0]) and not any(n.startswith("G") for n in never[0])
+
+
+def test_versions_qualified_by_function():
+    program = """function main()
+A:  call f(1) -> B
+B:  return #res
+
+function f(x)
+A:  return x
+"""
+    with pytest.raises(ValueError) as e:
+        _lv_trace([{"versions": ["A1"]}], program=program)
+    assert "several drawn functions have a version 'A1': write main/A1 or f/A1" in str(e.value)
+    t = _lv_trace([{"versions": ["main/A1", "f/A1", "B1"]}], program=program)
+    nodes, edges = _on(t, t.frames[-1])
+    assert sorted(nodes) == ["A1", "A1", "B1"] and edges["A1->B1"] == ("return", "[0]", [0])
+    assert plain(t.frames[-1]["caption"]).startswith("path chosen versions · A1 → A1 → B1")
+
+
+def test_path_with_intervals_ends_on_a_loop():
+    program = """function sum(n: fx [0, 100])
+A:  goto L(i=0, s=0)
+L(i, s):  if fx<(i, n) goto B else goto E
+B:  i = fx+?(i, 1)
+    if i goto C else goto E
+C:  s = fx+(s, i)
+    goto L
+E:  return s
+"""
+    t = VersioningTrace(parse(program), algorithm="sbbv", limit=3, intervals=True,
+                        paths=[{"input": {"n": "fx [0, 10]"}}])
+    nodes, _ = _on(t, t.frames[-1])
+    assert nodes[0] == "A1" and any(n.startswith("E") for n in nodes)
+
+
+def test_lv_paths_in_a_deck_with_a_follower_and_an_arrow(deck):
+    root = deck({"talk.md": """# A
+```bbv-cfg {#src program="p.bbv" follow=run}
+show: [label]
+```
+```bbv-anim {#run program="p.bbv" algorithm=lv heuristic=arithmetic limit=3 entry=main}
+paths:
+  - reads: [fl]
+    caption: "(read) returns a flonum"
+  - reads: [fx]
+```
+```arrow {#w}
+steps: [null, run.X1, run.A1->B5]
+```
+```timeline
+run ..end-2
+run end-1, w 1
+run end, w 2
+```
+""", "p.bbv": POLY_SQUARE})
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items, d.diagnostics.items
+    run = d.instances["a/run"]
+    hl = d.instances["a/src"]["data"]["highlight"]
+    assert len(hl) == run["positions"] and isinstance(hl[-2], list) and len(hl[-2]) == 10
+    root.write_text(root.read_text().replace("reads: [fx]", "reads: [fx]\n    reads_exhausted: maybe"))
+    items = check_deck(root, use_cache=False).items
+    assert any(x.code == "LT022" and "paths[1]: reads_exhausted: cannot read the type 'maybe'" in x.message
+               for x in items), items

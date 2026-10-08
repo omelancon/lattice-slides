@@ -12,6 +12,23 @@ from .types import ANY, Context, Type
 INTRA = ("goto", "true", "false", "return")
 
 
+def return_context_of(ctx: Context, binds: dict, after: Context) -> Context:
+    """``callContext ∩ exitSite.contextAfter`` (algorithm 2.8), from the caller's context at the call,
+    the bindings of the callee's parameters and the callee's context after its exit; also used by
+    the walk of paths. A symbolic bound of the callee names a callee variable: it is translated to
+    the caller's argument when the variable is a parameter bound to a variable, and widened otherwise."""
+    names = {after.rep(p): ctx.rep(a.name) for p, a in binds.items() if isinstance(a, Var) and p in after}
+    back = {v: names.get(v) for v in after.vars()}
+    for p, a in binds.items():
+        if isinstance(a, Var):
+            ctx = ctx.narrow(a.name, after.get(p).remap_symbols(back))
+    ctx = ctx.set(RESULT, after.get(RESULT).remap_symbols(back))
+    for p, a in binds.items():
+        if isinstance(a, Var) and after.same(RESULT, p):
+            ctx = ctx.equate(RESULT, a.name)
+    return ctx
+
+
 class LambdaVersioning(Specializer):
     interprocedural = True
 
@@ -80,21 +97,8 @@ class LambdaVersioning(Specializer):
 
     # ------------------------------------------------------------ return points (algorithms 2.8, 2.9)
     def return_context(self, cs: Version, exit: Version) -> Context:
-        """``callContext ∩ exitSite.contextAfter`` (algorithm 2.8). A symbolic bound of the callee
-        names a callee variable: it is translated to the caller's argument when the variable is a
-        parameter bound to a variable, and widened otherwise."""
-        ctx = cs.call.context
-        after = exit.context_after
-        names = {after.rep(p): ctx.rep(a.name) for p, a in cs.call.binds.items() if isinstance(a, Var) and p in after}
-        back = {v: names.get(v) for v in after.vars()}
-        for p, a in cs.call.binds.items():
-            if isinstance(a, Var):
-                ctx = ctx.narrow(a.name, after.get(p).remap_symbols(back))
-        ctx = ctx.set(RESULT, after.get(RESULT).remap_symbols(back))
-        for p, a in cs.call.binds.items():
-            if isinstance(a, Var) and after.same(RESULT, p):
-                ctx = ctx.equate(RESULT, a.name)
-        return ctx
+        """``callContext ∩ exitSite.contextAfter`` (algorithm 2.8)."""
+        return return_context_of(cs.call.context, cs.call.binds, exit.context_after)
 
     def reconcile_call_site(self, cs: Version) -> tuple[list, list]:
         """Make the return edges of a call site match the exit sites of its callee entry."""

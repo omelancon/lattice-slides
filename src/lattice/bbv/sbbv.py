@@ -373,36 +373,73 @@ class Specializer:
         can_false = not a.type.intersection(Type.of("#f")).is_bottom()
         return (ctx if can_true else None), (ctx if can_false else None), str(a)
 
+    # The transfer functions of assignments, moves and returns, shared with the walk of paths
+    # (``paths.py``). ``adjust(prim, type)`` lets a caller change a primitive's result (the types of
+    # ``read()`` along a path, the overflow of ``fx+?``). A context that becomes ``⊥`` means the
+    # primitive cannot accept its arguments there.
+    def assign_context(self, ctx: Context, instr: Assign, adjust=None) -> Context:
+        p = self.program.prims[instr.prim]
+        if p.args is not None:
+            for a, req in zip(instr.args, p.args):
+                if isinstance(a, Var):
+                    ctx = ctx.narrow(a.name, req)
+                elif a.type.intersection(req).is_bottom():
+                    ctx = ctx.set(instr.target, Type.bottom())
+        if ctx.is_bottom():
+            return ctx
+        t = self.result_of(ctx, p, instr.args)
+        return ctx.set(instr.target, adjust(instr.prim, t) if adjust is not None else t)
+
+    def move_context(self, ctx: Context, instr: Move) -> Context:
+        ctx = ctx.set(instr.target, self.type_of(ctx, instr.source))
+        if isinstance(instr.source, Var) and instr.source.name != instr.target:
+            ctx = ctx.equate(instr.target, instr.source.name)
+        return ctx
+
+    def exit_context(self, ctx: Context, instr: Return, adjust=None) -> Context:
+        """The context after ``return``: ``#res`` holds the returned value."""
+        if instr.prim is not None:
+            p = self.program.prims[instr.prim]
+            for a, req in zip(instr.args, p.args or []):
+                if isinstance(a, Var):
+                    ctx = ctx.narrow(a.name, req)
+            if ctx.is_bottom():
+                return ctx
+            t = self.result_of(ctx, p, instr.args)
+            return ctx.set(RESULT, adjust(instr.prim, t) if adjust is not None else t)
+        ctx = ctx.set(RESULT, self.type_of(ctx, instr.value))
+        if isinstance(instr.value, Var) and instr.value.name != RESULT:
+            ctx = ctx.equate(RESULT, instr.value.name)
+        return ctx
+
+    def goto_context(self, ctx: Context, instr: Goto, target: Block) -> Context:
+        """The context sent to the target of ``goto``, its parameters rebound (a constant through
+        ``type_of``: no singleton unless intervals are on)."""
+        mapping: dict[str, str | Type] = {}
+        for k, a in instr.binds.items():
+            mapping[k] = self.type_of(ctx, a) if isinstance(a, Const) else a.name
+        return ctx.rename(mapping, target.params)
+
     def specialize(self, v: Version) -> None:
         ctx = v.context
         body: list[Line] = []
         queued_before = {q.id for q in self.queue}
         removed = 0
-        prims = self.program.prims
         fn = self.program.function(v.function)
         halted = False
         for instr in v.block.instrs:
             kind, note = "other", ""
             if isinstance(instr, Assign):
-                p = prims[instr.prim]
-                if p.args is not None:
-                    for a, req in zip(instr.args, p.args):
-                        if isinstance(a, Var):
-                            ctx = ctx.narrow(a.name, req)
-                        elif a.type.intersection(req).is_bottom():
-                            ctx = ctx.set(instr.target, Type.bottom())
+                ctx = self.assign_context(ctx, instr)
                 if ctx.is_bottom():
                     body.append(Line(instr.text, instr.line))
                     body.append(Line("fail", instr.line))
                     kind, note, halted = "fail", f"{code(instr.prim)} cannot accept these types: the block fails here", True
                 else:
-                    ctx = ctx.set(instr.target, self.result_of(ctx, p, instr.args))
                     body.append(Line(instr.text, instr.line))
                     kind, note = "assign", binding(instr.target, ctx.get(instr.target))
             elif isinstance(instr, Move):
-                ctx = ctx.set(instr.target, self.type_of(ctx, instr.source))
-                if isinstance(instr.source, Var) and instr.source.name != instr.target:
-                    ctx = ctx.equate(instr.target, instr.source.name)
+                ctx = self.move_context(ctx, instr)
                 body.append(Line(instr.text, instr.line))
                 kind, note = "assign", binding(instr.target, ctx.get(instr.target))
             elif isinstance(instr, If):
@@ -438,10 +475,7 @@ class Specializer:
                 halted = True
             elif isinstance(instr, Goto):
                 target = fn.block(instr.target)
-                mapping: dict[str, str | Type] = {}
-                for k, a in instr.binds.items():  # a constant through type_of: no singleton unless intervals are on
-                    mapping[k] = self.type_of(ctx, a) if isinstance(a, Const) else a.name
-                tctx = ctx.rename(mapping, target.params)
+                tctx = self.goto_context(ctx, instr, target)
                 body.append(Line(instr.text, instr.line))
                 t = self.get_or_create(target, tctx)
                 self.add_edge(v, t, "goto")
@@ -451,22 +485,11 @@ class Specializer:
                 body.extend(lines)
                 kind, note, halted = "call", self.call_note, True
             elif isinstance(instr, Return):
-                if instr.prim is not None:
-                    p = prims[instr.prim]
-                    for a, req in zip(instr.args, p.args or []):
-                        if isinstance(a, Var):
-                            ctx = ctx.narrow(a.name, req)
-                    if ctx.is_bottom():
-                        body.append(Line(instr.text, instr.line))
-                        body.append(Line("fail", instr.line))
-                        break
-                    t = self.result_of(ctx, p, instr.args)
-                    ctx = ctx.set(RESULT, t)
-                else:
-                    t = self.type_of(ctx, instr.value)
-                    ctx = ctx.set(RESULT, t)
-                    if isinstance(instr.value, Var) and instr.value.name != RESULT:
-                        ctx = ctx.equate(RESULT, instr.value.name)
+                ctx = self.exit_context(ctx, instr)
+                if ctx.is_bottom():
+                    body.append(Line(instr.text, instr.line))
+                    body.append(Line("fail", instr.line))
+                    break
                 v.is_exit = True
                 body.append(Line(instr.text, instr.line, exit=v.id))
                 kind, note, halted = "return", binding(RESULT, ctx.get(RESULT)), True

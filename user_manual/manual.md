@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.30.0
+author: Lattice 0.31.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1362,7 +1362,7 @@ steps:
 | `algorithm`, `limit`, `limits: {f: 3, g: none}` | `sbbv` or `lv`; the version limit, overall or per function |
 | `heuristic` | The merge heuristic: `similarity`, `arithmetic` or `random` |
 | `entry`, `functions: [f, g]` | The function traversed first; the functions drawn, in that order (hidden ones are analysed, not drawn) |
-| `events`, `granularity=instruction`, `until`, `paths` | Event kinds kept; one frame per instruction; stop after N; paths at the end |
+| `events`, `granularity=instruction`, `until`, `paths` | Event kinds kept; one frame per instruction; stop after N; [[bbv-paths|paths]] at the end (by `input`, `reads` or `versions`) |
 | `panel: [queue, versions, checks, merges, limit]`, `panel_at=below`, `caption=none` | Panel entries, and where the panel sits (`auto`, `right`, `below`); no captions |
 | `colors=none`, `direction=LR`, `wrap=4`, `call_edges`, `height`, `prims` | Fills off; block bands direction; versions per line; dotted call edges; drawing height; extra primitives (a predicate declared there can be tested in an `if`) |
 | `intervals=true`, `thresholds`, `fixnum_bits=61`, `vector_bounds=false` | Track integer intervals and vector lengths (merges widen with the thresholds of the abstract interpreter); the fixnum width; lengths as numbers instead of `⟦v⟧` |
@@ -1420,12 +1420,52 @@ prun end-1, ponce 1
 :::
 ::: column {width=1fr}
 - Each entry of `paths` adds a frame after the run: its versions and edges in green, the others faded (`dim: false` keeps them)
-- `input` maps parameters of the entry function to types; the path holds the versions whose context admits them, from the entry along `goto`, `#t` and `#f` edges (may reach, not must)
-- `versions` lists the labels instead; `caption` replaces the automatic one, which counts the tests left on the path
+- `input` maps parameters of the entry function to types; the blocks run again on those types from the entry, and the path holds the versions they may reach (may, not must)
+- `versions` lists the labels instead (`f/A1` when two functions have an `A1`); `caption` replaces the automatic one, which counts the tests left on the path
 - A following `bbv-cfg` lights every block of the path; arrows name its versions as usual; `end-1` in a timeline is the frame before the last
-- SBBV only, and not with `until` (spec 9.5)
+- SBBV and [[bbv-paths-calls|ΛV]], not with `until` (spec 9.5)
 :::
 ::::
+
+# Paths through calls {#bbv-paths-calls .dense}
+
+:::: columns
+::: column {width=5fr}
+```bbv-anim {#cpath program="programs/polynomial-square.bbv" algorithm=lv heuristic=arithmetic limit=3 entry=main call_edges=true height=440}
+show: [label]
+panel: []
+paths:
+  - reads: [fl]
+  - reads: [fx]
+    overflow: never
+```
+:::
+::: column {width=2fr}
+```yaml
+paths:
+  - reads: [fl]
+  - reads: [fx]
+    overflow: never
+```
+
+- `reads`: the types `read()` returns, in execution order; then `reads_exhausted` (`any`, a type or a list that repeats, or `error`)
+- A call enters its entry point; an exit returns only to its own call site, at the index it was taken for (in green on the label)
+- `overflow: never` or `always` decides `fx+?`, `fx-?`, `fx*?`; `input` is optional
+:::
+::::
+
+```arrow {#cidx}
+steps:
+  - null
+  - {to: "cpath.A1->B3", angle: 225, length: 120, label: "[2]: back from X1"}
+  - null
+```
+
+```timeline
+cpath ..end-2
+cpath end-1, cidx 1
+cpath end, cidx end
+```
 
 # Instruction by instruction, with the algorithm's listing {#bbv-instructions}
 

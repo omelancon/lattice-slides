@@ -2779,3 +2779,73 @@ run end, w 1
         if "Executable doesn't exist" in str(e):
             pytest.skip("Chromium for Playwright is not installed")
         raise
+
+
+def test_bbv_path_through_calls_lights_its_return_indices(tmp_path):
+    """A ΛV path (spec 9.5): a return edge on the path draws the indices it was taken for in the path's
+    colour and fades the others (`A1->B5 [1] [3]` with `[1]` lit for a fixnum); the label keeps its text
+    and its mark its size; stepping back to the `done` frame draws the plain labels again."""
+    from test_bbv import POLY_SQUARE
+
+    (tmp_path / "p.bbv").write_text(POLY_SQUARE)
+    src = tmp_path / "talk.md"
+    src.write_text("""# A {#a}
+```bbv-cfg {#src program="p.bbv" follow=run}
+show: [label]
+```
+```bbv-anim {#run program="p.bbv" algorithm=lv heuristic=arithmetic limit=3 entry=main call_edges=true}
+show: [label]
+paths:
+  - reads: [fx]
+```
+```timeline
+run ..end-1
+run end
+```
+""")
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    state = """() => {
+      const run = document.querySelector('.lt-c-bbv-anim:not(.lt-bbv-cfg)');
+      const q = (s) => [...run.querySelectorAll(s)];
+      const labels = q('.lt-bbv-edge:not(.lt-gone) .lt-bbv-edge-label').map((l) => l.textContent).filter((t) => t.startsWith('['));
+      return {
+        lit: q('.lt-bbv-edge-lit').map((t) => t.textContent).sort(),
+        unlit: q('.lt-bbv-edge-unlit').map((t) => t.textContent).sort(),
+        labels: labels.sort(),
+        marks: q('.lt-bbv-edge:not(.lt-gone) .lt-bbv-edge-mark').map((m) => m.getAttribute('width')).sort().join(),
+        litColor: q('.lt-bbv-edge-lit').length ? getComputedStyle(q('.lt-bbv-edge-lit')[0]).fill : '',
+        unlitOpacity: q('.lt-bbv-edge-unlit').length ? getComputedStyle(q('.lt-bbv-edge-unlit')[0]).fillOpacity : '',
+        calls: q('.lt-bbv-edge.k-call.st-path').length,
+        cfg: document.querySelectorAll('.lt-bbv-cfg .lt-bbv-node.mk-path').length,
+      };
+    }"""
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+            page.goto(out.as_uri() + "#/a/999")
+            page.reload()
+            page.wait_for_timeout(300)
+            last = page.evaluate(state)
+            assert last["lit"] == ["[0]", "[0]", "[1]", "[1]", "[2]"] and last["unlit"] == ["[3]", "[4]"]
+            assert "[1] [3]" in last["labels"] and "[0] [2] [4]" in last["labels"]
+            assert last["litColor"] and last["unlitOpacity"] == "0.35"
+            assert last["calls"] == 2 and last["cfg"] > 0
+            page.keyboard.press("ArrowLeft")
+            page.wait_for_timeout(300)
+            done = page.evaluate(state)
+            assert done["lit"] == [] and done["unlit"] == [] and done["labels"] == last["labels"]
+            assert done["marks"] == last["marks"]  # same text, same mark
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(300)
+            assert page.evaluate(state) == last
+            assert not errors, errors
+            browser.close()
+    except Exception as e:  # browser not installed
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise

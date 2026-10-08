@@ -192,6 +192,20 @@
     n.afterEls.forEach((t) => { t.style.display = finished ? "" : "none"; });
   }
 
+  // The text of an edge label. On a path frame, a return edge names the return point indices the path
+  // took (`lit`, spec 9.5): those are drawn in the path's colour and the label's other indices fade.
+  // The text is the same either way, so the label's mark keeps its size.
+  function edgeLabel(el, text, lit) {
+    if (!lit || !lit.length) { el.textContent = text; return; }
+    el.textContent = "";
+    text.split(" ").forEach((tok, i) => {
+      if (i) el.appendChild(document.createTextNode(" "));
+      const m = /^\[(\d+)\]$/.exec(tok);
+      const on = m && lit.includes(Number(m[1]));
+      el.appendChild(svg("tspan", { class: on ? "lt-bbv-edge-lit" : "lt-bbv-edge-unlit" }, tok));
+    });
+  }
+
   // An edge: its path, its label at the middle of the curve, and the mark an arrow at the edge measures
   // (spec 9.5): invisible, at the middle of the curve, covering the label when there is one.
   function edge(inst, key) {
@@ -378,7 +392,7 @@
       const state = st.state || "default";
       e.g.setAttribute("class", `lt-bbv-edge k-${e.kind} st-${state}`);
       e.path.setAttribute("marker-end", `url(#${inst.id}-${STATES.includes(state) ? state : "default"})`);
-      e.label.textContent = st.label || (e.kind === "true" ? "#t" : e.kind === "false" ? "#f" : "");
+      edgeLabel(e.label, st.label || (e.kind === "true" ? "#t" : e.kind === "false" ? "#f" : ""), st.lit);
       e.chars = e.label.textContent.length;
     }
     for (const [key, e] of Object.entries(inst.edges)) if (!live.has(key)) e.g.setAttribute("class", "lt-bbv-edge lt-gone");

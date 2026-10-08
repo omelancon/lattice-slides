@@ -22,6 +22,7 @@ class Prim:
     test: Type | None = None  # for type predicates: the type of the argument when the test holds
     narrow: Narrow | None = None  # for predicates usable in ``if``
     names: bool = False  # the result rule also receives the class representative of each variable argument
+    overflow: bool = False  # an overflow-checking operation (``fx+?``): ``#f`` when the result does not fit
 
     def result_type(self, arg_types: list[Type], arg_names: list[str | None] | None = None) -> Type:
         if callable(self.result):
@@ -160,8 +161,8 @@ def _minmax(pick):
 def _table() -> dict[str, Prim]:
     prims: list[Prim] = []
 
-    def add(name, args=None, result=ANY, test=None, narrow=None, names=False):
-        prims.append(Prim(name, tuple(args) if args is not None else None, result, test, narrow, names))
+    def add(name, args=None, result=ANY, test=None, narrow=None, names=False, overflow=False):
+        prims.append(Prim(name, tuple(args) if args is not None else None, result, test, narrow, names, overflow))
 
     for name, t in [("fixnum?", "fx"), ("flonum?", "fl"), ("bignum?", "bg"), ("number?", "num"),
                     ("pair?", "pair"), ("null?", "nil"), ("procedure?", "proc"), ("boolean?", "bool"),
@@ -174,7 +175,7 @@ def _table() -> dict[str, Prim]:
     for name in ["fxremainder", "fxmodulo"]:
         add(name, [FX, FX], FX)
     for name, op in [("fx+?", lambda a, b: a + b), ("fx-?", lambda a, b: a - b), ("fx*?", lambda a, b: a * b)]:
-        add(name, [FX, FX], _checked_op(op))
+        add(name, [FX, FX], _checked_op(op), overflow=True)
     for name, cmp in [("fx<", "<"), ("fx>", ">"), ("fx=", "="), ("fx<=", "<="), ("fx>=", ">=")]:
         add(name, [FX, FX], BOOL, narrow=_compare(cmp))
     add("fxzero?", [FX], BOOL, narrow=lambda ts: _compare("=")([ts[0], Type.integer(0, 0)]))
