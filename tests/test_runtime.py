@@ -3090,8 +3090,9 @@ MERGE_GEOMETRY = """() => {
 
 def test_bbv_merge_runtime_renders_any_position_alike(tmp_path):
     """bbv-merge (spec 9.5): every position looks the same however it is reached (fresh load, steps forward
-    with the glides, steps back); the picked pair and its edge take the merge colour, and an edge keeps the
-    width of its distance whatever its state; preview and print draw the same frame."""
+    with the glides and fades of a merge, steps back); the picked pair and its edge take the merge colour; the
+    merge frame shows the pair met (absorbed, the result there) and the others greyed; an edge keeps the width
+    of its distance whatever its state; preview and print draw the same frame."""
     src = tmp_path / "talk.md"
     src.write_text("""# M {#m}
 ```bbv-merge {#h limit=2 heuristic=arithmetic edge_labels=true}
@@ -3114,22 +3115,27 @@ panel: [contexts, distance]
             page.on("pageerror", lambda e: errors.append(str(e)))
             page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
             fresh = []
-            for pos in range(8):
+            for pos in range(10):
                 page.goto(f"{out.as_uri()}#/m/{pos}")
                 page.reload()
                 page.wait_for_timeout(150)
                 fresh.append(page.evaluate(MERGE_GEOMETRY))
-            assert "closest pair" in fresh[1]["caption"] and "done" in fresh[7]["caption"]
+            assert "closest pair" in fresh[1]["caption"] and "done" in fresh[9]["caption"]
             page.goto(f"{out.as_uri()}#/m/0")
             page.reload()
             page.wait_for_timeout(150)
-            for pos in range(1, 8):
+            for pos in range(1, 10):
                 page.keyboard.press("ArrowRight")
-                page.wait_for_timeout(550)  # the glide (380 ms) ends
+                if pos == 2:  # while the pair glides it stays visible; it fades once it has met
+                    page.wait_for_timeout(100)
+                    gliding = page.evaluate("""() => Array.from(document.querySelectorAll('.lt-bbv-node.mk-absorbed'))
+                        .map(g => getComputedStyle(g).opacity)""")
+                    assert gliding == ["1", "1"], gliding
+                page.wait_for_timeout(1100)  # the glide (650 ms), then the fade of the pair or the result
                 assert page.evaluate(MERGE_GEOMETRY) == fresh[pos], pos
-            for pos in range(6, -1, -1):
+            for pos in range(8, -1, -1):
                 page.keyboard.press("ArrowLeft")
-                page.wait_for_timeout(550)
+                page.wait_for_timeout(1100)
                 assert page.evaluate(MERGE_GEOMETRY) == fresh[pos], pos
             # the pick frame: the pair and its edge in the merge colour, the other edges dimmed
             page.goto(f"{out.as_uri()}#/m/1")
@@ -3147,9 +3153,23 @@ panel: [contexts, distance]
             page.wait_for_timeout(150)
             widths = page.evaluate("""() => Array.from(document.querySelectorAll('.lt-bbv-dist.st-new path'))
                 .map(p => [getComputedStyle(p).strokeWidth, p.style.strokeWidth])""")
+            assert not widths  # the merge frame draws only the edges left alone, dimmed
+            merge = page.evaluate("""() => {
+                const op = (sel) => Array.from(document.querySelectorAll(sel)).map(g => getComputedStyle(g).opacity);
+                return {absorbed: op('.lt-bbv-node.mk-absorbed'), merged: op('.lt-bbv-node.mk-merged'),
+                        dim: op('.lt-bbv-node.mk-dim'), edges: op('.lt-bbv-dist:not(.lt-gone)'),
+                        dimEdges: document.querySelectorAll('.lt-bbv-dist.st-dim').length,
+                        under: document.querySelector('.lt-c-bbv-merge .lt-nodes').firstChild.classList.contains('mk-absorbed')};
+            }""")
+            assert merge["absorbed"] == ["0", "0"] and merge["merged"] == ["1"] and merge["dim"] == ["0.3"] * 3
+            assert merge["dimEdges"] == len(merge["edges"]) == 3 and merge["under"]
+            page.goto(f"{out.as_uri()}#/m/3")
+            page.reload()
+            page.wait_for_timeout(150)
+            widths = page.evaluate("""() => Array.from(document.querySelectorAll('.lt-bbv-dist.st-new path'))
+                .map(p => [getComputedStyle(p).strokeWidth, p.style.strokeWidth])""")
             assert widths and all(a == b for a, b in widths)
-            assert page.evaluate("document.querySelectorAll('.lt-bbv-node.mk-gone').length") == 2
-            assert page.evaluate("document.querySelectorAll('.lt-bbv-node.mk-merged').length") == 1
+            assert page.evaluate("document.querySelectorAll('.lt-bbv-node.mk-dim').length") == 0
             page.goto(out.as_uri() + "?preview")
             page.wait_for_timeout(250)
             page.evaluate("window.postMessage({lattice: 'preview', slide: 'm', step: 1}, '*')")
@@ -3162,6 +3182,7 @@ panel: [contexts, distance]
             plan = {"title": "t", "pageOf": {}, "sections": [], "pages": [{"slide": "m", "step": 2, "n": 1}]}
             assert page.evaluate("plan => Lattice.print(plan)", plan) == 1
             assert page.evaluate("document.querySelectorAll('#lt-page-1 .lt-bbv-node.mk-merged').length") == 1
+            assert page.evaluate("getComputedStyle(document.querySelector('#lt-page-1 .lt-bbv-node.mk-absorbed')).opacity") == "0"
             assert not errors, errors
             browser.close()
     except Exception as e:

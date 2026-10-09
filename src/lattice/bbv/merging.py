@@ -31,7 +31,7 @@ SEPARATION = (1.0, 3.0)  # the target distance of the nearest and farthest pairs
 # (scale, horizontal stretch) tried by `distance`, the least distorted first
 DISTANCE_FITS = [(1.0, 1.0), (0.8, 1.0), (1.0, 1.25), (0.8, 1.25), (0.65, 1.0), (1.0, 1.5), (0.8, 1.5), (0.65, 1.25),
                  (0.65, 1.5)]
-ALGO = {"start": [5], "pick": [53, 54], "merge": [55, 56, 57], "done": []}  # lines of sbbv.txt
+ALGO = {"start": [5], "pick": [53, 54], "merge": [55, 56, 57], "settle": [5], "done": []}  # lines of sbbv.txt
 
 _VAR = re.compile(r"[^\s(),=/:`]+")
 _NAME = re.compile(r"[A-Za-z_$][\w$.'-]*")
@@ -116,7 +116,8 @@ class MergeRun:
                  program: Program | None = None, block: str | None = None, name: str | None = None,
                  intervals: bool = False, thresholds="machine", fixnum_bits: int = 61, vector_bounds: bool = True,
                  placement: str = "circle", edges: str = "all", edge_width=(1.0, 7.0), log_range=None,
-                 show: list[str] | None = None, color_keys: bool = False, room: tuple[float, float] = (1136.0, 430.0)):
+                 show: list[str] | None = None, color_keys: bool = False, room: tuple[float, float] = (1136.0, 430.0),
+                 magnitude: bool = False):
         if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
             raise MergeError(f"limit: expected an integer >= 1, got {limit!r}")
         if placement not in PLACEMENTS:
@@ -129,6 +130,7 @@ class MergeRun:
         self.limit = limit
         self.edges_mode = edges if self.distance is not None else "none"
         self.color_keys = color_keys
+        self.magnitude = magnitude  # distances shown as their log10 (display only)
         items = _items(contexts, intervals)
         self.program, self.block = self._block(program, block, name, [c for c, _, _ in items])
         self.real_block = program is not None
@@ -254,40 +256,43 @@ class MergeRun:
             if kind == "merge":
                 merges.append(info)
         self.merges = merges
-        # every frame: (kind, live vids, marks, edge states, info)
+        # every frame: (kind, live vids, marks, edge states, absorbed vids, info). A merge takes three frames: the
+        # pair picked; the merge (the pair at their meeting point, absorbed, the result there, the others dimmed);
+        # the settle (everything clear again, back in the layout). The last settle is the `done` frame.
         steps: list[tuple[str, list[int], dict, dict, list[int], dict]] = [("start", list(live), {}, {}, [], {})]
-        self.sequence: list[list[int]] = [list(live)]  # the order of the live nodes (circle placement)
-        for info in merges:
+        self.orders: dict[int, list[int]] = {0: list(live)}  # the order of the live nodes (circle placement)
+        seq = list(live)
+        for n_merge, info in enumerate(merges):
             pair, into = list(info["merged"]), info["into"]
             marks = {p: "merge" for p in pair}
-            states = {_key(*pair): "merge"}
-            steps.append(("pick", list(live), marks, states, [], info))
+            steps.append(("pick", list(live), marks, {_key(*pair): "merge"}, [], info))
+            self.orders[len(steps) - 1] = list(seq)
             olds = [p for p in pair if p != into]
-            new = into not in live
-            for p in olds:
-                live.remove(p)
-            if new:
-                older = min(pair)
-                at = self.sequence[-1].index(older)
-                live.append(into)
+            arrive = into not in live  # the result appears when the pair reaches it
+            others = [v for v in live if v not in pair and v != into]
+            if arrive:
                 self.parents[into] = (pair[0], pair[1])
-            marks = {into: "merged"}
-            marks.update({p: "gone" for p in olds})
-            states = {}
-            if new:
-                states.update({_key(into, x): "new" for x in live if x != into})
-            steps.append(("merge", list(live), marks, states, olds, info))
-            seq = [x for x in self.sequence[-1]]
-            if new:
-                seq[at] = into
-            seq = [x for x in seq if x not in olds]
-            self.sequence.append(seq)
-        steps.append(("done", list(live), {}, {}, [], {}))
+            marks = {v: "dim" for v in others}
+            marks.update({p: "absorbed" for p in olds})
+            marks[into] = "merged"
+            after = others + [into] if arrive else [v for v in live if v not in olds]
+            steps.append(("merge", after, marks, {}, olds, {**info, "arrive": arrive, "others": others}))
+            if arrive:
+                seq = [into if v == min(pair) else v for v in seq]
+            seq = [v for v in seq if v not in olds]
+            live = after
+            states = {_key(into, x): "new" for x in live if x != into} if arrive else {}
+            last = n_merge == len(merges) - 1
+            steps.append(("done" if last else "settle", list(live), {into: "merged"}, states, [],
+                          {**info, "arrive": arrive}))
+            self.orders[len(steps) - 1] = list(seq)
+        if not merges:
+            steps.append(("done", list(live), {}, {}, [], {}))
+            self.orders[1] = list(seq)
         # widths: the log of the distance, clamped, thick for the nearest pairs
         pairs = set()
-        for _, lv, _, _, gone, _ in steps:
-            drawn = lv + gone
-            pairs |= {_key(a, b) for i, a in enumerate(drawn) for b in drawn[i + 1:]}
+        for _, lv, _, _, _, _ in steps:
+            pairs |= {_key(a, b) for i, a in enumerate(lv) for b in lv[i + 1:]}
         self.dist: dict[str, float] = {}
         if self.distance is not None:
             for k in pairs:
@@ -310,27 +315,28 @@ class MergeRun:
         merges_done = 0
         for kind, lv, marks, states, gone, info in steps:
             nodes = {str(v): {"state": "done"} for v in lv}
-            for v in gone:
+            for v in gone:  # absorbed by the merge: drawn at the meeting point, faded out
                 nodes[str(v)] = {"state": "done"}
             for v, m in marks.items():
                 nodes[str(v)]["mark"] = m
             edges = {}
             if self.edges_mode != "none":
-                drawn = lv + gone
+                # a merge frame draws only the edges between the contexts the merge leaves alone, dimmed
+                drawn = info["others"] if kind == "merge" else lv
                 for i, a in enumerate(drawn):
                     for b in drawn[i + 1:]:
                         k = _key(a, b)
                         state = states.get(k)
-                        if a in gone or b in gone:
-                            state = "gone"
-                        elif kind == "pick" and state is None:
+                        if kind in ("pick", "merge") and state is None:
                             state = "dim"
                         if self.edges_mode == "pair" and state != "merge":
                             continue
-                        e = {"w": width(self.dist[k]), "d": compact(self.dist[k])}
+                        e = {"w": width(self.dist[k]), "d": self.shown(self.dist[k])}
                         if state:
                             e["state"] = state
                         edges[k] = e
+            if kind == "merge" and info["arrive"]:
+                nodes[str(info["into"])]["arrive"] = True
             if kind == "merge":
                 merges_done += 1
             frame = {"nodes": nodes, "edges": edges, "caption": self._caption(kind, lv, info),
@@ -345,6 +351,11 @@ class MergeRun:
                 meta["line"] = self.block.line
             self.meta.append(meta)
         self.steps = steps
+
+    def shown(self, d: float) -> str:
+        """A distance as displayed (captions, panel, edge labels): compact, or its log10 with
+        ``distance_magnitude``. The merges and widths always use the raw distance."""
+        return magnitude(d) if self.magnitude else compact(d)
 
     def _chip(self, vid: int) -> str:
         v = self.spec.by_id[vid]
@@ -368,8 +379,9 @@ class MergeRun:
             pairs = n * (n - 1) // 2
             if self.distance is None:
                 return join([f"{op('random pair')} {self._chip(a)} {self._chip(b)}", f"one of {pairs} pairs"])
-            d = compact(self._d(a, b))
-            return join([f"{op('closest pair')} {self._chip(a)} {self._chip(b)}", f"distance {d}",
+            d = self.shown(self._d(a, b))
+            what = "log₁₀ distance" if self.magnitude else "distance"
+            return join([f"{op('closest pair')} {self._chip(a)} {self._chip(b)}", f"{what} {d}",
                          f"the smallest of {pairs} pair{'s' if pairs != 1 else ''}"])
         if kind == "merge":
             into = info["into"]
@@ -387,15 +399,26 @@ class MergeRun:
                 parts.append(f"{tag('widened')} {', '.join(var(w) for w in widened)}")
             parts.append(rich_context(self.spec.by_id[into].context))
             return join(parts)
+        what = self._outcome(info) if info else ""
+        if kind == "settle":
+            return join([f"{op('limit')} {n} contexts for a limit of {self.limit}", what])
         m = len(self.merges)
         return join([f"{op('done')} {n} context{'s' if n != 1 else ''}", f"{m} merge{'s' if m != 1 else ''}",
-                     f"limit {self.limit}"])
+                     f"limit {self.limit}", what])
+
+    def _outcome(self, info: dict) -> str:
+        """What the last merge left: a new context in place of its pair, or the pair absorbed."""
+        into = info["into"]
+        olds = [i for i in info["merged"] if i != into]
+        if info["arrive"]:
+            return f"{self._chip(into)} in place of {' and '.join(self._chip(i) for i in olds)}"
+        return f"{' and '.join(self._chip(i) for i in olds)} absorbed into {self._chip(into)}"
 
     def _panel(self, kind: str, live: list[int], info: dict, merges: int) -> dict:
         by = self.spec.by_id
         panel = {"contexts": [by[v].label for v in live], "limit": self.limit, "merges": merges}
         if self.distance is not None:
-            panel["distance"] = compact(self._d(*info["merged"])) if kind in ("pick", "merge") else ""
+            panel["distance"] = self.shown(self._d(*info["merged"])) if kind in ("pick", "merge") else ""
         return panel
 
     # ---------------------------------------------------------------- tables
@@ -418,6 +441,7 @@ class MergeRun:
             positions = self._circle(room)
         else:
             positions = self._distance(room)
+        positions = self._meet(positions)
         # the drawing's box: every position of every frame, moved to the margin
         w, h = self.size
         xs = [p[0] for f in positions for p in f.values()]
@@ -431,11 +455,32 @@ class MergeRun:
         _, live, _, _, gone, _ = self.steps[i]
         return live + gone
 
+    def _meet(self, positions: list[dict]) -> list[dict]:
+        """The merge frames: the contexts left alone stay where the pick frame drew them, and the pair meets on the
+        context that remains (the absorbed one under it), or, for a result not drawn yet, halfway between them,
+        where the result appears."""
+        out = list(positions)
+        for i, (kind, live, _, _, absorbed, info) in enumerate(self.steps):
+            if kind != "merge":
+                continue
+            prev = out[i - 1]
+            into, pair = str(info["into"]), [str(v) for v in info["merged"]]
+            if into in prev:
+                meet = prev[into]
+            else:
+                (ax, ay), (bx, by) = prev[pair[0]], prev[pair[1]]
+                meet = [(ax + bx) / 2, (ay + by) / 2]
+            pos = {str(v): prev[str(v)] for v in info["others"]}
+            for v in pair + [into]:
+                pos[v] = list(meet)
+            out[i] = pos
+        return out
+
     def _circle(self, room) -> list[dict]:
-        """Live contexts evenly on an ellipse, in the order given; a merged context takes the place of the
-        older of its pair for the merge frame, and the next frame spaces the nodes evenly again."""
+        """Live contexts evenly on an ellipse, in the order given; a new result takes the place of the older
+        context of its pair in that order, and the settle frame spaces the nodes evenly again."""
         w, h = self.size
-        counts = sorted({len(s) for s in self.sequence})
+        counts = sorted({len(s) for s in self.orders.values()})
 
         def slots(n: int, rx: float, ry: float) -> list[tuple[float, float]]:
             if n == 1:
@@ -469,23 +514,13 @@ class MergeRun:
                 best = (scale, k, r)
         _, k, r = best
         out = []
-        si = 0  # the sequence of the frame: one per pick frame, the merge frame uses the previous one
-        prev: dict[int, tuple[float, float]] = {}
-        for i, (kind, live, marks, _, gone, info) in enumerate(self.steps):
-            if kind == "merge":
-                pos = {v: prev[v] for v in live if v in prev}
-                into = info["into"]
-                if into not in prev:
-                    pos[into] = prev[min(info["merged"])]
-                for v in gone:
-                    pos[v] = prev[v]
-                si += 1
-            else:
-                seq = self.sequence[si]
-                pts = slots(len(seq), r * k, r)
-                pos = {v: (pts[j][0] - w / 2, pts[j][1] - h / 2) for j, v in enumerate(seq)}
-            prev = pos
-            out.append({str(v): list(p) for v, p in pos.items()})
+        for i in range(len(self.steps)):
+            seq = self.orders.get(i)
+            if seq is None:  # a merge frame: placed by _meet
+                out.append({})
+                continue
+            pts = slots(len(seq), r * k, r)
+            out.append({str(v): [pts[j][0] - w / 2, pts[j][1] - h / 2] for j, v in enumerate(seq)})
         return out
 
     def _distance(self, room) -> list[dict]:
@@ -531,6 +566,11 @@ class MergeRun:
 
 def _key(a: int, b: int) -> str:
     return f"{min(a, b)}--{max(a, b)}"
+
+
+def magnitude(d: float) -> str:
+    """The log10 of a distance, two decimals: ``6.22``; ``-∞`` for a distance of 0."""
+    return f"{math.log10(d):.2f}" if d > 0 else "-∞"
 
 
 def compact(d: float) -> str:

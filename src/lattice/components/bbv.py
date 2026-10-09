@@ -546,6 +546,7 @@ class BbvMergeOptions(BaseModel):
     edge_width: Any = None  # [min, max] stroke widths in px, of the farthest and nearest pairs; default [1, 7]
     log_range: Any = "auto"  # or [lo, hi]: the logs of the distances are clamped to it
     edge_labels: bool = False
+    distance_magnitude: bool = False  # show log10 of the distances (captions, panel, edge labels)
     intervals: bool = False
     thresholds: str | list[int | str] = "machine"
     fixnum_bits: int = 61
@@ -560,7 +561,7 @@ class BbvMergeOptions(BaseModel):
 
 
 MERGE_PANEL = ["contexts", "limit", "merges", "distance"]
-_NO_DISTANCE = ("edges", "edge_width", "log_range", "edge_labels")
+_NO_DISTANCE = ("edges", "edge_width", "log_range", "edge_labels", "distance_magnitude")
 
 
 def _pair(value, what: str, default):
@@ -636,7 +637,7 @@ class BbvMerge(Component):
                            block=opts.block, name=opts.name, intervals=opts.intervals, thresholds=opts.thresholds,
                            fixnum_bits=opts.fixnum_bits, vector_bounds=opts.vector_bounds, placement=opts.placement,
                            edges=opts.edges, edge_width=edge_width, log_range=log_range, show=show,
-                           color_keys=opts.colors == "context", room=room)
+                           color_keys=opts.colors == "context", room=room, magnitude=opts.distance_magnitude)
         except (MergeError, ProgramError, ValueError) as e:
             raise ComponentError(str(e)) from None
         if len(run.initial) <= opts.limit:
@@ -708,6 +709,6 @@ class BbvMerge(Component):
             selector = f'.lt-bbv-dist[data-key="{key}"]:not(.lt-gone) > .lt-bbv-edge-mark'
         else:
             vid = vid_of(name)
-            drawn = [vid in (f.get("nodes") or {}) for f in frames]
-            selector = f'.lt-bbv-node[data-vid="{vid}"]:not(.lt-gone)'
+            drawn = [vid in (f.get("nodes") or {}) and f["nodes"][vid].get("mark") != "absorbed" for f in frames]
+            selector = f'.lt-bbv-node[data-vid="{vid}"]:not(.lt-gone):not(.mk-absorbed)'
         return Part(selector, None if all(drawn) else drawn)

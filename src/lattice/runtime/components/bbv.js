@@ -5,6 +5,7 @@
 (() => {
   const NS = "http://www.w3.org/2000/svg";
   const DURATION = 380;
+  const MERGE_GLIDE = 650;  // bbv-merge: the pair meeting, and the contexts going back to the layout
   const PAD_X = 10, PAD_Y = 6, LABEL_H = 22, LINE_H = 16;
   const AFTER_HEAD = ";; after:";  // as layout.AFTER_HEAD, which sizes the enlarged block
   const ZOOM_PAD = 6;  // room around an enlarged block for its outline
@@ -600,7 +601,7 @@
       s.classList.add("lt-bbv-clickable");
       gNodes.addEventListener("click", (e) => {
         const g = e.target.closest(".lt-bbv-node");
-        if (!g || g.classList.contains("lt-gone") || g.classList.contains("mk-gone")) return;
+        if (!g || g.classList.contains("lt-gone") || g.classList.contains("mk-gone") || g.classList.contains("mk-absorbed")) return;
         api.zoom(g.dataset.vid);
       });
     }
@@ -639,7 +640,7 @@
 
   // Moves the nodes to `pos`: at once, or gliding when an animated step moves a node that was drawn. Returns
   // whether they glide.
-  function glide(inst, pos, info, placer) {
+  function glide(inst, pos, info, placer, duration = DURATION) {
     const from = inst.at;
     inst.at = pos;
     const moves = info.animate && Object.keys(pos).some((k) => from[k] && (from[k][0] !== pos[k][0] || from[k][1] !== pos[k][1]));
@@ -649,7 +650,7 @@
       const start = Object.fromEntries(Object.keys(pos).map((n) => [n, from[n] || pos[n]]));
       const t0 = performance.now();
       const tick = (now) => {
-        const k = Math.min(1, (now - t0) / DURATION);
+        const k = Math.min(1, (now - t0) / duration);
         const ease = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
         const at = {};
         for (const [n, p] of Object.entries(pos)) at[n] = [start[n][0] + (p[0] - start[n][0]) * ease, start[n][1] + (p[1] - start[n][1]) * ease];
@@ -664,12 +665,12 @@
 
   // The panel and caption of a frame, then the arrows at parts of the drawing (spec 8.9, 10.4), which
   // measure again, frame by frame while the nodes glide
-  function finish(inst, f, info, moves) {
+  function finish(inst, f, info, moves, duration = DURATION) {
     renderPanel(inst, f.panel);
     inst.caption.innerHTML = richHTML(inst, f.caption || "");
     fitCaption(inst.caption);
     inst.root.dispatchEvent(new CustomEvent("lt-relayout", { bubbles: true,
-      detail: moves ? { animate: true, follow: DURATION } : { animate: !!info.animate } }));
+      detail: moves ? { animate: true, follow: duration } : { animate: !!info.animate } }));
   }
 
   // ---- bbv-merge (spec 9.5, "Merge heuristics"): contexts merged two by two until the limit holds. The
@@ -730,7 +731,23 @@
     inst.position = position;
     const nodes = f.nodes || {};
     inst.root.classList.toggle("lt-animate", !!info.animate);
-    for (const [vid, st] of Object.entries(nodes)) nodeState(inst, node(inst, vid), vid, st, position);
+    inst.root.style.setProperty("--lt-glide", `${MERGE_GLIDE}ms`);
+    // an absorbed context goes under the one it meets: moved first in the drawing, then its style flushed, since
+    // an element moved in the DOM starts no transition from its old style
+    let moved = false;
+    for (const [vid, st] of Object.entries(nodes)) {
+      if (st.mark !== "absorbed") continue;
+      const g = node(inst, vid).g;
+      if (g !== inst.gNodes.firstChild) { inst.gNodes.insertBefore(g, inst.gNodes.firstChild); moved = true; }
+    }
+    if (moved) getComputedStyle(inst.gNodes.firstChild).opacity;
+    for (const [vid, st] of Object.entries(nodes)) {
+      const n = node(inst, vid);
+      nodeState(inst, n, vid, st, position);
+      // a new result fades in once the pair has met (CSS, on an animated step only); an absorbed context fades
+      // out there
+      if (st.arrive) n.g.classList.add("mk-arrive");
+    }
     for (const [vid, n] of Object.entries(inst.nodes)) if (!(vid in nodes)) n.g.setAttribute("class", `lt-bbv-node lt-gone${n.origin}`);
     const live = new Set();
     for (const [key, st] of Object.entries(f.edges || {})) {
@@ -742,8 +759,8 @@
       e.chars = e.label.textContent.length;
     }
     for (const [key, e] of Object.entries(inst.edges)) if (!live.has(key)) e.g.setAttribute("class", "lt-bbv-edge lt-bbv-dist lt-gone");
-    const moves = glide(inst, f.pos || {}, info, placeMerge);
-    finish(inst, f, info, moves);
+    const moves = glide(inst, f.pos || {}, info, placeMerge, MERGE_GLIDE);
+    finish(inst, f, info, moves, MERGE_GLIDE);
   }
 
   // The panel of Lattice.renderPanel, with version labels as chips and the ∪ / ∇ steps of a
@@ -775,7 +792,7 @@
   function zoom(inst, vid) {
     const st = inst.zoom && inst.frame && (inst.frame.nodes || {})[vid];
     const v = inst.T.versions[vid];
-    if (!st || !v || st.mark === "gone") return null;
+    if (!st || !v || st.mark === "gone" || st.mark === "absorbed") return null;
     const [w, h] = inst.zoom.sizes[vid];
     const ctx = st.lines || v.context;
     const after = st.after || v.after || [];

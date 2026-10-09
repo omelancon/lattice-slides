@@ -1790,7 +1790,8 @@ def test_merge_run_picks_the_closest_pair_until_the_limit_holds(heuristic):
     run = _merge_run(heuristic=heuristic, limit=2)
     events = [m["event"] for m in run.meta]
     n = len(run.merges)
-    assert events == ["start"] + ["pick", "merge"] * n + ["done"] and len(run.frames) == 2 * n + 2
+    assert events == ["start"] + ["pick", "merge", "settle"] * (n - 1) + ["pick", "merge", "done"]
+    assert len(run.frames) == 3 * n + 1
     by = run.spec.by_id
     for i, f in enumerate(run.frames):
         if run.meta[i]["event"] != "pick":
@@ -1804,7 +1805,7 @@ def test_merge_run_picks_the_closest_pair_until_the_limit_holds(heuristic):
         assert states.count("merge") == 1 and states.count("dim") == len(states) - 1
         assert len(states) == len(live) * (len(live) - 1) // 2  # the complete graph
     live = [v for v, st in run.frames[-1]["nodes"].items()]
-    assert len(live) <= 2 and not any(st.get("mark") for st in run.frames[-1]["nodes"].values())
+    assert len(live) <= 2 and [st.get("mark") for st in run.frames[-1]["nodes"].values()].count("merged") == 1
     assert "done" in plain(run.frames[-1]["caption"])
 
 
@@ -1815,13 +1816,22 @@ def test_merge_run_is_the_merge_of_sbbv():
     captions = [plain(f["caption"]) for f in run.frames]
     assert captions[1].startswith("closest pair C2 C3 · distance 64")
     assert captions[2].startswith("merge C2 C3 → C6 · new context, the union of theirs · x: fx | fl · y: fx | fl")
-    assert captions[4].startswith("merge C6 → C5 · its context is their union")
-    assert captions[6].startswith("merge C1 C4 → C5 · their union is C6, merged into C5 earlier")
+    assert captions[3].startswith("limit 4 contexts for a limit of 2 · C6 in place of C2 and C3")
+    assert captions[5].startswith("merge C6 → C5 · its context is their union")
+    assert captions[6].endswith("C6 absorbed into C5")
+    assert captions[8].startswith("merge C1 C4 → C5 · their union is C6, merged into C5 earlier")
+    assert captions[9].endswith("C1 and C4 absorbed into C5")
     merge = run.frames[2]["nodes"]
-    assert merge["6"]["mark"] == "merged" and merge["2"]["mark"] == merge["3"]["mark"] == "gone"
-    assert all(e.get("state") == "new" for k, e in run.frames[2]["edges"].items() if "6" in k.split("--")
-               and not {"2", "3"} & set(k.split("--")))
-    assert run.meta[1]["algo"] == [53, 54] and run.meta[2]["algo"] == [55, 56, 57]
+    assert merge["6"] == {"state": "done", "mark": "merged", "arrive": True}
+    assert merge["2"]["mark"] == merge["3"]["mark"] == "absorbed"
+    assert all(merge[v]["mark"] == "dim" for v in ("1", "4", "5"))
+    # the merge frame draws only the edges between the contexts left alone, dimmed
+    assert sorted(run.frames[2]["edges"]) == ["1--4", "1--5", "4--5"]
+    assert all(e["state"] == "dim" for e in run.frames[2]["edges"].values())
+    settle = run.frames[3]
+    assert all(e.get("state") == "new" for k, e in settle["edges"].items() if "6" in k.split("--"))
+    assert not any(st.get("mark") for v, st in settle["nodes"].items() if v != "6")
+    assert run.meta[1]["algo"] == [53, 54] and run.meta[2]["algo"] == [55, 56, 57] and run.meta[3]["algo"] == [5]
 
 
 def test_merge_edge_widths_are_the_clamped_log_of_the_distance():
@@ -1849,29 +1859,45 @@ def test_merge_edge_widths_are_the_clamped_log_of_the_distance():
 def test_merge_placements_never_overlap(placement, heuristic):
     run = _merge_run(heuristic=heuristic, placement=placement, limit=1)
     for i, f in enumerate(run.frames):
-        if run.meta[i]["event"] == "merge":  # the result drawn over the faded context it replaces (circle)
-            live = {v: p for v, p in f["pos"].items() if f["nodes"][v].get("mark") != "gone"}
+        if run.meta[i]["event"] == "merge":  # the pair meets: those left alone stay apart
+            live = {v: p for v, p in f["pos"].items() if f["nodes"][v].get("mark") == "dim"}
             assert not _overlaps({"pos": live}, run.size)
         else:
             assert not _overlaps(f, run.size), (i, f["pos"])
         for p in f["pos"].values():
             assert 0 <= p[0] and p[0] + run.size[0] <= run.box["width"] + 0.1
             assert 0 <= p[1] and p[1] + run.size[1] <= run.box["height"] + 0.1
-    if placement == "distance":  # one place per context for the whole run
+    if placement == "distance":  # one place per context for the whole run, but where a pair meets
         places = {}
-        for f in run.frames:
+        for i, f in enumerate(run.frames):
             for v, p in f["pos"].items():
-                assert places.setdefault(v, p) == p
+                if run.meta[i]["event"] != "merge" or f["nodes"][v].get("mark") == "dim":
+                    assert places.setdefault(v, p) == p
 
 
-def test_merge_circle_puts_the_result_at_the_older_place_then_respaces():
-    run = _merge_run(heuristic="arithmetic")
-    pick, merge, after = run.frames[1], run.frames[2], run.frames[3]
-    a, b = sorted(int(v) for v, st in pick["nodes"].items() if st.get("mark") == "merge")
-    into = next(v for v, st in merge["nodes"].items() if st.get("mark") == "merged")
-    assert merge["pos"][into] == pick["pos"][str(a)]
-    assert merge["pos"][str(b)] == pick["pos"][str(b)]  # the faded one stays
-    assert str(b) not in after["pos"] and after["pos"] != {k: v for k, v in merge["pos"].items() if k in after["pos"]}
+@pytest.mark.parametrize("placement", ["circle", "distance"])
+def test_merge_frames_meet_then_settle(placement):
+    """The pair meets on the context that remains, or halfway when the result is new; the others stay; the
+    settle frame is the layout of the contexts left."""
+    run = _merge_run(heuristic="arithmetic", placement=placement)
+    for i, m in enumerate(run.meta):
+        if m["event"] != "merge":
+            continue
+        pick, merge, settle = run.frames[i - 1], run.frames[i], run.frames[i + 1]
+        into = next(v for v, st in merge["nodes"].items() if st.get("mark") == "merged")
+        pair = [v for v, st in pick["nodes"].items() if st.get("mark") == "merge"]
+        if into in pick["pos"]:
+            meet = pick["pos"][into]
+        else:
+            meet = [round((pick["pos"][pair[0]][k] + pick["pos"][pair[1]][k]) / 2, 1) for k in (0, 1)]
+        assert all(merge["pos"][v] == meet for v in pair + [into]), (i, merge["pos"])
+        for v, st in merge["nodes"].items():
+            if st.get("mark") == "dim":
+                assert merge["pos"][v] == pick["pos"][v]
+        assert set(settle["nodes"]) == {v for v, st in merge["nodes"].items() if st.get("mark") != "absorbed"}
+    if placement == "circle":  # back to even spacing: a new result moves from where its pair met
+        into = str(run.merges[0]["into"])
+        assert run.frames[3]["pos"][into] != run.frames[2]["pos"][into]
 
 
 def test_merge_random_draws_no_distance():
@@ -1922,7 +1948,7 @@ def test_bbv_merge_component_builds(deck):
     assert not d.diagnostics.items, d.diagnostics.items
     inst = d.instances["m/h"]
     data = inst["data"]
-    assert data["kind"] == "merge" and inst["positions"] == data["frames"]["count"] == 2 * 2 + 2
+    assert data["kind"] == "merge" and inst["positions"] == data["frames"]["count"] == 3 * 2 + 1
     sizes = {tuple(s) for s in data["box"]["sizes"].values()}
     assert len(sizes) == 1  # every node has the same shape
     labels = [v["label"] for v in data["tables"]["versions"].values()]
@@ -1935,6 +1961,7 @@ def test_bbv_merge_component_builds(deck):
 @pytest.mark.parametrize("attrs, body, message", [
     ("", "contexts: null", "contexts: list the contexts"),
     (' heuristic=random edges=all', "", "edges: the random heuristic has no distance to draw"),
+    (' heuristic=random distance_magnitude=true', "", "distance_magnitude: the random heuristic has no distance"),
     (' heuristic=random', "panel: [distance]", "random has no distance"),
     (' heuristic=random placement=distance', "", "placement=distance needs a heuristic with a distance"),
     (' edge_width="[3, 1]"', "", "edge_width: expected two increasing numbers"),
@@ -1990,13 +2017,45 @@ def test_bbv_merge_within_the_limit_warns(deck):
 
 def test_arrow_at_contexts_and_edges_of_a_merge(deck):
     timeline = "```timeline\nh 1..end, w 1..end\n```\n"
-    root = _merge_deck(deck, after="```arrow {#w}\nsteps: [h.C1, h.Q, h.C1--C2, null, null, null]\n```\n" + timeline)
+    root = _merge_deck(deck, after="```arrow {#w}\nsteps: [h.C1--C2, h.Q, h.C1, null, null, null, null]\n```\n" + timeline)
     d = build_deck(root, use_cache=False)
     assert not d.diagnostics.items, d.diagnostics.items
     steps = d.instances["m/w"]["data"]["steps"]
-    assert steps[0]["to_part"] == '.lt-bbv-node[data-vid="1"]:not(.lt-gone)'
-    assert steps[2]["to_part"] == '.lt-bbv-dist[data-key="1--2"]:not(.lt-gone) > .lt-bbv-edge-mark'
+    assert steps[2]["to_part"] == '.lt-bbv-node[data-vid="1"]:not(.lt-gone):not(.mk-absorbed)'
+    assert steps[0]["to_part"] == '.lt-bbv-dist[data-key="1--2"]:not(.lt-gone) > .lt-bbv-edge-mark'
     for ref, message in [("h.C9", "no context 'C9'"), ("h.C1--C9", "no context 'C9'")]:
         bad = _merge_deck(deck, after=f"```arrow {{#w}}\nsteps: [{ref}]\n```\n")
         items = check_deck(bad, use_cache=False).items
         assert any(x.code == "LT063" and message in x.message for x in items), items
+
+
+def test_an_absorbed_context_is_not_a_part_to_point_at(deck):
+    from lattice.components.base import RenderResult
+    from lattice.components.bbv import BbvMerge
+
+    d = build_deck(_merge_deck(deck), use_cache=False)
+    inst = d.instances["m/h"]
+    result = RenderResult("", inst["data"], inst["positions"])
+    frame = inst["data"]["frames"]["frames"][2]
+    absorbed = [v for v, st in frame["nodes"].items() if st.get("mark") == "absorbed"]
+    label = inst["data"]["tables"]["versions"][absorbed[0]]["label"]
+    part = BbvMerge().part(result, label)
+    assert part.drawn[1] and not part.drawn[2]  # picked, then absorbed
+
+
+def test_distance_magnitude_changes_only_what_is_shown():
+    import math
+
+    raw = _merge_run(heuristic="similarity")
+    mag = _merge_run(heuristic="similarity", magnitude=True)
+    assert [f["pos"] for f in raw.frames] == [f["pos"] for f in mag.frames]  # same merges, same layout
+    for fr, fm in zip(raw.frames, mag.frames):
+        assert {k: e["w"] for k, e in fr["edges"].items()} == {k: e["w"] for k, e in fm["edges"].items()}
+        for k, e in fm["edges"].items():
+            assert e["d"] == f"{math.log10(raw.dist[k]):.2f}"
+    a, b = (int(v) for v, st in mag.frames[1]["nodes"].items() if st.get("mark") == "merge")
+    shown = f"{math.log10(raw._d(a, b)):.2f}"
+    assert f"log₁₀ distance {shown}" in plain(mag.frames[1]["caption"])
+    assert mag.frames[1]["panel"]["distance"] == shown
+    from lattice.bbv.merging import magnitude
+    assert magnitude(0) == "-∞" and magnitude(1000) == "3.00"

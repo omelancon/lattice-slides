@@ -1,5 +1,5 @@
 """Lattice: compile Markdown into non-linear HTML slide decks."""
-__version__ = "0.33.0"
+__version__ = "0.33.1"
 
 from .anim import ArrayTrace, GraphTrace, GridTrace, Trace, TreeTrace  # noqa: E402,F401
 from .components.base import (Component, ComponentError, Part, RenderContext, RenderResult,  # noqa: E402,F401

@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.33.0
+author: Lattice 0.33.1
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1568,7 +1568,7 @@ contexts:
 :::
 ::: column {width=1fr}
 - `contexts:` of one block, merged two by two by SBBV's `mergeSome` until `limit` holds
-- Two steps per merge: the pair the `heuristic` picks, then the merge
+- Three steps per merge: the pair the `heuristic` picks; the pair meets, the others grey; back in place
 - The thicker the edge, the closer the pair (log of the distance); `random` draws none
 - `placement=distance`; `program=` and `block=` add the specialized code
 :::
