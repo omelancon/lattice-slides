@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.33.2. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.33.3. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -264,7 +264,7 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.32 (done).** Bands of ranks in the versioning drawings: `rank_wrap` (a count or `auto`), `rank_wraps` per function and `rank_flow` (`restart` or `snake`) cut the ranks of a function into bands laid side by side, so that a long CFG takes the shape of its box and its text stays readable; edges between bands run through gutters, one lane per target.
 
-**v0.33 (done).** `bbv-merge`, one decision of the versioning algorithms on its own: a set of contexts of one block merged two by two by SBBV's own `mergeSome` until the limit holds, each merge in three steps (the pair the heuristic picks; the pair meeting, the absorbed context gliding under the one that remains or both meeting halfway where the new result appears, the others greyed; everything back to the placement), styled as in `bbv-anim`, on a complete graph whose edges are as thick as the two contexts are close (the clamped log of the heuristic's distance), placed on an ellipse or by multidimensional scaling of the distances; a block of a program, specialized in each context, makes the nodes look like versions. 0.33.2 routes the loops of every versioning drawing through the gutter before or after their band (decision 44), and makes lit call edges as heavy as the other lit edges.
+**v0.33 (done).** `bbv-merge`, one decision of the versioning algorithms on its own: a set of contexts of one block merged two by two by SBBV's own `mergeSome` until the limit holds, each merge in three steps (the pair the heuristic picks; the pair meeting, the absorbed context gliding under the one that remains or both meeting halfway where the new result appears, the others greyed; everything back to the placement), styled as in `bbv-anim`, on a complete graph whose edges are as thick as the two contexts are close (the clamped log of the heuristic's distance), placed on an ellipse or by multidimensional scaling of the distances; a block of a program, specialized in each context, makes the nodes look like versions. 0.33.2 routes the loops of every versioning drawing through the gutter before or after their band (decision 44), and makes lit call edges as heavy as the other lit edges; 0.33.3 puts every arrowhead, of a fixed size, on a straight end of its edge.
 
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".

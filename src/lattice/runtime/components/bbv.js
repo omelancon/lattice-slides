@@ -11,6 +11,11 @@
   const ZOOM_PAD = 6;  // room around an enlarged block for its outline
   const MARK_CH = 7.3, MARK_PAD = 3, MARK_H = 15;  // the box of an edge label: 12px monospace characters
   const STATES = ["default", "new", "gone", "active", "path", "dim"];
+  // arrowheads in drawing units, whatever the width of the edge: [length, width], larger for a lit edge
+  const ARROW = [10, 7], ARROW_LIT = [12, 9], LIT = ["new", "active", "path"];
+  // every edge ends with a straight leg at least this long, so that its arrowhead (whose back lies 0.9 of its
+  // length before the end) sits on it, aligned with the edge; shorter only where the gap it ends in is
+  const LEG = 13;
   let uid = 0;
 
   function svg(tag, attrs = {}, text) {
@@ -234,13 +239,18 @@
     return { sx: a[0] + na.w / 2, sy: a[1] + na.h, ex: b[0] + nb.w / 2, ey: b[1], back: b[1] < a[1] + na.h / 2 };
   }
 
-  // Rounded polyline through waypoints (for back edges, which travel along a lane beside the function).
+  // Rounded polyline through waypoints (for back edges, which travel along a lane beside the function). The
+  // last corner is rounded only as much as leaves a straight leg of LEG under the arrowhead (a sharp corner when
+  // the last segment is shorter).
   function polyline(points, r = 12) {
     let d = `M${points[0][0]},${points[0][1]}`;
+    const lastCorner = points.length - 2;
     for (let i = 1; i < points.length - 1; i++) {
       const [px, py] = points[i - 1], [cx, cy] = points[i], [nx, ny] = points[i + 1];
       const d1 = Math.hypot(cx - px, cy - py), d2 = Math.hypot(nx - cx, ny - cy);
-      const r1 = Math.min(r, d1 / 2), r2 = Math.min(r, d2 / 2);
+      // the last corner keeps the leg straight, and stays round (as wide on both sides)
+      const r2 = Math.min(r, i === lastCorner ? Math.max(0, d2 - LEG) : d2 / 2);
+      const r1 = i === lastCorner ? Math.min(r2, d1 / 2) : Math.min(r, d1 / 2);
       const ax = cx - (cx - px) / d1 * r1, ay = cy - (cy - py) / d1 * r1;
       const bx = cx + (nx - cx) / d2 * r2, by = cy + (ny - cy) / d2 * r2;
       d += ` L${ax},${ay} Q${cx},${cy} ${bx},${by}`;
@@ -262,12 +272,14 @@
       if (lr) { p.sy += side * PARALLEL_END; p.ey += side * PARALLEL_END; }
       else { p.sx += side * PARALLEL_END; p.ex += side * PARALLEL_END; }
     }
-    if (!p.back) {
+    if (!p.back) {  // a curve, then the straight leg under the arrowhead
       const bend = side * PARALLEL_BEND;
-      const c1 = lr ? [p.sx + (p.ex - p.sx) / 2, p.sy + bend] : [p.sx + bend, p.sy + (p.ey - p.sy) / 2];
-      const c2 = lr ? [p.sx + (p.ex - p.sx) / 2, p.ey + bend] : [p.ex + bend, p.ey - (p.ey - p.sy) / 2];
-      const mid = [(p.sx + 3 * c1[0] + 3 * c2[0] + p.ex) / 8, (p.sy + 3 * c1[1] + 3 * c2[1] + p.ey) / 8];
-      return { d: `M${p.sx},${p.sy} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p.ex},${p.ey}`, mid };
+      const lead = Math.min(LEG, Math.max(0, (lr ? p.ex - p.sx : p.ey - p.sy) / 2));
+      const qx = lr ? p.ex - lead : p.ex, qy = lr ? p.ey : p.ey - lead;
+      const c1 = lr ? [p.sx + (qx - p.sx) / 2, p.sy + bend] : [p.sx + bend, p.sy + (qy - p.sy) / 2];
+      const c2 = lr ? [p.sx + (qx - p.sx) / 2, qy + bend] : [qx + bend, qy - (qy - p.sy) / 2];
+      const mid = [(p.sx + 3 * c1[0] + 3 * c2[0] + qx) / 8, (p.sy + 3 * c1[1] + 3 * c2[1] + qy) / 8];
+      return { d: `M${p.sx},${p.sy} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${qx},${qy} L${p.ex},${p.ey}`, mid };
     }
     // a back edge leaves along the rank axis, travels on the lane beside the function and comes back in
     const band = inst.box.bands[inst.T.versions[e.src].function] || { lane: 0 };
@@ -286,9 +298,11 @@
   // ---- bands of ranks (spec 9.5): the ranks of a function cut into bands laid side by side. Edges are routed
   // in the frame of the drawing: `a` across (the rank axis: y in TB, x in LR), `l` along (the packing axis).
   const EXIT_RANK = 0.35, EXIT_LINE = 0.35;  // where an edge runs in the gap after a rank or a line, as a fraction of it
+  const ENTRY_LONE = 0.46;  // where a lone edge runs in the gap before the rank or line it enters (room for its leg)
   // the runs of several edges in one such gap take slots of their own, in this part of the gap (fractions of it,
-  // from the rank or line they leave or reach), at most SLOT_STEP apart
-  const SLOT_NEAR = 0.1, SLOT_FAR = 0.45, SLOT_STEP = 5;
+  // from the rank or line they leave or reach), at most SLOT_STEP apart: the runs into a node lie farther from it
+  // than those out of one, so that the straight leg under an arrowhead fits, and the two parts never overlap
+  const SLOT_OUT = [0.06, 0.38], SLOT_IN = [0.3, 0.62], SLOT_STEP = 5;
   const LABEL_AFTER = 20;  // the label of an edge between bands: this far along its run toward the gutter, at most
   const LANE = 18;  // as layout.LANE: the first lane of a gutter, from the band it borders
   const GUTTER_LANES = 5;  // as layout.GUTTER_LANES: the most lanes of the edges between bands in a gutter
@@ -368,11 +382,13 @@
     let sl = A.l + A.ls / 2, el = B.l + B.ls / 2;
     if (side) { sl += side * PARALLEL_END; el += side * PARALLEL_END; }
     const back = s > 0 ? B.a < A.a + A.as / 2 : B.a + B.as > A.a + A.as / 2;
-    if (!back) {
-      const bend = side * PARALLEL_BEND, ma = sa + (ea - sa) / 2;
-      const p0 = pt(inst, sa, sl), c1 = pt(inst, ma, sl + bend), c2 = pt(inst, ma, el + bend), p3 = pt(inst, ea, el);
+    if (!back) {  // a curve, then the straight leg under the arrowhead
+      const qa = ea - s * Math.min(LEG, Math.max(0, s * (ea - sa) / 2));
+      const bend = side * PARALLEL_BEND, ma = sa + (qa - sa) / 2;
+      const p0 = pt(inst, sa, sl), c1 = pt(inst, ma, sl + bend), c2 = pt(inst, ma, el + bend), p3 = pt(inst, qa, el);
+      const end = pt(inst, ea, el);
       const mid = [(p0[0] + 3 * c1[0] + 3 * c2[0] + p3[0]) / 8, (p0[1] + 3 * c1[1] + 3 * c2[1] + p3[1]) / 8];
-      return { d: `M${p0[0]},${p0[1]} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p3[0]},${p3[1]}`, mid };
+      return { d: `M${p0[0]},${p0[1]} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p3[0]},${p3[1]} L${end[0]},${end[1]}`, mid };
     }
     // a back edge here only while nodes glide (a loop of the frame travels in a gutter): on a lane after the band
     const bandLane = band.end + LANE;
@@ -397,7 +413,7 @@
       x0: [fs ? A.a : A.a + A.as, A.l + A.ls / 2 + side * PARALLEL_END],
       exitGap, exitA: exitGap.mid,
       y0: [fd ? B.a + B.as : B.a, B.l + B.ls / 2 + side * PARALLEL_END],
-      entryGap, entryA: entryGap.mid,
+      entryGap, entryA: entryGap.at + entryGap.dir * ENTRY_LONE * entryGap.room,
       gOut: bd > bs ? bs : bs - 1, gIn: bd > bs ? bd - 1 : bd, right: bd > bs, side,
     };
     if (c.gOut !== c.gIn) {
@@ -533,8 +549,8 @@
     // the gutter); the run that travels farthest to its gutter lies farthest from the rank, so runs do not cross.
     const slots = {};
     const slot = (fn, g, id, dist, set) => {
-      const k = `${fn}|${g.dir}|${g.at.toFixed(1)}`;
-      ((slots[k] ||= { g, items: {} }).items[id] ||= { dist: 0, sets: [] });
+      const k = `${fn}|${g.dir}|${g.at.toFixed(1)}|${id.slice(0, id.indexOf(":"))}`;
+      ((slots[k] ||= { g, part: id.startsWith("in:") ? SLOT_IN : SLOT_OUT, items: {} }).items[id] ||= { dist: 0, sets: [] });
       const it = slots[k].items[id];
       it.dist = Math.max(it.dist, dist);
       it.sets.push(set);
@@ -543,10 +559,10 @@
       slot(fn, c.exitGap, `out:${key}`, Math.abs(c.l1 - c.x0[1]), (a) => { c.exitA = a; });
       slot(fn, c.entryGap, `in:${inst.edges[key].dst}`, Math.abs(c.l2 - c.y0[1]), (a) => { c.entryA = a; });
     }
-    for (const { g, items } of Object.values(slots)) {
+    for (const { g, part, items } of Object.values(slots)) {
       const list = Object.entries(items).sort((p, q) => p[1].dist - q[1].dist || (p[0] < q[0] ? -1 : 1));
-      if (list.length < 2) continue;  // a lone run keeps the middle of its part of the gap
-      const near = SLOT_NEAR * g.room, far = SLOT_FAR * g.room;
+      if (list.length < 2) continue;  // a lone run keeps its place in the gap
+      const near = part[0] * g.room, far = part[1] * g.room;
       const step = Math.min(SLOT_STEP, (far - near) / (list.length - 1));
       list.forEach(([, it], k) => { for (const set of it.sets) set(g.at + g.dir * (near + k * step)); });
     }
@@ -633,7 +649,9 @@
     s.style.maxWidth = `${box.width * 1.4}px`;
     const defs = svg("defs");
     for (const st of STATES) {
-      const m = svg("marker", { id: `${id}-${st}`, viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "7", markerHeight: "7", orient: "auto-start-reverse", class: `lt-arrow st-${st}` });
+      const [len, wide] = LIT.includes(st) ? ARROW_LIT : ARROW;
+      const m = svg("marker", { id: `${id}-${st}`, viewBox: "0 0 10 10", refX: "9", refY: "5", markerUnits: "userSpaceOnUse",
+        markerWidth: len, markerHeight: wide, preserveAspectRatio: "none", orient: "auto-start-reverse", class: `lt-arrow st-${st}` });
       m.appendChild(svg("path", { d: "M0,0 L10,5 L0,10 z" }));
       defs.appendChild(m);
     }

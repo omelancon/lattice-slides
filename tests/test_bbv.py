@@ -260,10 +260,11 @@ def test_hidden_functions_and_event_filter():
 
 
 def test_layout_margins_cover_back_edges():
-    """bbv.js steps 22 px out of a node before joining the lane: the box must leave that room."""
+    """The runs into a first rank (up to 0.62 of a rank gap in bbv.js, SLOT_IN) and the runs past the ends of the
+    ranks (END_GAP) lie inside the margin, in that order from the rank."""
     from lattice.bbv import layout
 
-    assert layout.MARGIN >= 24 and layout.LANE + 10 >= 0
+    assert 0.62 * layout.GAP_RANK + 3 < layout.END_GAP * layout.GAP_RANK < layout.MARGIN - 5
 
 
 def test_layout_keeps_versions_on_their_rank():
@@ -1616,8 +1617,9 @@ def test_one_band_is_the_layout_without_bands():
     lf = _graphviz()
     t = _run(VECTOR_PRINT, VP_RUN)
     plain_box, plain_pos = layout_frames(t.tables, t.frames, SHOW, lf, "LR", 4)
-    # the request's figure for 0.31 (2753.4 x 488), with 5 more for the second lane of the tail gutter (0.33.2)
-    assert (plain_box["width"], plain_box["height"]) == (2753.4, 493.0)
+    # the request's figure for 0.31 (2753.4 x 488), with 5 more for the second lane of the tail gutter (0.33.2) and
+    # 10 more margin on each side (0.33.3)
+    assert (plain_box["width"], plain_box["height"]) == (2773.4, 513.0)
     for kw in ({"rank_wrap": 1}, {"rank_wraps": {"vprint": 1}}, {"rank_wrap": 1, "rank_flow": "snake"}):
         box, pos = layout_frames(t.tables, t.frames, SHOW, lf, "LR", 4, **kw)
         assert box == plain_box and pos == plain_pos and "rankWrap" not in box
@@ -1703,6 +1705,8 @@ def test_loops_take_the_gutter_on_the_cheaper_side():
 
 
 def test_auto_takes_the_shape_of_the_box():
+    from lattice.bbv.layout import AUTO_CAP, AUTO_TIE
+
     lf = _graphviz()
     a = _run(VECTOR_PRINT, VP_RUN)
     for d in ("LR", "TB"):  # the request's best rows
@@ -1710,7 +1714,14 @@ def test_auto_takes_the_shape_of_the_box():
         assert len(box["rankWrap"]["vprint"]["bands"]) == 2
     b = _run(FIB_CALL, FIB_RUN)
     box, _ = layout_frames(b.tables, b.frames, SHOW, lf, "TB", 4, rank_wrap="auto", fit=(1136, 430))
-    assert len(box["rankWrap"]["fib"]["bands"]) == 2  # 3 bands scale 1 % more: fewer bands win
+    # the fewest bands whose scale is within AUTO_TIE of the largest (2 and 3 bands are close here: 3 drew 2.0 %
+    # larger in 0.33.2, 2.9 % with the wider margin of 0.33.3)
+    scales = {}
+    for n in range(1, 5):
+        w, h = (lambda bx: (bx["width"], bx["height"]))(layout_frames(b.tables, b.frames, SHOW, lf, "TB", 4, rank_wraps={"fib": n})[0])
+        scales[n] = min(1136 / w, 430 / h, AUTO_CAP)
+    best = max(scales.values())
+    assert len(box["rankWrap"]["fib"]["bands"]) == min(n for n, sc in scales.items() if sc >= best * (1 - AUTO_TIE))
     assert "main" not in box["rankWrap"]
     box, _ = layout_frames(b.tables, b.frames, ["label", "context"], lf, "TB", 4, rank_wrap="auto", fit=(1136, 430))
     assert len(box["rankWrap"]["fib"]["bands"]) == 3

@@ -2,12 +2,13 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-09, after 0.33.2 (`implementation-report-2026-10-08-d.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-09, after 0.33.3 (`implementation-report-2026-10-09.md`; 0.33.0 to 0.33.2 in `archive/implementation-report-2026-10-08-d.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
 - [ ] 0.33.2: look at your `fib` slide (`lv-fib`) and the manual's "Bands of ranks" on your screen. Things to judge: the call dashes (`4 6` at rest, `5 7` lit, `lattice.css`); the sides the loops take, from `SIDE_CROSS` (60), `SIDE_KEEP` (40) and `HEAD_GAIN` (50) in `layout.py`; the head gutter, 28 px above the first band.
-- [ ] 0.33.2: no git commit for 0.33.1 and 0.33.2 unless you made one for 0.33.1 (only existing files changed; `git add -u`).
+- [ ] 0.33.3: no git commit: `git add docs/implementation-report-2026-10-09.md`, then `git add -u`.
+- [ ] 0.33.3: look at the arrowheads of a versioning drawing on your screen: 10 by 7 at rest, 12 by 9 lit (`ARROW`, `ARROW_LIT` in `bbv.js`), each on a straight end of 13 px (`LEG`); the drawings are 20 px wider and taller (`MARGIN` 40 in `layout.py`).
 - [ ] 0.33.0: look at the manual's "Choosing what to merge" (`bbv-merge`) on your screen, step by step. Things to judge: the edge widths (1 to 7 px, thick for the nearest pair, `edge_width`), the three steps of a merge (0.33.1: the glide of 650 ms, `MERGE_GLIDE` in `bbv.js`, and the fades of 250 to 300 ms after it, in `lattice.css`), the distance labels (`edge_labels`, off in the manual: on a complete graph they crowd the middle), and `placement=distance` (try the manual's contexts with it: nodes never move, but the drawing is less compact than the circle).
 - [ ] 0.33.0: only Chromium was available: look at a `bbv-merge` in Firefox once (straight edges from positions, nothing measured).
 - [ ] 0.32.0: look at the manual's "Bands of ranks" (`bbv-bands`) and at your two test cases on your screen (`archive/implementation-report-2026-10-08-c.md` gives the blocks). Things to judge: gutter lanes 5 px apart and runs beside a rank up to 5 px apart (`GUTTER_STEP` in `layout.py`, `SLOT_STEP` in `bbv.js`); the label of an edge between bands 20 px into its run (`LABEL_AFTER`); the gap between bands (48 to 62 px, against 64 between functions).

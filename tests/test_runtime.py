@@ -3169,6 +3169,78 @@ def test_call_edges_on_a_path_and_loops_before_their_band(tmp_path):
     assert not errors, errors
 
 
+ARROW_LEGS_JS = """() => {
+  const out = [];
+  for (const g of document.querySelectorAll('.lt-slide:not([hidden]) .lt-bbv-edge:not(.lt-gone)')) {
+    const p = g.querySelector('path'); if (!p.getAttribute('d')) continue;
+    const len = p.getTotalLength(); if (!(len > 0)) continue;
+    const id = (p.getAttribute('marker-end') || '').match(/#([^)]+)/); if (!id) continue;
+    const m = document.getElementById(id[1]);
+    const behind = 0.9 * +m.getAttribute('markerWidth');
+    const end = p.getPointAtLength(len), pre = p.getPointAtLength(Math.max(0, len - 0.5));
+    const dx = end.x - pre.x, dy = end.y - pre.y, n = Math.hypot(dx, dy) || 1;
+    let straight = 0;  // how far back the path stays on the line of its last half unit
+    for (let s = 1; s <= Math.min(len, 40); s += 0.5) {
+      const q = p.getPointAtLength(len - s);
+      const off = Math.abs((q.x - end.x) * dy / n - (q.y - end.y) * dx / n);
+      if (off > 0.4) break;
+      straight = s;
+    }
+    out.push({key: g.dataset.key, cls: g.getAttribute('class'), straight, behind, units: m.getAttribute('markerUnits')});
+  }
+  return out;
+}"""
+
+
+def test_arrowheads_sit_on_a_straight_end(tmp_path):
+    """Spec 9.5: an arrowhead has a size in drawing units whatever the width of its edge (10 by 7, 12 by 9 lit),
+    and every edge ends with a straight leg at least as long as the part of its arrowhead behind the end, so that
+    the arrowhead lies along the edge: curves, edges through gutters and loops, at rest and while nodes glide."""
+    from lattice.build import build_deck
+    from test_bbv import FIB_CALL
+
+    (tmp_path / "fib.bbv").write_text(FIB_CALL)
+    src = tmp_path / "talk.md"
+    src.write_text(LOOPS_DECK)
+    steps = build_deck(src, use_cache=False).slides["clr"].steps
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(out.as_uri())
+            page.wait_for_timeout(300)
+            sizes = page.evaluate("""() => Array.from(document.querySelectorAll('.lt-slide:not([hidden]) .lt-bbv-svg marker'))
+                .map(m => [m.id.split('-').pop(), m.getAttribute('markerUnits'), +m.getAttribute('markerWidth'), +m.getAttribute('markerHeight')])""")
+            assert {s[0]: s[1:] for s in sizes} == {
+                "default": ["userSpaceOnUse", 10, 7], "gone": ["userSpaceOnUse", 10, 7], "dim": ["userSpaceOnUse", 10, 7],
+                "new": ["userSpaceOnUse", 12, 9], "active": ["userSpaceOnUse", 12, 9], "path": ["userSpaceOnUse", 12, 9]}
+            checked = 0
+            for step in (steps // 4, steps // 2, steps - 3, steps - 1):
+                page.evaluate(f"location.hash = '#/clr/{step}'")
+                page.wait_for_timeout(300)
+                legs = page.evaluate(ARROW_LEGS_JS)
+                bad = [e for e in legs if e["straight"] + 0.5 < e["behind"]]
+                assert legs and not bad, (step, bad)
+                checked += len(legs)
+            page.evaluate(f"location.hash = '#/clr/{steps // 2}'")
+            page.wait_for_timeout(300)
+            page.keyboard.press("ArrowRight")  # an animated step: the same while nodes glide
+            page.wait_for_timeout(150)
+            legs = page.evaluate(ARROW_LEGS_JS)
+            assert legs and not [e for e in legs if e["straight"] + 0.5 < e["behind"]]
+            assert checked > 150
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors, errors
+
+
 MERGE_GEOMETRY = """() => {
   // what is drawn (an element hidden with lt-gone, or never created, is not)
   const root = document.querySelector('#s-m .lt-c-bbv-merge');

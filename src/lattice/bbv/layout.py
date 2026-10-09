@@ -24,7 +24,8 @@ GAP_RANK = 44.0  # between ranks
 GAP_LINE = 14.0  # between the lines of a wrapped rank
 FUNCTION_GAP = 64.0  # leaves room for the lane of back edges between functions beside each function
 HEADER = 30.0
-MARGIN = 30.0  # covers the runs of edges in the gap before a first rank or after a last one, plus the arrowhead
+MARGIN = 40.0  # covers the runs of edges in the gap before a first rank (up to 0.62 of GAP_RANK, bbv.js) and the
+#                runs past the ends of the ranks (END_GAP), or after a last rank, plus the arrowhead
 LANE = 18.0  # distance of the first lane of a gutter from the band it borders
 
 
@@ -154,7 +155,8 @@ HEAD_GAIN = 50.0  # the head gutter opens when its loops save at least this much
 AUTO_MAX = 6  # `auto` tries 1 to this many bands
 AUTO_CAP = 1.4  # the most the runtime enlarges a drawing (bbv.js: max-width of the SVG)
 AUTO_TIE = 0.02  # within this fraction of the largest scale, fewer bands win
-END_GAP = 0.6  # the gutters past the ends of the ranks, in GAP_RANK from the first and last ranks
+END_GAP = 0.75  # the runs past the ends of the ranks, in GAP_RANK from the first and last ranks: beyond the runs into a
+#                 first rank (SLOT_IN in bbv.js reaches 0.62)
 
 
 def gutter_gap(lanes: int) -> float:
