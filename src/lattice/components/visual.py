@@ -9,13 +9,14 @@ import json
 import re
 from typing import Annotated, Literal, Union
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 from .base import Component, ComponentError, RenderResult, register
 
 
 class PlotOptions(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # other options are passed to the `source` function (spec 8.2); without `source` they are errors
+    model_config = ConfigDict(extra="allow")
     backend: Literal["matplotlib", "vega", "plotly"] = "matplotlib"
     source: str | None = None
     spec: dict | None = None  # raw Vega-Lite spec or Plotly figure ({data, layout})
@@ -32,6 +33,13 @@ class PlotOptions(BaseModel):
     width: float = 9.0   # inches (96 px per inch for vega and plotly)
     height: float = 4.2
     legend: bool = True
+
+    @model_validator(mode="after")
+    def _extras_need_a_source(self):
+        if self.model_extra and not self.source:
+            names = ", ".join(repr(k) for k in sorted(self.model_extra))
+            raise ValueError(f"unknown option {names} (only a plot with 'source' passes other options to it)")
+        return self
 
 
 FONT_STACK = ["Avenir Next", "Segoe UI", "Helvetica Neue", "Arial", "DejaVu Sans"]
@@ -83,8 +91,25 @@ def _deep_merge(base: dict, over: dict) -> dict:
     return out
 
 
+def _source_args(fn, opts: PlotOptions, available: dict, reserved=("ax", "data")) -> dict:
+    """The keyword arguments of ``source``: those of ``available`` its signature asks for, and the options the
+    plot does not know (spec 8.2), read as YAML scalars. An option the function does not take is an error."""
+    from .animations import _extras
+
+    params = inspect.signature(fn).parameters
+    kwargs = {k: v for k, v in available.items() if k in params}
+    takes_any = any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
+    for k, v in _extras(opts).items():
+        if k in reserved:
+            raise ComponentError(f"option {k!r} is reserved: the plot passes it to {opts.source} itself")
+        if k not in params and not takes_any:
+            raise ComponentError(f"{opts.source} takes no option {k!r}")
+        kwargs[k] = v
+    return kwargs
+
+
 def _call_source(opts: PlotOptions, ctx, **available):
-    """Call ``source`` with the keyword arguments its signature asks for."""
+    """Call ``source`` with the keyword arguments its signature asks for, and the plot's extra options."""
     from .base import import_path
 
     fn_file, _, fn_name = opts.source.rpartition(":")
@@ -93,8 +118,7 @@ def _call_source(opts: PlotOptions, ctx, **available):
     fn = getattr(import_path(ctx.path(fn_file)), fn_name, None)
     if fn is None:
         raise ComponentError(f"{fn_file} has no function {fn_name!r}")
-    params = inspect.signature(fn).parameters
-    return fn(**{k: v for k, v in available.items() if k in params})
+    return fn(**_source_args(fn, opts, available))
 
 
 @register("plot")
@@ -259,12 +283,12 @@ class Plot(Component):
                 params = inspect.signature(fn).parameters
                 if "ax" in params:
                     fig, ax = plt.subplots(figsize=(opts.width, opts.height))
-                    kwargs = {"ax": ax}
+                    available = {"ax": ax}
                     if opts.data and "data" in params:
-                        kwargs["data"] = _read_csv(ctx.path(opts.data))
-                    fn(**kwargs)
+                        available["data"] = _read_csv(ctx.path(opts.data))
+                    fn(**_source_args(fn, opts, available))
                 else:
-                    fig = fn()
+                    fig = fn(**_source_args(fn, opts, {}))
                 if fig is None or not hasattr(fig, "savefig"):
                     raise ComponentError("plot source must return a Figure or accept an 'ax' argument")
             else:

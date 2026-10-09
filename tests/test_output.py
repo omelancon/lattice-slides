@@ -68,6 +68,60 @@ def test_plotly_bars_are_categorical(deck):
     assert d.requires == {"plotly"}
 
 
+PLOT_SOURCE = '''
+def chart(series=None, scale=1):
+    names = series or ["a", "b"]
+    return {"mark": "line", "data": {"values": [{"s": s, "v": scale} for s in names]}}
+
+def fixed():
+    return {"mark": "line"}
+
+def drawn(ax, color="red"):
+    ax.plot([1, 2], [3, 4], color=color)
+
+def figure(dpi=50):
+    import matplotlib.pyplot as plt
+    return plt.figure(dpi=dpi)
+'''
+
+
+def test_plot_passes_extra_options_to_its_source(deck):
+    """Spec 8.2: a plot with a source passes the options it does not know to the function, read as YAML."""
+    pytest.importorskip("matplotlib")
+    root = deck({"talk.md": """
+        # A
+        ```plot {#p backend=vega source="charts.py:chart" series="[b]" scale=2}
+        ```
+
+        ```plot {#q backend=vega source="charts.py:chart"}
+        series: [a, c]
+        ```
+
+        ```plot {#r source="charts.py:drawn" color=blue}
+        ```
+
+        ```plot {#s source="charts.py:figure" dpi=40}
+        ```
+    """, "charts.py": PLOT_SOURCE})
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items
+    assert d.instances["a/p"]["data"]["spec"]["data"]["values"] == [{"s": "b", "v": 2}]
+    assert [v["s"] for v in d.instances["a/q"]["data"]["spec"]["data"]["values"]] == ["a", "c"]
+    assert "#0000ff" in d.slides["a"].body_html
+
+
+@pytest.mark.parametrize("block, code", [
+    ('```plot {backend=vega source="charts.py:fixed" series="[a]"}', "LT022"),  # the function takes no such option
+    ('```plot {source="charts.py:drawn" ax=1}', "LT022"),  # ax is the plot's to pass
+    ('```plot {backend=vega data="d.csv" x=n y=ms colour=red}', "LT021"),  # no source: unknown option
+])
+def test_plot_rejects_options_its_source_does_not_take(deck, block, code):
+    from lattice.build import check_deck
+
+    root = deck({"talk.md": f"# A\n{block}\n```\n", "charts.py": PLOT_SOURCE, "d.csv": CSV})
+    assert code in {x.code for x in check_deck(root, use_cache=False).items}
+
+
 def test_matplotlib_plots_rebuild_byte_identical(deck):
     """Report section 2, goal 6: the ids matplotlib gives clip paths do not change from one build to the next."""
     pytest.importorskip("matplotlib")
