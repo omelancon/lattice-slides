@@ -92,13 +92,18 @@ def _deep_merge(base: dict, over: dict) -> dict:
 
 
 def _source_args(fn, opts: PlotOptions, available: dict, reserved=("ax", "data")) -> dict:
-    """The keyword arguments of ``source``: those of ``available`` its signature asks for, and the options the
-    plot does not know (spec 8.2), read as YAML scalars. An option the function does not take is an error."""
+    """The keyword arguments of ``source`` (spec 8.2): those of ``available`` its signature asks for, ``legend``
+    if it has that parameter or the block sets it, and the options the plot does not know, read as YAML
+    scalars. An option of the block that the function does not take is an error, ``legend`` included."""
     from .animations import _extras
 
     params = inspect.signature(fn).parameters
     kwargs = {k: v for k, v in available.items() if k in params}
     takes_any = any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values())
+    if "legend" in params or (takes_any and "legend" in opts.model_fields_set):
+        kwargs["legend"] = opts.legend
+    elif "legend" in opts.model_fields_set:
+        raise ComponentError(f"{opts.source} takes no option 'legend' (it draws its own legend, or none)")
     for k, v in _extras(opts).items():
         if k in reserved:
             raise ComponentError(f"option {k!r} is reserved: the plot passes it to {opts.source} itself")

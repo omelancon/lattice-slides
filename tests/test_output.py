@@ -76,6 +76,9 @@ def chart(series=None, scale=1):
 def fixed():
     return {"mark": "line"}
 
+def keyed(legend, scale=1):
+    return {"mark": "line", "description": f"legend {legend}"}
+
 def drawn(ax, color="red"):
     ax.plot([1, 2], [3, 4], color=color)
 
@@ -102,17 +105,28 @@ def test_plot_passes_extra_options_to_its_source(deck):
 
         ```plot {#s source="charts.py:figure" dpi=40}
         ```
+
+        ```plot {#t backend=vega source="charts.py:keyed" legend=false}
+        ```
+
+        ```plot {#u backend=vega source="charts.py:keyed" scale=3}
+        ```
     """, "charts.py": PLOT_SOURCE})
     d = build_deck(root, use_cache=False)
     assert not d.diagnostics.items
     assert d.instances["a/p"]["data"]["spec"]["data"]["values"] == [{"s": "b", "v": 2}]
     assert [v["s"] for v in d.instances["a/q"]["data"]["spec"]["data"]["values"]] == ["a", "c"]
     assert "#0000ff" in d.slides["a"].body_html
+    # `legend` is the plot's own option: a source with that parameter receives it, true by default
+    assert d.instances["a/t"]["data"]["spec"]["description"] == "legend False"
+    assert d.instances["a/u"]["data"]["spec"]["description"] == "legend True"
 
 
 @pytest.mark.parametrize("block, code", [
     ('```plot {backend=vega source="charts.py:fixed" series="[a]"}', "LT022"),  # the function takes no such option
     ('```plot {source="charts.py:drawn" ax=1}', "LT022"),  # ax is the plot's to pass
+    ('```plot {backend=vega source="charts.py:fixed" legend=true}', "LT022"),  # legend set, not taken
+    ('```plot {source="charts.py:drawn"}\nlegend: false', "LT022"),  # the same, in the body
     ('```plot {backend=vega data="d.csv" x=n y=ms colour=red}', "LT021"),  # no source: unknown option
 ])
 def test_plot_rejects_options_its_source_does_not_take(deck, block, code):
