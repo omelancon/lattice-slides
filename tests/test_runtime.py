@@ -2888,6 +2888,13 @@ rank_wraps: {fib: 2}
 ```bbv-anim {#fib program="fib.bbv" algorithm=lv heuristic=arithmetic limit=3 entry=main direction=LR rank_wrap=2 rank_flow=snake call_edges=true}
 show: [label, context]
 ```
+
+# C LR auto, calls {#clr}
+```bbv-anim {#fib program="fib.bbv" algorithm=lv heuristic=arithmetic limit=3 entry=fib direction=LR rank_wrap=auto call_edges=true}
+paths:
+  - input: {n: fx}
+    overflow: never
+```
 """
 
 CROSSINGS_JS = """([inst, keys]) => {
@@ -2919,10 +2926,11 @@ CROSSINGS_JS = """([inst, keys]) => {
 }"""
 
 
-OVERLAPS_JS = """([inst, keys, full]) => {
-    // two edges between bands with different sources and targets never share a segment (spec 9.5): the points of
+OVERLAPS_JS = """([inst, keys, full, strict]) => {
+    // two edges through gutters with different sources and targets never share a segment (spec 9.5): the points of
     // one, away from its ends, that lie on the other, in runs longer than a crossing makes; inside a gutter that
-    // uses all its lanes (`full`: [axis, lo, hi]), the targets closest to each other share one by design
+    // uses all its lanes (`full`: [axis, lo, hi]), the targets closest to each other share one by design, but never
+    // a loop (`strict`), whose targets each have a lane
     const sec = document.querySelector('.lt-slide:not([hidden])');
     const wrap = sec.querySelector(`[data-instance="${inst}"]`);
     const paths = [];
@@ -2940,7 +2948,8 @@ OVERLAPS_JS = """([inst, keys, full]) => {
             if (a === b || a.src === b.src || a.dst === b.dst) continue;
             let run = 0, longest = 0;
             for (const [x, y, s, len] of a.pts) {
-                const inFull = full.some(([axis, lo, hi]) => (axis === 'x' ? x : y) > lo && (axis === 'x' ? x : y) < hi);
+                const loose = !(strict || []).includes(a.k) && !(strict || []).includes(b.k);
+                const inFull = loose && full.some(([axis, lo, hi]) => (axis === 'x' ? x : y) > lo && (axis === 'x' ? x : y) < hi);
                 const on = !inFull && s > 24 && s < len - 24 && b.pts.some(([u, v]) => Math.abs(u - x) < 0.75 && Math.abs(v - y) < 0.75);
                 run = on ? run + 1 : 0;
                 longest = Math.max(longest, run);
@@ -2952,22 +2961,36 @@ OVERLAPS_JS = """([inst, keys, full]) => {
 }"""
 
 
-def _between_bands(data):
-    """The keys of the edges that join two bands of one function, over every frame."""
+def _through_gutters(data):
+    """The keys of the edges routed through gutters over every frame (spec 9.5): those that join two bands of one
+    function, and the loops (an edge inside one band whose target is not after its source), the latter apart."""
     from lattice.anim import frames_of
 
-    rw = data["box"]["rankWrap"]
+    box = data["box"]
+    rw, sizes, lr = box["rankWrap"], box["sizes"], box["direction"] == "LR"
     versions = data["tables"]["versions"]
-    keys = set()
+    keys, loops = set(), set()
     for f in frames_of(data["frames"]):
+        pos = f.get("pos", {})
         for key in f.get("edges", {}):
             src, rest = key.split("->", 1)
-            dst = rest.split(":", 1)[0]
+            dst, kind = rest.split(":", 1)
+            if src not in f["nodes"] or dst not in f["nodes"] or (kind == "call" and not data.get("callEdges")):
+                continue
             a, b = versions[src], versions[dst]
             fw = rw.get(a["function"])
-            if fw and a["function"] == b["function"] and fw["blocks"][a["name"]][0] != fw["blocks"][b["name"]][0]:
+            if not fw or a["function"] != b["function"]:
+                continue
+            ka, kb = fw["blocks"][a["name"]][0], fw["blocks"][b["name"]][0]
+            if ka != kb:
                 keys.add(key)
-    return sorted(keys)
+            elif src in pos and dst in pos:
+                ax, bx = (pos[src][0], pos[dst][0]) if lr else (pos[src][1], pos[dst][1])
+                aw, bw = (sizes[src][0], sizes[dst][0]) if lr else (sizes[src][1], sizes[dst][1])
+                if (bx + bw > ax + aw / 2) if fw["bands"][ka]["flip"] else (bx < ax + aw / 2):
+                    keys.add(key)
+                    loops.add(key)
+    return sorted(keys), sorted(loops)
 
 
 def test_edges_between_bands_cross_no_node(tmp_path):
@@ -2989,18 +3012,22 @@ def test_edges_between_bands_cross_no_node(tmp_path):
     src.write_text(BANDS_RUNTIME_DECK)
     deck = build_deck(src, use_cache=False)
     assert not deck.diagnostics.items, deck.diagnostics.items
-    cases = []
-    for slide, inst in (("alr", "vp"), ("asnake", "vp"), ("atb", "vp"), ("btb", "fib"), ("blr", "fib")):
+    cases, with_loops = [], []
+    for slide, inst in (("alr", "vp"), ("asnake", "vp"), ("atb", "vp"), ("btb", "fib"), ("blr", "fib"), ("clr", "fib")):
         data = deck.instances[f"{slide}/{inst}"]["data"]
-        keys = _between_bands(data)
-        assert keys
+        keys, loops = _through_gutters(data)
+        assert keys, slide
+        if loops:
+            with_loops.append(slide)
         full = []  # the gutters at their most lanes
         for fw in data["box"]["rankWrap"].values():
             for g, gut in enumerate(fw["gutters"]):
                 if gut["lanes"] >= GUTTER_LANES:
                     full.append(["x" if data["box"]["direction"] == "TB" else "y", fw["bands"][g]["end"],
                                  fw["bands"][g + 1]["start"]])
-        cases.append((slide, f"{slide}/{inst}", keys, deck.slides[slide].steps, full))
+        cases.append((slide, f"{slide}/{inst}", keys, deck.slides[slide].steps, full, loops))
+    print("slides with loops:", with_loops)
+    assert "clr" in with_loops  # loops are checked as well (spec 9.5)
     out = tmp_path / "talk.html"
     assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
     try:
@@ -3012,13 +3039,13 @@ def test_edges_between_bands_cross_no_node(tmp_path):
             page.on("console", lambda m: errors.append(m.text) if m.type in ("error", "warning") else None)
             page.goto(out.as_uri())
             page.wait_for_timeout(300)
-            for slide, inst, keys, steps, full in cases:
+            for slide, inst, keys, steps, full, loops in cases:
                 for step in (steps // 3, steps - 2, steps - 1):
                     page.evaluate(f"location.hash = '#/{slide}/{step}'")
                     page.wait_for_timeout(250)
                     r = page.evaluate(CROSSINGS_JS, [inst, keys])
                     assert r["checked"] and not r["bad"], (slide, step, r)
-                    shared = page.evaluate(OVERLAPS_JS, [inst, keys, full])
+                    shared = page.evaluate(OVERLAPS_JS, [inst, keys, full, loops])
                     assert not shared, (slide, step, shared)
                 page.evaluate(f"location.hash = '#/{slide}/{steps // 2}'")
                 page.wait_for_timeout(250)
@@ -3065,6 +3092,75 @@ def test_edges_between_bands_cross_no_node(tmp_path):
             # print mode draws the same routes
             page.goto(out.as_uri() + "?print")
             page.wait_for_timeout(600)
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors, errors
+
+
+LOOPS_DECK = """
+# Loops {#clr}
+```bbv-anim {#fib program="fib.bbv" algorithm=lv heuristic=arithmetic limit=3 entry=fib direction=LR rank_wrap=auto call_edges=true}
+paths:
+  - input: {n: fx}
+    overflow: never
+```
+"""
+
+
+def test_call_edges_on_a_path_and_loops_before_their_band(tmp_path):
+    """Spec 9.5: a lit call edge has the width of the other lit edges, longer dashes and full opacity, a call edge
+    at rest keeps its dots and lighter tone; a loop the frame sends before its band (the recursive call H1 -> A2 of
+    fib, near the top of its band) travels in the head gutter, above the band, and the others below it."""
+    from lattice.anim import frames_of
+    from lattice.build import build_deck
+    from test_bbv import FIB_CALL
+
+    (tmp_path / "fib.bbv").write_text(FIB_CALL)
+    src = tmp_path / "talk.md"
+    src.write_text(LOOPS_DECK)
+    deck = build_deck(src, use_cache=False)
+    assert not deck.diagnostics.items, deck.diagnostics.items
+    data = deck.instances["clr/fib"]["data"]
+    steps = deck.slides["clr"].steps
+    head = data["box"]["bands"]["fib"]["head"]
+    band0 = data["box"]["rankWrap"]["fib"]["bands"][0]
+    last = frames_of(data["frames"])[-1]
+    versions = data["tables"]["versions"]
+    label = {k: v["label"] for k, v in versions.items()}
+    before = [k for k in last.get("sides", {}) if (label[k.split("->")[0]], label[k.split("->")[1].split(":")[0]]) == ("H1", "A2")]
+    assert before and all(v == "before" for v in last["sides"].values())
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(out.as_uri() + f"#/clr/{steps - 1}")
+            page.wait_for_timeout(500)
+            styles = page.evaluate("""() => Array.from(document.querySelectorAll('.lt-slide:not([hidden]) .lt-bbv-edge:not(.lt-gone)'))
+                .map(g => { const p = g.querySelector('path'), cs = getComputedStyle(p), b = p.getBBox();
+                  return {key: g.dataset.key, cls: g.getAttribute('class'), width: cs.strokeWidth, dash: cs.strokeDasharray,
+                          opacity: cs.opacity, top: b.y, bottom: b.y + b.height}; })""")
+            lit = [e for e in styles if "st-path" in e["cls"]]
+            calls = [e for e in lit if "k-call" in e["cls"]]
+            flow = [e for e in lit if "k-goto" in e["cls"] or "k-true" in e["cls"] or "k-false" in e["cls"]]
+            assert calls and flow
+            assert all(e["width"] == flow[0]["width"] and e["opacity"] == "1" and e["dash"] == "5px, 7px" for e in calls), calls
+            rest = [e for e in styles if "k-call" in e["cls"] and "st-dim" in e["cls"]]
+            assert rest and all(e["dash"] == "4px, 6px" and e["opacity"] == "0.7" for e in rest), rest
+            by_key = {e["key"]: e for e in styles}
+            up = by_key[before[0]]
+            assert up["top"] <= head["at"] + 0.5 and up["top"] > 0, (up, head)  # in the head gutter, above the band
+            for key, e in by_key.items():  # the other loops of band 0 stay on or below it
+                if "k-call" in e["cls"] and key not in last.get("sides", {}) and key in last["edges"]:
+                    a, b = key.split("->")[0], key.split("->")[1].split(":")[0]
+                    if label[a][0] == "H" and label[b][0] == "A":
+                        assert e["top"] >= band0["start"] - 0.5, (key, e)
             browser.close()
     except Exception as e:
         if "Executable doesn't exist" in str(e):

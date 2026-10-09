@@ -376,11 +376,13 @@ html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone
 .lt-rc-step.tone-accent{color:var(--lt-accent)}
 .lt-bbv-edge path{fill:none;stroke:var(--lt-edge);stroke-width:1.8}
 .lt-bbv-edge.k-return path{stroke-dasharray:6 4}
-.lt-bbv-edge.k-call path{stroke-dasharray:2 4;opacity:.7}
+.lt-bbv-edge.k-call path{stroke-dasharray:4 6;opacity:.7}
 .lt-bbv-edge.st-new path{stroke:var(--lt-accent);stroke-width:3}
 .lt-bbv-edge.st-active path{stroke:var(--lt-active);stroke-width:3}
 .lt-bbv-edge.st-gone{opacity:.22}
 .lt-bbv-edge.st-path path{stroke:var(--lt-good);stroke-width:3.5}
+/* a lit call edge: the width of its state, as other edges, longer dashes for that width, and fully opaque */
+.lt-bbv-edge.k-call:is(.st-new,.st-active,.st-path) path{stroke-dasharray:5 7;opacity:1}
 .lt-bbv-edge.st-dim{opacity:.3}
 .lt-bbv-edge.lt-gone{opacity:0}
 /* bbv-merge: distance edges keep the width of their distance (inline); a state changes their colour only */

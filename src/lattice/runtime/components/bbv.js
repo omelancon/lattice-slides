@@ -290,6 +290,21 @@
   // from the rank or line they leave or reach), at most SLOT_STEP apart
   const SLOT_NEAR = 0.1, SLOT_FAR = 0.45, SLOT_STEP = 5;
   const LABEL_AFTER = 20;  // the label of an edge between bands: this far along its run toward the gutter, at most
+  const LANE = 18;  // as layout.LANE: the first lane of a gutter, from the band it borders
+  const GUTTER_LANES = 5;  // as layout.GUTTER_LANES: the most lanes of the edges between bands in a gutter
+
+  // The bands, gutters and ranks of a function whose edges travel in gutters (spec 9.5): its bands of ranks, or
+  // a function without bands that has loops (one band, with its head and tail gutters); null otherwise
+  function layoutOf(inst, fn) {
+    const cache = (inst.layouts ||= {});
+    if (fn in cache) return cache[fn];
+    const rw = inst.box.rankWrap && inst.box.rankWrap[fn];
+    const b = inst.box.bands[fn] || {};
+    let out = null;
+    if (rw) out = { ...rw, head: b.head, tail: b.tail };
+    else if (b.blocks) out = { bands: [{ start: b.start, end: b.end, flip: false }], gutters: [], blocks: b.blocks, head: b.head, tail: b.tail };
+    return (cache[fn] = out);
+  }
 
   function banded(inst, e) {
     const rw = inst.box.rankWrap;
@@ -312,13 +327,12 @@
   // The free gaps before and after the line of every node of a banded function (between two lines of a wrapped
   // rank, or before and after the rank), read from the positions: an edge between bands runs along them.
   function lineGaps(inst, at) {
-    const rw = inst.box.rankWrap;
     const gapRank = inst.box.gaps.rank, gapLine = inst.box.gaps.line;
     const nodes = (inst.frame && inst.frame.nodes) || {};
     const ranks = {};
     for (const vid of Object.keys(at)) {
       const v = inst.T.versions[vid];
-      const fw = v && rw[v.function];
+      const fw = v && layoutOf(inst, v.function);
       if (!fw || !inst.nodes[vid] || (nodes[vid] && nodes[vid].mark === "gone")) continue;
       const b = frameBox(inst, at, vid);
       const key = `${v.function}/${fw.blocks[v.name][1]}`;
@@ -330,7 +344,7 @@
     for (const lines of Object.values(ranks)) lines.sort((x, y) => x.start - y.start);
     return (vid) => {
       const v = inst.T.versions[vid];
-      const fw = rw[v.function];
+      const fw = layoutOf(inst, v.function);
       const [, rank, start, end] = fw.blocks[v.name];
       const lines = ranks[`${v.function}/${rank}`] || [];
       const b = frameBox(inst, at, vid);
@@ -360,8 +374,10 @@
       const mid = [(p0[0] + 3 * c1[0] + 3 * c2[0] + p3[0]) / 8, (p0[1] + 3 * c1[1] + 3 * c2[1] + p3[1]) / 8];
       return { d: `M${p0[0]},${p0[1]} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p3[0]},${p3[1]}`, mid };
     }
-    const toward = side * Math.sign(band.lane - sl);
-    const lane = band.lane - side * PARALLEL_LANE;
+    // a back edge here only while nodes glide (a loop of the frame travels in a gutter): on a lane after the band
+    const bandLane = band.end + LANE;
+    const toward = side * Math.sign(bandLane - sl);
+    const lane = bandLane - side * PARALLEL_LANE;
     const out = 22 - toward * PARALLEL_LANE * 0.6;
     const pts = [[sa, sl], [sa + s * out, sl], [sa + s * out, lane], [ea - s * out, lane], [ea - s * out, el], [ea, el]];
     return { d: polyline(pts.map(([a, l]) => pt(inst, a, l))), mid: pt(inst, (sa + ea) / 2, lane) };
@@ -391,25 +407,37 @@
     return c;
   }
 
-  // Lanes of the gutters (spec 9.5): every target has its own lane, the edges that travel farthest nearest the
-  // band they leave; beyond the lanes of a gutter, the targets closest to each other share one.
+  // Lanes of the gutters (spec 9.5). A gutter between bands g and g+1 holds four groups, from band g: the loops of
+  // band g (`near`), the edges from band g on (`x`, right), the edges toward band g (`x`, left), the loops of band
+  // g+1 (`far`); a head or tail gutter holds the loops of the band it borders (`near`), its lanes going outward.
+  // Every target has its own lane in a group. Loops nest: the shortest nearest their band. Edges between bands:
+  // the edges that travel farthest nearest the band they leave; beyond the lanes left to them (at most
+  // GUTTER_LANES), the targets closest to each other share one.
   function assignLanes(fw, uses) {
     const lanes = {};
     for (const [g, list] of Object.entries(uses)) {
-      const gut = fw.gutters[g];
+      const gut = g === "head" ? fw.head : g === "tail" ? fw.tail : fw.gutters[g];
+      if (!gut) continue;
       const groups = {};
       for (const u of list) {
-        const x = (groups[u.target] ||= { target: u.target, right: u.right, from: u.from, to: u.to, n: 0 });
+        const id = `${u.group}/${u.target}`;
+        const x = (groups[id] ||= { id, group: u.group, target: u.target, right: u.right, from: u.from, to: u.to, n: 0, span: 0 });
         x.from = (x.from * x.n + u.from) / (x.n + 1);
         x.n += 1;
+        x.span = Math.max(x.span, Math.abs(u.to - u.from));
       }
-      const sides = [Object.values(groups).filter((x) => x.right), Object.values(groups).filter((x) => !x.right)];
+      const all = Object.values(groups);
+      const nest = (p, q) => p.span - q.span || (p.target < q.target ? -1 : 1);
+      const near = all.filter((x) => x.group === "near").sort(nest);
+      const far = all.filter((x) => x.group === "far").sort(nest);
+      const sides = [all.filter((x) => x.group === "x" && x.right), all.filter((x) => x.group === "x" && !x.right)];
       for (const xs of sides) {  // the farthest in the direction of travel first
         const up = xs.reduce((t, x) => t + (x.to - x.from), 0) < 0;
         xs.sort((p, q) => (up ? p.to - q.to : q.to - p.to) || (p.target < q.target ? -1 : 1));
       }
       const count = () => sides[0].length + sides[1].length;
-      while (count() > gut.lanes) {  // merge the two neighbours whose targets are closest
+      const room = Math.max(1, Math.min(GUTTER_LANES, gut.lanes - near.length - far.length));
+      while (count() > room) {  // merge the two neighbours whose targets are closest
         let best = null;
         for (const xs of sides) {
           for (let i = 0; i + 1 < xs.length; i++) {
@@ -419,11 +447,15 @@
         }
         if (!best) break;
         const [p, q] = best.xs.splice(best.i, 2);
-        best.xs.splice(best.i, 0, { ...p, members: [...(p.members || [p.target]), ...(q.members || [q.target])] });
+        best.xs.splice(best.i, 0, { ...p, members: [...(p.members || [p.id]), ...(q.members || [q.id])] });
       }
-      const at = (k) => gut.at + k * gut.step;
-      sides[0].forEach((x, k) => { for (const t of x.members || [x.target]) lanes[`${g}/${t}`] = at(k); });
-      sides[1].forEach((x, k) => { for (const t of x.members || [x.target]) lanes[`${g}/${t}`] = at(gut.lanes - 1 - k); });
+      const dir = g === "head" ? -1 : 1;
+      const at = (k) => gut.at + dir * k * gut.step;
+      const put = (x, k) => { for (const id of x.members || [x.id]) lanes[`${g}/${id}`] = at(k); };
+      near.forEach((x, k) => put(x, k));
+      far.forEach((x, k) => put(x, gut.lanes - 1 - k));
+      sides[0].forEach((x, k) => put(x, near.length + k));
+      sides[1].forEach((x, k) => put(x, gut.lanes - 1 - far.length - k));
     }
     return lanes;
   }
@@ -442,30 +474,59 @@
     return points[0];
   }
 
-  // Routes of the edges between bands of one function: leave the source on its usual side into the gap after
-  // its line, run along that gap to the gutter, along the gutter (passing bands in between beyond the ends of
-  // their ranks) to the gap before the target's line, and along it into the target. No node is crossed.
-  function routesBetweenBands(inst, at, keys, side) {
+  // A loop (spec 9.5): an edge between two versions of one band whose target is not after its source, judged on
+  // the positions the frame rests at (so that a glide does not switch it)
+  function isLoop(inst, e, fw) {
+    const A = frameBox(inst, inst.at, e.src), B = frameBox(inst, inst.at, e.dst);
+    if (!A || !B) return false;
+    const band = fw.bands[fw.blocks[inst.T.versions[e.src].name][0]];
+    return band.flip ? B.a + B.as > A.a + A.as / 2 : B.a < A.a + A.as / 2;
+  }
+
+  // Whether an edge travels through a gutter: between two bands of one function, or a loop
+  function throughGutter(inst, e) {
+    const v = inst.T.versions;
+    if (v[e.src].function !== v[e.dst].function) return false;
+    const fw = layoutOf(inst, v[e.src].function);
+    if (!fw) return false;
+    return fw.blocks[v[e.src].name][0] !== fw.blocks[v[e.dst].name][0] || isLoop(inst, e, fw);
+  }
+
+  // Routes of the edges through gutters, between bands of one function and loops: leave the source on its usual
+  // side into the gap after its line, run along that gap to the gutter, along the gutter (passing bands in between
+  // beyond the ends of their ranks) to the gap before the target's line, and along it into the target. A loop runs
+  // in the gutter before or after its band, as the frame says (`sides`, chosen at build time). No node is crossed.
+  function routesInGutters(inst, at, keys, side) {
     const gaps = lineGaps(inst, at);
     const courses = {}, uses = {};
+    const before = (inst.frame && inst.frame.sides) || {};
     for (const key of keys) {
       const e = inst.edges[key];
-      const fw = banded(inst, e);
+      const fn = inst.T.versions[e.src].function;
+      const fw = layoutOf(inst, fn);
       const c = course(inst, at, e, side[key] || 0, fw, gaps);
       if (!c) continue;
-      const fn = inst.T.versions[e.src].function;
+      c.group = "x";
+      const k = fw.blocks[inst.T.versions[e.src].name][0];
+      if (k === fw.blocks[inst.T.versions[e.dst].name][0]) {  // a loop
+        const last = fw.bands.length - 1;
+        if (before[key] === "before") { c.gOut = k === 0 ? "head" : k - 1; c.group = k === 0 ? "near" : "far"; }
+        else { c.gOut = k === last ? "tail" : k; c.group = "near"; }
+        c.gIn = c.gOut;
+        delete c.endA;
+      }
       courses[key] = { c, fw, fn };
-      const use = (g, from, to, right) => ((uses[fn] ||= {})[g] ||= []).push({ target: e.dst, from, to, right });
+      const use = (g, from, to, right) => ((uses[fn] ||= {})[g] ||= []).push({ target: e.dst, from, to, right, group: c.group });
       if (c.gOut === c.gIn) use(c.gOut, c.exitA, c.entryA, c.right);
       else { use(c.gOut, c.exitA, c.endA, c.right); use(c.gIn, c.endA, c.entryA, c.right); }
     }
     const lanes = {};
-    for (const [fn, u] of Object.entries(uses)) lanes[fn] = assignLanes(inst.box.rankWrap[fn], u);
+    for (const [fn, u] of Object.entries(uses)) lanes[fn] = assignLanes(layoutOf(inst, fn), u);
     const shiftOf = (c) => c.side * 2;  // two edges between the same versions keep apart on their lane
     for (const [key, { c, fn }] of Object.entries(courses)) {
       const dst = inst.edges[key].dst;
-      c.l1 = lanes[fn][`${c.gOut}/${dst}`] + shiftOf(c);
-      c.l2 = lanes[fn][`${c.gIn}/${dst}`] + shiftOf(c);
+      c.l1 = lanes[fn][`${c.gOut}/${c.group}/${dst}`] + shiftOf(c);
+      c.l2 = lanes[fn][`${c.gIn}/${c.group}/${dst}`] + shiftOf(c);
     }
     // The runs in the gap after a source and before a target take slots too, so that no two edges share a
     // segment there: every edge leaving a gap has its own slot, the edges into one target share theirs (as in
@@ -525,21 +586,15 @@
   function place(inst, at) {
     for (const [vid, p] of Object.entries(at)) if (inst.nodes[vid]) inst.nodes[vid].g.setAttribute("transform", `translate(${p[0]},${p[1]})`);
     const side = sides(inst);
-    const between = [];
-    if (inst.box.rankWrap) {  // edges between two bands of a function are routed together (their gutter lanes)
-      for (const [key, e] of Object.entries(inst.edges)) {
-        if (e.g.classList.contains("lt-gone")) continue;
-        const fw = banded(inst, e);
-        if (!fw) continue;
-        const v = inst.T.versions;
-        if (fw.blocks[v[e.src].name][0] !== fw.blocks[v[e.dst].name][0]) between.push(key);
-      }
+    const gutter = [];  // edges between two bands of a function, and loops, are routed together (their gutter lanes)
+    for (const [key, e] of Object.entries(inst.edges)) {
+      if (!e.g.classList.contains("lt-gone") && throughGutter(inst, e)) gutter.push(key);
     }
-    const crossing = between.length ? routesBetweenBands(inst, at, between, side) : {};
+    const routed = gutter.length ? routesInGutters(inst, at, gutter, side) : {};
     for (const [key, e] of Object.entries(inst.edges)) {
       if (e.g.classList.contains("lt-gone")) continue;
       const fw = inst.box.rankWrap ? banded(inst, e) : null;
-      const r = key in crossing ? crossing[key] : fw ? routeInBand(inst, at, e, side[key] || 0, fw) : route(inst, at, e, side[key] || 0);
+      const r = key in routed ? routed[key] : fw ? routeInBand(inst, at, e, side[key] || 0, fw) : route(inst, at, e, side[key] || 0);
       if (!r) continue;
       e.path.setAttribute("d", r.d);
       e.label.setAttribute("x", r.mid[0]);

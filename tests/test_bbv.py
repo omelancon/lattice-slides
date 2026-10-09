@@ -1616,7 +1616,8 @@ def test_one_band_is_the_layout_without_bands():
     lf = _graphviz()
     t = _run(VECTOR_PRINT, VP_RUN)
     plain_box, plain_pos = layout_frames(t.tables, t.frames, SHOW, lf, "LR", 4)
-    assert (plain_box["width"], plain_box["height"]) == (2753.4, 488.0)  # the request's figure for 0.31
+    # the request's figure for 0.31 (2753.4 x 488), with 5 more for the second lane of the tail gutter (0.33.2)
+    assert (plain_box["width"], plain_box["height"]) == (2753.4, 493.0)
     for kw in ({"rank_wrap": 1}, {"rank_wraps": {"vprint": 1}}, {"rank_wrap": 1, "rank_flow": "snake"}):
         box, pos = layout_frames(t.tables, t.frames, SHOW, lf, "LR", 4, **kw)
         assert box == plain_box and pos == plain_pos and "rankWrap" not in box
@@ -1662,10 +1663,43 @@ def test_gutters_widen_with_their_lanes():
     box, _ = layout_frames(t.tables, t.frames, SHOW, lf, "TB", 4, rank_wraps={"fib": 3})
     rw = box["rankWrap"]["fib"]
     for k, g in enumerate(rw["gutters"]):
-        assert 1 <= g["lanes"] <= GUTTER_LANES
+        assert g["lanes"] >= 1  # loops do not count toward GUTTER_LANES
         gap = rw["bands"][k + 1]["start"] - rw["bands"][k]["end"]
         assert gap == pytest.approx(gutter_gap(g["lanes"]), abs=0.2)
-        assert rw["bands"][k]["lane"] < g["at"] < rw["bands"][k + 1]["start"]
+        assert rw["bands"][k]["end"] < g["at"] < g["at"] + (g["lanes"] - 1) * g["step"] < rw["bands"][k + 1]["start"]
+
+
+def test_loops_take_the_gutter_on_the_cheaper_side():
+    """Spec 9.5: a loop travels in the gutter before or after its band, the shorter runs then the fewer edges
+    crossed deciding, with a hysteresis; the head gutter takes room only when its loops save enough."""
+    from lattice.bbv.layout import GUTTER_STEP, LANE
+
+    lf = _graphviz()
+    t = _run(FIB_CALL, {**FIB_RUN, "entry": "fib"})
+    sides: list[dict] = []
+    box, pos = layout_frames(t.tables, t.frames, SHOW, lf, "LR", 4, rank_wrap="auto", fit=(1136, 430),
+                             call_edges=True, sides=sides)
+    assert len(sides) == len(t.frames) and len(box["rankWrap"]["fib"]["bands"]) == 2
+    label = {k: v["label"] for k, v in t.tables["versions"].items()}
+    named = lambda key: (label[key.split("->")[0]], label[key.split("->")[1].split(":")[0]])
+    done = sides[-1]
+    # the recursive call at the top of its band goes over it; the two lower ones go under it
+    assert [named(k) for k in done] == [("H1", "A2")]
+    fib = box["bands"]["fib"]
+    assert fib["head"] == {"at": fib["start"] - LANE, "lanes": 1, "step": GUTTER_STEP}
+    assert box["headers"]["fib"]["y"] < fib["head"]["at"] - GUTTER_STEP  # the name stays above the head gutter
+    # no flickering: a loop changes side at most twice over the run
+    changes: dict[str, int] = {}
+    for a, b in zip(sides, sides[1:]):
+        for k in set(a) ^ set(b):
+            changes[k] = changes.get(k, 0) + 1
+    assert max(changes.values(), default=0) <= 2, changes
+    # vector-print without bands: two loops would go over their band for 3 frames each, not worth the room
+    vp_sides: list[dict] = []
+    v = _run(VECTOR_PRINT, VP_RUN)
+    box, _ = layout_frames(v.tables, v.frames, SHOW, lf, "LR", 4, sides=vp_sides)
+    assert "head" not in box["bands"]["vprint"] and not any(vp_sides)
+    assert box["bands"]["vprint"]["tail"]["lanes"] == 2  # its loops into two targets: a lane each
 
 
 def test_auto_takes_the_shape_of_the_box():

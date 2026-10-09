@@ -214,13 +214,21 @@ def _bands(opts: BbvCommonOptions, prog: Program, ctx, panel: bool) -> dict:
 
 def _layout(tables: dict, frames: list[dict], show: list[str], opts: BbvCommonOptions, prog: Program, ctx,
             panel: bool = False, call_edges: bool = False):
-    """``layout_frames`` with the options of the drawing; a clamped band count warns (LT046)."""
+    """``layout_frames`` with the options of the drawing; a clamped band count warns (LT046). Returns the
+    frames with their positions (``pos``) and the loops that travel before their band (``sides``, spec 9.5)."""
     notes: list[str] = []
+    sides: list[dict] = []
     box, positions = layout_frames(tables, frames, show, _layout_fn(ctx), opts.direction, opts.wrap,
-                                   call_edges=call_edges, notes=notes, **_bands(opts, prog, ctx, panel))
+                                   call_edges=call_edges, notes=notes, sides=sides, **_bands(opts, prog, ctx, panel))
     for note in notes:
         ctx.warn(note)
-    return box, positions
+    placed = []
+    for f, p, sd in zip(frames, positions, sides):
+        g = {**f, "pos": p}
+        if sd:
+            g["sides"] = sd
+        placed.append(g)
+    return box, placed
 
 
 def _layout_fn(ctx):
@@ -411,9 +419,8 @@ class BbvAnim(_NamesParts, Component):
             raise ComponentError(str(e)) from None
         if trace.spec.truncated:
             ctx.warn(f"bbv-anim: stopped after {opts.max_steps} steps without converging (raise max_steps or lower the limit)")
-        box, positions = _layout(trace.tables, trace.frames, show, opts, prog, ctx,
-                                 panel=bool(opts.panel) and opts.panel_at != "below", call_edges=opts.call_edges)
-        frames = [{**f, "pos": p} for f, p in zip(trace.frames, positions)]
+        box, frames = _layout(trace.tables, trace.frames, show, opts, prog, ctx,
+                              panel=bool(opts.panel) and opts.panel_at != "below", call_edges=opts.call_edges)
         cfg = ctx.frames_config
         data = {"box": box, "tables": trace.tables, "frames": frame_store(frames, cfg.max_full_bytes, cfg.keyframe_interval),
                 "show": show, "colors": _colors(trace.tables, ctx, opts.colors), "callEdges": opts.call_edges,
@@ -460,8 +467,7 @@ class BbvCfg(_NamesParts, Component):
                     key = f"{ids[b['key']]}->{ids[fn['name'] + '/' + e['to']]}:{e['kind']}"
                     edges[key] = {"kind": e["kind"]}
         frame = {"nodes": nodes, "edges": edges, "caption": "", "panel": {}}
-        box, positions = _layout({"program": program_table, "versions": versions}, [frame], show, opts, prog, ctx)
-        frames = [{**frame, "pos": positions[0]}]
+        box, frames = _layout({"program": program_table, "versions": versions}, [frame], show, opts, prog, ctx)
         highlight = None
         count = 1
         if ctx.leader is not None:
@@ -513,9 +519,8 @@ class AbstractInterpAnim(_NamesParts, Component):
         panel = None
         if opts.panel is not None:
             panel = [k for k in opts.panel if k != "history"] + (opts.history or [] if "history" in opts.panel else [])
-        box, positions = _layout(trace.tables, trace.frames, show, opts, prog, ctx,
-                                 panel=bool(panel) and opts.panel_at != "below")
-        frames = [{**f, "pos": p} for f, p in zip(trace.frames, positions)]
+        box, frames = _layout(trace.tables, trace.frames, show, opts, prog, ctx,
+                              panel=bool(panel) and opts.panel_at != "below")
         cfg = ctx.frames_config
         data = {"box": box, "tables": trace.tables, "frames": frame_store(frames, cfg.max_full_bytes, cfg.keyframe_interval),
                 "show": show, "colors": _colors(trace.tables, ctx, opts.colors), "callEdges": False,

@@ -2,12 +2,13 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-09, after 0.33.1 (`implementation-report-2026-10-08-d.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-09, after 0.33.2 (`implementation-report-2026-10-08-d.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
+- [ ] 0.33.2: look at your `fib` slide (`lv-fib`) and the manual's "Bands of ranks" on your screen. Things to judge: the call dashes (`4 6` at rest, `5 7` lit, `lattice.css`); the sides the loops take, from `SIDE_CROSS` (60), `SIDE_KEEP` (40) and `HEAD_GAIN` (50) in `layout.py`; the head gutter, 28 px above the first band.
+- [ ] 0.33.2: no git commit for 0.33.1 and 0.33.2 unless you made one for 0.33.1 (only existing files changed; `git add -u`).
 - [ ] 0.33.0: look at the manual's "Choosing what to merge" (`bbv-merge`) on your screen, step by step. Things to judge: the edge widths (1 to 7 px, thick for the nearest pair, `edge_width`), the three steps of a merge (0.33.1: the glide of 650 ms, `MERGE_GLIDE` in `bbv.js`, and the fades of 250 to 300 ms after it, in `lattice.css`), the distance labels (`edge_labels`, off in the manual: on a complete graph they crowd the middle), and `placement=distance` (try the manual's contexts with it: nodes never move, but the drawing is less compact than the circle).
-- [ ] 0.33.1: no git commit (only existing files changed; `git add -u`).
 - [ ] 0.33.0: only Chromium was available: look at a `bbv-merge` in Firefox once (straight edges from positions, nothing measured).
 - [ ] 0.32.0: look at the manual's "Bands of ranks" (`bbv-bands`) and at your two test cases on your screen (`archive/implementation-report-2026-10-08-c.md` gives the blocks). Things to judge: gutter lanes 5 px apart and runs beside a rank up to 5 px apart (`GUTTER_STEP` in `layout.py`, `SLOT_STEP` in `bbv.js`); the label of an edge between bands 20 px into its run (`LABEL_AFTER`); the gap between bands (48 to 62 px, against 64 between functions).
 - [ ] 0.32.0: `rank_wrap=auto` aims at the slide's content, since the build does not know a column's width; in a column, give `fit_aspect` or a count. The runtime choice of the count (your stretch goal) is on the roadmap; say if you want it next.
@@ -86,6 +87,8 @@ Code (0.12):
 - [ ] Character-level alignment of identifiers (`xs` to `xs2`): whole tokens are replaced today, by design.
 
 Basic block versioning and abstract interpretation (from `archive/todo.md`, plus 0.7; the Gambit importer, a Scheme front end, jump cascade removal and other traversal orders are on the roadmap):
+- [ ] 0.33.2: the runs in the gap before a first rank can crowd: on the `fib` slide seven runs into rank `A` share its 15 px of slots (2.6 px apart). The slots (`SLOT_NEAR`, `SLOT_FAR` in `bbv.js`) could use the whole margin there, since no edge leaves a rank before it.
+- [ ] 0.33.2: back edges between two functions still share one lane past the source function (now past its tail gutter); they could take lanes per target like loops.
 - [ ] 0.32.0: an edge between two bands that are not neighbours (three bands or more) passes the bands between them on one line beyond the ends of their ranks, shared by every such edge; give it lanes if it shows up in a real deck.
 - [ ] 0.32.0: inside a band, an edge that skips ranks is still a curve that may cross a block of the ranks it skips (as without bands; seen in case A with `snake`, `N3 -> F1` past the corner of `D1`). The routing of edges between bands could serve them too.
 - [ ] 0.33.0: more placements for `bbv-merge`: a row in the order of the merge tree (every pair merged adjacent when it is picked, the result between its parents), a grid, positions given by hand; and contexts read from a `bbv-anim` run (the versions of a block at one of its `must-merge` events) instead of a list.
