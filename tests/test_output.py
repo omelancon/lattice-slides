@@ -79,6 +79,9 @@ def fixed():
 def keyed(legend, scale=1):
     return {"mark": "line", "description": f"legend {legend}"}
 
+def titled(title="Own title"):
+    return {"mark": "line", "title": title}
+
 def drawn(ax, color="red"):
     ax.plot([1, 2], [3, 4], color=color)
 
@@ -120,6 +123,27 @@ def test_plot_passes_extra_options_to_its_source(deck):
     # `legend` is the plot's own option: a source with that parameter receives it, true by default
     assert d.instances["a/t"]["data"]["spec"]["description"] == "legend False"
     assert d.instances["a/u"]["data"]["spec"]["description"] == "legend True"
+
+
+def test_plot_passes_its_title_to_a_source_that_takes_it(deck):
+    """Spec 8.2: `title` set on the block goes to a source with a `title` parameter, which otherwise keeps
+    its own default; a source without one gets the title from the plot, as before."""
+    root = deck({"talk.md": """
+        # A
+        ```plot {#t backend=vega source="charts.py:titled" title="micro benchmarks"}
+        ```
+
+        ```plot {#u backend=vega source="charts.py:titled"}
+        ```
+
+        ```plot {#v backend=vega source="charts.py:fixed" title="Set by the plot"}
+        ```
+    """, "charts.py": PLOT_SOURCE})
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items
+    assert d.instances["a/t"]["data"]["spec"]["title"] == "micro benchmarks"
+    assert d.instances["a/u"]["data"]["spec"]["title"] == "Own title"
+    assert d.instances["a/v"]["data"]["spec"]["title"] == "Set by the plot"
 
 
 @pytest.mark.parametrize("block, code", [

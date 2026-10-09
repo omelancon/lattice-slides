@@ -93,8 +93,9 @@ def _deep_merge(base: dict, over: dict) -> dict:
 
 def _source_args(fn, opts: PlotOptions, available: dict, reserved=("ax", "data")) -> dict:
     """The keyword arguments of ``source`` (spec 8.2): those of ``available`` its signature asks for, ``legend``
-    if it has that parameter or the block sets it, and the options the plot does not know, read as YAML
-    scalars. An option of the block that the function does not take is an error, ``legend`` included."""
+    if it has that parameter or the block sets it, ``title`` if the block sets it and the function takes it,
+    and the options the plot does not know, read as YAML scalars. An option of the block that the function
+    does not take is an error, ``legend`` included; ``title`` is not: the plot then sets the title itself."""
     from .animations import _extras
 
     params = inspect.signature(fn).parameters
@@ -104,6 +105,8 @@ def _source_args(fn, opts: PlotOptions, available: dict, reserved=("ax", "data")
         kwargs["legend"] = opts.legend
     elif "legend" in opts.model_fields_set:
         raise ComponentError(f"{opts.source} takes no option 'legend' (it draws its own legend, or none)")
+    if "title" in opts.model_fields_set and ("title" in params or takes_any):
+        kwargs["title"] = opts.title
     for k, v in _extras(opts).items():
         if k in reserved:
             raise ComponentError(f"option {k!r} is reserved: the plot passes it to {opts.source} itself")

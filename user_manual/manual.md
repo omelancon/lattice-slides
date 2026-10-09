@@ -792,7 +792,7 @@ xlabel: elements
 ylabel: time (ms)
 ```
 
-`source="file.py:fn"` draws with your code: a function taking `ax` (and `data`) for matplotlib, or returning a Vega-Lite spec or a Plotly figure; other options, `legend` too, are passed to it. A `spec:` body passes a raw spec; theme colours are merged in, yours win.
+`source="file.py:fn"` draws with your code: a function taking `ax` (and `data`) for matplotlib, or returning a Vega-Lite spec or a Plotly figure; other options, `legend` too, are passed to it, and `title` when it takes one. A `spec:` body passes a raw spec; theme colours are merged in, yours win.
 :::
 ::::
 
