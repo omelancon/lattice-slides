@@ -3071,3 +3071,100 @@ def test_edges_between_bands_cross_no_node(tmp_path):
             pytest.skip("Chromium for Playwright is not installed")
         raise
     assert not errors, errors
+
+
+MERGE_GEOMETRY = """() => {
+  // what is drawn (an element hidden with lt-gone, or never created, is not)
+  const root = document.querySelector('#s-m .lt-c-bbv-merge');
+  const nodes = Array.from(root.querySelectorAll('.lt-bbv-node:not(.lt-gone)')).map(g =>
+    [g.dataset.vid, g.getAttribute('class'), g.getAttribute('transform')]);
+  const edges = Array.from(root.querySelectorAll('.lt-bbv-dist:not(.lt-gone)')).map(g => {
+    const p = g.querySelector('path');
+    return [g.dataset.key, g.getAttribute('class'), p.getAttribute('d'), getComputedStyle(p).strokeWidth,
+            g.querySelector('text').textContent];
+  });
+  nodes.sort(); edges.sort();
+  return {nodes, edges, caption: root.querySelector('.lt-ga-caption').textContent};
+}"""
+
+
+def test_bbv_merge_runtime_renders_any_position_alike(tmp_path):
+    """bbv-merge (spec 9.5): every position looks the same however it is reached (fresh load, steps forward
+    with the glides, steps back); the picked pair and its edge take the merge colour, and an edge keeps the
+    width of its distance whatever its state; preview and print draw the same frame."""
+    src = tmp_path / "talk.md"
+    src.write_text("""# M {#m}
+```bbv-merge {#h limit=2 heuristic=arithmetic edge_labels=true}
+contexts:
+  - {x: fx, y: fx}
+  - {x: fl, y: fx}
+  - {x: fx, y: fl}
+  - {x: fl, y: fl}
+  - {x: fx | fl, y: any}
+panel: [contexts, distance]
+```
+""")
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+            fresh = []
+            for pos in range(8):
+                page.goto(f"{out.as_uri()}#/m/{pos}")
+                page.reload()
+                page.wait_for_timeout(150)
+                fresh.append(page.evaluate(MERGE_GEOMETRY))
+            assert "closest pair" in fresh[1]["caption"] and "done" in fresh[7]["caption"]
+            page.goto(f"{out.as_uri()}#/m/0")
+            page.reload()
+            page.wait_for_timeout(150)
+            for pos in range(1, 8):
+                page.keyboard.press("ArrowRight")
+                page.wait_for_timeout(550)  # the glide (380 ms) ends
+                assert page.evaluate(MERGE_GEOMETRY) == fresh[pos], pos
+            for pos in range(6, -1, -1):
+                page.keyboard.press("ArrowLeft")
+                page.wait_for_timeout(550)
+                assert page.evaluate(MERGE_GEOMETRY) == fresh[pos], pos
+            # the pick frame: the pair and its edge in the merge colour, the other edges dimmed
+            page.goto(f"{out.as_uri()}#/m/1")
+            page.reload()
+            page.wait_for_timeout(150)
+            colours = page.evaluate("""() => [
+                getComputedStyle(document.querySelector('.lt-bbv-dist.st-merge path')).stroke,
+                getComputedStyle(document.querySelector('.lt-bbv-node.mk-merge rect')).stroke,
+                document.querySelectorAll('.lt-bbv-node.mk-merge').length,
+                document.querySelectorAll('.lt-bbv-dist.st-dim').length]""")
+            assert colours[0] == colours[1] and colours[2] == 2 and colours[3] == 9
+            # widths are the data's, whatever the state (st-new sets a width for the edges of bbv-anim)
+            page.goto(f"{out.as_uri()}#/m/2")
+            page.reload()
+            page.wait_for_timeout(150)
+            widths = page.evaluate("""() => Array.from(document.querySelectorAll('.lt-bbv-dist.st-new path'))
+                .map(p => [getComputedStyle(p).strokeWidth, p.style.strokeWidth])""")
+            assert widths and all(a == b for a, b in widths)
+            assert page.evaluate("document.querySelectorAll('.lt-bbv-node.mk-gone').length") == 2
+            assert page.evaluate("document.querySelectorAll('.lt-bbv-node.mk-merged').length") == 1
+            page.goto(out.as_uri() + "?preview")
+            page.wait_for_timeout(250)
+            page.evaluate("window.postMessage({lattice: 'preview', slide: 'm', step: 1}, '*')")
+            page.wait_for_timeout(100)
+            page.evaluate("window.postMessage({lattice: 'preview', slide: 'm', step: 2}, '*')")
+            page.wait_for_timeout(150)
+            assert page.evaluate(MERGE_GEOMETRY) == fresh[2]
+            page.goto(out.as_uri() + "?print")
+            page.wait_for_timeout(250)
+            plan = {"title": "t", "pageOf": {}, "sections": [], "pages": [{"slide": "m", "step": 2, "n": 1}]}
+            assert page.evaluate("plan => Lattice.print(plan)", plan) == 1
+            assert page.evaluate("document.querySelectorAll('#lt-page-1 .lt-bbv-node.mk-merged').length") == 1
+            assert not errors, errors
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise

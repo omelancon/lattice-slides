@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.32.0
+author: Lattice 0.33.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1367,6 +1367,7 @@ steps:
 | `intervals=true`, `thresholds`, `fixnum_bits=61`, `vector_bounds=false` | Integer intervals and vector lengths (merges widen with the thresholds); the fixnum width; lengths as numbers, not `⟦v⟧` |
 | `clickable=off`, `clickable_show` | No enlarging on click; what an enlarged block shows |
 | `rank_wrap=2` or `auto`, `rank_wraps`, `rank_flow`, `fit_aspect` | Cut the ranks into bands laid side by side: [[bbv-bands]] |
+| `bbv-merge` | One merge heuristic at work on given contexts: [[bbv-merge]] |
 
 # Bands of ranks {#bbv-bands .dense}
 
@@ -1552,6 +1553,26 @@ history: [B.i]
 ```bbv-anim {#vec program="programs/findv.bbv" algorithm=sbbv limit=2 intervals=true direction=LR height=230}
 show: [label, context]
 ```
+
+# Choosing what to merge {#bbv-merge .dense}
+
+:::: columns
+::: column {width=2fr}
+```bbv-merge {#heur program="programs/find.bbv" block=A limit=1 heuristic=similarity height=420 fit_aspect="7:4"}
+contexts:
+  - {p: proc, lst: pair}
+  - {p: proc, lst: nil}
+  - {p: any, lst: pair}
+  - {p: any, lst: any}
+```
+:::
+::: column {width=1fr}
+- `contexts:` of one block, merged two by two by SBBV's `mergeSome` until `limit` holds
+- Two steps per merge: the pair the `heuristic` picks, then the merge
+- The thicker the edge, the closer the pair (log of the distance); `random` draws none
+- `placement=distance`; `program=` and `block=` add the specialized code
+:::
+::::
 
 # Reading the drawing {#reading-the-drawing .dense}
 

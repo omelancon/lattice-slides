@@ -129,6 +129,9 @@ def random_pair(contexts: list[Context], rng: random.Random) -> tuple[Context, C
     return contexts[i], contexts[j]
 
 
+# The distance of each heuristic that picks the closest pair (``random`` has none); ``bbv-merge`` draws it
+DISTANCES: dict[str, Distance] = {"similarity": similarity, "arithmetic": arithmetic}
+
 HEURISTICS = {
     "similarity": closest_pair(similarity),
     "arithmetic": closest_pair(arithmetic),

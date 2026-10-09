@@ -1763,3 +1763,240 @@ def test_auto_follows_the_deck_aspect_and_the_panel(deck):
     # the aspect is part of the cache key
     assert bands("", 'direction=LR rank_wrap=auto height=900', cache=True) == 2
     assert bands('---\naspect: "4:3"\n---\n', 'direction=LR rank_wrap=auto height=900', cache=True) == 3
+
+
+# ------------------------------------------------------------ merge heuristics: bbv-merge (spec 9.5)
+
+TWO_VARS = [{"x": "fx", "y": "fx"}, {"x": "fl", "y": "fx"}, {"x": "fx", "y": "fl"}, {"x": "fl", "y": "fl"},
+            {"x": "fx | fl", "y": "any"}, {"x": "pair", "y": "nil"}]
+
+
+def _merge_run(contexts=TWO_VARS, **kw):
+    from lattice.bbv.merging import MergeRun
+
+    return MergeRun(contexts, **kw)
+
+
+def _overlaps(frame, size):
+    w, h = size
+    pts = list(frame["pos"].values())
+    return [(a, b) for i, a in enumerate(pts) for b in pts[i + 1:] if abs(a[0] - b[0]) < w and abs(a[1] - b[1]) < h]
+
+
+@pytest.mark.parametrize("heuristic", ["similarity", "arithmetic"])
+def test_merge_run_picks_the_closest_pair_until_the_limit_holds(heuristic):
+    from lattice.bbv.heuristics import DISTANCES
+
+    run = _merge_run(heuristic=heuristic, limit=2)
+    events = [m["event"] for m in run.meta]
+    n = len(run.merges)
+    assert events == ["start"] + ["pick", "merge"] * n + ["done"] and len(run.frames) == 2 * n + 2
+    by = run.spec.by_id
+    for i, f in enumerate(run.frames):
+        if run.meta[i]["event"] != "pick":
+            continue
+        live = [int(v) for v in f["nodes"]]
+        pair = [int(v) for v, st in f["nodes"].items() if st.get("mark") == "merge"]
+        d = DISTANCES[heuristic]
+        best = min(d(by[a].context, by[b].context) for j, a in enumerate(live) for b in live[j + 1:])
+        assert d(by[pair[0]].context, by[pair[1]].context) == best
+        states = [e.get("state") for e in f["edges"].values()]
+        assert states.count("merge") == 1 and states.count("dim") == len(states) - 1
+        assert len(states) == len(live) * (len(live) - 1) // 2  # the complete graph
+    live = [v for v, st in run.frames[-1]["nodes"].items()]
+    assert len(live) <= 2 and not any(st.get("mark") for st in run.frames[-1]["nodes"].values())
+    assert "done" in plain(run.frames[-1]["caption"])
+
+
+def test_merge_run_is_the_merge_of_sbbv():
+    """The merges are those of Specializer.merge_some: the run below matches the hand computation of
+    the arithmetic distance, including a union that is a context merged away earlier."""
+    run = _merge_run(TWO_VARS[:5], heuristic="arithmetic", limit=2)
+    captions = [plain(f["caption"]) for f in run.frames]
+    assert captions[1].startswith("closest pair C2 C3 · distance 64")
+    assert captions[2].startswith("merge C2 C3 → C6 · new context, the union of theirs · x: fx | fl · y: fx | fl")
+    assert captions[4].startswith("merge C6 → C5 · its context is their union")
+    assert captions[6].startswith("merge C1 C4 → C5 · their union is C6, merged into C5 earlier")
+    merge = run.frames[2]["nodes"]
+    assert merge["6"]["mark"] == "merged" and merge["2"]["mark"] == merge["3"]["mark"] == "gone"
+    assert all(e.get("state") == "new" for k, e in run.frames[2]["edges"].items() if "6" in k.split("--")
+               and not {"2", "3"} & set(k.split("--")))
+    assert run.meta[1]["algo"] == [53, 54] and run.meta[2]["algo"] == [55, 56, 57]
+
+
+def test_merge_edge_widths_are_the_clamped_log_of_the_distance():
+    import math
+
+    run = _merge_run(heuristic="arithmetic")
+    edges = [(run.dist[k], e["w"]) for f in run.frames for k, e in f["edges"].items()]
+    assert all(1.0 <= w <= 7.0 for _, w in edges)
+    near = min(d for d, _ in edges)
+    far = max(d for d, _ in edges)
+    assert dict(edges)[near] == 7.0 and dict(edges)[far] == 1.0  # thick = close
+    for (d1, w1) in edges:
+        for (d2, w2) in edges:
+            if d1 < d2:
+                assert w1 >= w2
+    lo = math.log10(1 + near)
+    clamped = _merge_run(heuristic="arithmetic", log_range=(lo, lo + 0.5), edge_width=(2.0, 4.0))
+    widths = {e["w"] for f in clamped.frames for e in f["edges"].values()}
+    assert min(widths) == 2.0 and max(widths) == 4.0
+    assert sum(1 for f in clamped.frames for e in f["edges"].values() if e["w"] == 2.0) > len(widths)
+
+
+@pytest.mark.parametrize("placement", ["circle", "distance"])
+@pytest.mark.parametrize("heuristic", ["similarity", "arithmetic"])
+def test_merge_placements_never_overlap(placement, heuristic):
+    run = _merge_run(heuristic=heuristic, placement=placement, limit=1)
+    for i, f in enumerate(run.frames):
+        if run.meta[i]["event"] == "merge":  # the result drawn over the faded context it replaces (circle)
+            live = {v: p for v, p in f["pos"].items() if f["nodes"][v].get("mark") != "gone"}
+            assert not _overlaps({"pos": live}, run.size)
+        else:
+            assert not _overlaps(f, run.size), (i, f["pos"])
+        for p in f["pos"].values():
+            assert 0 <= p[0] and p[0] + run.size[0] <= run.box["width"] + 0.1
+            assert 0 <= p[1] and p[1] + run.size[1] <= run.box["height"] + 0.1
+    if placement == "distance":  # one place per context for the whole run
+        places = {}
+        for f in run.frames:
+            for v, p in f["pos"].items():
+                assert places.setdefault(v, p) == p
+
+
+def test_merge_circle_puts_the_result_at_the_older_place_then_respaces():
+    run = _merge_run(heuristic="arithmetic")
+    pick, merge, after = run.frames[1], run.frames[2], run.frames[3]
+    a, b = sorted(int(v) for v, st in pick["nodes"].items() if st.get("mark") == "merge")
+    into = next(v for v, st in merge["nodes"].items() if st.get("mark") == "merged")
+    assert merge["pos"][into] == pick["pos"][str(a)]
+    assert merge["pos"][str(b)] == pick["pos"][str(b)]  # the faded one stays
+    assert str(b) not in after["pos"] and after["pos"] != {k: v for k, v in merge["pos"].items() if k in after["pos"]}
+
+
+def test_merge_random_draws_no_distance():
+    run = _merge_run(heuristic="random", seed=7)
+    assert all(not f["edges"] for f in run.frames)
+    assert "distance" not in run.frames[1]["panel"]
+    assert plain(run.frames[1]["caption"]).startswith("random pair")
+    again = _merge_run(heuristic="random", seed=7)
+    assert [f["caption"] for f in again.frames] == [f["caption"] for f in run.frames]
+
+
+def test_merge_code_is_the_block_specialized_per_context():
+    run = _merge_run([{"p": "proc", "lst": "pair"}, {"p": "proc", "lst": "nil"}, {"p": "any", "lst": "pair"}],
+                     program=program("find.bbv"), block="A", limit=1, show=["label", "context", "code"])
+    versions = run.tables()["versions"]
+    assert [v["label"] for v in versions.values()][:3] == ["A1", "A2", "A3"]
+    first = versions["1"]["code"]
+    assert first[0]["removed"] and first[1]["text"] == "goto B"
+    merged = [v for vid, v in versions.items() if int(vid) > 3]
+    assert merged and not merged[0]["code"][0].get("removed")  # nil | pair: the test stays
+    assert run.meta[0]["block"] == "find/A"
+
+
+MERGE_DECK = """
+# M {#m}
+
+```bbv-merge {#h limit=2 heuristic=arithmetic%s}
+contexts:
+  - {x: fx, y: fx}
+  - {x: fl, y: fx}
+  - {x: fx, y: fl}
+  - context: {x: fl, y: fl}
+    label: Q
+%s
+```
+%s
+"""
+
+
+def _merge_deck(deck, attrs="", body="", after="", files=None):
+    return deck({"talk.md": MERGE_DECK % (attrs, body, after), **(files or {})})
+
+
+def test_bbv_merge_component_builds(deck):
+    root = _merge_deck(deck, " colors=context", "panel: [contexts, limit, merges, distance]",
+                       "```code {#algo lang=text file=\"lattice:bbv/pseudocode/sbbv.txt\" follow=h meta=algo}\n```\n")
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items, d.diagnostics.items
+    inst = d.instances["m/h"]
+    data = inst["data"]
+    assert data["kind"] == "merge" and inst["positions"] == data["frames"]["count"] == 2 * 2 + 2
+    sizes = {tuple(s) for s in data["box"]["sizes"].values()}
+    assert len(sizes) == 1  # every node has the same shape
+    labels = [v["label"] for v in data["tables"]["versions"].values()]
+    assert labels[:4] == ["C1", "C2", "C3", "Q"]
+    colors = data["colors"]
+    assert len(colors) == len(labels)  # a colour per context, merged ones mixed from their pair
+    assert "bbv-merge" in d.component_names
+
+
+@pytest.mark.parametrize("attrs, body, message", [
+    ("", "contexts: null", "contexts: list the contexts"),
+    (' heuristic=random edges=all', "", "edges: the random heuristic has no distance to draw"),
+    (' heuristic=random', "panel: [distance]", "random has no distance"),
+    (' heuristic=random placement=distance', "", "placement=distance needs a heuristic with a distance"),
+    (' edge_width="[3, 1]"', "", "edge_width: expected two increasing numbers"),
+    (' log_range=wide', "", "log_range: expected two increasing numbers"),
+    ("", "show: [label, code]", "show: code needs a program"),
+    (' block=A', "", "block names a block of program or source"),
+    (' name="9x"', "", "name: '9x' is not a block name"),
+    (' fit_aspect=wide', "", "fit_aspect: expected two positive numbers W:H"),
+])
+def test_bbv_merge_option_errors(deck, attrs, body, message):
+    contexts = "" if body.startswith("contexts:") else "contexts: [{x: fx}, {x: fl}, {x: bg}]\n"
+    text = f"# M {{#m}}\n\n```bbv-merge {{#h{attrs}}}\n{contexts}{body}\n```\n"
+    items = check_deck(deck({"talk.md": text}), use_cache=False).items
+    assert any(message in x.message for x in items), items
+
+
+@pytest.mark.parametrize("contexts, message", [
+    ("[{x: fx}]", "a list of at least two contexts"),
+    ("[{x: fx}, {x: fx}]", "contexts[1] is the same context as contexts[0]"),
+    ("[{x: fx}, {x: blob}]", "contexts[1]: x: cannot read the type 'blob'"),
+    ("[{x: fx}, 3]", "contexts[1]: a context is a mapping"),
+    ("[{x: fx}, {x: fl}, {context: {x: bg}, label: C1}]", "label C1 names two contexts"),
+])
+def test_bbv_merge_context_errors(deck, contexts, message):
+    root = deck({"talk.md": f"# M\n\n```bbv-merge {{#h}}\ncontexts: {contexts}\n```\n"})
+    items = check_deck(root, use_cache=False).items
+    assert any(message in x.message for x in items), items
+
+
+def test_bbv_merge_with_a_program(deck):
+    find = (PROGRAMS / "find.bbv").read_text(encoding="utf-8")
+    ok = '# M\n\n```bbv-merge {#h program="find.bbv" block=A limit=1}\ncontexts: [{p: proc, lst: pair}, {p: any, lst: nil}]\n```\n'
+    d = build_deck(deck({"talk.md": ok, "find.bbv": find}), use_cache=False)
+    assert not d.diagnostics.items, d.diagnostics.items
+    assert d.instances["m/h"]["data"]["show"] == ["label", "context", "code"]
+    for body, message in [("block=Z", "block: no block 'Z'"), ("block=A name=K", "name labels the contexts"),
+                          ("", "block: name the block")]:
+        bad = ok.replace("block=A", body).replace("{p: proc, lst: pair}", "{p: proc, q: pair}")
+        items = check_deck(deck({"talk.md": bad, "find.bbv": find}), use_cache=False).items
+        assert any(message in x.message for x in items), (body, items)
+    bad = ok.replace("{p: proc, lst: pair}", "{p: proc, q: pair}")
+    items = check_deck(deck({"talk.md": bad, "find.bbv": find}), use_cache=False).items
+    assert any("q is not a parameter of block find/A" in x.message for x in items), items
+
+
+def test_bbv_merge_within_the_limit_warns(deck):
+    root = deck({"talk.md": "# M\n\n```bbv-merge {#h limit=3}\ncontexts: [{x: fx}, {x: fl}]\n```\n"})
+    d = build_deck(root, use_cache=False)
+    assert d.instances["m/h"]["positions"] == 2
+    assert [x.code for x in d.diagnostics.items] == ["LT046"]
+    assert "nothing to merge" in d.diagnostics.items[0].message
+
+
+def test_arrow_at_contexts_and_edges_of_a_merge(deck):
+    timeline = "```timeline\nh 1..end, w 1..end\n```\n"
+    root = _merge_deck(deck, after="```arrow {#w}\nsteps: [h.C1, h.Q, h.C1--C2, null, null, null]\n```\n" + timeline)
+    d = build_deck(root, use_cache=False)
+    assert not d.diagnostics.items, d.diagnostics.items
+    steps = d.instances["m/w"]["data"]["steps"]
+    assert steps[0]["to_part"] == '.lt-bbv-node[data-vid="1"]:not(.lt-gone)'
+    assert steps[2]["to_part"] == '.lt-bbv-dist[data-key="1--2"]:not(.lt-gone) > .lt-bbv-edge-mark'
+    for ref, message in [("h.C9", "no context 'C9'"), ("h.C1--C9", "no context 'C9'")]:
+        bad = _merge_deck(deck, after=f"```arrow {{#w}}\nsteps: [{ref}]\n```\n")
+        items = check_deck(bad, use_cache=False).items
+        assert any(x.code == "LT063" and message in x.message for x in items), items

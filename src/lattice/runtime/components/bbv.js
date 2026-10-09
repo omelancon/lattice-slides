@@ -1,6 +1,7 @@
 // Basic block versioning: versions of a CFG appear, merge and vanish. Positions are computed at
 // build time per frame (block bands); on a single step the nodes glide, any other move is immediate.
-// Registers both bbv-anim (an algorithm run) and bbv-cfg (a source CFG, static or following a run).
+// Registers bbv-anim (an algorithm run), bbv-cfg (a source CFG, static or following a run),
+// abstract-interp-anim and bbv-merge (a merge heuristic at work: contexts merged two by two).
 (() => {
   const NS = "http://www.w3.org/2000/svg";
   const DURATION = 380;
@@ -23,7 +24,8 @@
   const SPAN = /`(op|tag|v|var|ty|code|rm):([^`]*)`/g;
   const KEYWORDS = /(\b(?:if|goto|else|return|call|fail)\b|->|\[[^\]]*\])/;
   const TONES = { specialize: "active", "test kept": "active", test: "active", "test removed": "warn", merge: "warn",
-    widen: "warn", "dead edge": "warn", fail: "warn", limit: "warn", done: "good", "fixed point": "good", exit: "good",
+    "closest pair": "warn", "random pair": "warn", widen: "warn", "dead edge": "warn", fail: "warn", limit: "warn",
+    done: "good", "fixed point": "good", exit: "good",
     reached: "accent", union: "accent", entry: "accent", "return points": "accent", path: "good" };
   const esc = (t) => Lattice.esc(t);
 
@@ -604,7 +606,8 @@
     }
     return { id, root, box, zoom: data.zoom || null, frame: null, position: 0, T: data.tables, show: data.show, colors: data.colors || {}, byLabel, callEdges: !!data.callEdges,
       store: api.frames(data.frames), gEdges, gNodes, nodes: {}, edges: {}, at: {}, raf: 0, keys: data.panel || [],
-      panel: root.querySelector(".lt-ga-panel"), caption, highlight: data.highlight };
+      panel: root.querySelector(".lt-ga-panel"), caption, highlight: data.highlight, kind: data.kind || null,
+      edgeLabels: !!data.edgeLabels };
   }
 
   function show(inst, position, info) {
@@ -630,11 +633,18 @@
       e.chars = e.label.textContent.length;
     }
     for (const [key, e] of Object.entries(inst.edges)) if (!live.has(key)) e.g.setAttribute("class", "lt-bbv-edge lt-gone");
+    const moves = glide(inst, pos, info, place);
+    finish(inst, f, info, moves);
+  }
+
+  // Moves the nodes to `pos`: at once, or gliding when an animated step moves a node that was drawn. Returns
+  // whether they glide.
+  function glide(inst, pos, info, placer) {
     const from = inst.at;
     inst.at = pos;
     const moves = info.animate && Object.keys(pos).some((k) => from[k] && (from[k][0] !== pos[k][0] || from[k][1] !== pos[k][1]));
     if (!moves) {
-      place(inst, pos);
+      placer(inst, pos);
     } else {
       const start = Object.fromEntries(Object.keys(pos).map((n) => [n, from[n] || pos[n]]));
       const t0 = performance.now();
@@ -643,18 +653,97 @@
         const ease = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
         const at = {};
         for (const [n, p] of Object.entries(pos)) at[n] = [start[n][0] + (p[0] - start[n][0]) * ease, start[n][1] + (p[1] - start[n][1]) * ease];
-        place(inst, at);
+        placer(inst, k < 1 ? at : pos);  // the end exactly where a fresh load draws it
         if (k < 1) inst.raf = requestAnimationFrame(tick);
       };
-      place(inst, start);
+      placer(inst, start);
       inst.raf = requestAnimationFrame(tick);
     }
+    return moves;
+  }
+
+  // The panel and caption of a frame, then the arrows at parts of the drawing (spec 8.9, 10.4), which
+  // measure again, frame by frame while the nodes glide
+  function finish(inst, f, info, moves) {
     renderPanel(inst, f.panel);
     inst.caption.innerHTML = richHTML(inst, f.caption || "");
     fitCaption(inst.caption);
-    // arrows at parts of the drawing (spec 8.9, 10.4) measure again, frame by frame while the nodes glide
     inst.root.dispatchEvent(new CustomEvent("lt-relayout", { bubbles: true,
       detail: moves ? { animate: true, follow: DURATION } : { animate: !!info.animate } }));
+  }
+
+  // ---- bbv-merge (spec 9.5, "Merge heuristics"): contexts merged two by two until the limit holds. The
+  // edges of the complete graph join the borders of two nodes in a straight line, without arrowheads; their
+  // width (the log of the heuristic's distance, clamped: thick for the nearest pairs) comes from the frame,
+  // and a state changes their colour only, so that the width always reads as the distance.
+  function distEdge(inst, key) {
+    if (inst.edges[key]) return inst.edges[key];
+    const g = svg("g", { class: "lt-bbv-edge lt-bbv-dist", "data-key": key });
+    const path = svg("path", {});
+    const label = svg("text", { class: "lt-bbv-edge-label", "text-anchor": "middle", "dominant-baseline": "middle" });
+    const mark = svg("rect", { class: "lt-bbv-edge-mark", width: 0, height: 0 });
+    g.append(path, label, mark);
+    inst.gEdges.appendChild(g);
+    const [src, dst] = key.split("--");
+    return (inst.edges[key] = { g, path, label, mark, src, dst, chars: 0 });
+  }
+
+  // Where the ray from the centre of a w x h box toward (dx, dy) leaves the box, from the centre
+  function border(w, h, dx, dy) {
+    const t = Math.min(dx ? w / 2 / Math.abs(dx) : Infinity, dy ? h / 2 / Math.abs(dy) : Infinity);
+    return [dx * t, dy * t];
+  }
+
+  function placeMerge(inst, at) {
+    for (const [vid, p] of Object.entries(at)) if (inst.nodes[vid]) inst.nodes[vid].g.setAttribute("transform", `translate(${p[0]},${p[1]})`);
+    for (const e of Object.values(inst.edges)) {
+      if (e.g.classList.contains("lt-gone")) continue;
+      const a = at[e.src], b = at[e.dst], na = inst.nodes[e.src], nb = inst.nodes[e.dst];
+      if (!a || !b || !na || !nb) continue;
+      const ca = [a[0] + na.w / 2, a[1] + na.h / 2], cb = [b[0] + nb.w / 2, b[1] + nb.h / 2];
+      const dx = cb[0] - ca[0], dy = cb[1] - ca[1];
+      let p = ca, q = cb, d = "";
+      if (dx || dy) {
+        const [ax, ay] = border(na.w, na.h, dx, dy), [bx, by] = border(nb.w, nb.h, -dx, -dy);
+        p = [ca[0] + ax, ca[1] + ay];
+        q = [cb[0] + bx, cb[1] + by];
+        // boxes that overlap (a merged context drawn over the faded one it replaces) leave no segment
+        if ((q[0] - p[0]) * dx + (q[1] - p[1]) * dy > 0) d = `M${p[0]},${p[1]} L${q[0]},${q[1]}`;
+      }
+      e.path.setAttribute("d", d);
+      const mid = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+      e.label.setAttribute("x", mid[0]);
+      e.label.setAttribute("y", mid[1]);
+      // the label's box from its length in the monospace font of .lt-bbv-edge-label, as in `place`
+      const w = e.chars ? e.chars * MARK_CH + 2 * MARK_PAD : 0, h = e.chars ? MARK_H : 0;
+      e.mark.setAttribute("x", mid[0] - w / 2);
+      e.mark.setAttribute("y", mid[1] - h / 2);
+      e.mark.setAttribute("width", w);
+      e.mark.setAttribute("height", h);
+    }
+  }
+
+  function showMerge(inst, position, info) {
+    cancelAnimationFrame(inst.raf);
+    const f = inst.store.at(position) || {};
+    inst.frame = f;
+    inst.position = position;
+    const nodes = f.nodes || {};
+    inst.root.classList.toggle("lt-animate", !!info.animate);
+    for (const [vid, st] of Object.entries(nodes)) nodeState(inst, node(inst, vid), vid, st, position);
+    for (const [vid, n] of Object.entries(inst.nodes)) if (!(vid in nodes)) n.g.setAttribute("class", `lt-bbv-node lt-gone${n.origin}`);
+    const live = new Set();
+    for (const [key, st] of Object.entries(f.edges || {})) {
+      const e = distEdge(inst, key);
+      live.add(key);
+      e.g.setAttribute("class", `lt-bbv-edge lt-bbv-dist st-${st.state || "default"}`);
+      e.path.style.strokeWidth = `${st.w}px`;
+      e.label.textContent = inst.edgeLabels ? st.d : "";
+      e.chars = e.label.textContent.length;
+    }
+    for (const [key, e] of Object.entries(inst.edges)) if (!live.has(key)) e.g.setAttribute("class", "lt-bbv-edge lt-bbv-dist lt-gone");
+    const moves = glide(inst, f.pos || {}, info, placeMerge);
+    finish(inst, f, info, moves);
   }
 
   // The panel of Lattice.renderPanel, with version labels as chips and the ∪ / ∇ steps of a
@@ -700,10 +789,11 @@
 
   function leave(inst) {
     cancelAnimationFrame(inst.raf);
-    place(inst, inst.at);
+    (inst.kind === "merge" ? placeMerge : place)(inst, inst.at);
   }
 
   Lattice.component("bbv-anim", { mount, show, leave, zoom });
   Lattice.component("bbv-cfg", { mount, show, leave, zoom });
   Lattice.component("abstract-interp-anim", { mount, show, leave, zoom });
+  Lattice.component("bbv-merge", { mount, show: showMerge, leave, zoom });
 })();

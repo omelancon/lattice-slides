@@ -29,4 +29,5 @@ Documents kept as they were written, for the history behind features. They are n
 | `implementation-report-2026-10-07-c.md` | Lattice 0.29.0: Left walks the structure, Backspace undoes the last move |
 | `implementation-report-2026-10-08.md` | Lattice 0.30.0: one press of Shift+Right or Shift+Left per checkpoint |
 | `implementation-report-2026-10-08-b.md` | Lattice 0.31.0: paths through calls and `read()` |
+| `implementation-report-2026-10-08-c.md` | Lattice 0.32.0: bands of ranks in the versioning drawings |
 | `thesis.pdf` | The thesis on basic block versioning that the 0.4.0 and 0.5.0 work follows |

@@ -148,6 +148,27 @@ PANEL_GAP = 28  # the gap between the drawing and its panel (.lt-ga-main)
 DEFAULT_HEIGHT = 430  # the default height of the drawing (.lt-ga-canvas)
 
 
+def _room(ctx, height: float, panel: bool) -> tuple[float, float]:
+    """The room of a drawing on its slide: the content width of the deck's aspect, less the panel when it
+    shows beside the drawing, by ``height``."""
+    from ..emit import DESIGN_SIZES
+
+    aspect = getattr(ctx.meta, "aspect", "16:9")
+    width = float(DESIGN_SIZES.get(aspect, DESIGN_SIZES["16:9"])[0] - 2 * SLIDE_PAD_X)
+    if panel:  # the panel beside the drawing: clamp(150px, 22%, 260px) in lattice.css, and the gap
+        width -= min(max(150.0, 0.22 * width), 260.0) + PANEL_GAP
+    return (width, height)
+
+
+def _aspect(value) -> float:
+    """``fit_aspect``: ``"W:H"`` as the ratio W / H."""
+    m = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\s*", str(value)) if isinstance(value, str) else None
+    if not m or float(m.group(1)) <= 0 or float(m.group(2)) <= 0:
+        hint = " (in a YAML body, quote it: \"16:9\")" if isinstance(value, int) else ""
+        raise ComponentError(f"fit_aspect: expected two positive numbers W:H, got {value!r}{hint}")
+    return float(m.group(1)) / float(m.group(2))
+
+
 def _count(value, what: str) -> int | str:
     """A band count: an integer >= 1 or ``auto`` (spec 9.5)."""
     if isinstance(value, str) and value.strip() == "auto":
@@ -176,23 +197,13 @@ def _bands(opts: BbvCommonOptions, prog: Program, ctx, panel: bool) -> dict:
     height = float(opts.height or DEFAULT_HEIGHT)
     fit = None
     if opts.fit_aspect is not None:
-        m = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\s*", str(opts.fit_aspect)) \
-            if isinstance(opts.fit_aspect, str) else None
-        if not m or float(m.group(1)) <= 0 or float(m.group(2)) <= 0:
-            hint = " (in a YAML body, quote it: \"16:9\")" if isinstance(opts.fit_aspect, int) else ""
-            raise ComponentError(f"fit_aspect: expected two positive numbers W:H, got {opts.fit_aspect!r}{hint}")
+        ratio = _aspect(opts.fit_aspect)
         if auto:
-            fit = (height * float(m.group(1)) / float(m.group(2)), height)
+            fit = (height * ratio, height)
         else:
             ctx.warn("fit_aspect has no effect without rank_wrap=auto (or auto in rank_wraps)")
     if auto and fit is None:
-        from ..emit import DESIGN_SIZES
-
-        aspect = getattr(ctx.meta, "aspect", "16:9")
-        width = float(DESIGN_SIZES.get(aspect, DESIGN_SIZES["16:9"])[0] - 2 * SLIDE_PAD_X)
-        if panel:  # the panel beside the drawing: clamp(150px, 22%, 260px) in lattice.css, and the gap
-            width -= min(max(150.0, 0.22 * width), 260.0) + PANEL_GAP
-        fit = (width, height)
+        fit = _room(ctx, height, panel)
     cuts = None
     leader = getattr(ctx, "leader", None)
     if leader is not None and isinstance(leader.data, dict):
@@ -515,3 +526,188 @@ class AbstractInterpAnim(_NamesParts, Component):
             data["zoom"] = zoom
         return RenderResult(panel_root("lt-bbv-anim lt-bbv-absint", opts.panel_at), data=data, positions=len(frames),
                             meta=trace.meta)
+
+
+# ---------------------------------------------------------------- bbv-merge (spec 9.5, "Merge heuristics")
+class BbvMergeOptions(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    contexts: Any = None  # a list of contexts (mappings variable: type), or {context, label, code}
+    limit: int = 2
+    heuristic: Literal["similarity", "arithmetic", "random"] = "similarity"
+    placement: Literal["circle", "distance"] = "circle"
+    program: str | None = None  # code for the looks: a block of a program, specialized per context
+    source: str | None = None
+    block: str | None = None
+    name: str | None = None  # the label prefix without a program (default C)
+    prims: dict | None = None
+    show: list[str] | None = None
+    colors: Literal["origin", "context", "none"] = "origin"
+    edges: Literal["all", "pair", "none"] = "all"
+    edge_width: Any = None  # [min, max] stroke widths in px, of the farthest and nearest pairs; default [1, 7]
+    log_range: Any = "auto"  # or [lo, hi]: the logs of the distances are clamped to it
+    edge_labels: bool = False
+    intervals: bool = False
+    thresholds: str | list[int | str] = "machine"
+    fixnum_bits: int = 61
+    vector_bounds: bool = True
+    panel: list[str] | None = None
+    panel_at: PanelAt = "auto"
+    caption: Literal["auto", "none"] = "auto"
+    height: int | None = None
+    clickable: bool = True
+    clickable_show: list[str] | None = None
+    fit_aspect: Any = None  # "W:H": the room the placement aims at, instead of the slide's content width
+
+
+MERGE_PANEL = ["contexts", "limit", "merges", "distance"]
+_NO_DISTANCE = ("edges", "edge_width", "log_range", "edge_labels")
+
+
+def _pair(value, what: str, default):
+    """Two increasing numbers ``[a, b]`` (a YAML list, or its text in an attribute)."""
+    import yaml
+
+    if value is None:
+        return default
+    if isinstance(value, str):
+        try:
+            value = yaml.safe_load(value)
+        except yaml.YAMLError:
+            pass
+    if (isinstance(value, (list, tuple)) and len(value) == 2
+            and all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in value) and value[0] < value[1]):
+        return float(value[0]), float(value[1])
+    raise ComponentError(f"{what}: expected two increasing numbers [a, b], got {value!r}")
+
+
+def _mix(colors: list[str]) -> str:
+    rgb = [[int(c[i:i + 2], 16) for i in (1, 3, 5)] for c in colors]
+    return "#" + "".join(f"{round(sum(x[k] for x in rgb) / len(rgb)):02x}" for k in range(3))
+
+
+@register("bbv-merge")
+class BbvMerge(Component):
+    """A merge heuristic at work: contexts merged two by two until the limit holds (spec 9.5)."""
+
+    Options = BbvMergeOptions
+    body = "yaml"
+    runtime = "bbv.js"
+
+    def render(self, block, opts: BbvMergeOptions, ctx) -> RenderResult:
+        from ..bbv.merging import MergeError, MergeRun
+
+        if opts.contexts is None:
+            raise ComponentError("contexts: list the contexts to merge, such as [{x: fx, y: fx}, {x: fl, y: fx}]")
+        random = opts.heuristic == "random"
+        if random:
+            given = [k for k in _NO_DISTANCE if k in opts.model_fields_set]
+            if given:
+                raise ComponentError(f"{', '.join(given)}: the random heuristic has no distance to draw")
+        edge_width = _pair(opts.edge_width, "edge_width", (1.0, 7.0))
+        if edge_width[0] <= 0:
+            raise ComponentError("edge_width: widths must be positive")
+        log_range = None
+        if not (isinstance(opts.log_range, str) and opts.log_range.strip() == "auto"):
+            log_range = _pair(opts.log_range, "log_range", None)
+        panel = opts.panel
+        if panel is not None:
+            allowed = MERGE_PANEL if not random else [k for k in MERGE_PANEL if k != "distance"]
+            bad = [k for k in panel if k not in allowed]
+            if bad:
+                raise ComponentError(f"panel: unknown key(s) {bad}; use {allowed}"
+                                     + (" (random has no distance)" if random and "distance" in bad else ""))
+        prog = None
+        if opts.program is not None or opts.source is not None:
+            prog = load_program(opts, ctx)
+        items = opts.contexts if isinstance(opts.contexts, list) else None
+        has_code = prog is not None or any(isinstance(i, dict) and "code" in i and "context" in i for i in items or [])
+        default = ["label", "context"] + (["code"] if has_code else [])
+        show = _show(opts, default)
+        if "code" in show and not has_code:
+            raise ComponentError("show: code needs a program and its block (program or source, and block), "
+                                 "or code given with the contexts")
+        height = float(opts.height or DEFAULT_HEIGHT)
+        if opts.fit_aspect is not None:
+            room = (height * _aspect(opts.fit_aspect), height)
+        else:
+            room = _room(ctx, height, bool(panel) and opts.panel_at != "below")
+        try:
+            run = MergeRun(opts.contexts, limit=opts.limit, heuristic=opts.heuristic, seed=ctx.seed, program=prog,
+                           block=opts.block, name=opts.name, intervals=opts.intervals, thresholds=opts.thresholds,
+                           fixnum_bits=opts.fixnum_bits, vector_bounds=opts.vector_bounds, placement=opts.placement,
+                           edges=opts.edges, edge_width=edge_width, log_range=log_range, show=show,
+                           color_keys=opts.colors == "context", room=room)
+        except (MergeError, ProgramError, ValueError) as e:
+            raise ComponentError(str(e)) from None
+        if len(run.initial) <= opts.limit:
+            ctx.warn(f"bbv-merge: {len(run.initial)} contexts within a limit of {opts.limit}: nothing to merge")
+        tables = run.tables()
+        versions = tables["versions"]
+        w, h = run.size
+        box = {**run.box, "sizes": {vid: [w, h] for vid in versions}, "direction": "TB"}
+        frames = run.frames
+        if opts.caption == "none":
+            frames = [{**f, "caption": ""} for f in frames]
+        cfg = ctx.frames_config
+        data = {"kind": "merge", "box": box, "tables": tables,
+                "frames": frame_store(frames, cfg.max_full_bytes, cfg.keyframe_interval), "show": show,
+                "colors": self._colors(run, prog, ctx, opts.colors), "callEdges": False, "panel": panel,
+                "height": opts.height, "algorithm": "sbbv", "static": True, "edgeLabels": opts.edge_labels,
+                "captions": opts.caption != "none"}
+        zoom = _zoom(opts, versions, [])
+        if zoom:
+            zoom["sizes"] = {vid: [max(s[0], w), max(s[1], h)] for vid, s in zoom["sizes"].items()}
+            data["zoom"] = zoom
+        return RenderResult(panel_root("lt-bbv-anim lt-bbv-merge", opts.panel_at), data=data, positions=len(frames),
+                            meta=run.meta)
+
+    @staticmethod
+    def _colors(run, prog, ctx, mode: str) -> dict[str, str]:
+        if mode == "none":
+            return {}
+        series = list(ctx.palette.get("series") or []) or ["#4c78a8", "#f58518", "#54a24b", "#e45756", "#72b7b2",
+                                                           "#b279a2", "#ff9da6", "#9d755d"]
+        if mode == "origin":
+            index = 0
+            if prog is not None:  # the colour this block has in a bbv-anim or bbv-cfg of the program
+                fns = [f for f in prog.functions.values() if not f.hidden] or list(prog.functions.values())
+                keys = [b.key for f in fns for b in f.blocks.values()]
+                index = keys.index(run.block.key) if run.block.key in keys else 0
+            return {run.block.key: series[index % len(series)]}
+        out: dict[str, str] = {}
+        for i, vid in enumerate(run.initial):
+            out[run.key_of(vid)] = series[i % len(series)]
+        for vid in sorted(run.spec.by_id):
+            if vid in run.parents:
+                a, b = run.parents[vid]
+                out[run.key_of(vid)] = _mix([out[run.key_of(a)], out[run.key_of(b)]])
+        return out
+
+    def part(self, result: RenderResult, name: str) -> Part:
+        """``LABEL`` (a context) or ``A--B`` (the edge between two contexts)."""
+        data = result.data or {}
+        versions = data["tables"]["versions"]
+        by_label = {v["label"]: vid for vid, v in versions.items()}
+        frames = frames_of(data["frames"])
+
+        def vid_of(label: str) -> str:
+            label = label.strip()
+            if label not in by_label:
+                raise ComponentError(f"no context {label!r}; the contexts are {', '.join(by_label)}")
+            return by_label[label]
+
+        if "--" in name:
+            a, _, b = name.partition("--")
+            x, y = sorted((int(vid_of(a)), int(vid_of(b))))
+            key = f"{x}--{y}"
+            drawn = [key in (f.get("edges") or {}) for f in frames]
+            if not any(drawn):
+                raise ComponentError(f"no edge {name} is drawn: edges join contexts alive at the same step, "
+                                     "and none are drawn with heuristic=random or edges=none (edges=pair draws "
+                                     "only the pair picked)")
+            selector = f'.lt-bbv-dist[data-key="{key}"]:not(.lt-gone) > .lt-bbv-edge-mark'
+        else:
+            vid = vid_of(name)
+            drawn = [vid in (f.get("nodes") or {}) for f in frames]
+            selector = f'.lt-bbv-node[data-vid="{vid}"]:not(.lt-gone)'
+        return Part(selector, None if all(drawn) else drawn)

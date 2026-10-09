@@ -2,12 +2,14 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-08, after 0.32.0 (`implementation-report-2026-10-08-c.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-08, after 0.33.0 (`implementation-report-2026-10-08-d.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
-- [ ] 0.32.0: look at the manual's "Bands of ranks" (`bbv-bands`) and at your two test cases on your screen (`implementation-report-2026-10-08-c.md` gives the blocks). Things to judge: gutter lanes 5 px apart and runs beside a rank up to 5 px apart (`GUTTER_STEP` in `layout.py`, `SLOT_STEP` in `bbv.js`); the label of an edge between bands 20 px into its run (`LABEL_AFTER`); the gap between bands (48 to 62 px, against 64 between functions).
-- [ ] 0.32.0: no git commit. `git add user_manual/programs/vector-print.bbv docs/implementation-report-2026-10-08-c.md docs/archive/implementation-report-2026-10-08-b.md`, and `git rm docs/implementation-report-2026-10-08-b.md` (the 0.31 report is copied to `docs/archive/`).
+- [ ] 0.33.0: look at the manual's "Choosing what to merge" (`bbv-merge`) on your screen, step by step. Things to judge: the edge widths (1 to 7 px, thick for the nearest pair, `edge_width`), the merge frame where the result sits over the faded older context (only the other one is seen fading), the distance labels (`edge_labels`, off in the manual: on a complete graph they crowd the middle), and `placement=distance` (try the manual's contexts with it: nodes never move, but the drawing is less compact than the circle).
+- [ ] 0.33.0: no git commit. `git add src/lattice/bbv/merging.py docs/implementation-report-2026-10-08-d.md docs/archive/implementation-report-2026-10-08-c.md`, and `git rm docs/implementation-report-2026-10-08-c.md` (the 0.32 report is copied to `docs/archive/`).
+- [ ] 0.33.0: only Chromium was available: look at a `bbv-merge` in Firefox once (straight edges from positions, nothing measured).
+- [ ] 0.32.0: look at the manual's "Bands of ranks" (`bbv-bands`) and at your two test cases on your screen (`archive/implementation-report-2026-10-08-c.md` gives the blocks). Things to judge: gutter lanes 5 px apart and runs beside a rank up to 5 px apart (`GUTTER_STEP` in `layout.py`, `SLOT_STEP` in `bbv.js`); the label of an edge between bands 20 px into its run (`LABEL_AFTER`); the gap between bands (48 to 62 px, against 64 between functions).
 - [ ] 0.32.0: `rank_wrap=auto` aims at the slide's content, since the build does not know a column's width; in a column, give `fit_aspect` or a count. The runtime choice of the count (your stretch goal) is on the roadmap; say if you want it next.
 - [ ] 0.32.0: only Chromium was available: check the banded drawings in Firefox once (the routes are SVG paths computed from positions, nothing measured).
 - [ ] 0.31.0: look at the manual's "Paths through calls" on your screen: the call edges and the return edges a path takes in green, and on a return edge the indices it was taken for in green and bold, the others faded to 35 % (`.lt-bbv-edge-lit`, `.lt-bbv-edge-unlit` in `lattice.css`). Say if the faded indices should stay readable at full ink instead.
@@ -86,6 +88,8 @@ Code (0.12):
 Basic block versioning and abstract interpretation (from `archive/todo.md`, plus 0.7; the Gambit importer, a Scheme front end, jump cascade removal and other traversal orders are on the roadmap):
 - [ ] 0.32.0: an edge between two bands that are not neighbours (three bands or more) passes the bands between them on one line beyond the ends of their ranks, shared by every such edge; give it lanes if it shows up in a real deck.
 - [ ] 0.32.0: inside a band, an edge that skips ranks is still a curve that may cross a block of the ranks it skips (as without bands; seen in case A with `snake`, `N3 -> F1` past the corner of `D1`). The routing of edges between bands could serve them too.
+- [ ] 0.33.0: more placements for `bbv-merge`: a row in the order of the merge tree (every pair merged adjacent when it is picked, the result between its parents), a grid, positions given by hand; and contexts read from a `bbv-anim` run (the versions of a block at one of its `must-merge` events) instead of a list.
+- [ ] 0.33.0: `bbv-merge` with `colors=context` mixes the colours of a pair for its result; a result that is an existing context keeps its colour. Say if a merged context should rather take the colour of the block.
 - [ ] 0.28.0: paths on `abstract-interp-anim` (the blocks an input may reach on the fixed CFG); the ΛV half of this item is done in 0.31.0.
 - [ ] A `code` panel key: the version of the current frame with its specialized code (removed tests struck through) listed in the panel, for slides that draw `show: [label, context]` (discussed on 2026-10-02, not needed yet since `show` covers it).
 - [ ] The blog's backward-score heuristic, as another `heuristic` value.
