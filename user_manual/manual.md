@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.35.0
+author: Lattice 0.35.1
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1709,7 +1709,7 @@ Try it: from the first step, Shift+Right stops after the second bullet, then aft
 ::::: columns
 :::: column {width=1fr}
 {.reveal}
-- `p` opens a second window with `?presenter`: the slide, a timer (click to reset), the step counters, a scrubber over the steps, a preview of **what Right will show**, the moves with their keys, every key binding, and the notes
+- `p` opens a second window with `?presenter`: the slide, a timer (click to reset), the step counters, a scrubber over the steps, a preview of **what Right will show** with the notes just below it, then the moves with their keys and every key binding
 - Both windows stay in sync, an enlarged block included: either one can drive
 - The scrubber sets the step directly, without touching the history
 - The preview is a passive copy of the deck, so animations show their real next position

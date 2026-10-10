@@ -772,6 +772,14 @@ def test_presenter_preview_and_scrubber(tmp_path):
                 return cur
 
             assert previewed({"slide": "steps", "step": 0}) == {"slide": "steps", "step": 0}
+            # spec 7.5: Next and its preview, then the notes just below them, then the moves and the keybindings
+            order = page.evaluate("""() => [...document.querySelectorAll('#lt-presenter-panel > *')]
+                .map((e) => e.className || e.tagName.toLowerCase())""")
+            assert [c for c in order if c in ("lt-pp-next", "lt-pp-notes", "lt-pp-moves", "lt-pp-keys")] == \
+                ["lt-pp-next", "lt-pp-notes", "lt-pp-moves", "lt-pp-keys"]
+            assert order[order.index("lt-pp-next") + 2] == "lt-pp-notes"  # only the Notes heading between them
+            tops = [page.locator(sel).bounding_box()["y"] for sel in (".lt-pp-next", ".lt-pp-notes", ".lt-pp-keys")]
+            assert tops == sorted(tops)
             keys = page.inner_text(".lt-pp-keys")  # spec 7.5: every global binding is listed
             assert "Shift+\u2192" in keys and "End" in keys and "presenter view" in keys and "Space" in keys
             assert "next checkpoint" in keys and "previous checkpoint" in keys and "\u00d72" not in keys  # spec 7.6

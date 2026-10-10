@@ -1,4 +1,4 @@
-# Implementation report: ΛV without generic entries (Lattice 0.35.0, 2026-10-10)
+# Implementation report: ΛV without generic entries (Lattice 0.35.0, 2026-10-10), and 0.35.1
 
 The report of 0.34.0 is in `archive/implementation-report-2026-10-10.md`.
 
@@ -20,3 +20,11 @@ Olivier's request, from the "Built-in Constant Folding" slide of `phd_defense/sr
 
 - An unknown callee (a procedure in a variable) is still an opaque call without generic entries: its return point receives `any`, as when the callee is unknown with them.
 - The `plot-sources` layout failure of 0.34.0 in this sandbox (fonts) is unchanged.
+
+## 4. 0.35.1: notes below the preview in the presenter view
+
+Olivier's request: in the presenter view, put the notes just below Next and its slide, with the keybindings below the notes.
+
+- `runtime/lattice.js` (`buildPresenter`): the panel now reads, top to bottom, timer and position, scrubber, Next with its preview, Notes, Moves, Keybindings (before: Next, Moves, Keybindings, Notes). Only the order of the sections changed; their content, styles and updates are as before. Moves stay above the keybindings, as the request names only Next, Notes and the keybindings.
+- `test_runtime.py` (`test_presenter_preview_and_scrubber`): the panel's sections come in that order, with only the Notes heading between the preview and the notes, and their boxes lie top to bottom. The test fails on 0.35.0.
+- Docs: spec 7.5 and 15, README (key `p`), the manual's `presenter-view` slide, the design report (roadmap), `docs/SKILL.md` (the suite table); version 0.35.1. Examples and the manual rebuilt; a screenshot of example 01 in presenter view checked.

@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.35.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.35.1. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -268,7 +268,7 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 
 **v0.34 (done).** Constant folding in ΛV (`fold`, thesis section 4.2): a call whose exits all return one constant to it, to a callee whose reachable versions have no side effect, is replaced by the constant at the step where both become known, in three frames (the callee's region, the call site and its return point, the fold); the versions only that call reached fade out as after a merge. The thesis pairs the fold with context memoization (pausing ΛV at a call site to analyse the callee with a higher limit), which the model does not do: it folds what the run itself proves.
 
-**v0.35 (done).** `generic_entry=false` on a ΛV run: no generic entry for the functions other than the entry, so a small example (a call folded to a constant) ends with what its calls reach rather than with a generic version of the callee nobody calls.
+**v0.35 (done).** `generic_entry=false` on a ΛV run: no generic entry for the functions other than the entry, so a small example (a call folded to a constant) ends with what its calls reach rather than with a generic version of the callee nobody calls. 0.35.1 moves the notes of the presenter view just below the preview of what comes next, above the moves and the keybindings.
 
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".

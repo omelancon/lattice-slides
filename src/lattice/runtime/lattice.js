@@ -888,6 +888,7 @@ const Lattice = (() => {
   }
 
   // ------------------------------------------------------------------ presenter view (spec 7.5)
+  // The panel, top to bottom: timer and position, scrubber, Next (its preview), Notes, Moves, Keybindings.
   function buildPresenter() {
     const panel = $("#lt-presenter-panel");
     const W = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--lt-w"));
@@ -897,9 +898,9 @@ const Lattice = (() => {
       <div class="lt-pp-scrub" hidden><input type="range" min="0" max="1" step="1" value="0" aria-label="Step of the current slide"><span class="lt-pp-scrub-label"></span></div>
       <h3>Next <span class="lt-pp-next-label"></span></h3>
       <div class="lt-pp-next"><iframe class="lt-pp-preview" title="Next" tabindex="-1" style="aspect-ratio:${W} / ${H}"></iframe><div class="lt-pp-next-none" hidden></div></div>
+      <h3>Notes</h3><div class="lt-pp-notes"></div>
       <h3>Moves</h3><ul class="lt-pp-moves"></ul>
-      <h4 class="lt-pp-keys-title">Keybindings</h4><ul class="lt-pp-keys">${keybindingsList()}</ul>
-      <h3>Notes</h3><div class="lt-pp-notes"></div>`;
+      <h4 class="lt-pp-keys-title">Keybindings</h4><ul class="lt-pp-keys">${keybindingsList()}</ul>`;
     const range = $(".lt-pp-scrub input", panel);
     range.addEventListener("input", () => {
       const i = Number(range.value);
