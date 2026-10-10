@@ -44,15 +44,18 @@ class VersioningTrace(Trace):
                  events: list[str] | None = None, caption: str = "auto", until: int | None = None,
                  max_steps: int = 5000, granularity: str = "block", intervals: bool = False,
                  thresholds="machine", fixnum_bits: int = 61, vector_bounds: bool = True,
-                 paths: list[dict] | None = None, fold: bool = False):
+                 paths: list[dict] | None = None, fold: bool = False, generic_entry: bool = True):
         super().__init__({})
         self.program = program
         self.algorithm = algorithm
         if fold and algorithm != "lv":
             raise ValueError("fold: constant folding replaces calls by their result, which needs algorithm=lv "
                              "(SBBV calls are opaque)")
+        if not generic_entry and algorithm != "lv":
+            raise ValueError("generic_entry: SBBV starts from the generic entry of every function (its calls are "
+                             "opaque); generic_entry=false needs algorithm=lv")
         cls = LambdaVersioning if algorithm == "lv" else Specializer
-        extra = {"fold": fold} if algorithm == "lv" else {}
+        extra = {"fold": fold, "generic_entry": generic_entry} if algorithm == "lv" else {}
         self.fold_at: dict[str, int] = {}  # folded call site -> index of its fold frame
         self.spec = cls(program, limit, heuristic, entry=entry, limits=limits, seed=seed, max_steps=max_steps,
                         emit=self._on_event, intervals=intervals, thresholds=thresholds, fixnum_bits=fixnum_bits,

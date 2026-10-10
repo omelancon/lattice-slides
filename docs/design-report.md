@@ -1,6 +1,6 @@
 # Lattice: Design Report
 
-*Why Lattice is built the way it is, and where it is going. Current as of v0.34.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
+*Why Lattice is built the way it is, and where it is going. Current as of v0.35.0. What Lattice does exactly is defined in [`spec.md`](spec.md); how to use it is in the [README](../README.md); how to work on the code is in [`SKILL.md`](SKILL.md).*
 
 ---
 
@@ -267,6 +267,8 @@ After the lecture, the teacher exports the main path to PDF with the detours as 
 **v0.33 (done).** `bbv-merge`, one decision of the versioning algorithms on its own: a set of contexts of one block merged two by two by SBBV's own `mergeSome` until the limit holds, each merge in three steps (the pair the heuristic picks; the pair meeting, the absorbed context gliding under the one that remains or both meeting halfway where the new result appears, the others greyed; everything back to the placement), styled as in `bbv-anim`, on a complete graph whose edges are as thick as the two contexts are close (the clamped log of the heuristic's distance), placed on an ellipse or by multidimensional scaling of the distances; a block of a program, specialized in each context, makes the nodes look like versions. 0.33.2 routes the loops of every versioning drawing through the gutter before or after their band (decision 44), and makes lit call edges as heavy as the other lit edges; 0.33.3 puts every arrowhead, of a fixed size, on a straight end of its edge.
 
 **v0.34 (done).** Constant folding in ΛV (`fold`, thesis section 4.2): a call whose exits all return one constant to it, to a callee whose reachable versions have no side effect, is replaced by the constant at the step where both become known, in three frames (the callee's region, the call site and its return point, the fold); the versions only that call reached fade out as after a merge. The thesis pairs the fold with context memoization (pausing ΛV at a call site to analyse the callee with a higher limit), which the model does not do: it folds what the run itself proves.
+
+**v0.35 (done).** `generic_entry=false` on a ΛV run: no generic entry for the functions other than the entry, so a small example (a call folded to a constant) ends with what its calls reach rather than with a generic version of the callee nobody calls.
 
 **Later.**
 - Spatial mode: slides placed on a canvas, with pan and zoom transitions that make detours "dive in".

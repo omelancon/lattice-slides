@@ -47,9 +47,10 @@ def return_context_of(ctx: Context, binds: dict, after: Context) -> Context:
 class LambdaVersioning(Specializer):
     interprocedural = True
 
-    def __init__(self, *args, fold: bool = False, **kwargs):
+    def __init__(self, *args, fold: bool = False, generic_entry: bool = True, **kwargs):
         super().__init__(*args, **kwargs)
         self.fold = fold  # constant folding at call sites (thesis section 4.2)
+        self.generic_entry = generic_entry  # queue the generic entries of the other functions when the queue empties
         self.folds = 0
         self.generic_done = False
         self.return_index: dict[int, int] = {}  # exit version -> index of its return point
@@ -64,6 +65,8 @@ class LambdaVersioning(Specializer):
             self.fold_call_sites()
         if not self.queue and not self.generic_done:
             self.generic_done = True
+            if not self.generic_entry:  # only the entry function's generic entry, and the entries calls create
+                return
             others = [f for f in self.program.functions.values() if f is not self.entry_function]
             before = set(self.by_id)
             ids = [self.queue_generic_entry(f).id for f in others]

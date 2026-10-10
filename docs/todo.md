@@ -2,11 +2,11 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-10, after 0.34.0 (`implementation-report-2026-10-10.md`; 0.33.3 in `archive/implementation-report-2026-10-09.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-10, after 0.35.0 (`implementation-report-2026-10-10-b.md`; 0.34.0 in `archive/implementation-report-2026-10-10.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
-- [ ] 0.34.0: no git commit: `git add docs/implementation-report-2026-10-10.md docs/archive/implementation-report-2026-10-09.md user_manual/programs/incr.bbv`, `git rm docs/implementation-report-2026-10-09.md` (moved to the archive), then `git add -u`; the deck's `make` installs Lattice from GitHub, so it sees `fold` once this is pushed.
+- [ ] 0.35.0: no git commit: `git add docs/implementation-report-2026-10-10-b.md docs/archive/implementation-report-2026-10-10.md`, `git rm docs/implementation-report-2026-10-10.md` (moved to the archive), then `git add -u`; push for the deck's `make` to see `generic_entry`.
 - [ ] 0.34.0: an exit that a fold makes unreachable keeps a late return index, allocated at the end (`return [4] r` in `incr`'s R1, shown before the fold). Say if indices should skip exits that a fold removed, or be allocated as exits appear.
 - [ ] 0.34.0: the fold is judged on the run's own contexts, without the context memoization of thesis section 4.2 (pausing ΛV at a call site to analyse the callee with a higher limit); say if you want it modelled.
 - [ ] 0.34.0: look at the manual's "Constant folding" (`bbv-fold`) on your screen; the operation badges `no side effect`, `constant result` and `constant fold` are new.

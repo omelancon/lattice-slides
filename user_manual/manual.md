@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.34.0
+author: Lattice 0.35.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1489,7 +1489,7 @@ cpath end, cidx end
 
 :::: columns
 ::: column {width=2fr}
-```bbv-anim {#fold program="programs/incr.bbv" algorithm=lv limit=3 entry=main intervals=true fold=true call_edges=true height=420}
+```bbv-anim {#fold program="programs/incr.bbv" algorithm=lv limit=3 entry=main intervals=true fold=true generic_entry=false call_edges=true height=420}
 show: [label, context, code]
 panel: []
 ```
@@ -1499,10 +1499,12 @@ panel: []
 algorithm: lv
 intervals: true
 fold: true
+generic_entry: false
 ```
 
 - A call whose exits all give one constant (`fx {1}`, `#t`, `#f`, `nil`), to a callee with no side effect, becomes `#res = 1`
 - Frames `fold-pure`, `fold-site`, `fold`, when it becomes valid (thesis section 4.2)
+- `generic_entry: false`: no generic entry for `incr`
 :::
 ::::
 

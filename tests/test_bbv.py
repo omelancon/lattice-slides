@@ -2226,3 +2226,34 @@ show: [label, code]
     assert tuple(data["box"]["sizes"][m1]) == node_size(v, ["label", "code"])
     assert data["box"]["sizes"][m1][0] == max(before[0], after[0]) and data["box"]["sizes"][m1][1] == max(before[1], after[1])
     assert data["zoom"]["sizes"][m1][0] >= max(before[0], after[0])
+
+
+# ------------------------------------------------------------ generic entries (ΛV, spec 9.5)
+
+def test_generic_entry_false_builds_no_generic_entry_for_the_other_functions():
+    """Without generic entries, ΛV specializes only what the entry function reaches through its calls: no
+    `generic-entries` frame, no A2 for incr; the default still builds them, so existing runs do not change."""
+    default = fold_trace(fold=False)
+    assert "generic-entries" in [m["event"] for m in default.meta]
+    t = fold_trace(fold=False, generic_entry=False)
+    assert "generic-entries" not in [m["event"] for m in t.meta]
+    assert labels_of(t, t.frames[-1]) == {"M1", "N1", "A1", "B1", "R1"}
+    assert [m["event"] for m in t.meta][: len(t.meta) - 1] == [m["event"] for m in default.meta][: len(t.meta) - 1]
+    folded = fold_trace(generic_entry=False)
+    assert labels_of(folded, folded.frames[-1]) == {"M1", "N1"}
+    assert plain(folded.frames[-1]["caption"]).startswith("done 2 versions")
+
+
+def test_generic_entry_false_needs_lv_and_reaches_the_component(tmp_path):
+    with pytest.raises(ValueError, match="needs algorithm=lv"):
+        VersioningTrace(parse(INCR), algorithm="sbbv", generic_entry=False)
+    (tmp_path / "incr.bbv").write_text(INCR)
+    src = tmp_path / "talk.md"
+    src.write_text("""# A {#a}
+
+```bbv-anim {#run program="incr.bbv" algorithm=lv limit=3 entry=main intervals=true fold=true generic_entry=false}
+show: [label]
+```
+""")
+    data = build_deck(src, use_cache=False).instances["a/run"]["data"]
+    assert sorted(v["label"] for v in data["tables"]["versions"].values()) == ["A1", "B1", "M1", "N1", "R1"]
