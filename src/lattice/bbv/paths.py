@@ -181,6 +181,11 @@ class PathWalker:
                         self.arrive(e.dst, cur, act, spec.goto_context(ctx, instr, dst.block), ("goto", vid, e.dst, None, vid))
                 return
             elif isinstance(instr, Call):
+                if v.folded is not None:  # folded by ΛV: the constant, then the goto to the return point
+                    for e in v.edges:
+                        if e.kind == "goto":
+                            self.arrive(e.dst, cur, act, ctx.set(RESULT, v.folded), ("goto", vid, e.dst, None, vid))
+                    return
                 self.call(v, ctx, instr, cur, act)
                 return
             elif isinstance(instr, Return):

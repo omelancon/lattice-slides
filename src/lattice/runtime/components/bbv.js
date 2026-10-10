@@ -32,7 +32,8 @@
   const TONES = { specialize: "active", "test kept": "active", test: "active", "test removed": "warn", merge: "warn",
     "closest pair": "warn", "random pair": "warn", widen: "warn", "dead edge": "warn", fail: "warn", limit: "warn",
     done: "good", "fixed point": "good", exit: "good",
-    reached: "accent", union: "accent", entry: "accent", "return points": "accent", path: "good" };
+    reached: "accent", union: "accent", entry: "accent", "return points": "accent", path: "good",
+    "no side effect": "good", "constant result": "accent", "constant fold": "good" };
   const esc = (t) => Lattice.esc(t);
 
   function plain(text) {
@@ -127,16 +128,21 @@
       }
     }
     let ellipsis = null;
+    const altEls = [];
     if (show.includes("code")) {
       ellipsis = svg("text", { class: "lt-bbv-code lt-bbv-ellipsis", x: PAD_X, y }, "…");
       g.appendChild(ellipsis);
-      for (const c of v.code) {
-        const t = svg("text", { class: `lt-bbv-code${c.removed ? " lt-bbv-removed" : ""}`, x: PAD_X, y, "xml:space": "preserve" });
+      // a call site folded by ΛV (spec 9.5) also draws its code before the fold, in the same place: a
+      // frame shows one or the other (`alt`), and the box has room for the longer one
+      const lines = (code, els) => code.map((c, i) => {
+        const t = svg("text", { class: `lt-bbv-code${c.removed ? " lt-bbv-removed" : ""}`, x: PAD_X, y: y + i * LINE_H, "xml:space": "preserve" });
         tspans(t, codeParts(c.text));
         g.appendChild(t);
-        codeEls.push(t);
-        y += LINE_H;
-      }
+        els.push(t);
+      });
+      lines(v.code, codeEls);
+      lines(v.alt || [], altEls);
+      y += Math.max(v.code.length, (v.alt || []).length) * LINE_H;
     }
     if (show.includes("after") && after.length) {
       const head = svg("text", { class: "lt-bbv-ctx lt-bbv-after-head", x: PAD_X, y, "xml:space": "preserve" }, AFTER_HEAD);
@@ -159,7 +165,7 @@
     }
     // `origin` is remembered here: the class attribute is rewritten at every frame, including when
     // the node is hidden, so the colour must not depend on the classes the element currently has
-    const n = { g, star, codeEls, ctxEls, afterEls, ellipsis, title, w, h, v, origin: color ? " has-origin" : "" };
+    const n = { g, star, codeEls, altEls, ctxEls, afterEls, ellipsis, title, w, h, v, origin: color ? " has-origin" : "" };
     setContextLines(n, ctx);
     if (afterEls.length) setLines(afterEls.slice(1), after);
     return n;
@@ -192,11 +198,20 @@
       }
     }
     const queued = st.state === "queued";
-    const shown = st.shown != null ? st.shown : n.codeEls.length;
-    if (n.ellipsis) n.ellipsis.style.display = (queued || shown === 0) && n.codeEls.length ? "" : "none";
-    n.codeEls.forEach((t, i) => { t.style.display = queued || i >= shown ? "none" : ""; });
+    // before its fold, a folded call site shows the code it had then (`alt`)
+    const alt = !!st.alt && n.altEls.length > 0;
+    const els = alt ? n.altEls : n.codeEls;
+    (alt ? n.codeEls : n.altEls).forEach((t) => { t.style.display = "none"; });
+    const shown = st.shown != null ? st.shown : els.length;
+    if (n.ellipsis) n.ellipsis.style.display = (queued || shown === 0) && els.length ? "" : "none";
+    els.forEach((t, i) => { t.style.display = queued || i >= shown ? "none" : ""; });
+    if (n.title && !st.lines && n.altEls.length) {  // the tooltip of a folded call site follows its code
+      const tip = [n.v.context.length ? `;; ${n.v.context.join("\n;; ")}` : "", ...(alt ? n.v.alt : n.v.code).map((c) => c.text)];
+      if (n.v.after && n.v.after.length) tip.push("", `after: ${n.v.after.join(", ")}`);
+      n.title.textContent = tip.filter((s, i) => s !== "" || i > 0).join("\n");
+    }
     // the exit context is known once the version is specialized to its end
-    const finished = !queued && shown >= n.v.code.length;
+    const finished = !queued && shown >= els.length;
     n.afterEls.forEach((t) => { t.style.display = finished ? "" : "none"; });
   }
 

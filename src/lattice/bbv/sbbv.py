@@ -75,6 +75,9 @@ class Version:
     call_sites: set[int] = field(default_factory=set)  # entry points only
     exit_sites: list[int] = field(default_factory=list)  # entry points only
     call: CallInfo | None = None  # call sites only
+    folded: "Type | None" = None  # a call site folded by ΛV (``fold``): the constant that replaced the call
+    folded_from: list[Line] | None = None  # its code before the fold
+    folded_entry: int | None = None  # the callee entry it called
 
     @property
     def done(self) -> bool:

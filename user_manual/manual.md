@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.33.3
+author: Lattice 0.34.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
@@ -1360,7 +1360,7 @@ steps:
 |---|---|
 | `program="f.bbv"`, `program="f.py:fn"`, `source:` | The program: a file, a Python function returning it, or its text |
 | `algorithm`, `limit`, `limits: {f: 3, g: none}`, `heuristic` | `sbbv` or `lv`; the version limit, overall or per function; the merge heuristic (`similarity`, `arithmetic`, `random`) |
-| `entry`, `functions: [f, g]` | The function traversed first; the functions drawn, in order |
+| `entry`, `functions: [f, g]`, `fold` | First function traversed; functions drawn, in order; [[bbv-fold]] |
 | `events`, `granularity=instruction`, `until`, `paths` | Event kinds kept; one frame per instruction; stop after N; paths at the end |
 | `panel: [queue, versions, checks, merges, limit]`, `panel_at=below`, `caption=none` | Panel entries, and where the panel sits (`auto`, `right`, `below`); no captions |
 | `colors=none`, `direction=LR`, `wrap=4`, `call_edges`, `height`, `prims` | Fills off; block bands direction; versions per line; dotted call edges; drawing height; extra primitives (a predicate declared there can be tested in an `if`) |
@@ -1483,6 +1483,43 @@ steps:
 cpath ..end-2
 cpath end-1, cidx 1
 cpath end, cidx end
+```
+
+# Constant folding {#bbv-fold .dense}
+
+:::: columns
+::: column {width=2fr}
+```bbv-anim {#fold program="programs/incr.bbv" algorithm=lv limit=3 entry=main intervals=true fold=true call_edges=true height=420}
+show: [label, context, code]
+panel: []
+```
+:::
+::: column {width=1fr}
+```yaml
+algorithm: lv
+intervals: true
+fold: true
+```
+
+- A call whose exits all give one constant (`fx {1}`, `#t`, `#f`, `nil`), to a callee with no side effect, becomes `#res = 1`
+- Frames `fold-pure`, `fold-site`, `fold`, when it becomes valid (thesis section 4.2)
+:::
+::::
+
+```arrow {#fnote}
+steps:
+  - null
+  - {to: fold.R1, to_anchor: left, angle: 180, length: 90, label: "no side effect"}
+  - {to: fold.N1, to_anchor: bottom, angle: 270, length: 70, label: "exactly 1"}
+  - null
+```
+
+```timeline
+fold 1..11
+fold 12, fnote 1
+fold 13, fnote 2
+fold 14, fnote 3
+fold ..end
 ```
 
 # Instruction by instruction, with the algorithm's listing {#bbv-instructions}

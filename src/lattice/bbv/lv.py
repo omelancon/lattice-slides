@@ -4,12 +4,27 @@ for call sites (forward) and specialized return points for the exit sites reacha
 """
 from __future__ import annotations
 
-from .ir import RESULT, Call, Const, Function, Var
+from .ir import RESULT, Assign, Call, Const, Fail, Function, Goto, If, Move, Return, Var
+from .prims import DEFAULT_PRIMS
 from .rich import SEP, binding, context, join, ver
 from .sbbv import CallInfo, Line, Specializer, Version
 from .types import ANY, Context, Type
 
 INTRA = ("goto", "true", "false", "return")
+# Primitives with a side effect (I/O, mutation, a fresh random value): a callee using one is never folded
+EFFECTS = frozenset({"display", "read", "random", "vector-set!", "##vector-set!"})
+_INT = Type.of("fx", "bg")
+
+
+def constant_text(t: Type) -> str | None:
+    """The constant a type stands for, as written in a program (``1``, ``#t``, ``'()``), or ``None`` when
+    the type holds more than one value: an integer with a singleton interval, ``#t``, ``#f`` or ``nil``."""
+    if t.range is not None and t.range.is_singleton() and not t.range.symbols() and t.subset(_INT):
+        return str(t.range.lo)
+    for name, text in (("#t", "#t"), ("#f", "#f"), ("nil", "'()")):
+        if t.is_exactly(name):
+            return text
+    return None
 
 
 def return_context_of(ctx: Context, binds: dict, after: Context) -> Context:
@@ -32,8 +47,10 @@ def return_context_of(ctx: Context, binds: dict, after: Context) -> Context:
 class LambdaVersioning(Specializer):
     interprocedural = True
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, fold: bool = False, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fold = fold  # constant folding at call sites (thesis section 4.2)
+        self.folds = 0
         self.generic_done = False
         self.return_index: dict[int, int] = {}  # exit version -> index of its return point
 
@@ -43,6 +60,8 @@ class LambdaVersioning(Specializer):
         self.emit("start", versions=[r.id for r in self.roots])
 
     def after_step(self) -> None:
+        if self.fold:
+            self.fold_call_sites()
         if not self.queue and not self.generic_done:
             self.generic_done = True
             others = [f for f in self.program.functions.values() if f is not self.entry_function]
@@ -173,6 +192,113 @@ class LambdaVersioning(Specializer):
                             self.reconcile_call_site(cs)
             if not changed:
                 return
+
+    # ------------------------------------------------------------ constant folding (thesis section 4.2)
+    def fold_call_sites(self) -> None:
+        """Replace by its constant every call whose result is known exactly and whose callee has no side
+        effect, as soon as both are known: once the versions the entry reaches are all specialized."""
+        for cs in sorted(self.by_id.values(), key=lambda v: v.id):
+            if cs.call is None or not cs.done or not self.is_reachable(cs):
+                continue
+            found = self.foldable(cs)
+            if found is not None:
+                self.apply_fold(cs, *found)
+
+    def callee_region(self, entry: Version) -> list[int] | None:
+        """The versions an entry point reaches: its function's versions along goto, test and return edges,
+        and the callees it calls, through their entries. ``None`` while one of them is not specialized."""
+        seen: set[int] = set()
+        stack = [entry.id]
+        reach = self.reachable()
+        while stack:
+            i = stack.pop()
+            if i in seen:
+                continue
+            v = self.by_id[i]
+            if v.merged is not None or i not in reach or not v.done:
+                return None
+            seen.add(i)
+            for e in v.edges:
+                if e.kind in INTRA or e.kind == "call":
+                    stack.append(e.dst)
+        return sorted(seen)
+
+    def pure_prim(self, ctx: Context, name: str, args) -> bool:
+        """A primitive without side effect that cannot raise an exception here: its arguments already have
+        the types it requires. A primitive declared by the deck (``prims``) is assumed to have effects."""
+        p = self.program.prims[name]
+        if name in EFFECTS or p is not DEFAULT_PRIMS.get(name):
+            return False
+        return all(self.type_of(ctx, a).subset(req) for a, req in zip(args, p.args or []))
+
+    def no_side_effect(self, v: Version) -> bool:
+        """The instructions of a specialized version, replayed on its context: no effect, no unknown
+        callee, no failure (a primitive whose argument may have the wrong type could raise one)."""
+        if any(line.text == "fail" for line in v.body or []):
+            return False
+        ctx = v.context
+        for instr in v.block.instrs:
+            if isinstance(instr, Assign):
+                if not self.pure_prim(ctx, instr.prim, instr.args):
+                    return False
+                ctx = self.assign_context(ctx, instr)
+                if ctx.is_bottom():
+                    return False
+            elif isinstance(instr, Move):
+                ctx = self.move_context(ctx, instr)
+            elif isinstance(instr, If):
+                return instr.prim is None or self.pure_prim(ctx, instr.prim, instr.args)
+            elif isinstance(instr, Return):
+                return instr.prim is None or self.pure_prim(ctx, instr.prim, instr.args)
+            elif isinstance(instr, Call):
+                return self.callee_of(ctx, instr) is not None  # a known callee is part of the region
+            elif isinstance(instr, Goto):
+                return True
+            elif isinstance(instr, Fail):
+                return False
+        return True
+
+    def foldable(self, cs: Version):
+        """``(entry, region, return point, constant, type)`` when the call of ``cs`` can be replaced by a
+        constant: its callee entry reaches no side effect, every exit site it reaches returns the same
+        constant to ``cs``, and they all return to one return point. ``None`` otherwise."""
+        entry = self.resolve(self.by_id[cs.call.entry])
+        region = self.callee_region(entry)
+        if region is None or cs.id in region:  # not specialized yet, or recursive
+            return None
+        if not all(self.no_side_effect(self.by_id[i]) for i in region):
+            return None
+        rets = [e for e in cs.edges if e.kind == "return"]
+        if not rets or {e.exit for e in rets} != set(entry.exit_sites) or len({e.dst for e in rets}) != 1:
+            return None
+        texts, t = set(), None
+        for x in entry.exit_sites:
+            r = self.return_context(cs, self.by_id[x]).get(RESULT)
+            texts.add(constant_text(r))
+            t = r if t is None else t.union(r)
+        if len(texts) != 1 or None in texts:
+            return None
+        return entry, region, self.by_id[rets[0].dst], texts.pop(), t
+
+    def apply_fold(self, cs: Version, entry: Version, region: list[int], rp: Version, text: str, t: Type) -> None:
+        """Three events: the region has no side effect, the call site receives a constant, then the fold:
+        the call becomes ``#res = constant`` and a ``goto`` to the return point, and the callee versions
+        that only this call reached become unreachable."""
+        self.emit("fold-pure", call_site=cs.id, entry=entry.id, versions=list(region))
+        self.emit("fold-site", call_site=cs.id, entry=entry.id, return_point=rp.id, value=text, type=t)
+        call_line = cs.body[-1]
+        cs.folded, cs.folded_from, cs.folded_entry = t, list(cs.body), entry.id
+        cs.body = cs.body[:-1] + [Line(f"{RESULT} = {text}", call_line.line), Line(f"goto {cs.call.ret.name}", call_line.line)]
+        cs.edges = [e for e in cs.edges if e.kind not in ("call", "return")]
+        cs.context_after = cs.context_after.set(RESULT, t)
+        entry.call_sites.discard(cs.id)
+        cs.call = None
+        self.add_edge(cs, rp, "goto")
+        self.invalidate()
+        self.folds += 1
+        self.sync_all()
+        self.requeue()
+        self.emit("fold", call_site=cs.id, entry=entry.id, return_point=rp.id, value=text, versions=list(region))
 
     # ------------------------------------------------------------ hooks
     def after_specialize(self, v: Version) -> None:

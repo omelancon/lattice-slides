@@ -3357,3 +3357,61 @@ panel: [contexts, distance]
         if "Executable doesn't exist" in str(e):
             pytest.skip("Chromium for Playwright is not installed")
         raise
+
+
+def test_a_folded_call_site_shows_its_code_of_the_step(tmp_path):
+    """ΛV's constant folding (spec 9.5): before its fold frame a folded call site draws the call, from
+    it on `#res = 1` and the goto, in the same box, however the step is reached (fresh load, forward,
+    backward); the versions only that call reached are gone after the fold."""
+    from test_bbv import INCR
+
+    (tmp_path / "incr.bbv").write_text(INCR)
+    src = tmp_path / "talk.md"
+    src.write_text("""# A {#a}
+```bbv-anim {#run program="incr.bbv" algorithm=lv limit=3 entry=main intervals=true fold=true}
+show: [label, code]
+```
+""")
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    state = """() => {
+      const m1 = [...document.querySelectorAll('.lt-bbv-node')].find((g) => g.querySelector('.lt-bbv-label').textContent.startsWith('M1'));
+      const shown = [...m1.querySelectorAll('.lt-bbv-code:not(.lt-bbv-ellipsis)')].filter((t) => t.style.display !== 'none').map((t) => t.textContent);
+      const live = [...document.querySelectorAll('.lt-bbv-node:not(.lt-gone)')].map((g) => g.querySelector('.lt-bbv-label').textContent.replace(' ∗', ''));
+      return { shown, live, box: m1.querySelector('rect').getAttribute('width') };
+    }"""
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(out.as_uri() + "#/a/0")
+            page.wait_for_timeout(200)
+            seen = []
+            for _ in range(60):
+                seen.append(page.evaluate(state))
+                if page.evaluate("location.hash").endswith("/a/999"):
+                    break
+                page.keyboard.press("ArrowRight")
+                page.wait_for_timeout(60)
+            calls = [i for i, s in enumerate(seen) if s["shown"] == ["call incr[A1](0) -> N"]]
+            folded = [i for i, s in enumerate(seen) if s["shown"] == ["#res = 1", "goto N"]]
+            assert calls and folded and max(calls) < min(folded)
+            assert len({s["box"] for s in seen}) == 1  # the box keeps its size
+            k = min(folded)
+            assert "A1" in seen[k - 1]["live"] and "A1" not in seen[k + 1]["live"]
+            for step in (k - 1, k + 1, k - 1):  # jumps, both ways
+                page.goto(out.as_uri() + f"#/a/{step}")
+                page.reload()
+                page.wait_for_timeout(200)
+                assert page.evaluate(state)["shown"] == seen[step]["shown"]
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(400)
+            assert page.evaluate(state)["shown"] == seen[k]["shown"]
+            assert not errors, errors
+            browser.close()
+    except Exception as e:  # browser not installed
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise

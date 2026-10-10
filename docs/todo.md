@@ -2,12 +2,15 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-09, after 0.33.3 (`implementation-report-2026-10-09.md`; 0.33.0 to 0.33.2 in `archive/implementation-report-2026-10-08-d.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-10, after 0.34.0 (`implementation-report-2026-10-10.md`; 0.33.3 in `archive/implementation-report-2026-10-09.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
+- [ ] 0.34.0: no git commit: `git add docs/implementation-report-2026-10-10.md docs/archive/implementation-report-2026-10-09.md user_manual/programs/incr.bbv`, `git rm docs/implementation-report-2026-10-09.md` (moved to the archive), then `git add -u`; the deck's `make` installs Lattice from GitHub, so it sees `fold` once this is pushed.
+- [ ] 0.34.0: an exit that a fold makes unreachable keeps a late return index, allocated at the end (`return [4] r` in `incr`'s R1, shown before the fold). Say if indices should skip exits that a fold removed, or be allocated as exits appear.
+- [ ] 0.34.0: the fold is judged on the run's own contexts, without the context memoization of thesis section 4.2 (pausing ΛV at a call site to analyse the callee with a higher limit); say if you want it modelled.
+- [ ] 0.34.0: look at the manual's "Constant folding" (`bbv-fold`) on your screen; the operation badges `no side effect`, `constant result` and `constant fold` are new.
 - [ ] 0.33.2: look at your `fib` slide (`lv-fib`) and the manual's "Bands of ranks" on your screen. Things to judge: the call dashes (`4 6` at rest, `5 7` lit, `lattice.css`); the sides the loops take, from `SIDE_CROSS` (60), `SIDE_KEEP` (40) and `HEAD_GAIN` (50) in `layout.py`; the head gutter, 28 px above the first band.
-- [ ] 0.33.3: no git commit: `git add docs/implementation-report-2026-10-09.md`, then `git add -u`.
 - [ ] 0.33.3: look at the arrowheads of a versioning drawing on your screen: 10 by 7 at rest, 12 by 9 lit (`ARROW`, `ARROW_LIT` in `bbv.js`), each on a straight end of 13 px (`LEG`); the drawings are 20 px wider and taller (`MARGIN` 40 in `layout.py`).
 - [ ] 0.33.0: look at the manual's "Choosing what to merge" (`bbv-merge`) on your screen, step by step. Things to judge: the edge widths (1 to 7 px, thick for the nearest pair, `edge_width`), the three steps of a merge (0.33.1: the glide of 650 ms, `MERGE_GLIDE` in `bbv.js`, and the fades of 250 to 300 ms after it, in `lattice.css`), the distance labels (`edge_labels`, off in the manual: on a complete graph they crowd the middle), and `placement=distance` (try the manual's contexts with it: nodes never move, but the drawing is less compact than the circle).
 - [ ] 0.33.0: only Chromium was available: look at a `bbv-merge` in Firefox once (straight edges from positions, nothing measured).

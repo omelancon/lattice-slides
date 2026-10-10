@@ -14,7 +14,7 @@ from .sbbv import Specializer, Version
 from .types import Type
 
 EVENTS = ["start", "dequeue", "must-merge", "merge", "specialize", "instruction", "entry", "exit", "return-points",
-          "generic-entries", "done"]
+          "fold-pure", "fold-site", "fold", "generic-entries", "done"]
 BLOCK_EVENTS = [e for e in EVENTS if e != "instruction"]
 # The operation badge of an instruction frame, by the kind of instruction specialized
 INSTRUCTION_OPS = {"assign": "assign", "if": "test kept", "if-true": "test removed", "if-false": "test removed",
@@ -44,14 +44,19 @@ class VersioningTrace(Trace):
                  events: list[str] | None = None, caption: str = "auto", until: int | None = None,
                  max_steps: int = 5000, granularity: str = "block", intervals: bool = False,
                  thresholds="machine", fixnum_bits: int = 61, vector_bounds: bool = True,
-                 paths: list[dict] | None = None):
+                 paths: list[dict] | None = None, fold: bool = False):
         super().__init__({})
         self.program = program
         self.algorithm = algorithm
+        if fold and algorithm != "lv":
+            raise ValueError("fold: constant folding replaces calls by their result, which needs algorithm=lv "
+                             "(SBBV calls are opaque)")
         cls = LambdaVersioning if algorithm == "lv" else Specializer
+        extra = {"fold": fold} if algorithm == "lv" else {}
+        self.fold_at: dict[str, int] = {}  # folded call site -> index of its fold frame
         self.spec = cls(program, limit, heuristic, entry=entry, limits=limits, seed=seed, max_steps=max_steps,
                         emit=self._on_event, intervals=intervals, thresholds=thresholds, fixnum_bits=fixnum_bits,
-                        vector_bounds=vector_bounds)
+                        vector_bounds=vector_bounds, **extra)
         self.visible = [f for f in program.functions if not program.functions[f].hidden] if functions is None else list(functions)
         for f in self.visible:
             program.function(f)
@@ -147,6 +152,8 @@ class VersioningTrace(Trace):
         frame = {"nodes": nodes, "edges": edges, "panel": self._panel(nodes),
                  "caption": self._caption(kind, info, gone) if self.caption_mode == "auto" else ""}
         meta = self._meta(kind, info)
+        if kind == "fold":
+            self.fold_at[str(info["call_site"])] = len(self.frames)
         self.frames.append(frame)
         self.meta.append(meta)
         self.prev_nodes = {k: v for k, v in nodes.items() if v.get("mark") != "gone"}
@@ -205,6 +212,25 @@ class VersioningTrace(Trace):
                 k = f"{info['call_site']}->{rp}:return"
                 if k in edges:
                     edges[k]["state"] = "new"
+        elif kind == "fold-pure":  # the versions the callee entry reaches: no side effect
+            region = {s(i) for i in info["versions"]}
+            for i in region:
+                m[i] = "path"
+            for key in edges:
+                src, rest = key.split("->", 1)
+                if src in region and rest.split(":", 1)[0] in region:
+                    edges[key]["state"] = "path"
+        elif kind == "fold-site":  # the call site and the return point that receives the constant
+            m[s(info["call_site"])] = "path"
+            m[s(info["return_point"])] = "path"
+            k = f"{info['call_site']}->{info['return_point']}:return"
+            if k in edges:
+                edges[k]["state"] = "path"
+        elif kind == "fold":
+            m[s(info["call_site"])] = "new"
+            k = f"{info['call_site']}->{info['return_point']}:goto"
+            if k in edges:
+                edges[k]["state"] = "new"
         elif kind == "generic-entries":
             for i in info.get("created", []):
                 m[s(i)] = "new"
@@ -309,6 +335,17 @@ class VersioningTrace(Trace):
             removed_ = [rp for rp, _ in info.get("removed", [])]
             if removed_:
                 parts.append(f"{tag('removed')} {self._chips(removed_)}")
+        elif kind == "fold-pure":
+            e = v(info["entry"])
+            parts = [f"{op('no side effect')} entry {self._chip(info['entry'])} of {e.function}",
+                     f"{self._chips(i for i in info['versions'] if self._visible(i))}: no I/O, no mutation, no exception"]
+        elif kind == "fold-site":
+            parts = [f"{op('constant result')} call site {self._chip(info['call_site'])}",
+                     f"return point {self._chip(info['return_point'])} receives {binding(RESULT, info['type'])} only"]
+        elif kind == "fold":
+            folded = f"{RESULT} = {info['value']}"
+            parts = [f"{op('constant fold')} {self._chip(info['call_site'])}", f"the call is replaced by {code(folded)}",
+                     f"{code('goto')} {self._chip(info['return_point'])}"]
         elif kind == "generic-entries":
             created = [i for i in info.get("created", []) if self._visible(i)]
             parts = [f"{op('queue')} {tag('generic entry' if len(created) == 1 else 'generic entries')}"] + [self._named(i) for i in created]
@@ -320,7 +357,7 @@ class VersioningTrace(Trace):
                      f"{self._tests(self.prev_nodes)} test{'s' if self._tests(self.prev_nodes) != 1 else ''} left{where}"]
             if spec.truncated:
                 parts.insert(0, f"{tag('stopped')} after the maximum number of steps")
-        if gone and kind in ("merge", "specialize", "return-points"):
+        if gone and kind in ("merge", "specialize", "return-points", "fold"):
             parts.append(f"{tag('unreachable')} {self._chips(int(i) for i in gone)}")
         return join(parts)
 
@@ -532,21 +569,17 @@ class VersioningTrace(Trace):
         for vid, v in spec.by_id.items():
             if not self._visible(vid):
                 continue
-            code = []
-            for line in (v.body or []):
-                d = line.as_dict()
-                if line.callee is not None:
-                    cs = spec.by_id[line.callee]
-                    label = spec.resolve(spec.by_id[cs.call.entry]).label if cs.call else "?"
-                    d["text"] = line.text.replace("{callee}", label)
-                if line.exit is not None and isinstance(spec, LambdaVersioning) and line.exit in spec.return_index:
-                    d["text"] = d["text"].replace("return ", f"return [{spec.return_index[line.exit]}] ", 1)
-                code.append(d)
             self.tables["versions"][str(vid)] = {
                 "label": v.label, "block": v.block.key, "function": v.function, "name": v.block.name,
-                "context": v.context.lines(), "code": code,
+                "context": v.context.lines(), "code": self._code(v.body),
                 "after": v.context_after.lines() if v.context_after is not None else [],
             }
+            if v.folded_from is not None:  # a folded call site: its code before the fold (spec 9.5)
+                self.tables["versions"][str(vid)]["alt"] = self._code(v.folded_from)
+        for vid, at in self.fold_at.items():  # the frames before the fold show the call
+            for f in self.frames[:at]:
+                if vid in f["nodes"]:
+                    f["nodes"][vid] = {**f["nodes"][vid], "alt": True}
         index = getattr(spec, "return_index", {})
         for f in self.frames:
             for e in f["edges"].values():
@@ -558,6 +591,22 @@ class VersioningTrace(Trace):
                     lit = sorted({index.get(x, 0) for x in e.pop("lit_exits")}) if index else []
                     if lit:
                         e["lit"] = lit
+
+    def _code(self, lines) -> list[dict]:
+        """The code lines of a version for the tables, with the callee entry and return indices resolved."""
+        spec = self.spec
+        code = []
+        for line in lines or []:
+            d = line.as_dict()
+            if line.callee is not None:
+                cs = spec.by_id[line.callee]
+                entry = cs.call.entry if cs.call else cs.folded_entry
+                label = spec.resolve(spec.by_id[entry]).label if entry is not None else "?"
+                d["text"] = line.text.replace("{callee}", label)
+            if line.exit is not None and isinstance(spec, LambdaVersioning) and line.exit in spec.return_index:
+                d["text"] = d["text"].replace("return ", f"return [{spec.return_index[line.exit]}] ", 1)
+            code.append(d)
+        return code
 
     def _program_table(self) -> dict:
         prog = self.program

@@ -57,6 +57,7 @@ class BbvAnimOptions(BbvCommonOptions):
     fixnum_bits: int = 61
     vector_bounds: bool = True  # vector lengths as symbolic bounds (with intervals)
     paths: list | None = None  # frames after the run highlighting the versions of a path (spec 9.5)
+    fold: bool = False  # ΛV replaces a call by its constant result when the callee has no side effect (spec 9.5)
 
 
 class BbvCfgOptions(BbvCommonOptions):
@@ -82,7 +83,7 @@ class AbstractInterpOptions(BbvCommonOptions):
 _KNOWN = {"program", "source", "functions", "show", "colors", "direction", "height", "prims", "algorithm", "limit", "limits",
           "heuristic", "entry", "events", "granularity", "until", "call_edges", "panel", "caption", "max_steps", "wrap",
           "thresholds", "narrowing", "fixnum_bits", "history", "intervals", "clickable", "clickable_show", "vector_bounds",
-          "panel_at", "paths", "rank_wrap", "rank_wraps", "rank_flow", "fit_aspect"}
+          "panel_at", "paths", "fold", "rank_wrap", "rank_wraps", "rank_flow", "fit_aspect"}
 
 
 def load_program(opts: BbvCommonOptions, ctx) -> Program:
@@ -414,7 +415,7 @@ class BbvAnim(_NamesParts, Component):
                                     events=opts.events, caption=opts.caption, until=opts.until,
                                     max_steps=opts.max_steps, granularity=opts.granularity,
                                     intervals=opts.intervals, thresholds=opts.thresholds, fixnum_bits=opts.fixnum_bits,
-                                    vector_bounds=opts.vector_bounds, paths=opts.paths)
+                                    vector_bounds=opts.vector_bounds, paths=opts.paths, fold=opts.fold)
         except (ProgramError, ValueError) as e:
             raise ComponentError(str(e)) from None
         if trace.spec.truncated:

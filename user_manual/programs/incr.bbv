@@ -1,0 +1,15 @@
+; (define (incr x) (+ x 1)) (incr 0), with + expanded, as basic blocks: a fixnum fast path with its
+; overflow check, a flonum case, a generic fallback. With intervals, ΛV calls incr with x exactly 0, so
+; the call returns exactly 1 and has no side effect: with fold=true it is folded (spec 9.5).
+function main()
+M:  call incr(0) -> N
+N:  return #res
+
+function incr(x)
+A:  if fixnum?(x) goto B else goto C
+B:  r = fx+?(x, 1)
+    if r goto R else goto D
+R:  return r
+C:  if flonum?(x) goto F else goto D
+F:  return fl+(x, 1.0)
+D:  return ##+(x, 1)

@@ -51,10 +51,11 @@ def node_size(version: dict, show: list[str]) -> tuple[float, float]:
     if "context" in show:
         widths.append(context_width(version["context"]))
         count += len(version["context"])
-    if "code" in show:
+    if "code" in show:  # a folded call site shows its code before the fold too (``alt``): room for both
         code = [c["text"] for c in version["code"]] or ["…"]
-        widths += [len(t) for t in code]
-        count += len(code)
+        alt = [c["text"] for c in version.get("alt") or []]
+        widths += [len(t) for t in code + alt]
+        count += max(len(code), len(alt))
     after = version.get("after") or []
     if "after" in show and after:
         widths += [len(AFTER_HEAD), context_width(after)]

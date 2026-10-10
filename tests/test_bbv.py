@@ -2104,3 +2104,125 @@ def test_distance_magnitude_changes_only_what_is_shown():
     assert mag.frames[1]["panel"]["distance"] == shown
     from lattice.bbv.merging import magnitude
     assert magnitude(0) == "-∞" and magnitude(1000) == "3.00"
+
+
+# ------------------------------------------------------------ constant folding (ΛV, spec 9.5)
+
+INCR = """function main()
+M:  call incr(0) -> N
+N:  return #res
+
+function incr(x)
+A:  if fixnum?(x) goto B else goto C
+B:  r = fx+?(x, 1)
+    if r goto R else goto D
+R:  return r
+C:  if flonum?(x) goto F else goto D
+F:  return fl+(x, 1.0)
+D:  return ##+(x, 1)
+"""
+
+
+def fold_trace(source: str = INCR, **kw):
+    opts = dict(algorithm="lv", limit=3, heuristic="arithmetic", entry="main", intervals=True, fold=True)
+    opts.update(kw)
+    return VersioningTrace(parse(source), **opts)
+
+
+def labels_of(t: VersioningTrace, frame: dict) -> set[str]:
+    return {t.tables["versions"][vid]["label"] for vid, n in frame["nodes"].items() if n.get("mark") != "gone"}
+
+
+def test_fold_replaces_a_call_by_its_constant_result():
+    """incr(0) returns exactly 1 and incr has no side effect: once A1, B1 and R1 are specialized, three
+    frames (the region, the call site and its return point, the fold) replace the call by `#res = 1`,
+    and the versions only that call reached become unreachable; the generic entry is still queued."""
+    t = fold_trace()
+    events = [m["event"] for m in t.meta]
+    i = events.index("fold-pure")
+    assert events[i:i + 3] == ["fold-pure", "fold-site", "fold"]
+    assert events.index("exit") < i < events.index("generic-entries")
+    pure, site, fold = t.frames[i:i + 3]
+    marked = lambda f, mark: {t.tables["versions"][v]["label"] for v, n in f["nodes"].items() if n.get("mark") == mark}
+    assert marked(pure, "path") == {"A1", "B1", "R1"}
+    assert marked(site, "path") == {"M1", "N1"}
+    assert marked(fold, "gone") == {"A1", "B1", "R1"} and marked(fold, "new") == {"M1"}
+    assert "the call is replaced by" in plain(fold["caption"]) and "#res = 1" in plain(fold["caption"])
+    assert "receives #res: fx {1} only" in plain(site["caption"])
+    assert labels_of(t, t.frames[-1]) == {"M1", "N1", "A2", "B2", "C1", "R2", "D1", "F1", "D2"}
+    m1 = next(vid for vid, v in t.tables["versions"].items() if v["label"] == "M1")
+    v = t.tables["versions"][m1]
+    assert [c["text"] for c in v["code"]] == ["#res = 1", "goto N"]
+    assert [c["text"] for c in v["alt"]] == ["call incr[A1](0) -> N"]
+    assert all(f["nodes"][m1].get("alt") for f in t.frames[1:i + 2] if m1 in f["nodes"])
+    assert not any(f["nodes"][m1].get("alt") for f in t.frames[i + 2:])
+    assert t.spec.folds == 1
+
+
+def test_no_fold_without_the_option_or_with_side_effects_or_without_a_constant():
+    assert "fold" not in [m["event"] for m in fold_trace(fold=False).meta]
+    effect = INCR.replace("R:  return r", "R:  t = display(r)\n    return r")
+    assert "fold" not in [m["event"] for m in fold_trace(effect).meta]
+    assert "fold" not in [m["event"] for m in fold_trace(intervals=False).meta]  # fx, not fx {1}
+    unknown = INCR.replace("call incr(0) -> N", "call incr(y) -> N").replace("M:  ", "M:  y = read()\n    ", 1)
+    assert "fold" not in [m["event"] for m in fold_trace(unknown).meta]  # any input: several results
+    one = """function main()
+M:  y = read()
+    call one(y) -> N
+N:  return #res
+
+function one(y)
+A:  %s
+    return 1
+"""
+    assert "fold" in [m["event"] for m in fold_trace(one % "t = ##car(y)").meta]  # ##car never raises
+    assert "fold" not in [m["event"] for m in fold_trace(one % "t = car(y)").meta]  # car of any may raise
+
+
+def test_fold_of_a_boolean_and_errors():
+    source = """function main()
+M:  call positive(3) -> N
+N:  return #res
+
+function positive(x)
+A:  if fx>(x, 0) goto B else goto C
+B:  return #t
+C:  return #f
+"""
+    t = fold_trace(source)
+    m1 = next(vid for vid, v in t.tables["versions"].items() if v["label"] == "M1")
+    assert [c["text"] for c in t.tables["versions"][m1]["code"]] == ["#res = #t", "goto N"]
+    with pytest.raises(ValueError, match="needs algorithm=lv"):
+        VersioningTrace(parse(INCR), algorithm="sbbv", fold=True)
+
+
+def test_a_path_goes_through_a_folded_call():
+    t = fold_trace(paths=[{"input": {}}])
+    path = t.frames[-1]
+    on = {t.tables["versions"][v]["label"] for v, n in path["nodes"].items() if n.get("mark") == "path"}
+    assert on == {"M1", "N1"}
+    assert any(k.endswith(":goto") and e.get("state") == "path" for k, e in path["edges"].items())
+
+
+def test_fold_in_a_deck_sizes_the_box_for_both_codes(tmp_path):
+    """The box of a folded call site has room for its code before and after the fold (the drawing
+    never rescales), and an enlarged block is sized the same way."""
+    from lattice.bbv.layout import node_size
+
+    (tmp_path / "incr.bbv").write_text(INCR)
+    src = tmp_path / "talk.md"
+    src.write_text("""# A {#a}
+
+```bbv-anim {#run program="incr.bbv" algorithm=lv limit=3 entry=main intervals=true fold=true}
+show: [label, code]
+```
+""")
+    data = build_deck(src, use_cache=False).instances["a/run"]["data"]
+    versions = data["tables"]["versions"]
+    m1 = next(vid for vid, v in versions.items() if v["label"] == "M1")
+    v = versions[m1]
+    before = node_size({**v, "code": v["alt"], "alt": None}, ["label", "code"])
+    after = node_size({**v, "alt": None}, ["label", "code"])
+    assert tuple(data["box"]["sizes"][m1]) == node_size(v, ["label", "code"])
+    assert data["box"]["sizes"][m1][0] == max(before[0], after[0]) and data["box"]["sizes"][m1][1] == max(before[1], after[1])
+    assert data["zoom"]["sizes"][m1][0] >= max(before[0], after[0])

@@ -31,4 +31,5 @@ Documents kept as they were written, for the history behind features. They are n
 | `implementation-report-2026-10-08-b.md` | Lattice 0.31.0: paths through calls and `read()` |
 | `implementation-report-2026-10-08-c.md` | Lattice 0.32.0: bands of ranks in the versioning drawings |
 | `implementation-report-2026-10-08-d.md` | Lattice 0.33.0 to 0.33.2: `bbv-merge`, merges in three steps, loops on either side of their band, lit call edges |
+| `implementation-report-2026-10-09.md` | Lattice 0.33.3: arrowheads of the versioning drawings on a straight end |
 | `thesis.pdf` | The thesis on basic block versioning that the 0.4.0 and 0.5.0 work follows |
