@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.36.0
+author: Lattice 0.37.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, touch, pdf-export, thanks]
@@ -1727,6 +1727,35 @@ go to [[bellman-ford]].
 ```
 
 Several `notes` containers on one slide are concatenated.
+::::
+:::::
+
+# Notes written while rehearsing {#sidecar-notes .dense}
+
+::::: columns
+:::: column {width=1fr}
+{.reveal}
+- Under `lattice serve`, the presenter view has an **Edit** button by the notes (or double-click them): type, and the notes are saved as you go, with no rebuild and no reload
+- They go to a **sidecar** file beside the deck, `talk.notes.md` for `talk.md`, one section per slide id
+- The deck's own `::: notes` stay above them, and are edited in the source only
+- `lattice build` appends the sidecar notes to the deck's own: the built file holds all of them, alike
+- An edit made in your editor shows up in the open presenter view
+::::
+:::: column {width=1fr}
+`talk.notes.md`:
+
+```markdown
+# dijkstra
+
+Mention the heap first.
+Negative weights? [[bellman-ford]]
+
+# complexity
+
+$O((V+E)\log V)$ with a binary heap.
+```
+
+A section starts at a line `# ID` (a slide id). Notes take Markdown, math, links and code; an unknown id is a warning (LT067), and the section stays in the file.
 ::::
 :::::
 

@@ -14,6 +14,7 @@ from .diagnostics import BuildError, Diagnostics, SourceLoc
 from .graph import resolve_target, resolve_graph
 from .markdown import create_markdown
 from .model import Deck
+from .notes import merge_into as merge_sidecar
 from .parser import Loader
 from .pdf import check_steps
 from .render import render_components
@@ -49,7 +50,9 @@ def load_plugins(deck_root: Path, names: list[str], diags: Diagnostics) -> list[
     return loaded
 
 
-def build_deck(path: str | Path, *, use_cache: bool = True) -> Deck:
+def build_deck(path: str | Path, *, use_cache: bool = True, sidecar: bool = True) -> Deck:
+    """Build the deck at ``path``. ``sidecar=False`` leaves out the sidecar notes (``lattice serve`` serves
+    them to the presenter view instead, spec 3.14)."""
     root = Path(path).resolve()
     if not root.is_file():
         raise FileNotFoundError(root)
@@ -76,6 +79,8 @@ def build_deck(path: str | Path, *, use_cache: bool = True) -> Deck:
     builder = BodyBuilder(md, diags, loader.rel)
     for s in deck.slides.values():
         builder.build(s)
+    if sidecar:
+        merge_sidecar(deck, md)
     resolve_graph(deck)
     diags.raise_if_errors()
 

@@ -149,6 +149,8 @@ def deck_json(deck: Deck, *, data_urls: bool = False) -> dict:
     }
     canon = json.dumps(data, sort_keys=True, separators=(",", ":")).encode()
     data["hash"] = hashlib.sha256(canon).hexdigest()[:16]
+    if deck.serve_notes:  # `lattice serve` only: the sidecar notes are edited in the presenter view (spec 3.14)
+        data["serve"] = {"notes": deck.serve_notes}
     return data
 
 
@@ -246,7 +248,9 @@ def emit_html(deck: Deck, *, live_reload: str | None = None) -> str:
                    for k, v in page.data.items())
     tail += f'<script type="module">\n{page.runtime}\n</script>'
     if live_reload:
-        tail += (f"\n<script>new EventSource({json.dumps(live_reload)}).onmessage=()=>location.reload();"
+        # `reload` after a rebuild; `notes` when the sidecar notes changed (spec 3.14), which the runtime refetches
+        tail += (f"\n<script>new EventSource({json.dumps(live_reload)}).onmessage=(e)=>{{"
+                 "if(e.data==='notes')window.dispatchEvent(new Event('lattice:notes'));else location.reload();}"
                  "</script>")
     return _document(deck, page, head=head, tail=tail)
 

@@ -255,6 +255,16 @@ class BodyBuilder:
             slide.timeline = parse_timeline(tok.content, loc.line + 1, slide.loc.file, self.d)
             slide.timeline_loc = loc
             return ""
+        if self.in_notes:
+            # notes are HTML shown in the presenter panel: a code block is drawn at once, a component cannot
+            # run there (LT068, spec 3.14)
+            from .notes import fence_html
+
+            problems: list[tuple[int, str]] = []
+            out = fence_html(tok, problems, loc.line, "speaker notes")
+            for line, message in problems:
+                self.d.warn("LT068", message, SourceLoc(loc.file, line, 1))
+            return out
         if name in REGISTRY:
             comp_name = name
         else:

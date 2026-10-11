@@ -2,10 +2,13 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-10, after 0.36.0 (`implementation-report-2026-10-10-c.md`; 0.35.0 and 0.35.1 in `archive/implementation-report-2026-10-10-b.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-10, after 0.37.0 (`implementation-report-2026-10-10-d.md`; 0.36.0 in `archive/implementation-report-2026-10-10-c.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
+- [ ] 0.37.0: rehearse a talk with `lattice serve talk.md`, press `p`, and write notes with **Edit** (or a double-click): check that the autosave keeps up with your typing, that `talk.notes.md` reads well (sections in deck order), and that `lattice build` puts the notes in the presenter view of the built file. Say if the editor should stay open when the window loses focus (it closes now, after saving).
+- [ ] 0.37.0: no git commit: `git add src/lattice/notes.py tests/test_notes.py docs/implementation-report-2026-10-10-d.md docs/archive/implementation-report-2026-10-10-c.md`, then `git add -u`. The 0.36.0 report moved to `docs/archive/`, so the item of 0.36.0 below adds it there (if it was already committed in `docs/`, `git rm --cached docs/implementation-report-2026-10-10-c.md`).
+- [ ] 0.37.0: a slide whose id comes from its title orphans its sidecar notes when the title changes (LT067 says so). Say if `serve` should offer to move orphaned sections to a slide, or if the warning is enough.
 - [ ] 0.36.0: try a deck on your phone and on a tablet (only Chromium's emulation was available here): swipes, the two-finger swipes, double tap, long press, two-finger tap, the Notes and **?** sheets and their Tour and Start buttons. On an iPhone especially, check that a horizontal swipe never goes back in the browser's history and that the page never scrolls.
 - [ ] 0.36.0: no git commit: `git add docs/implementation-report-2026-10-10-c.md tests/test_touch.py docs/archive/implementation-report-2026-10-10-b.md`, `git rm docs/implementation-report-2026-10-10-b.md` (moved to the archive), then `git add -u`. The defense deck's `scripts/mobile-deck` (claude.ai project) can drop its touch layer once the deck is built with 0.36.0: `make_mobile.py` then only strips the page skeleton.
 - [ ] 0.36.0: the HUD shrinks with the slide, so on a phone held upright its text is tiny. Say if touch mode should give the HUD a larger, unscaled bar.

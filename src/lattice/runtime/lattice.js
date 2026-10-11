@@ -23,6 +23,9 @@ const Lattice = (() => {
   let hudTimer = null;
   let timerStart = Date.now();
   let zoomed = null; // the enlarged element (spec 7.7): { instance, key, card, source, size }
+  // Sidecar notes under `lattice serve` (spec 3.14): slide id -> { md, html, problems }, fetched from the server.
+  // A built deck has none: its sidecar notes are part of `notes`.
+  let sidecarNotes = {};
 
   // ------------------------------------------------------------------ registry
   function component(name, controller) {
@@ -901,7 +904,8 @@ const Lattice = (() => {
       <div class="lt-pp-scrub" hidden><input type="range" min="0" max="1" step="1" value="0" aria-label="Step of the current slide"><span class="lt-pp-scrub-label"></span></div>
       <h3>Next <span class="lt-pp-next-label"></span></h3>
       <div class="lt-pp-next"><iframe class="lt-pp-preview" title="Next" tabindex="-1" style="aspect-ratio:${W} / ${H}"></iframe><div class="lt-pp-next-none" hidden></div></div>
-      <h3>Notes</h3><div class="lt-pp-notes"></div>
+      <h3 class="lt-pp-notes-head">Notes${deck.serve ? '<button type="button" class="lt-pp-notes-edit" title="Edit the notes of this slide (saved to the sidecar file)">Edit</button><span class="lt-pp-notes-status" role="status"></span>' : ""}</h3>
+      <div class="lt-pp-notes"><div class="lt-pp-notes-static"></div><div class="lt-pp-notes-side"></div>${deck.serve ? '<textarea class="lt-pp-notes-input" aria-label="Notes of this slide (Markdown)" spellcheck="true" hidden></textarea>' : ""}</div>
       <h3>Moves</h3><ul class="lt-pp-moves"></ul>
       <h4 class="lt-pp-keys-title">Keybindings</h4><ul class="lt-pp-keys">${keybindingsList()}</ul>`;
     const range = $(".lt-pp-scrub input", panel);
@@ -918,6 +922,118 @@ const Lattice = (() => {
       }
     });
     previewFrame.src = location.pathname + "?preview";
+    if (deck.serve) setupNotesEditor(panel);
+  }
+
+  // ------------------------------------------------------------------ sidecar notes (spec 3.14)
+  // Under `lattice serve`, the presenter edits the sidecar notes of the current slide: a textarea of Markdown
+  // under the static notes, saved as one types (debounced) and when it closes. The server renders what it
+  // saves; the static notes stay as they are. Positions, history and storage are never touched.
+  const NOTES_SAVE_MS = 700;
+  const notesEdit = { on: false, slide: null, timer: 0, dirty: false, queue: Promise.resolve() };
+  const notesHtml = (id) => (slide(id).notes || "") + ((sidecarNotes[id] || {}).html || "");
+
+  function fetchSidecarNotes() {
+    if (!deck.serve) return Promise.resolve();
+    return fetch(deck.serve.notes, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((j) => { sidecarNotes = j.slides || {}; showNotes(); refreshTouchNotes(); })
+      .catch((e) => console.error("lattice: cannot load the sidecar notes", e));
+  }
+
+  function notesStatus(text, kind) {
+    const el = $(".lt-pp-notes-status");
+    if (!el) return;
+    el.textContent = text;
+    el.dataset.kind = kind || "";
+    el.title = text;
+  }
+
+  // The Notes section of the panel: the static notes, then the sidecar notes (or the textarea that edits them).
+  function showNotes() {
+    const panel = $("#lt-presenter-panel");
+    if (!presenter || !panel || !$(".lt-pp-notes", panel)) return;
+    const s = slide(nav.cur.slide);
+    const side = sidecarNotes[nav.cur.slide] || {};
+    const stat = $(".lt-pp-notes-static", panel), sideEl = $(".lt-pp-notes-side", panel);
+    stat.innerHTML = s.notes || "";
+    sideEl.innerHTML = notesEdit.on ? "" : side.html || "";
+    if (!s.notes && !side.html && !notesEdit.on) {
+      stat.innerHTML = `<p class="lt-muted">No notes for this slide.${deck.serve ? " Double-click here or press Edit to write some." : ""}</p>`;
+    }
+    renderMath(stat);
+    renderMath(sideEl);
+  }
+
+  function setupNotesEditor(panel) {
+    const input = $(".lt-pp-notes-input", panel);
+    const button = $(".lt-pp-notes-edit", panel);
+    const grow = () => { input.style.height = "auto"; input.style.height = `${input.scrollHeight + 2}px`; };
+    button.addEventListener("click", () => (notesEdit.on ? input.blur() : startNotesEdit()));
+    button.addEventListener("mousedown", (e) => { if (notesEdit.on) e.preventDefault(); }); // keep the blur for the click
+    $(".lt-pp-notes", panel).addEventListener("dblclick", (e) => {
+      if (!notesEdit.on && !e.target.closest("a, textarea")) startNotesEdit();
+    });
+    input.addEventListener("input", () => { grow(); notesEdit.dirty = true; clearTimeout(notesEdit.timer); notesEdit.timer = setTimeout(saveNotes, NOTES_SAVE_MS); notesStatus("editing\u2026"); });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); input.blur(); }
+      e.stopPropagation(); // typing never steers the deck
+    });
+    input.addEventListener("blur", stopNotesEdit);
+    notesEdit.grow = grow;
+  }
+
+  function startNotesEdit() {
+    const input = $(".lt-pp-notes-input");
+    if (!input || notesEdit.on) return;
+    notesEdit.on = true;
+    notesEdit.slide = nav.cur.slide;
+    input.value = (sidecarNotes[nav.cur.slide] || {}).md || "";
+    input.hidden = false;
+    $(".lt-pp-notes-edit").textContent = "Done";
+    showNotes();
+    notesEdit.grow();
+    input.focus();
+    notesStatus("");
+  }
+
+  function stopNotesEdit() {
+    if (!notesEdit.on) return;
+    saveNotes();
+    notesEdit.on = false;
+    $(".lt-pp-notes-input").hidden = true;
+    $(".lt-pp-notes-edit").textContent = "Edit";
+    showNotes();
+  }
+
+  // The slide changed while the textarea is open: save what was typed, then edit the new slide's notes.
+  function followNotesEdit() {
+    if (!notesEdit.on || notesEdit.slide === nav.cur.slide) return;
+    saveNotes();
+    const input = $(".lt-pp-notes-input");
+    notesEdit.slide = nav.cur.slide;
+    input.value = (sidecarNotes[nav.cur.slide] || {}).md || "";
+    notesEdit.grow();
+  }
+
+  // Saves run one after the other, so the file ends with the last text typed.
+  function saveNotes() {
+    clearTimeout(notesEdit.timer);
+    if (!notesEdit.dirty) return notesEdit.queue;
+    notesEdit.dirty = false;
+    const id = notesEdit.slide, md = $(".lt-pp-notes-input").value;
+    notesStatus("saving\u2026");
+    notesEdit.queue = notesEdit.queue.then(() => fetch(deck.serve.notes, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slide: id, md }),
+    }).then((r) => r.json().then((j) => {
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      sidecarNotes[id] = j;
+      if (notesEdit.dirty) return; // more was typed meanwhile: its save will report
+      if (j.problems && j.problems.length) notesStatus(`saved \u00b7 ${j.problems.join("; ")}`, "warn");
+      else notesStatus("saved", "ok");
+      if (!notesEdit.on || notesEdit.slide !== id) { showNotes(); refreshTouchNotes(); }
+    })).catch((e) => { notesEdit.dirty = true; notesStatus(`not saved: ${e.message}`, "error"); }));
+    return notesEdit.queue;
   }
 
   // The Keybindings section of the presenter panel: every global action with its keys (spec 7.5).
@@ -1020,9 +1136,8 @@ const Lattice = (() => {
     range.value = String(nav.cur.step);
     $(".lt-pp-scrub-label", scrub).textContent = `${nav.cur.step + 1} / ${s.steps}`;
     $(".lt-pp-moves", panel).innerHTML = moves.join("");
-    const notes = $(".lt-pp-notes", panel);
-    notes.innerHTML = s.notes || "<p class=\"lt-muted\">No notes for this slide.</p>";
-    renderMath(notes);
+    followNotesEdit();
+    showNotes();
     updatePreview();
     tickTimer();
   }
@@ -1349,7 +1464,7 @@ const Lattice = (() => {
     const s = slide(nav.cur.slide);
     $(".lt-tc-notes-title", touchUi.notes).textContent = s.label;
     const body = $(".lt-tc-notes-body", touchUi.notes);
-    body.innerHTML = s.notes || '<p class="lt-tc-muted">No notes for this slide.</p>';
+    body.innerHTML = notesHtml(nav.cur.slide) || '<p class="lt-tc-muted">No notes for this slide.</p>';
     renderMath(body);
   }
 
@@ -1546,6 +1661,10 @@ const Lattice = (() => {
     }
     fit();
     render(null, { kind: "sync", dir: 0 });
+    if (deck.serve) { // sidecar notes (spec 3.14): fetched now, and again whenever the server says they changed
+      fetchSidecarNotes();
+      window.addEventListener("lattice:notes", fetchSidecarNotes);
+    }
     setupTouch();
     document.documentElement.classList.add("lt-ready");
   }

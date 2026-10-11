@@ -527,6 +527,17 @@ html.lt-touch #lt-stage{touch-action:none;-webkit-user-select:none;user-select:n
 .lt-pp-keys kbd{font-size:11px;padding:1px 5px;color:var(--lt-accent)}
 .lt-pp-notes{font-size:19px;line-height:1.5}
 .lt-pp-notes a{color:var(--lt-accent)}
+/* sidecar notes under `lattice serve` (spec 3.14): the same look as static notes, plus an editor */
+.lt-pp-notes-head{display:flex;align-items:baseline;gap:10px}
+.lt-pp-notes-edit{font:inherit;font-size:12px;font-weight:600;padding:1px 9px;border:1px solid var(--lt-rule);border-radius:5px;
+  background:transparent;color:var(--lt-accent);cursor:pointer}
+.lt-pp-notes-edit:hover{border-color:var(--lt-accent)}
+.lt-pp-notes-status{flex:1;min-width:0;font-weight:400;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt-pp-notes-status[data-kind="warn"],.lt-pp-notes-status[data-kind="error"]{color:var(--lt-warn)}
+.lt-pp-notes-input{display:block;width:100%;min-height:6em;margin:6px 0 0;padding:8px 10px;resize:vertical;box-sizing:border-box;
+  font-family:var(--lt-font-code);font-size:15px;line-height:1.5;color:var(--lt-ink);background:var(--lt-bg);
+  border:1px solid var(--lt-accent);border-radius:6px;outline:none}
+.lt-pp-notes-input[hidden]{display:none}
 .lt-pp-scrub{display:flex;align-items:center;gap:14px;margin-top:18px}
 .lt-pp-scrub[hidden]{display:none}
 .lt-pp-scrub input{flex:1;min-width:0;accent-color:var(--lt-accent);cursor:pointer}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="generator" content="lattice 0.36.0">
+<meta name="generator" content="lattice 0.37.0">
 <title>Refactoring a cache</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -535,6 +535,17 @@ html.lt-touch #lt-stage{touch-action:none;-webkit-user-select:none;user-select:n
 .lt-pp-keys kbd{font-size:11px;padding:1px 5px;color:var(--lt-accent)}
 .lt-pp-notes{font-size:19px;line-height:1.5}
 .lt-pp-notes a{color:var(--lt-accent)}
+/* sidecar notes under `lattice serve` (spec 3.14): the same look as static notes, plus an editor */
+.lt-pp-notes-head{display:flex;align-items:baseline;gap:10px}
+.lt-pp-notes-edit{font:inherit;font-size:12px;font-weight:600;padding:1px 9px;border:1px solid var(--lt-rule);border-radius:5px;
+  background:transparent;color:var(--lt-accent);cursor:pointer}
+.lt-pp-notes-edit:hover{border-color:var(--lt-accent)}
+.lt-pp-notes-status{flex:1;min-width:0;font-weight:400;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt-pp-notes-status[data-kind="warn"],.lt-pp-notes-status[data-kind="error"]{color:var(--lt-warn)}
+.lt-pp-notes-input{display:block;width:100%;min-height:6em;margin:6px 0 0;padding:8px 10px;resize:vertical;box-sizing:border-box;
+  font-family:var(--lt-font-code);font-size:15px;line-height:1.5;color:var(--lt-ink);background:var(--lt-bg);
+  border:1px solid var(--lt-accent);border-radius:6px;outline:none}
+.lt-pp-notes-input[hidden]{display:none}
 .lt-pp-scrub{display:flex;align-items:center;gap:14px;margin-top:18px}
 .lt-pp-scrub[hidden]{display:none}
 .lt-pp-scrub input{flex:1;min-width:0;accent-color:var(--lt-accent);cursor:pointer}
@@ -714,7 +725,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.36.0","meta":{"title":"Refactoring a cache","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"refactoring-a-cache","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"next-checkpoint":["Shift+ArrowRight"],"prev-checkpoint":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"gestures":{"swipe-left":"next","swipe-right":"prev","swipe-up":"enter-detour","swipe-down":"return","two-finger-swipe-left":"next-checkpoint","two-finger-swipe-right":"prev-checkpoint","double-tap":"goto","long-press":"overview","two-finger-tap":"undo"},"touch":true,"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["refactoring-a-cache","idea","bug","diff","bench","hits","thanks"],"slides":{"refactoring-a-cache":{"title":"Refactoring a cache","label":"Refactoring a cache","scope":"root","next":{"slide":"idea"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"idea":{"title":"What an LRU cache keeps","label":"What an LRU cache keeps","scope":"root","next":{"slide":"bug"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>The image is embedded in the HTML at build time, like everything else.<\/p>\n"},"bug":{"title":"A bug, fixed in place","label":"A bug, fixed in place","scope":"root","next":{"slide":"diff"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"fix","kind":"component","instance":"bug/fix"},{"id":"c2","kind":"component","instance":"bug/c2","follow":"fix"}],"positions":[[0,0],[1,1],[2,2],[3,3]],"offpath":false,"source":{"file":"talk.md","line":20},"notes":"<p>The code is written once, in <code>versions/v0-bug.py<\/code>; each step replaces the text of one named segment. Tokens that survive glide to their new place.<\/p>\n"},"diff":{"title":"From a list to an OrderedDict, then to statistics","label":"From a list to an OrderedDict, then to statistics","scope":"root","next":{"slide":"bench"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"diff/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":48},"notes":"<p>Step 1 is the original. Step 2 removes <code>order.remove(key)<\/code>, which is linear in the cache size.<\/p>\n"},"bench":{"title":"Was it worth it?","label":"Was it worth it?","scope":"root","next":{"slide":"hits"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":61}},"hits":{"title":"Hit rate by capacity","label":"Hit rate by capacity","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":70}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":79}}},"detours":{},"instances":{"bug/fix":{"component":"code-morph","slide":"bug","data":"lt-data-bug/fix"},"bug/c2":{"component":"arrow","slide":"bug","data":"lt-data-bug/c2"},"diff/c1":{"component":"diff-steps","slide":"diff","data":"lt-data-diff/c1"},"bench/c1":{"component":"plot","slide":"bench","data":"lt-data-bench/c1"},"hits/c1":{"component":"plot","slide":"hits","data":"lt-data-hits/c1"}},"tours":{},"mainPath":["refactoring-a-cache","idea","bug","diff","bench","hits","thanks"],"overview":{"nodes":{"refactoring-a-cache":{"x":73.0,"y":21.0,"w":130.0,"h":26.0,"label":"Refactoring a cache"},"idea":{"x":251.0,"y":21.0,"w":166.0,"h":26.0,"label":"What an LRU cache keeps"},"bug":{"x":430.5,"y":21.0,"w":133.0,"h":26.0,"label":"A bug, fixed in place"},"diff":{"x":614.5,"y":21.0,"w":175.0,"h":26.0,"label":"From a list to an Ordered…"},"bench":{"x":786.5,"y":21.0,"w":109.0,"h":26.0,"label":"Was it worth it?"},"hits":{"x":936.0,"y":21.0,"w":130.0,"h":26.0,"label":"Hit rate by capacity"},"thanks":{"x":1060.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"refactoring-a-cache","to":"idea","kind":"next","path":"M138.0,21.0 C145.8,21.0 153.8,21.0 161.8,21.0 L168.0,21.0"},{"from":"idea","to":"bug","kind":"next","path":"M334.2,21.0 C342.0,21.0 349.8,21.0 357.4,21.0 L363.7,21.0"},{"from":"bug","to":"diff","kind":"next","path":"M497.2,21.0 C504.9,21.0 512.9,21.0 520.9,21.0 L527.0,21.0"},{"from":"diff","to":"bench","kind":"next","path":"M702.5,21.0 C710.3,21.0 718.0,21.0 725.5,21.0 L731.7,21.0"},{"from":"bench","to":"hits","kind":"next","path":"M841.2,21.0 C848.9,21.0 856.8,21.0 864.8,21.0 L870.8,21.0"},{"from":"hits","to":"thanks","kind":"next","path":"M1001.1,21.0 C1009.3,21.0 1017.3,21.0 1024.8,21.0 L1030.8,21.0"}],"width":1098.0,"height":42.0},"hash":"f99299f3bee0e79c"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.37.0","meta":{"title":"Refactoring a cache","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"refactoring-a-cache","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"next-checkpoint":["Shift+ArrowRight"],"prev-checkpoint":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"gestures":{"swipe-left":"next","swipe-right":"prev","swipe-up":"enter-detour","swipe-down":"return","two-finger-swipe-left":"next-checkpoint","two-finger-swipe-right":"prev-checkpoint","double-tap":"goto","long-press":"overview","two-finger-tap":"undo"},"touch":true,"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["refactoring-a-cache","idea","bug","diff","bench","hits","thanks"],"slides":{"refactoring-a-cache":{"title":"Refactoring a cache","label":"Refactoring a cache","scope":"root","next":{"slide":"idea"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"idea":{"title":"What an LRU cache keeps","label":"What an LRU cache keeps","scope":"root","next":{"slide":"bug"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>The image is embedded in the HTML at build time, like everything else.<\/p>\n"},"bug":{"title":"A bug, fixed in place","label":"A bug, fixed in place","scope":"root","next":{"slide":"diff"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"fix","kind":"component","instance":"bug/fix"},{"id":"c2","kind":"component","instance":"bug/c2","follow":"fix"}],"positions":[[0,0],[1,1],[2,2],[3,3]],"offpath":false,"source":{"file":"talk.md","line":20},"notes":"<p>The code is written once, in <code>versions/v0-bug.py<\/code>; each step replaces the text of one named segment. Tokens that survive glide to their new place.<\/p>\n"},"diff":{"title":"From a list to an OrderedDict, then to statistics","label":"From a list to an OrderedDict, then to statistics","scope":"root","next":{"slide":"bench"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"diff/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":48},"notes":"<p>Step 1 is the original. Step 2 removes <code>order.remove(key)<\/code>, which is linear in the cache size.<\/p>\n"},"bench":{"title":"Was it worth it?","label":"Was it worth it?","scope":"root","next":{"slide":"hits"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":61}},"hits":{"title":"Hit rate by capacity","label":"Hit rate by capacity","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":70}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":79}}},"detours":{},"instances":{"bug/fix":{"component":"code-morph","slide":"bug","data":"lt-data-bug/fix"},"bug/c2":{"component":"arrow","slide":"bug","data":"lt-data-bug/c2"},"diff/c1":{"component":"diff-steps","slide":"diff","data":"lt-data-diff/c1"},"bench/c1":{"component":"plot","slide":"bench","data":"lt-data-bench/c1"},"hits/c1":{"component":"plot","slide":"hits","data":"lt-data-hits/c1"}},"tours":{},"mainPath":["refactoring-a-cache","idea","bug","diff","bench","hits","thanks"],"overview":{"nodes":{"refactoring-a-cache":{"x":73.0,"y":21.0,"w":130.0,"h":26.0,"label":"Refactoring a cache"},"idea":{"x":251.0,"y":21.0,"w":166.0,"h":26.0,"label":"What an LRU cache keeps"},"bug":{"x":430.5,"y":21.0,"w":133.0,"h":26.0,"label":"A bug, fixed in place"},"diff":{"x":614.5,"y":21.0,"w":175.0,"h":26.0,"label":"From a list to an Ordered…"},"bench":{"x":786.5,"y":21.0,"w":109.0,"h":26.0,"label":"Was it worth it?"},"hits":{"x":936.0,"y":21.0,"w":130.0,"h":26.0,"label":"Hit rate by capacity"},"thanks":{"x":1060.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"refactoring-a-cache","to":"idea","kind":"next","path":"M138.0,21.0 C145.8,21.0 153.8,21.0 161.8,21.0 L168.0,21.0"},{"from":"idea","to":"bug","kind":"next","path":"M334.2,21.0 C342.0,21.0 349.8,21.0 357.4,21.0 L363.7,21.0"},{"from":"bug","to":"diff","kind":"next","path":"M497.2,21.0 C504.9,21.0 512.9,21.0 520.9,21.0 L527.0,21.0"},{"from":"diff","to":"bench","kind":"next","path":"M702.5,21.0 C710.3,21.0 718.0,21.0 725.5,21.0 L731.7,21.0"},{"from":"bench","to":"hits","kind":"next","path":"M841.2,21.0 C848.9,21.0 856.8,21.0 864.8,21.0 L870.8,21.0"},{"from":"hits","to":"thanks","kind":"next","path":"M1001.1,21.0 C1009.3,21.0 1017.3,21.0 1024.8,21.0 L1030.8,21.0"}],"width":1098.0,"height":42.0},"hash":"9b6cfdd7931a6ced"}</script>
 <script type="application/json" id="lt-data-bug/fix">{"pos":[[[0,4,0],[0,4,0],[0,4,0],[0,4,0]],[[0,8,1],[0,8,1],[0,8,1],[0,8,1]],[[0,11,2],[0,11,2],[0,11,2],[0,11,2]],[[0,12,3],[0,12,3],[0,12,3],[0,12,3]],[[0,16,2],[0,16,2],[0,16,2],[0,16,2]],[[0,18,4],[0,18,4],[0,18,4],[0,18,4]],[[0,21,2],[0,21,2],[0,21,2],[0,21,2]],[[0,23,4],[0,23,4],[0,23,4],[0,23,4]],[[0,28,2],[0,28,2],[0,28,2],[0,28,2]],[[0,29,2],[0,29,2],[0,29,2],[0,29,2]],[[1,8,0],[1,8,0],[1,8,0],[1,8,0]],[[1,11,4],[1,11,4],[1,11,4],[1,11,4]],[[1,15,5],[1,15,5],[1,15,5],[1,15,5]],[[1,18,3],[1,18,3],[1,18,3],[1,18,3]],[[1,22,6],[1,22,6],[1,22,6],[1,22,6]],[[1,23,4],[1,23,4],[1,23,4],[1,23,4]],[[1,28,2],[1,28,2],[1,28,2],[1,28,2]],[[2,12,3],[2,12,3],[2,12,3],[3,12,3]],[[2,16,6],[2,16,6],[2,16,6],[3,16,6]],[[2,17,4],[2,17,4],[2,17,4],[3,17,4]],[[2,22,6],[2,22,6],[2,22,6],[3,22,6]],[[2,23,4],[2,23,4],[2,23,4],[3,23,4]],[[2,29,2],[2,29,2],[2,29,2],[3,29,2]],[[2,30,4],[2,30,4],[2,30,4],[3,30,4]],[[2,33,2],[2,33,2],[2,33,2],[3,33,2]],[[3,8,0],[3,8,0],[3,8,0],[6,8,0]],[[3,13,7],[3,13,7],[3,13,7],[6,13,7]],[[3,16,2],[3,16,2],[3,16,2],[6,16,2]],[[3,17,3],[3,17,3],[3,17,3],[6,17,3]],[[3,21,6],[3,21,6],[3,21,6],[6,21,6]],[[3,22,4],[3,22,4],[3,22,4],[6,22,4]],[[3,27,2],[3,27,2],[3,27,2],[6,27,2]],[[3,29,6],null,null,null],[[3,31,3],[3,32,3],[3,32,3],[6,32,3]],[[3,35,6],[3,36,6],[3,36,6],[6,36,6]],[[3,36,4],[3,37,4],[3,37,4],[6,37,4]],[[3,44,2],[3,45,2],[3,45,2],[6,45,2]],[[4,12,4],[4,12,4],null,null],[[4,19,6],[4,19,6],null,null],[[4,21,3],[4,21,3],[4,27,3],[7,27,3]],[[4,25,6],[4,25,6],[4,31,6],[7,31,6]],[[4,26,4],[4,26,4],[4,32,4],[7,32,4]],[[4,31,6],[4,31,6],[4,37,6],[7,37,6]],[[4,32,4],[4,32,4],[4,38,4],[7,38,4]],[[4,35,2],[4,35,2],[4,41,2],[7,41,2]],[[4,36,8],[4,36,8],[4,42,8],[7,42,8]],[[4,37,2],[4,37,2],[4,43,2],[7,43,2]],[[5,12,0],[5,12,0],null,null],[[5,16,3],[5,16,3],null,null],[[5,20,6],[5,20,6],null,null],[[5,21,4],[5,21,4],null,null],[[5,26,2],[5,26,2],null,null],[[5,27,4],[5,27,4],null,null],[[5,33,2],[5,33,2],[4,44,2],[7,44,2]],[[6,8,3],[6,8,3],[5,8,3],[8,8,3]],[[6,12,6],[6,12,6],[5,12,6],[8,12,6]],[[6,13,4],[6,13,4],[5,13,4],[8,13,4]],[[6,18,2],[6,18,2],[5,18,2],[8,18,2]],[[6,19,4],[6,19,4],[5,19,4],[8,19,4]],[[6,22,2],[6,22,2],[5,22,2],[8,22,2]],[[6,24,6],[6,24,6],[5,24,6],[8,24,6]],[[6,26,4],[6,26,4],[5,26,4],[8,26,4]],[[7,8,3],[7,8,3],[6,8,3],[9,8,3]],[[7,12,6],[7,12,6],[6,12,6],[9,12,6]],[[7,13,4],[7,13,4],[6,13,4],[9,13,4]],[[7,18,6],[7,18,6],[6,18,6],[9,18,6]],[[7,19,4],[7,19,4],[6,19,4],[9,19,4]],[[7,25,2],[7,25,2],[6,25,2],[9,25,2]],[[7,26,4],[7,26,4],[6,26,4],[9,26,4]],[[7,29,2],[7,29,2],[6,29,2],[9,29,2]],[null,[3,29,6],[3,29,6],[6,29,6]],[null,[3,30,6],[3,30,6],[6,30,6]],[null,null,[4,12,0],[7,12,0]],[null,null,[4,16,3],[7,16,3]],[null,null,[4,20,6],[7,20,6]],[null,null,[4,21,4],[7,21,4]],[null,null,[4,26,2],[7,26,2]],[null,null,null,[2,12,3]],[null,null,null,[2,16,6]],[null,null,null,[2,17,4]],[null,null,null,[2,22,2]],[null,null,null,[2,23,4]],[null,null,null,[2,26,2]],[null,null,null,[2,28,6]],[null,null,null,[2,30,4]],[null,null,null,[4,12,3]],[null,null,null,[4,16,6]],[null,null,null,[4,17,4]],[null,null,null,[4,22,6]],[null,null,null,[4,23,4]],[null,null,null,[4,29,2]],[null,null,null,[4,30,4]],[null,null,null,[4,33,2]],[null,null,null,[5,12,0]]],"classes":["k","nf","p","bp","n","ow","o","nb","mi"],"rows":[8,8,7,10],"height":10,"labels":["v0: one item too many","fix: evict when full","two lines become one","one line becomes four"],"layers":["    def put(self, key, value):\n        if key in self.items:\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\" id=\"refresh\">self.order.remove(key)<\/span>\n        <span class=\"lt-seg\" data-lt-seg=\"full\" id=\"full\">elif len(self.items) &gt; self.capacity:<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"evict\" id=\"evict\">oldest = self.order.pop(0)<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"evict\">del self.items[oldest]<\/span>\n        self.items[key] = value\n        self.order.append(key)","    def put(self, key, value):\n        if key in self.items:\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\" id=\"refresh\">self.order.remove(key)<\/span>\n        <span class=\"lt-seg\" data-lt-seg=\"full\" id=\"full\">elif len(self.items) == self.capacity:<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"evict\" id=\"evict\">oldest = self.order.pop(0)<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"evict\">del self.items[oldest]<\/span>\n        self.items[key] = value\n        self.order.append(key)","    def put(self, key, value):\n        if key in self.items:\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\" id=\"refresh\">self.order.remove(key)<\/span>\n        <span class=\"lt-seg\" data-lt-seg=\"full\" id=\"full\">elif len(self.items) == self.capacity:<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"evict\" id=\"evict\">del self.items[self.order.pop(0)]<\/span>\n        self.items[key] = value\n        self.order.append(key)","    def put(self, key, value):\n        if key in self.items:\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\" id=\"refresh\">self.items[key] = value<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\">self.order.remove(key)<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\">self.order.append(key)<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"refresh\">return<\/span>\n        <span class=\"lt-seg\" data-lt-seg=\"full\" id=\"full\">elif len(self.items) == self.capacity:<\/span>\n            <span class=\"lt-seg\" data-lt-seg=\"evict\" id=\"evict\">del self.items[self.order.pop(0)]<\/span>\n        self.items[key] = value\n        self.order.append(key)"],"changed":[0,3,4,2],"duration":600,"room":"max","mark":false,"linenos":false,"hl":[null,[3],[4],[2,4,5]],"under":["","<span class=\"lt-line lt-hl\" style=\"--r:3\">        elif len(self.items) == self.capacity:<\/span>","<span class=\"lt-line lt-hl\" style=\"--r:4\">            del self.items[self.order.pop(0)]<\/span>","<span class=\"lt-line lt-hl\" style=\"--r:2\">            self.items[key] = value<\/span><span class=\"lt-line lt-hl\" style=\"--r:4\">            self.order.append(key)<\/span><span class=\"lt-line lt-hl\" style=\"--r:5\">            return<\/span>"]}</script>
 <script type="application/json" id="lt-data-bug/c2">{"steps":[{"to":"full","from":null,"angle":0.0,"length":90.0,"label":"> lets the cache grow past capacity","to_anchor":0.0},{"to":"full","from":null,"angle":0.0,"length":90.0,"label":"== evicts before it grows","to_anchor":0.0},{"to":"evict","from":null,"angle":0.0,"length":90.0,"label":"inlined","to_anchor":0.0},{"to":"refresh","from":null,"angle":0.0,"length":90.0,"label":"an update needs no eviction","to_anchor":0.0}],"color":null,"width":4,"curve":0}</script>
 <script type="application/json" id="lt-data-diff/c1">{"count":3}</script>
@@ -746,6 +757,9 @@ const Lattice = (() => {
   let hudTimer = null;
   let timerStart = Date.now();
   let zoomed = null; // the enlarged element (spec 7.7): { instance, key, card, source, size }
+  // Sidecar notes under `lattice serve` (spec 3.14): slide id -> { md, html, problems }, fetched from the server.
+  // A built deck has none: its sidecar notes are part of `notes`.
+  let sidecarNotes = {};
 
   // ------------------------------------------------------------------ registry
   function component(name, controller) {
@@ -1624,7 +1638,8 @@ const Lattice = (() => {
       <div class="lt-pp-scrub" hidden><input type="range" min="0" max="1" step="1" value="0" aria-label="Step of the current slide"><span class="lt-pp-scrub-label"></span></div>
       <h3>Next <span class="lt-pp-next-label"></span></h3>
       <div class="lt-pp-next"><iframe class="lt-pp-preview" title="Next" tabindex="-1" style="aspect-ratio:${W} / ${H}"></iframe><div class="lt-pp-next-none" hidden></div></div>
-      <h3>Notes</h3><div class="lt-pp-notes"></div>
+      <h3 class="lt-pp-notes-head">Notes${deck.serve ? '<button type="button" class="lt-pp-notes-edit" title="Edit the notes of this slide (saved to the sidecar file)">Edit</button><span class="lt-pp-notes-status" role="status"></span>' : ""}</h3>
+      <div class="lt-pp-notes"><div class="lt-pp-notes-static"></div><div class="lt-pp-notes-side"></div>${deck.serve ? '<textarea class="lt-pp-notes-input" aria-label="Notes of this slide (Markdown)" spellcheck="true" hidden></textarea>' : ""}</div>
       <h3>Moves</h3><ul class="lt-pp-moves"></ul>
       <h4 class="lt-pp-keys-title">Keybindings</h4><ul class="lt-pp-keys">${keybindingsList()}</ul>`;
     const range = $(".lt-pp-scrub input", panel);
@@ -1641,6 +1656,118 @@ const Lattice = (() => {
       }
     });
     previewFrame.src = location.pathname + "?preview";
+    if (deck.serve) setupNotesEditor(panel);
+  }
+
+  // ------------------------------------------------------------------ sidecar notes (spec 3.14)
+  // Under `lattice serve`, the presenter edits the sidecar notes of the current slide: a textarea of Markdown
+  // under the static notes, saved as one types (debounced) and when it closes. The server renders what it
+  // saves; the static notes stay as they are. Positions, history and storage are never touched.
+  const NOTES_SAVE_MS = 700;
+  const notesEdit = { on: false, slide: null, timer: 0, dirty: false, queue: Promise.resolve() };
+  const notesHtml = (id) => (slide(id).notes || "") + ((sidecarNotes[id] || {}).html || "");
+
+  function fetchSidecarNotes() {
+    if (!deck.serve) return Promise.resolve();
+    return fetch(deck.serve.notes, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((j) => { sidecarNotes = j.slides || {}; showNotes(); refreshTouchNotes(); })
+      .catch((e) => console.error("lattice: cannot load the sidecar notes", e));
+  }
+
+  function notesStatus(text, kind) {
+    const el = $(".lt-pp-notes-status");
+    if (!el) return;
+    el.textContent = text;
+    el.dataset.kind = kind || "";
+    el.title = text;
+  }
+
+  // The Notes section of the panel: the static notes, then the sidecar notes (or the textarea that edits them).
+  function showNotes() {
+    const panel = $("#lt-presenter-panel");
+    if (!presenter || !panel || !$(".lt-pp-notes", panel)) return;
+    const s = slide(nav.cur.slide);
+    const side = sidecarNotes[nav.cur.slide] || {};
+    const stat = $(".lt-pp-notes-static", panel), sideEl = $(".lt-pp-notes-side", panel);
+    stat.innerHTML = s.notes || "";
+    sideEl.innerHTML = notesEdit.on ? "" : side.html || "";
+    if (!s.notes && !side.html && !notesEdit.on) {
+      stat.innerHTML = `<p class="lt-muted">No notes for this slide.${deck.serve ? " Double-click here or press Edit to write some." : ""}</p>`;
+    }
+    renderMath(stat);
+    renderMath(sideEl);
+  }
+
+  function setupNotesEditor(panel) {
+    const input = $(".lt-pp-notes-input", panel);
+    const button = $(".lt-pp-notes-edit", panel);
+    const grow = () => { input.style.height = "auto"; input.style.height = `${input.scrollHeight + 2}px`; };
+    button.addEventListener("click", () => (notesEdit.on ? input.blur() : startNotesEdit()));
+    button.addEventListener("mousedown", (e) => { if (notesEdit.on) e.preventDefault(); }); // keep the blur for the click
+    $(".lt-pp-notes", panel).addEventListener("dblclick", (e) => {
+      if (!notesEdit.on && !e.target.closest("a, textarea")) startNotesEdit();
+    });
+    input.addEventListener("input", () => { grow(); notesEdit.dirty = true; clearTimeout(notesEdit.timer); notesEdit.timer = setTimeout(saveNotes, NOTES_SAVE_MS); notesStatus("editing\u2026"); });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); input.blur(); }
+      e.stopPropagation(); // typing never steers the deck
+    });
+    input.addEventListener("blur", stopNotesEdit);
+    notesEdit.grow = grow;
+  }
+
+  function startNotesEdit() {
+    const input = $(".lt-pp-notes-input");
+    if (!input || notesEdit.on) return;
+    notesEdit.on = true;
+    notesEdit.slide = nav.cur.slide;
+    input.value = (sidecarNotes[nav.cur.slide] || {}).md || "";
+    input.hidden = false;
+    $(".lt-pp-notes-edit").textContent = "Done";
+    showNotes();
+    notesEdit.grow();
+    input.focus();
+    notesStatus("");
+  }
+
+  function stopNotesEdit() {
+    if (!notesEdit.on) return;
+    saveNotes();
+    notesEdit.on = false;
+    $(".lt-pp-notes-input").hidden = true;
+    $(".lt-pp-notes-edit").textContent = "Edit";
+    showNotes();
+  }
+
+  // The slide changed while the textarea is open: save what was typed, then edit the new slide's notes.
+  function followNotesEdit() {
+    if (!notesEdit.on || notesEdit.slide === nav.cur.slide) return;
+    saveNotes();
+    const input = $(".lt-pp-notes-input");
+    notesEdit.slide = nav.cur.slide;
+    input.value = (sidecarNotes[nav.cur.slide] || {}).md || "";
+    notesEdit.grow();
+  }
+
+  // Saves run one after the other, so the file ends with the last text typed.
+  function saveNotes() {
+    clearTimeout(notesEdit.timer);
+    if (!notesEdit.dirty) return notesEdit.queue;
+    notesEdit.dirty = false;
+    const id = notesEdit.slide, md = $(".lt-pp-notes-input").value;
+    notesStatus("saving\u2026");
+    notesEdit.queue = notesEdit.queue.then(() => fetch(deck.serve.notes, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slide: id, md }),
+    }).then((r) => r.json().then((j) => {
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      sidecarNotes[id] = j;
+      if (notesEdit.dirty) return; // more was typed meanwhile: its save will report
+      if (j.problems && j.problems.length) notesStatus(`saved \u00b7 ${j.problems.join("; ")}`, "warn");
+      else notesStatus("saved", "ok");
+      if (!notesEdit.on || notesEdit.slide !== id) { showNotes(); refreshTouchNotes(); }
+    })).catch((e) => { notesEdit.dirty = true; notesStatus(`not saved: ${e.message}`, "error"); }));
+    return notesEdit.queue;
   }
 
   // The Keybindings section of the presenter panel: every global action with its keys (spec 7.5).
@@ -1743,9 +1870,8 @@ const Lattice = (() => {
     range.value = String(nav.cur.step);
     $(".lt-pp-scrub-label", scrub).textContent = `${nav.cur.step + 1} / ${s.steps}`;
     $(".lt-pp-moves", panel).innerHTML = moves.join("");
-    const notes = $(".lt-pp-notes", panel);
-    notes.innerHTML = s.notes || "<p class=\"lt-muted\">No notes for this slide.</p>";
-    renderMath(notes);
+    followNotesEdit();
+    showNotes();
     updatePreview();
     tickTimer();
   }
@@ -2072,7 +2198,7 @@ const Lattice = (() => {
     const s = slide(nav.cur.slide);
     $(".lt-tc-notes-title", touchUi.notes).textContent = s.label;
     const body = $(".lt-tc-notes-body", touchUi.notes);
-    body.innerHTML = s.notes || '<p class="lt-tc-muted">No notes for this slide.</p>';
+    body.innerHTML = notesHtml(nav.cur.slide) || '<p class="lt-tc-muted">No notes for this slide.</p>';
     renderMath(body);
   }
 
@@ -2269,6 +2395,10 @@ const Lattice = (() => {
     }
     fit();
     render(null, { kind: "sync", dir: 0 });
+    if (deck.serve) { // sidecar notes (spec 3.14): fetched now, and again whenever the server says they changed
+      fetchSidecarNotes();
+      window.addEventListener("lattice:notes", fetchSidecarNotes);
+    }
     setupTouch();
     document.documentElement.classList.add("lt-ready");
   }

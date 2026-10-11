@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="generator" content="lattice 0.36.0">
+<meta name="generator" content="lattice 0.37.0">
 <title>Sorting, your way</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -535,6 +535,17 @@ html.lt-touch #lt-stage{touch-action:none;-webkit-user-select:none;user-select:n
 .lt-pp-keys kbd{font-size:11px;padding:1px 5px;color:var(--lt-accent)}
 .lt-pp-notes{font-size:19px;line-height:1.5}
 .lt-pp-notes a{color:var(--lt-accent)}
+/* sidecar notes under `lattice serve` (spec 3.14): the same look as static notes, plus an editor */
+.lt-pp-notes-head{display:flex;align-items:baseline;gap:10px}
+.lt-pp-notes-edit{font:inherit;font-size:12px;font-weight:600;padding:1px 9px;border:1px solid var(--lt-rule);border-radius:5px;
+  background:transparent;color:var(--lt-accent);cursor:pointer}
+.lt-pp-notes-edit:hover{border-color:var(--lt-accent)}
+.lt-pp-notes-status{flex:1;min-width:0;font-weight:400;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt-pp-notes-status[data-kind="warn"],.lt-pp-notes-status[data-kind="error"]{color:var(--lt-warn)}
+.lt-pp-notes-input{display:block;width:100%;min-height:6em;margin:6px 0 0;padding:8px 10px;resize:vertical;box-sizing:border-box;
+  font-family:var(--lt-font-code);font-size:15px;line-height:1.5;color:var(--lt-ink);background:var(--lt-bg);
+  border:1px solid var(--lt-accent);border-radius:6px;outline:none}
+.lt-pp-notes-input[hidden]{display:none}
 .lt-pp-scrub{display:flex;align-items:center;gap:14px;margin-top:18px}
 .lt-pp-scrub[hidden]{display:none}
 .lt-pp-scrub input{flex:1;min-width:0;accent-color:var(--lt-accent);cursor:pointer}
@@ -1453,7 +1464,7 @@ L 467.085547 214.094484
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.36.0","meta":{"title":"Sorting, your way","author":"Workshop","date":null,"aspect":"16:9","theme":"dark"},"start":"sorting-your-way","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"next-checkpoint":["Shift+ArrowRight"],"prev-checkpoint":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"gestures":{"swipe-left":"next","swipe-right":"prev","swipe-up":"enter-detour","swipe-down":"return","two-finger-swipe-left":"next-checkpoint","two-finger-swipe-right":"prev-checkpoint","double-tap":"goto","long-press":"overview","two-finger-tap":"undo"},"touch":true,"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["sorting-your-way","pick","bubble","insertion","quick","the-recursion-tree","compare","done"],"slides":{"sorting-your-way":{"title":"Sorting, your way","label":"Sorting, your way","scope":"root","next":{"slide":"pick"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":9}},"pick":{"title":"Pick an algorithm","label":"Pick an algorithm","scope":"root","next":null,"branches":[{"target":"bubble","key":"1","label":"Bubble sort"},{"target":"insertion","key":"2","label":"Insertion sort"},{"target":"quick","key":"3","label":"Quicksort"}],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":13},"notes":"<p>Let the room vote. Press 1, 2 or 3, or click a card.<\/p>\n"},"bubble":{"title":"Bubble sort","label":"Bubble sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":27,"tracks":[{"id":"src","kind":"component","instance":"bubble/src","follow":"bars"},{"id":"bars","kind":"component","instance":"bubble/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26]],"offpath":false,"source":{"file":"talk.md","line":27}},"insertion":{"title":"Insertion sort","label":"Insertion sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":25,"tracks":[{"id":"src","kind":"component","instance":"insertion/src","follow":"bars"},{"id":"bars","kind":"component","instance":"insertion/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24]],"offpath":false,"source":{"file":"talk.md","line":41}},"quick":{"title":"Quicksort","label":"Quicksort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":["quick-detour-1"],"steps":34,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"bars","kind":"component","instance":"quick/bars"}],"positions":[[0,0],[1,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12],[2,13],[2,14],[2,15],[2,16],[2,17],[2,18],[2,19],[2,20],[2,21],[2,22],[2,23],[2,24],[2,25],[2,26],[2,27],[2,28],[2,29],[2,30],[2,31]],"offpath":false,"source":{"file":"talk.md","line":56},"checkpoints":[2,33]},"the-recursion-tree":{"title":"The recursion tree","label":"The recursion tree","scope":"quick-detour-1","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":73}},"compare":{"title":"How many comparisons?","label":"How many comparisons?","scope":"root","next":{"slide":"done"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":87}},"done":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":94}}},"detours":{"quick-detour-1":{"origin":"quick","entry":"the-recursion-tree","label":"The recursion tree","key":"r","slides":["the-recursion-tree"]}},"instances":{"bubble/src":{"component":"code","slide":"bubble","data":"lt-data-bubble/src"},"bubble/bars":{"component":"array-anim","slide":"bubble","data":"lt-data-bubble/bars"},"insertion/src":{"component":"code","slide":"insertion","data":"lt-data-insertion/src"},"insertion/bars":{"component":"array-anim","slide":"insertion","data":"lt-data-insertion/bars"},"quick/bars":{"component":"array-anim","slide":"quick","data":"lt-data-quick/bars"},"the-recursion-tree/c1":{"component":"dot","slide":"the-recursion-tree","data":null},"compare/c1":{"component":"plot","slide":"compare","data":null}},"tours":{"bubble-only":["sorting-your-way","pick","bubble","compare","done"]},"mainPath":["sorting-your-way","pick"],"overview":{"nodes":{"sorting-your-way":{"x":67.0,"y":63.0,"w":118.0,"h":26.0,"label":"Sorting, your way"},"pick":{"x":215.0,"y":63.0,"w":118.0,"h":26.0,"label":"Pick an algorithm"},"bubble":{"x":352.0,"y":21.0,"w":84.0,"h":26.0,"label":"Bubble sort"},"insertion":{"x":352.0,"y":63.0,"w":96.0,"h":26.0,"label":"Insertion sort"},"quick":{"x":352.0,"y":105.0,"w":73.0,"h":26.0,"label":"Quicksort"},"the-recursion-tree":{"x":510.0,"y":105.0,"w":124.0,"h":26.0,"label":"The recursion tree"},"compare":{"x":510.0,"y":63.0,"w":160.0,"h":26.0,"label":"How many comparisons?"},"done":{"x":649.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"sorting-your-way","to":"pick","kind":"next","path":"M126.1,63.0 C133.7,63.0 141.5,63.0 149.2,63.0 L155.6,63.0"},{"from":"pick","to":"bubble","kind":"branch","path":"M258.0,49.9 C272.6,45.4 289.1,40.3 304.1,35.6 L310.0,33.8"},{"from":"pick","to":"insertion","kind":"branch","path":"M274.0,63.0 C281.9,63.0 289.8,63.0 297.6,63.0 L304.0,63.0"},{"from":"pick","to":"quick","kind":"branch","path":"M258.0,76.1 C274.4,81.2 293.1,87.0 309.5,92.1 L315.4,93.9"},{"from":"bubble","to":"compare","kind":"next","path":"M394.4,32.1 C412.8,37.1 434.7,43.0 454.4,48.3 L460.5,49.9"},{"from":"insertion","to":"compare","kind":"next","path":"M400.2,63.0 C407.7,63.0 415.7,63.0 423.8,63.0 L429.9,63.0"},{"from":"quick","to":"the-recursion-tree","kind":"detour","path":"M388.8,105.0 C404.6,105.0 423.6,105.0 441.8,105.0 L448.0,105.0"},{"from":"quick","to":"compare","kind":"next","path":"M388.6,95.2 C401.6,91.7 416.5,87.6 430.0,84.0 C437.6,81.9 445.7,79.8 453.6,77.7 L459.7,76.1"},{"from":"compare","to":"done","kind":"next","path":"M590.2,63.0 C598.5,63.0 606.6,63.0 614.0,63.0 L620.0,63.0"}],"width":687.0,"height":126.0},"hash":"92d98f00dafa9160"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.37.0","meta":{"title":"Sorting, your way","author":"Workshop","date":null,"aspect":"16:9","theme":"dark"},"start":"sorting-your-way","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"next-checkpoint":["Shift+ArrowRight"],"prev-checkpoint":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"gestures":{"swipe-left":"next","swipe-right":"prev","swipe-up":"enter-detour","swipe-down":"return","two-finger-swipe-left":"next-checkpoint","two-finger-swipe-right":"prev-checkpoint","double-tap":"goto","long-press":"overview","two-finger-tap":"undo"},"touch":true,"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["sorting-your-way","pick","bubble","insertion","quick","the-recursion-tree","compare","done"],"slides":{"sorting-your-way":{"title":"Sorting, your way","label":"Sorting, your way","scope":"root","next":{"slide":"pick"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":9}},"pick":{"title":"Pick an algorithm","label":"Pick an algorithm","scope":"root","next":null,"branches":[{"target":"bubble","key":"1","label":"Bubble sort"},{"target":"insertion","key":"2","label":"Insertion sort"},{"target":"quick","key":"3","label":"Quicksort"}],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":13},"notes":"<p>Let the room vote. Press 1, 2 or 3, or click a card.<\/p>\n"},"bubble":{"title":"Bubble sort","label":"Bubble sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":27,"tracks":[{"id":"src","kind":"component","instance":"bubble/src","follow":"bars"},{"id":"bars","kind":"component","instance":"bubble/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26]],"offpath":false,"source":{"file":"talk.md","line":27}},"insertion":{"title":"Insertion sort","label":"Insertion sort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":[],"steps":25,"tracks":[{"id":"src","kind":"component","instance":"insertion/src","follow":"bars"},{"id":"bars","kind":"component","instance":"insertion/bars"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24]],"offpath":false,"source":{"file":"talk.md","line":41}},"quick":{"title":"Quicksort","label":"Quicksort","scope":"root","next":{"slide":"compare"},"branches":[],"detours":["quick-detour-1"],"steps":34,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"bars","kind":"component","instance":"quick/bars"}],"positions":[[0,0],[1,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12],[2,13],[2,14],[2,15],[2,16],[2,17],[2,18],[2,19],[2,20],[2,21],[2,22],[2,23],[2,24],[2,25],[2,26],[2,27],[2,28],[2,29],[2,30],[2,31]],"offpath":false,"source":{"file":"talk.md","line":56},"checkpoints":[2,33]},"the-recursion-tree":{"title":"The recursion tree","label":"The recursion tree","scope":"quick-detour-1","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":73}},"compare":{"title":"How many comparisons?","label":"How many comparisons?","scope":"root","next":{"slide":"done"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":87}},"done":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":94}}},"detours":{"quick-detour-1":{"origin":"quick","entry":"the-recursion-tree","label":"The recursion tree","key":"r","slides":["the-recursion-tree"]}},"instances":{"bubble/src":{"component":"code","slide":"bubble","data":"lt-data-bubble/src"},"bubble/bars":{"component":"array-anim","slide":"bubble","data":"lt-data-bubble/bars"},"insertion/src":{"component":"code","slide":"insertion","data":"lt-data-insertion/src"},"insertion/bars":{"component":"array-anim","slide":"insertion","data":"lt-data-insertion/bars"},"quick/bars":{"component":"array-anim","slide":"quick","data":"lt-data-quick/bars"},"the-recursion-tree/c1":{"component":"dot","slide":"the-recursion-tree","data":null},"compare/c1":{"component":"plot","slide":"compare","data":null}},"tours":{"bubble-only":["sorting-your-way","pick","bubble","compare","done"]},"mainPath":["sorting-your-way","pick"],"overview":{"nodes":{"sorting-your-way":{"x":67.0,"y":63.0,"w":118.0,"h":26.0,"label":"Sorting, your way"},"pick":{"x":215.0,"y":63.0,"w":118.0,"h":26.0,"label":"Pick an algorithm"},"bubble":{"x":352.0,"y":21.0,"w":84.0,"h":26.0,"label":"Bubble sort"},"insertion":{"x":352.0,"y":63.0,"w":96.0,"h":26.0,"label":"Insertion sort"},"quick":{"x":352.0,"y":105.0,"w":73.0,"h":26.0,"label":"Quicksort"},"the-recursion-tree":{"x":510.0,"y":105.0,"w":124.0,"h":26.0,"label":"The recursion tree"},"compare":{"x":510.0,"y":63.0,"w":160.0,"h":26.0,"label":"How many comparisons?"},"done":{"x":649.5,"y":63.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"sorting-your-way","to":"pick","kind":"next","path":"M126.1,63.0 C133.7,63.0 141.5,63.0 149.2,63.0 L155.6,63.0"},{"from":"pick","to":"bubble","kind":"branch","path":"M258.0,49.9 C272.6,45.4 289.1,40.3 304.1,35.6 L310.0,33.8"},{"from":"pick","to":"insertion","kind":"branch","path":"M274.0,63.0 C281.9,63.0 289.8,63.0 297.6,63.0 L304.0,63.0"},{"from":"pick","to":"quick","kind":"branch","path":"M258.0,76.1 C274.4,81.2 293.1,87.0 309.5,92.1 L315.4,93.9"},{"from":"bubble","to":"compare","kind":"next","path":"M394.4,32.1 C412.8,37.1 434.7,43.0 454.4,48.3 L460.5,49.9"},{"from":"insertion","to":"compare","kind":"next","path":"M400.2,63.0 C407.7,63.0 415.7,63.0 423.8,63.0 L429.9,63.0"},{"from":"quick","to":"the-recursion-tree","kind":"detour","path":"M388.8,105.0 C404.6,105.0 423.6,105.0 441.8,105.0 L448.0,105.0"},{"from":"quick","to":"compare","kind":"next","path":"M388.6,95.2 C401.6,91.7 416.5,87.6 430.0,84.0 C437.6,81.9 445.7,79.8 453.6,77.7 L459.7,76.1"},{"from":"compare","to":"done","kind":"next","path":"M590.2,63.0 C598.5,63.0 606.6,63.0 614.0,63.0 L620.0,63.0"}],"width":687.0,"height":126.0},"hash":"79d73661c3e6034a"}</script>
 <script type="application/json" id="lt-data-bubble/src">{"steps":[[1],[6],[7],[6],[7],[6],[7],[6],[6],[7],[9],[6],[6],[7],[6],[6],[7],[9],[6],[6],[6],[7],[9],[6],[6],[9],[10]]}</script>
 <script type="application/json" id="lt-data-bubble/bars">{"frames":{"format":"full","count":27,"frames":[{"values":[5,1,4,2,8,3],"caption":"Unsorted input","marks":{}},{"values":[5,1,4,2,8,3],"caption":"Compare 5 and 1","pointers":{"i":0},"marks":{"0":"compare","1":"compare"}},{"values":[1,5,4,2,8,3],"caption":"Out of order: swap","pointers":{"i":0},"marks":{"0":"swap","1":"swap"}},{"values":[1,5,4,2,8,3],"caption":"Compare 5 and 4","pointers":{"i":1},"marks":{"1":"compare","2":"compare"}},{"values":[1,4,5,2,8,3],"caption":"Out of order: swap","pointers":{"i":1},"marks":{"1":"swap","2":"swap"}},{"values":[1,4,5,2,8,3],"caption":"Compare 5 and 2","pointers":{"i":2},"marks":{"2":"compare","3":"compare"}},{"values":[1,4,2,5,8,3],"caption":"Out of order: swap","pointers":{"i":2},"marks":{"2":"swap","3":"swap"}},{"values":[1,4,2,5,8,3],"caption":"Compare 5 and 8","pointers":{"i":3},"marks":{"3":"compare","4":"compare"}},{"values":[1,4,2,5,8,3],"caption":"Compare 8 and 3","pointers":{"i":4},"marks":{"4":"compare","5":"compare"}},{"values":[1,4,2,5,3,8],"caption":"Out of order: swap","pointers":{"i":4},"marks":{"4":"swap","5":"swap"}},{"values":[1,4,2,5,3,8],"caption":"8 has bubbled to its final place","pointers":{},"cells":{"5":"sorted"},"marks":{}},{"values":[1,4,2,5,3,8],"caption":"Compare 1 and 4","pointers":{"i":0},"cells":{"5":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,4,2,5,3,8],"caption":"Compare 4 and 2","pointers":{"i":1},"cells":{"5":"sorted"},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,4,5,3,8],"caption":"Out of order: swap","pointers":{"i":1},"cells":{"5":"sorted"},"marks":{"1":"swap","2":"swap"}},{"values":[1,2,4,5,3,8],"caption":"Compare 4 and 5","pointers":{"i":2},"cells":{"5":"sorted"},"marks":{"2":"compare","3":"compare"}},{"values":[1,2,4,5,3,8],"caption":"Compare 5 and 3","pointers":{"i":3},"cells":{"5":"sorted"},"marks":{"3":"compare","4":"compare"}},{"values":[1,2,4,3,5,8],"caption":"Out of order: swap","pointers":{"i":3},"cells":{"5":"sorted"},"marks":{"3":"swap","4":"swap"}},{"values":[1,2,4,3,5,8],"caption":"5 has bubbled to its final place","pointers":{},"cells":{"5":"sorted","4":"sorted"},"marks":{}},{"values":[1,2,4,3,5,8],"caption":"Compare 1 and 2","pointers":{"i":0},"cells":{"5":"sorted","4":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,2,4,3,5,8],"caption":"Compare 2 and 4","pointers":{"i":1},"cells":{"5":"sorted","4":"sorted"},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,4,3,5,8],"caption":"Compare 4 and 3","pointers":{"i":2},"cells":{"5":"sorted","4":"sorted"},"marks":{"2":"compare","3":"compare"}},{"values":[1,2,3,4,5,8],"caption":"Out of order: swap","pointers":{"i":2},"cells":{"5":"sorted","4":"sorted"},"marks":{"2":"swap","3":"swap"}},{"values":[1,2,3,4,5,8],"caption":"4 has bubbled to its final place","pointers":{},"cells":{"5":"sorted","4":"sorted","3":"sorted"},"marks":{}},{"values":[1,2,3,4,5,8],"caption":"Compare 1 and 2","pointers":{"i":0},"cells":{"5":"sorted","4":"sorted","3":"sorted"},"marks":{"0":"compare","1":"compare"}},{"values":[1,2,3,4,5,8],"caption":"Compare 2 and 3","pointers":{"i":1},"cells":{"5":"sorted","4":"sorted","3":"sorted"},"marks":{"1":"compare","2":"compare"}},{"values":[1,2,3,4,5,8],"caption":"3 has bubbled to its final place","pointers":{},"cells":{"5":"sorted","4":"sorted","3":"sorted","2":"sorted"},"marks":{}},{"values":[1,2,3,4,5,8],"caption":"No swap in a full pass: done early","pointers":{},"cells":{"5":"sorted","4":"sorted","3":"sorted","2":"sorted","0":"sorted","1":"sorted"},"marks":{}}]},"panel":null}</script>
 <script type="application/json" id="lt-data-insertion/src">{"steps":[[1],[3],[5],[6],[8],[3],[5],[6],[8],[3],[5],[6],[5],[6],[8],[3],[8],[3],[5],[6],[5],[6],[5],[6],[8]]}</script>
@@ -1485,6 +1496,9 @@ const Lattice = (() => {
   let hudTimer = null;
   let timerStart = Date.now();
   let zoomed = null; // the enlarged element (spec 7.7): { instance, key, card, source, size }
+  // Sidecar notes under `lattice serve` (spec 3.14): slide id -> { md, html, problems }, fetched from the server.
+  // A built deck has none: its sidecar notes are part of `notes`.
+  let sidecarNotes = {};
 
   // ------------------------------------------------------------------ registry
   function component(name, controller) {
@@ -2363,7 +2377,8 @@ const Lattice = (() => {
       <div class="lt-pp-scrub" hidden><input type="range" min="0" max="1" step="1" value="0" aria-label="Step of the current slide"><span class="lt-pp-scrub-label"></span></div>
       <h3>Next <span class="lt-pp-next-label"></span></h3>
       <div class="lt-pp-next"><iframe class="lt-pp-preview" title="Next" tabindex="-1" style="aspect-ratio:${W} / ${H}"></iframe><div class="lt-pp-next-none" hidden></div></div>
-      <h3>Notes</h3><div class="lt-pp-notes"></div>
+      <h3 class="lt-pp-notes-head">Notes${deck.serve ? '<button type="button" class="lt-pp-notes-edit" title="Edit the notes of this slide (saved to the sidecar file)">Edit</button><span class="lt-pp-notes-status" role="status"></span>' : ""}</h3>
+      <div class="lt-pp-notes"><div class="lt-pp-notes-static"></div><div class="lt-pp-notes-side"></div>${deck.serve ? '<textarea class="lt-pp-notes-input" aria-label="Notes of this slide (Markdown)" spellcheck="true" hidden></textarea>' : ""}</div>
       <h3>Moves</h3><ul class="lt-pp-moves"></ul>
       <h4 class="lt-pp-keys-title">Keybindings</h4><ul class="lt-pp-keys">${keybindingsList()}</ul>`;
     const range = $(".lt-pp-scrub input", panel);
@@ -2380,6 +2395,118 @@ const Lattice = (() => {
       }
     });
     previewFrame.src = location.pathname + "?preview";
+    if (deck.serve) setupNotesEditor(panel);
+  }
+
+  // ------------------------------------------------------------------ sidecar notes (spec 3.14)
+  // Under `lattice serve`, the presenter edits the sidecar notes of the current slide: a textarea of Markdown
+  // under the static notes, saved as one types (debounced) and when it closes. The server renders what it
+  // saves; the static notes stay as they are. Positions, history and storage are never touched.
+  const NOTES_SAVE_MS = 700;
+  const notesEdit = { on: false, slide: null, timer: 0, dirty: false, queue: Promise.resolve() };
+  const notesHtml = (id) => (slide(id).notes || "") + ((sidecarNotes[id] || {}).html || "");
+
+  function fetchSidecarNotes() {
+    if (!deck.serve) return Promise.resolve();
+    return fetch(deck.serve.notes, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((j) => { sidecarNotes = j.slides || {}; showNotes(); refreshTouchNotes(); })
+      .catch((e) => console.error("lattice: cannot load the sidecar notes", e));
+  }
+
+  function notesStatus(text, kind) {
+    const el = $(".lt-pp-notes-status");
+    if (!el) return;
+    el.textContent = text;
+    el.dataset.kind = kind || "";
+    el.title = text;
+  }
+
+  // The Notes section of the panel: the static notes, then the sidecar notes (or the textarea that edits them).
+  function showNotes() {
+    const panel = $("#lt-presenter-panel");
+    if (!presenter || !panel || !$(".lt-pp-notes", panel)) return;
+    const s = slide(nav.cur.slide);
+    const side = sidecarNotes[nav.cur.slide] || {};
+    const stat = $(".lt-pp-notes-static", panel), sideEl = $(".lt-pp-notes-side", panel);
+    stat.innerHTML = s.notes || "";
+    sideEl.innerHTML = notesEdit.on ? "" : side.html || "";
+    if (!s.notes && !side.html && !notesEdit.on) {
+      stat.innerHTML = `<p class="lt-muted">No notes for this slide.${deck.serve ? " Double-click here or press Edit to write some." : ""}</p>`;
+    }
+    renderMath(stat);
+    renderMath(sideEl);
+  }
+
+  function setupNotesEditor(panel) {
+    const input = $(".lt-pp-notes-input", panel);
+    const button = $(".lt-pp-notes-edit", panel);
+    const grow = () => { input.style.height = "auto"; input.style.height = `${input.scrollHeight + 2}px`; };
+    button.addEventListener("click", () => (notesEdit.on ? input.blur() : startNotesEdit()));
+    button.addEventListener("mousedown", (e) => { if (notesEdit.on) e.preventDefault(); }); // keep the blur for the click
+    $(".lt-pp-notes", panel).addEventListener("dblclick", (e) => {
+      if (!notesEdit.on && !e.target.closest("a, textarea")) startNotesEdit();
+    });
+    input.addEventListener("input", () => { grow(); notesEdit.dirty = true; clearTimeout(notesEdit.timer); notesEdit.timer = setTimeout(saveNotes, NOTES_SAVE_MS); notesStatus("editing\u2026"); });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); input.blur(); }
+      e.stopPropagation(); // typing never steers the deck
+    });
+    input.addEventListener("blur", stopNotesEdit);
+    notesEdit.grow = grow;
+  }
+
+  function startNotesEdit() {
+    const input = $(".lt-pp-notes-input");
+    if (!input || notesEdit.on) return;
+    notesEdit.on = true;
+    notesEdit.slide = nav.cur.slide;
+    input.value = (sidecarNotes[nav.cur.slide] || {}).md || "";
+    input.hidden = false;
+    $(".lt-pp-notes-edit").textContent = "Done";
+    showNotes();
+    notesEdit.grow();
+    input.focus();
+    notesStatus("");
+  }
+
+  function stopNotesEdit() {
+    if (!notesEdit.on) return;
+    saveNotes();
+    notesEdit.on = false;
+    $(".lt-pp-notes-input").hidden = true;
+    $(".lt-pp-notes-edit").textContent = "Edit";
+    showNotes();
+  }
+
+  // The slide changed while the textarea is open: save what was typed, then edit the new slide's notes.
+  function followNotesEdit() {
+    if (!notesEdit.on || notesEdit.slide === nav.cur.slide) return;
+    saveNotes();
+    const input = $(".lt-pp-notes-input");
+    notesEdit.slide = nav.cur.slide;
+    input.value = (sidecarNotes[nav.cur.slide] || {}).md || "";
+    notesEdit.grow();
+  }
+
+  // Saves run one after the other, so the file ends with the last text typed.
+  function saveNotes() {
+    clearTimeout(notesEdit.timer);
+    if (!notesEdit.dirty) return notesEdit.queue;
+    notesEdit.dirty = false;
+    const id = notesEdit.slide, md = $(".lt-pp-notes-input").value;
+    notesStatus("saving\u2026");
+    notesEdit.queue = notesEdit.queue.then(() => fetch(deck.serve.notes, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slide: id, md }),
+    }).then((r) => r.json().then((j) => {
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      sidecarNotes[id] = j;
+      if (notesEdit.dirty) return; // more was typed meanwhile: its save will report
+      if (j.problems && j.problems.length) notesStatus(`saved \u00b7 ${j.problems.join("; ")}`, "warn");
+      else notesStatus("saved", "ok");
+      if (!notesEdit.on || notesEdit.slide !== id) { showNotes(); refreshTouchNotes(); }
+    })).catch((e) => { notesEdit.dirty = true; notesStatus(`not saved: ${e.message}`, "error"); }));
+    return notesEdit.queue;
   }
 
   // The Keybindings section of the presenter panel: every global action with its keys (spec 7.5).
@@ -2482,9 +2609,8 @@ const Lattice = (() => {
     range.value = String(nav.cur.step);
     $(".lt-pp-scrub-label", scrub).textContent = `${nav.cur.step + 1} / ${s.steps}`;
     $(".lt-pp-moves", panel).innerHTML = moves.join("");
-    const notes = $(".lt-pp-notes", panel);
-    notes.innerHTML = s.notes || "<p class=\"lt-muted\">No notes for this slide.</p>";
-    renderMath(notes);
+    followNotesEdit();
+    showNotes();
     updatePreview();
     tickTimer();
   }
@@ -2811,7 +2937,7 @@ const Lattice = (() => {
     const s = slide(nav.cur.slide);
     $(".lt-tc-notes-title", touchUi.notes).textContent = s.label;
     const body = $(".lt-tc-notes-body", touchUi.notes);
-    body.innerHTML = s.notes || '<p class="lt-tc-muted">No notes for this slide.</p>';
+    body.innerHTML = notesHtml(nav.cur.slide) || '<p class="lt-tc-muted">No notes for this slide.</p>';
     renderMath(body);
   }
 
@@ -3008,6 +3134,10 @@ const Lattice = (() => {
     }
     fit();
     render(null, { kind: "sync", dir: 0 });
+    if (deck.serve) { // sidecar notes (spec 3.14): fetched now, and again whenever the server says they changed
+      fetchSidecarNotes();
+      window.addEventListener("lattice:notes", fetchSidecarNotes);
+    }
     setupTouch();
     document.documentElement.classList.add("lt-ready");
   }

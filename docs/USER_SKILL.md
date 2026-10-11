@@ -62,6 +62,7 @@ Renders are cached in `.lattice-cache/` next to the root file. When a result loo
 | Slide attributes | `next=id\|back\|none`, `offpath=true`, `layout=title`, `transition=fade`, `pdf=...`, helper classes `.center`, `.fullbleed`, `.small` | manual `slide-attributes`, spec section 3.5 |
 | Text, tables, math, images | CommonMark + GFM tables, `$x$`, `$$x$$`, `![alt](file.svg)` (embedded) | manual `text-and-math` and `images-and-code`, spec section 3.1 |
 | Speaker notes | `::: notes` (links in notes are clickable in presenter view) | manual `links-and-notes`, spec section 3.14 |
+| Sidecar notes, written in the presenter view while rehearsing (`lattice serve`), saved to `talk.notes.md` (sections `# ID`), appended to the static notes by `lattice build` | manual `sidecar-notes`, spec section 3.14 |
 
 ### The slide graph
 
@@ -172,6 +173,7 @@ These are the mistakes that build cleanly or produce a confusing error. Each one
 - **DOT keywords** (`graph`, `node`, `edge`, `digraph`, `subgraph`, `strict`) cannot be bare node names in `dot` blocks or `.dot` files.
 - **A line of the timeline that moves two tracks is a step of its own kind.** Checkpoints (spec section 6.5) end every run of steps that move the same tracks, so `code 2, trace 5` in the middle of a trace splits it in two for Shift+Right; let a follower (`follow=`) move with the trace instead when the code only tracks it.
 - **Touch input is invisible on a desktop.** Gestures and their buttons exist only where the primary pointer is a finger, so a screenshot from `scripts/snapshot.py` never shows them; open the deck with `?touch` to see them in a desktop browser. A `gestures` entry runs a global action by name (LT066 for an unknown gesture or action), whatever `keys` binds to it.
+- **Sidecar notes follow slide ids.** A section `# ID` of `talk.notes.md` belongs to the slide `ID`; renaming a slide whose id comes from its title orphans its notes (warning LT067, the section stays in the file): give a slide that has sidecar notes an explicit `{#id}`, or rename the section. Use `##` for headings inside notes, since a `# word` line starts a section. Sidecar notes take no containers or components (LT068). When editing a deck for its author, leave `talk.notes.md` to the presenter view unless asked.
 - **Step numbers differ by audience:** the URL and `pdf=` count from 0, the HUD and the presenter view from 1.
 - **Columns are meant to contain their content** (a table wider than its column scrolls inside it), so a column holding too much is a layout problem that only a screenshot shows. An animation narrower than 760 px puts its panel below the drawing (except `array-anim`) unless `panel_at=right`. Big animations need a `height=` or a column that makes room (`width` cues); check the screenshot.
 - **Name the closing fences of long containers** (`::: /column`, `::: /detour`): a forgotten fence otherwise swallows the following slides, and the name turns that into error LT061 at the right line.

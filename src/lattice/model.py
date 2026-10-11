@@ -279,3 +279,4 @@ class Deck:
     dependencies: set[Path] = field(default_factory=set)
     uses_math: bool = False
     requires: set[str] = field(default_factory=set)
+    serve_notes: str | None = None  # URL of the sidecar notes under `lattice serve` (spec 3.14), else None

@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.36.0. This README covers usage in brief. The rest:
+This is version 0.37.0. This README covers usage in brief. The rest:
 
 - [`user_manual/manual.md`](user_manual/manual.md) is the user manual, itself a Lattice deck (open
   [`user_manual/manual.html`](user_manual/manual.html)): every feature, with a live example of each.
@@ -84,7 +84,7 @@ The last slide of a detour returns to where you came from.
 | `::: detour {at=2 badge=next}` | The badge of a detour step appears only when Right is about to enter it; `badge=step` keeps it from then on, `badge=false` hides it (spec section 3.9) |
 | `::detour-badge{ref=id label=... badge=next}` | The badge of detour `id` placed here (in a column, say) instead of where the detour is written; several are allowed (spec section 3.9) |
 | `::: branch` with a list of `[[target\|label]]` | A choice point, keys 1 to 9 by default |
-| `::: notes` | Speaker notes, shown in presenter view |
+| `::: notes` | Speaker notes, shown in presenter view; more notes can live in `talk.notes.md` (below) |
 | ` ```timeline ` with a line `detour id` (or `detour id blocking`) | A step that enters that detour, between the slide's other steps (spec section 6.4) |
 | `::: columns` / `::: column {width=2fr}` | Layout; containers nest with `:::` fences, a bare `:::` closes the innermost one, the colon count is free (spec section 3.2) |
 | ` ```timeline ` with a line `width src=0 viz=1fr` | Columns that change width from that step on, to make room for an animation; `width=0` collapses a column (hidden, its gap given back), `::: columns {duration=600}` sets the motion (spec section 3.8) |
@@ -201,6 +201,24 @@ where the primary pointer is a finger: desktops and laptops, touchscreens includ
 `?touch` or `?touch=0` in the URL forces it on or off, `touch: false` in the front matter turns it
 off, and `gestures:` maps gestures to other actions (spec section 7.8).
 
+## Rehearsing: notes written in the presenter view
+
+Notes can also live beside the deck, in a sidecar file: `talk.notes.md` for `talk.md`, one section
+per slide id.
+
+```markdown
+# dijkstra
+
+Mention the heap. If asked about negative weights: [[bellman-ford]].
+```
+
+Under `lattice serve`, the presenter view (`p`) shows an **Edit** button by the notes (or
+double-click them): what you type is saved to the slide's section of `talk.notes.md` as you type,
+without a rebuild or a reload, and an edit made in your editor shows up in the open presenter view.
+Notes written in the deck (`::: notes`) stay above and are not editable there. `lattice build`
+appends the sidecar notes after the deck's own, so the built HTML holds all of them as ordinary
+notes. Details: spec section 3.14.
+
 ## PDF export
 
 `lattice pdf talk.md` prints the main path, or a tour with `--tour NAME`, one page per slide at its
@@ -253,7 +271,7 @@ Rebuild them all, and the user manual, with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.36.0 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.37.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

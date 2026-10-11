@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.36.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.37.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -43,6 +43,7 @@
 - Relative paths in a file (includes, component options, images) are resolved against **the directory of the file containing them**, not the root file.
 - A file `lattice_plugins.py` next to the root file, if present, is imported before rendering (section 8.1).
 - The build cache lives in `.lattice-cache/` next to the root file.
+- A file `NAME.notes.md` next to the root file `NAME.md`, if present, holds sidecar speaker notes (section 3.14).
 
 ### 2.2 Front matter
 
@@ -332,7 +333,25 @@ Reserved attributes, handled by the core and not passed to component options: `#
 
 ### 3.14 Speaker notes
 
-A `notes` container's content goes to presenter view only. A slide MAY have several `notes` containers; they are concatenated in order. Wiki links in notes are clickable in presenter view and create link edges.
+A `notes` container's content goes to presenter view only. A slide MAY have several `notes` containers; they are concatenated in order. Wiki links in notes are clickable in presenter view and create link edges. A fenced code block in notes is drawn there as the `code` component draws it at rest (its `lang`, `highlight`, `linenos`, `title`, `markers` and `line_base` apply); notes run no component, so a component block in notes is shown as code and another option of a code block is ignored, with warning LT068.
+
+**Sidecar notes.** Speaker notes MAY also live in a sidecar file beside the root file: `talk.notes.md` for `talk.md` (section 2.1). Notes written in the deck are *static*; those of the sidecar are *sidecar notes*. The sidecar is Markdown cut into sections:
+
+```markdown
+# dijkstra
+
+Mention the heap. If asked about negative weights: [[bellman-ford]].
+
+# complexity
+
+$O((V+E)\log V)$
+```
+
+- A line `# ID` (a level-1 ATX heading whose text is one `IDENT`, alone on its line, outside fenced code) starts the section of the slide `ID`; it runs to the next such line. Text before the first section is kept and ignored. A level-1 heading of other text is part of the notes; headings in notes should use `##` or deeper.
+- `ID` is a slide id, detour slides included (not a detour id). A section whose id is no slide of the deck is warning LT067 and is ignored; the file keeps it. An id with several sections is warning LT067; its sections are shown in file order.
+- A section is rendered like static notes (Markdown, math, wiki links, code blocks) except that containers and the `::include` and `::detour-badge` directives are not interpreted: their content is shown without them, with warning LT068. A wiki link to an unknown id is error LT011.
+- **`lattice build`** (and `check`, `graph`, `pdf`) appends the sidecar notes of a slide after its static notes; the output does not distinguish them (the deck JSON's `notes`, section 11.2). Their wiki links create link edges.
+- **`lattice serve`** leaves the sidecar notes out of the page, so that they can change without a rebuild. The deck JSON carries `serve.notes`, the URL from which the page fetches them (`GET`, by slide: the Markdown, its HTML and the problems found) and to which it saves the notes of one slide (`POST {slide, md}`, `Content-Type: application/json`, same origin only; the server answers the saved notes rendered). The presenter view (section 7.5) shows the static notes, then the sidecar notes, alike; an **Edit** button (or a double-click on the notes) opens a text area holding the slide's sidecar Markdown under the static notes, which cannot be edited there. What is typed is saved after a pause of 700 ms and when the area closes (Escape, **Done**, or the focus leaving it); the panel shows whether it was saved and any problem (an unknown link, LT067 and LT068 cases). Keys typed in the area never act on the deck. When the slide changes while the area is open, what was typed is saved to the slide it was typed for and the area moves on to the new slide's notes. A save rewrites only that slide's section of the file, read again just before: the text before the first section, the other sections and those of unknown ids are kept as written; empty notes remove the section; a new section is placed before the first section of a slide that follows it in document order, else at the end; the sections of an id given twice become one; a sidecar left empty is removed. Saving never rebuilds the deck nor reloads a window. When the sidecar changes (a save, or an edit made in an editor), the server sends the event `notes` on its live reload stream, and every window of the deck fetches the sidecar notes again (an open text area keeps what is being typed). Under `serve`, KaTeX is always included, so that math typed in the notes renders.
 
 ### 3.15 Timelines
 
@@ -723,7 +742,7 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 
 ### 7.5 Presenter view
 
-- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel holding, from top to bottom: a timer (click to reset) with the slide and step, a scrubber, a preview of what comes next, the notes just below it, the available moves (what NEXT does, what PREV does, the steps `next-checkpoint` and `prev-checkpoint` reach with the kinds of the steps they land on, branch options, detours, the return target and the slide UNDO goes back to, each with its key; the kind of a step, section 6.5, is shown by the types of the tracks it changes: `reveal`, `columns`, or a component name such as `bbv-anim` or `arrow`), and last a **Keybindings** section listing every global action of section 7.6 with its keys (as bound by the deck, in smaller type than the moves, plus the digit keys of branch options and detours, and the click that enlarges an element when the deck has components that offer it, section 7.7).
+- Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel holding, from top to bottom: a timer (click to reset) with the slide and step, a scrubber, a preview of what comes next, the notes just below it (with the editor of sidecar notes under `lattice serve`, section 3.14), the available moves (what NEXT does, what PREV does, the steps `next-checkpoint` and `prev-checkpoint` reach with the kinds of the steps they land on, branch options, detours, the return target and the slide UNDO goes back to, each with its key; the kind of a step, section 6.5, is shown by the types of the tracks it changes: `reveal`, `columns`, or a component name such as `bbv-anim` or `arrow`), and last a **Keybindings** section listing every global action of section 7.6 with its keys (as bound by the deck, in smaller type than the moves, plus the digit keys of branch options and detours, and the click that enlarges an element when the deck has components that offer it, section 7.7).
 - The **scrubber** is a slider over the steps of the current slide, shown when the slide has more than one step. Moving it sets `cur.step` directly: it is not an event of section 7.2 and leaves `H` unchanged, and runtimes receive `animate: false` (section 10.1).
 - The **preview** shows what NEXT would show: the next step of the current slide (the entry slide of the detour when that step is a detour step, which the moves list names as "detour: label", marked "(blocking)" when it is, followed by the `skip-detour` key); at the last step, the slide NEXT moves to (tour successor, `next` slide at step 0, or the return target at the step it restores). At a branch point or at the end of the path it shows a label instead. The preview is a second copy of the document opened with `?preview`: a passive window that ignores keys and clicks, keeps no history or storage, does not join the `BroadcastChannel`, never animates, and renders the position the presenter window sends it with `postMessage`.
 - Audience and presenter windows share state over a `BroadcastChannel` named `lattice:<deck-hash>`. After every event, the window that handled it broadcasts `{cur, H, tour}`; the other window adopts it without re-running the event. Either window may drive. An enlarged element (section 7.7) is shared the same way: opening one broadcasts `{zoom: {instance, key}}` and closing one `{zoom: null}`, and the other window opens or closes its own copy.
@@ -1336,6 +1355,8 @@ interface DeckJSON {
     nodes: Record<string, { x: number; y: number; w: number; h: number; label: string }>;
     edges: (EdgeJSON & { path: string })[];  // path: SVG path of the drawn edge
   };
+  serve?: { notes: string };               // `lattice serve` only: URL of the sidecar notes (section 3.14);
+                                           // not part of `hash`
 }
 
 interface SlideJSON {
@@ -1354,7 +1375,7 @@ interface SlideJSON {
   checkpoints?: number[];                  // when one precedes the last step; default [steps - 1] (section 6.5)
   offpath: boolean;
   transition?: string;
-  notes?: string;                          // HTML
+  notes?: string;                          // HTML: static notes, then sidecar notes (built output, section 3.14)
   source: { file: string; line: number };
 }
 
@@ -1463,6 +1484,8 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT064 | error | A column width that is not a fraction (`Nfr`), a CSS length or `0`, in a `width` attribute or a `width` cue; a `duration` of `columns` that is not a non-negative integer; a `width` cue naming something that is not a column of this slide directly in a `columns` container, naming a column twice, or naming none (sections 3.8, 3.15) |
 | LT065 | warning | An attribute line directly before a `detour` container, which applies to nothing (section 3.9) |
 | LT066 | error | A `gestures` entry in front matter naming an unknown gesture, or an action that is not a global action of section 7.6 nor `none` (section 7.8) |
+| LT067 | warning | A section of the sidecar notes whose id is not a slide of the deck (ignored, kept in the file), or a slide id with more than one section (section 3.14) |
+| LT068 | warning | Something speaker notes cannot show: a component block (shown as code), an option of a code block other than those notes apply, and in sidecar notes a container or a directive (its content shown without it) (section 3.14) |
 
 Diagnostics are printed as `file:line:col: severity LTnnn: message`. `lattice check` exits with status 1 if any error is reported, 0 otherwise (`--strict` also fails on warnings).
 
@@ -1683,3 +1706,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.35.1 | Presenter panel order: the notes come just below the preview of what comes next, then the moves and the Keybindings section | 7.5 |
 | 0.36 | `plot` passes the options it does not know, and `legend`, to its `source` function; an option the function does not take is LT022, `legend` included; `title`, when set, goes to a source that takes it | 8.2, 8.8 |
 | 0.36 | Touch input: touch mode on phones and tablets (the pointer media query, `?touch`, `?touch=0`, `touch: false`), gestures for the global actions (`gestures` in front matter, LT066), notes and help sheets with tour and start buttons; the viewport meta has `viewport-fit=cover` and `#lt-root` keeps to the safe areas; DeckJSON `gestures` and `touch` | 2.2, 7.6, 7.8, 11.1, 11.2, 12 |
+| 0.37 | Sidecar notes (`NAME.notes.md`, sections `# ID`): appended to the static notes by the build, edited in the presenter view under `lattice serve` (saved as one types, without rebuild; the `notes` event of the live reload stream); DeckJSON `serve`; code blocks in notes are drawn in the notes, components there are shown as code; LT067, LT068 | 2.1, 3.14, 7.5, 11.2, 12 |
