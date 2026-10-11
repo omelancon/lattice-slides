@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.35.1 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.36.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -57,6 +57,8 @@ The root file MAY start with a YAML front matter block delimited by `---` lines.
 | `start` | id | first root, non-offpath slide | Start slide |
 | `plugins` | list of strings | `[]` | Plugin packages to activate (section 8.1) |
 | `keys` | map action to key or list of keys | section 7.6 | Key binding overrides |
+| `touch` | bool | `true` | Touch input on phones and tablets (section 7.8); `false` turns it off unless the URL asks for it |
+| `gestures` | map gesture to action, or `none` | section 7.8 | Gesture overrides (section 7.8); an unknown gesture or action is LT066 |
 | `transitions` | map edge kind to transition name (`slide`, `zoom`, `fade`, `none`) | `next: slide`, `branch: slide`, `detour: zoom`, `link: fade` | Default transitions; moving backward plays the reverse (`slide` from the left, `zoom` out) |
 | `tours` | map name to list of ids, or the string `main` | `{}` | Named tours (section 5.7) |
 | `build.cache` | bool | `true` | Enable the render cache |
@@ -749,7 +751,7 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 
 **Checkpoint keys.** One press of `next-checkpoint` performs SKIP to the next checkpoint (section 6.5), one press of `prev-checkpoint` to the previous one (or step 0). The checkpoint is taken from the **anchor**: the current step, or, when the press arrives during the playback of an earlier press of the same action on the same slide, the checkpoint that playback is heading to, so two presses in a row go two checkpoints ahead however quickly they come. The auto-repeat of a held key (`KeyboardEvent.repeat`) is ignored for these two actions, so holding the keys moves one checkpoint only. At the last (first) checkpoint they do nothing: they never leave the slide. `last-step` and `first-step` ignore checkpoints; like every SKIP, all four stop in front of a blocking detour step on the way forward.
 
-Bindings are overridable in front matter under `keys`. The names `skip-forward` and `skip-back` (the ten-step skips before 0.30) are accepted there as aliases of `next-checkpoint` and `prev-checkpoint`. A key is a `KeyboardEvent.key` value, optionally prefixed with `Shift+`; with Shift held, the `Shift+` binding is tried first, then the plain key (letters already arrive shifted, so `A` binds Shift+a). Slide-level keys (branch options and detours) never override global bindings: a collision is an error (LT018).
+Bindings are overridable in front matter under `keys`. The names `skip-forward` and `skip-back` (the ten-step skips before 0.30) are accepted there as aliases of `next-checkpoint` and `prev-checkpoint`. A key is a `KeyboardEvent.key` value, optionally prefixed with `Shift+`; with Shift held, the `Shift+` binding is tried first, then the plain key (letters already arrive shifted, so `A` binds Shift+a). Slide-level keys (branch options and detours) never override global bindings: a collision is an error (LT018). Gestures run the same actions on touch devices (section 7.8).
 
 
 ### 7.7 Enlarged elements
@@ -760,6 +762,33 @@ A component MAY let the viewer enlarge one of its elements (a basic block of the
 - **Input.** While a card is open, any key closes it and performs no action, except a bare modifier (`Shift`, `Control`, `Alt`, `Meta`) and a combination with `Ctrl`, `Meta` or `Alt`, which are left to the browser. A press of the pointer outside the card closes it and does nothing else (no link, badge, branch option, timer reset or scrubber move); a click inside the card does nothing.
 - **Not a position.** Opening or closing a card is not an event of section 7.2: `cur`, `H` and `tour` do not change, the URL hash and `sessionStorage` are not written, and a reload never reopens a card. Any render of a position (a sync from the other window, a change of the URL hash, the scrubber) closes it at once. After it closes, keys and clicks act as before it opened.
 - **Windows.** The presenter and audience windows show the same card (section 7.5). Passive windows (the preview and print mode) never open one.
+
+### 7.8 Touch input
+
+On a phone or a tablet, gestures perform the global actions of section 7.6 and a few on-screen controls stand in for the presenter view. Elsewhere touch input does not exist: no gesture acts, no control is shown, and the page looks and behaves as without it.
+
+**Touch mode.** A window is in touch mode when the media query `(hover: none) and (pointer: coarse)` matches, that is when its primary pointer is a finger (phones and tablets; a laptop with a touchscreen has a fine primary pointer and is left out), and follows the query when it changes (a tablet that gains or loses a trackpad). The URL overrides the query: `?touch` turns touch mode on and `?touch=0` (also `false`, `off`, `no`) turns it off, whatever the device. The front matter's `touch: false` turns it off; the URL wins over it, and `?touch` on such a deck logs a warning in the console and flashes a notice. Passive windows (section 7.5) are never in touch mode. In touch mode the root element has the class `lt-touch`, which scopes every style of touch input: the slide pane takes no browser gesture (`touch-action: none`: no scrolling, pinch zoom, history swipe or text selection), and the page does not bounce. The controls are created the first time touch mode turns on and hidden when it turns off.
+
+**Gestures.** A swipe moves one or two fingers more than 45 px within 900 ms, along one axis (one component at least 1.2 times the other); a tap moves less than 12 px and lasts less than 400 ms; a long press holds one finger still for 550 ms; a double tap is two taps within 320 ms and 40 px, the first not on an element a tap already acts on (a link, button, badge, branch option or enlargeable block). The defaults:
+
+| Gesture | Action |
+|---|---|
+| `swipe-left` | `next` |
+| `swipe-right` | `prev` |
+| `swipe-up` | `enter-detour` |
+| `swipe-down` | `return` |
+| `two-finger-swipe-left` | `next-checkpoint` |
+| `two-finger-swipe-right` | `prev-checkpoint` |
+| `two-finger-swipe-up`, `two-finger-swipe-down` | none |
+| `double-tap` | `goto` |
+| `long-press` | `overview` |
+| `two-finger-tap` | `undo` |
+
+The front matter's `gestures` maps a gesture to the name of a global action of section 7.6 (the aliases `skip-forward` and `skip-back` included), or to `none` or null for no action; gestures it does not name keep their default. A gesture performs its action directly, whatever keys `keys` binds to it, and as a key press would: a playback under way stops, and the checkpoint actions count from their anchor (section 7.6). A single tap is left to the browser, so links, badges, branch options and enlargeable blocks (section 7.7) respond to it as to a click. A gesture is ignored while the page is pinch-zoomed, and on the controls, form fields and the presenter panel.
+
+**Overlays and enlarged elements.** While the overview or the go-to is open, a gesture whose action is `overview` or `goto` closes it and other gestures do nothing (the lists scroll under the finger; a tap on the backdrop closes as a click does). A gesture that begins while an element is enlarged only closes it (section 7.7).
+
+**Controls.** Two buttons in the top right corner: **Notes** opens a sheet with the speaker notes of the current slide (section 3.14), which follows every move while it is open (absent in presenter view, whose panel shows them); **?** opens the help sheet, which lists the deck's gestures with their actions, a button that cycles through the tours (SET_TOUR, as `tour`; shown when the deck has tours) and a button that goes to the start of the deck (HOME). The help sheet opens by itself the first time touch mode turns on in a browser (remembered in `localStorage` under `lattice:touch-help-seen`). Each gesture briefly names its action at the top of the screen. The sheets and the notices are not positions: they touch neither `cur`, `H`, the hash nor `sessionStorage`.
 
 ---
 
@@ -1228,7 +1257,7 @@ Requirements:
 
 - Reveal: elements carry `data-lt-reveal="k"`; the core shows fragment `k` when the reveal position is at least `k`, using `visibility: hidden` so layout does not shift.
 - Badges that wait for their step (section 3.9): the badge carries `data-lt-badge="step"` or `data-lt-badge="next"`; at every step the core looks up the detour steps of its `data-lt-detour` in the slide's `stepDetours` and hides the badge the same way as a fragment. Each badge is handled on its own, so the placed badges of one detour may differ. The presenter preview and print mode render positions through the same path, so they follow.
-- Branch menus, detour badges, wiki links, transitions, overview, go-to, presenter view (with its preview and scrubber), enlarged elements (section 7.7) and print mode (section 11.5) are implemented by the core.
+- Branch menus, detour badges, wiki links, transitions, overview, go-to, presenter view (with its preview and scrubber), enlarged elements (section 7.7), touch input (section 7.8) and print mode (section 11.5) are implemented by the core.
 - A runtime that moves content of the slide without changing its own box (the text of a `code-morph`, section 8.11) dispatches a bubbling `CustomEvent` named `lt-relayout` on its element after it has placed its new state, with `detail.animate` true when the move is animated and, optionally, `detail.timing = {delay, duration}` in milliseconds, when the content glides. Runtimes that measure the slide (`arrow`, section 8.9) listen for it on their slide section and glide with that timing. The versioning drawings (section 9.5) dispatch it after every `show`, with `detail.follow` (below) the duration of the glide when their nodes move, so that an arrow at a part follows it.
 - Column widths (section 3.8). A `columns` container with a column named in a `width` cue or collapsed by its attribute carries `data-lt-cols` and `data-lt-duration`; each of its columns carries `data-lt-col` (its id, or empty) and `data-lt-flex` (the `flex` value of its attribute, empty for the default), and its content is wrapped in `<div class="lt-column-in">`. At every step the core gives each such column the `flex` value of the current position of the columns track (`SlideJSON.columns`), or its own `data-lt-flex`; a collapsed column has the class `lt-col-shut` and is `inert`. An animated change measures the columns before and after the change (for display only, as `arrow` does), moves their boxes in slide pixels while the width of their contents stays fixed, then sets the final values, cancelling any transition of the move still running (a transition started late on a busy page), so that the columns are at rest when their final widths are measured. It dispatches `lt-relayout` on the container with `detail.follow`, the duration of the move in milliseconds; a still change dispatches it with `animate` false. A runtime that measures the slide re-measures at every frame while `follow` lasts (`arrow` does). A runtime whose drawing depends on its own size observes it (`ResizeObserver`): a change of widths changes its box once per step.
 - The core exports helpers for runtimes: `Lattice.frames(store)`, `Lattice.applyDelta`, `Lattice.renderPanel(el, panel, keys)` (the variable panel of the animation components) and `Lattice.esc` (HTML escaping).
@@ -1244,6 +1273,7 @@ Requirements:
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">  <!-- section 7.8 -->
   <meta name="generator" content="lattice 0.16.0">
   <title>Shortest Paths</title>
   <style>:root{--lt-w:1280px;--lt-h:720px}</style>   <!-- design size from `aspect` -->
@@ -1278,6 +1308,7 @@ Requirements:
 - Relative image sources are embedded as `data:` URIs; a missing image produces LT051.
 - Component data lives in separate `<script type="application/json">` tags, parsed on first mount.
 - Speaker notes are stored in the deck JSON, not in slide sections.
+- `#lt-root` is inset by the safe areas of the screen (`env(safe-area-inset-*)`, zero except on phones with a notch or rounded corners). The controls of touch input (section 7.8) are not in the document: the runtime adds them at the end of `body` when touch mode first turns on.
 - The command line warns (LT032) when the file exceeds 50 MB.
 
 ### 11.2 Deck JSON
@@ -1291,6 +1322,8 @@ interface DeckJSON {
           aspect: string; theme: string };
   start: string;
   keys: Record<string, string[]>;          // action -> keys
+  gestures: Record<string, string>;        // gesture -> action, the gestures with an action (section 7.8)
+  touch: boolean;                          // false: `touch: false` in front matter (section 7.8)
   transitions: Record<"next" | "branch" | "detour" | "link", string>;
   order: string[];                         // slide ids, document order
   slides: Record<string, SlideJSON>;
@@ -1429,6 +1462,7 @@ With `lattice build --dir OUT` or `build.output: dir`, the build writes `index.h
 | LT063 | error | An `arrow` end naming a list item that does not exist (`LIST[N]`: no such list on the slide, not a list, an index out of range, no nested list), or a part of a component that does not exist (`COMP.NAME`: no such component on the slide, a component that names no parts, a name that denotes nothing, section 9.5), or a `bullet` anchor on an end that is not a list item (section 8.9) |
 | LT064 | error | A column width that is not a fraction (`Nfr`), a CSS length or `0`, in a `width` attribute or a `width` cue; a `duration` of `columns` that is not a non-negative integer; a `width` cue naming something that is not a column of this slide directly in a `columns` container, naming a column twice, or naming none (sections 3.8, 3.15) |
 | LT065 | warning | An attribute line directly before a `detour` container, which applies to nothing (section 3.9) |
+| LT066 | error | A `gestures` entry in front matter naming an unknown gesture, or an action that is not a global action of section 7.6 nor `none` (section 7.8) |
 
 Diagnostics are printed as `file:line:col: severity LTnnn: message`. `lattice check` exits with status 1 if any error is reported, 0 otherwise (`--strict` also fails on warnings).
 
@@ -1647,4 +1681,5 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.34 | `fold` on `bbv-anim` (ΛV): constant folding of calls whose result is one constant and whose callee has no side effect, at the step where it becomes valid, as thesis §4.2 describes; frames `fold-pure`, `fold-site`, `fold`; `alt` on the nodes and in the tables (the code of a folded call site before its fold); paths walk folded calls | 8.8, 9.5 |
 | 0.35 | `generic_entry` on `bbv-anim` (ΛV): `false` queues no generic entry for the other functions when the queue empties | 8.8, 9.5 |
 | 0.35.1 | Presenter panel order: the notes come just below the preview of what comes next, then the moves and the Keybindings section | 7.5 |
-| unreleased | `plot` passes the options it does not know, and `legend`, to its `source` function; an option the function does not take is LT022, `legend` included; `title`, when set, goes to a source that takes it | 8.2, 8.8 |
+| 0.36 | `plot` passes the options it does not know, and `legend`, to its `source` function; an option the function does not take is LT022, `legend` included; `title`, when set, goes to a source that takes it | 8.2, 8.8 |
+| 0.36 | Touch input: touch mode on phones and tablets (the pointer media query, `?touch`, `?touch=0`, `touch: false`), gestures for the global actions (`gestures` in front matter, LT066), notes and help sheets with tour and start buttons; the viewport meta has `viewport-fit=cover` and `#lt-root` keeps to the safe areas; DeckJSON `gestures` and `touch` | 2.2, 7.6, 7.8, 11.1, 11.2, 12 |

@@ -57,6 +57,46 @@ def key_bindings(overrides: dict[str, str | list[str]]) -> dict[str, list[str]]:
     return keys
 
 
+# Touch gestures (spec 7.8), in the order the help sheet lists them, with the action of each by default
+# (None: no action). A gesture runs a global action of section 7.6, whatever keys the deck binds to it.
+DEFAULT_GESTURES: dict[str, str | None] = {
+    "swipe-left": "next",
+    "swipe-right": "prev",
+    "swipe-up": "enter-detour",
+    "swipe-down": "return",
+    "two-finger-swipe-left": "next-checkpoint",
+    "two-finger-swipe-right": "prev-checkpoint",
+    "two-finger-swipe-up": None,
+    "two-finger-swipe-down": None,
+    "double-tap": "goto",
+    "long-press": "overview",
+    "two-finger-tap": "undo",
+}
+NO_ACTION = ("none",)  # written in front matter to leave a gesture without action, like null
+
+
+def gesture_problems(overrides: dict[str, str | None]) -> list[str]:
+    """What is wrong with the front matter's `gestures` (LT066): unknown gestures and unknown actions."""
+    problems = []
+    for gesture, action in overrides.items():
+        if gesture not in DEFAULT_GESTURES:
+            problems.append(f"unknown gesture {gesture!r} (gestures: {', '.join(DEFAULT_GESTURES)})")
+        elif action is not None and action not in NO_ACTION and KEY_ALIASES.get(action, action) not in DEFAULT_KEYS:
+            problems.append(f"gesture {gesture!r}: unknown action {action!r} (actions: {', '.join(DEFAULT_KEYS)}, "
+                            "or none)")
+    return problems
+
+
+def gesture_bindings(overrides: dict[str, str | None]) -> dict[str, str]:
+    """The deck's gestures, gesture -> action: the defaults with the front matter's `gestures` applied,
+    without the gestures left with no action. Invalid entries (LT066) are ignored."""
+    out = dict(DEFAULT_GESTURES)
+    for gesture, action in overrides.items():
+        if gesture in out:
+            out[gesture] = None if action is None or action in NO_ACTION else KEY_ALIASES.get(action, action)
+    return {g: a for g, a in out.items() if a in DEFAULT_KEYS}
+
+
 class FrontMatter(BaseModel):
     model_config = ConfigDict(extra="allow")
     title: str | None = None
@@ -67,6 +107,8 @@ class FrontMatter(BaseModel):
     start: str | None = None
     plugins: list[str] = Field(default_factory=list)
     keys: dict[str, str | list[str]] = Field(default_factory=dict)
+    touch: bool = True
+    gestures: dict[str, str | None] = Field(default_factory=dict)
     transitions: dict[str, str] = Field(default_factory=dict)
     tours: dict[str, list[str] | Literal["main"]] = Field(default_factory=dict)
     build: BuildConfig = Field(default_factory=BuildConfig)

@@ -4,7 +4,7 @@ Lattice compiles Markdown into **non-linear** slide decks: one self-contained HT
 made for computer science talks. Slides form a graph with a main path, detours, branches and links,
 and content blocks can be animated algorithm traces, plots, Graphviz diagrams or highlighted code.
 
-This is version 0.35.1. This README covers usage in brief. The rest:
+This is version 0.36.0. This README covers usage in brief. The rest:
 
 - [`user_manual/manual.md`](user_manual/manual.md) is the user manual, itself a Lattice deck (open
   [`user_manual/manual.html`](user_manual/manual.html)): every feature, with a live example of each.
@@ -183,6 +183,24 @@ the themes style are in spec section 9.1, and the program syntax in spec section
 The URL keeps the position (`#/slide-id/step`), and a reload restores the history. Keys can be
 changed with `keys:` in the front matter; the exact behavior of each move is spec section 7.
 
+On a phone or a tablet, gestures perform the same moves:
+
+| Gesture | Action |
+|---|---|
+| Swipe left / right | Next / previous step or slide |
+| Two-finger swipe left / right | Next / previous checkpoint |
+| Swipe up / down | Enter the slide's first detour / return |
+| Double tap | Go to a slide by name |
+| Long press | Overview (a long press again closes it) |
+| Two-finger tap | Undo the last move |
+| Tap | Links, badges, branch options and blocks, as with a mouse |
+
+Two buttons in the corner open the speaker notes of the current slide and the list of gestures,
+which also has buttons to cycle through tours and to go back to the start. Touch input exists only
+where the primary pointer is a finger: desktops and laptops, touchscreens included, are unchanged.
+`?touch` or `?touch=0` in the URL forces it on or off, `touch: false` in the front matter turns it
+off, and `gestures:` maps gestures to other actions (spec section 7.8).
+
 ## PDF export
 
 `lattice pdf talk.md` prints the main path, or a tour with `--tour NAME`, one page per slide at its
@@ -235,7 +253,7 @@ Rebuild them all, and the user manual, with `python scripts/build_examples.py`.
 
 ## Status
 
-Version 0.35.1 implements everything in the spec; spec section 15 lists how it changed since the
+Version 0.36.0 implements everything in the spec; spec section 15 lists how it changed since the
 first draft. Planned work is in the roadmap, design report section 6.
 
 ## Contributing

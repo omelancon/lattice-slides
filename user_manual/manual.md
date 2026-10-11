@@ -1,9 +1,9 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.35.1
+author: Lattice 0.36.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
-          branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, pdf-export, thanks]
+          branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, touch, pdf-export, thanks]
 ---
 
 # Lattice User Manual {#lattice-user-manual layout=title}
@@ -61,8 +61,9 @@ Every command accepts `--no-cache`. Renders are cached in `.lattice-cache/` next
 | `start` | a slide id | First slide (default: the first root slide that is not off path) |
 | `tours` | `name: [ids]` or `name: main` | Named tours for the `t` key and `lattice pdf --tour` |
 | `keys` | `action: key` or `action: [keys]` | Key binding overrides (see [[presenting-keys]]) |
+| `touch`, `gestures` | bool; `gesture: action` | Touch input and its gestures (see [[touch\|touch]]) |
 | `transitions` | per edge kind: `slide`, `zoom`, `fade`, `none` | Transition when entering by a `next`, `branch`, `detour` or `link` edge |
-| `plugins` | list of packages | Installed plugins to activate (see [[plugins]]) |
+| `plugins` | list of packages | Installed plugins to activate (see [[plugins\|plugins]]) |
 | `build.cache`, `build.output`, `build.frames.*` | bool; `single` or `dir`; ints | The render cache, the output mode, the keyframe thresholds |
 
 Only the root file has front matter; every key is optional. Relative paths resolve against the file that mentions them.
@@ -1728,6 +1729,38 @@ go to [[bellman-ford]].
 Several `notes` containers on one slide are concatenated.
 ::::
 :::::
+
+# On a phone or a tablet {#touch .dense}
+
+:::: columns
+::: column {width=1fr}
+| Gesture | Action |
+|---|---|
+| Swipe left, right | Next, previous step or slide |
+| Two-finger swipe left, right | Next, previous checkpoint |
+| Swipe up, down | Enter the first detour, return |
+| Double tap | Go to a slide |
+| Long press | Overview (again to close it) |
+| Two-finger tap | Undo the last move |
+| Tap | Links, badges, branch options, blocks |
+:::
+::: column {width=1fr}
+- Only where the primary pointer is a finger; desktops and laptops, touchscreens included, are unchanged
+- **Notes** shows the slide's notes, **?** the gestures with a tour and a start button
+- `?touch` or `?touch=0` in the URL forces it on or off: try `?touch` here
+
+```yaml
+touch: false      # off, unless ?touch
+gestures:         # an action, or none
+  double-tap: none
+  long-press: goto
+```
+:::
+::::
+
+::: notes
+On a phone, hold it sideways for the largest slide. A gesture runs its action whatever key the deck binds to it.
+:::
 
 # Output {#output}
 

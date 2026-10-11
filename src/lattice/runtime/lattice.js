@@ -569,6 +569,7 @@ const Lattice = (() => {
     save();
     if (!how || how.kind !== "sync") broadcast();
     if (presenter) updatePresenter();
+    refreshTouchNotes();
   }
 
   // ------------------------------------------------------------------ HUD
@@ -669,6 +670,7 @@ const Lattice = (() => {
   const ZOOM_MS = 350;
   const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "AltGraph", "CapsLock", "OS", "Hyper", "Super"]);
   let swallowClick = false;
+  let pressOverZoom = false; // the latest press began while an element was enlarged
   const reducedMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function zoomLayer() {
@@ -761,6 +763,7 @@ const Lattice = (() => {
   function onZoomPointer(e) {
     if (e.type === "pointerdown") {
       swallowClick = false;
+      pressOverZoom = !!zoomed; // read by the gesture this press starts (pointerdown comes before touchstart)
       if (!zoomed || zoomed.card.contains(e.target)) return;
       swallowClick = true; // the mousedown and click of this press are swallowed too
       e.preventDefault();
@@ -1176,15 +1179,21 @@ const Lattice = (() => {
     const action = (e.shiftKey && map[`Shift+${e.key}`]) || map[e.key];
     if (action && actions[action]) {
       e.preventDefault();
-      if (CHECKPOINT_KEYS.has(action)) {
-        if (e.repeat) return; // holding the keys moves one checkpoint (spec 7.6)
-        const anchor = checkpointAnchor(action); // before stopPlaying: it reads the playback under way
-        stopPlaying();
-        return actions[action](anchor);
-      }
-      stopPlaying();
-      actions[action]();
+      if (CHECKPOINT_KEYS.has(action) && e.repeat) return; // holding the keys moves one checkpoint (spec 7.6)
+      perform(action);
     }
+  }
+
+  // A global action (spec 7.6) from a key or a gesture (spec 7.8): a playback under way stops, and the
+  // checkpoint actions count from their anchor, read before the playback is stopped.
+  function perform(action) {
+    if (CHECKPOINT_KEYS.has(action)) {
+      const anchor = checkpointAnchor(action);
+      stopPlaying();
+      return actions[action](anchor);
+    }
+    stopPlaying();
+    return actions[action]();
   }
 
   function onClick(e) {
@@ -1198,6 +1207,253 @@ const Lattice = (() => {
     if (detour) { e.preventDefault(); actions.enter(detour.dataset.ltDetour); return; }
     if (e.target.closest(".lt-pp-timer")) { timerStart = Date.now(); tickTimer(); return; }
     if (e.target.id === "lt-overlay") closeOverlay();
+  }
+
+  // ------------------------------------------------------------------ touch input (spec 7.8)
+  // On a phone or a tablet (the primary pointer is a finger: no hover, coarse), gestures run the deck's actions
+  // and a few buttons give the notes and the help. Elsewhere nothing of this exists: the class `lt-touch` scopes
+  // every style, and the buttons and sheets are created when touch mode first turns on. `?touch` and `?touch=0`
+  // force it on or off, and win over the front matter's `touch: false`. Passive windows never have it.
+  const TOUCH_QUERY = "(hover: none) and (pointer: coarse)";
+  const SWIPE = 45, TAP_MOVE = 12, LONG_MS = 550, DOUBLE_MS = 320, DOUBLE_GAP = 40, TAP_MS = 400, SWIPE_MS = 900;
+  const GESTURE_LABELS = {
+    "swipe-left": "Swipe left", "swipe-right": "Swipe right", "swipe-up": "Swipe up", "swipe-down": "Swipe down",
+    "two-finger-swipe-left": "Two-finger swipe left", "two-finger-swipe-right": "Two-finger swipe right",
+    "two-finger-swipe-up": "Two-finger swipe up", "two-finger-swipe-down": "Two-finger swipe down",
+    "double-tap": "Double tap", "long-press": "Long press", "two-finger-tap": "Two-finger tap",
+  };
+  const ACTION_TOASTS = {
+    next: "Next", prev: "Back", undo: "Undo", "next-checkpoint": "Next checkpoint", "prev-checkpoint": "Previous checkpoint",
+    "last-step": "Last step", "first-step": "First step", "skip-detour": "Skip detour", "enter-detour": "Detour",
+    return: "Return", overview: "Overview", goto: "Search", presenter: "Presenter", tour: "Tour", home: "Start",
+  };
+  // what a tap already does, as with a mouse: such a tap never counts toward a double tap
+  const TAPPABLE = "a, button, input, select, textarea, label, [data-jump], [data-lt-link], [data-lt-choose], " +
+    "[data-lt-detour], .lt-bbv-clickable .lt-bbv-node";
+  const HELP_SEEN = "lattice:touch-help-seen";
+  let touchOn = false;
+  let touchUi = null; // { bar, help, notes, toast, tour }
+  let gesture = null; // the gesture under way
+  let lastTap = null;
+  let longTimer = 0;
+  let toastTimer = 0;
+
+  // "on", "off" or "auto", and whether the URL overrides `touch: false`.
+  function touchSetting() {
+    const params = new URLSearchParams(location.search);
+    if (!params.has("touch")) return { mode: deck.touch === false ? "off" : "auto", conflict: false };
+    const on = !["0", "false", "off", "no"].includes(params.get("touch").toLowerCase());
+    return { mode: on ? "on" : "off", conflict: on && deck.touch === false };
+  }
+
+  function setupTouch() {
+    const { mode, conflict } = touchSetting();
+    if (conflict) {
+      console.warn("lattice: ?touch turns touch input on although the deck sets `touch: false` (the URL wins)");
+      flash("Touch input on (?touch overrides touch: false)");
+    }
+    if (mode === "off") return;
+    const query = mode === "auto" && window.matchMedia ? window.matchMedia(TOUCH_QUERY) : null;
+    const update = () => setTouch(mode === "on" || !!(query && query.matches));
+    if (query) {
+      if (query.addEventListener) query.addEventListener("change", update);
+      else if (query.addListener) query.addListener(update);
+    }
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onTouchEnd, { passive: false });
+    document.addEventListener("touchcancel", resetGesture, { passive: true });
+    update();
+  }
+
+  function setTouch(on) {
+    if (on === touchOn) return;
+    touchOn = on;
+    resetGesture();
+    lastTap = null;
+    document.documentElement.classList.toggle("lt-touch", on);
+    if (!on) {
+      if (touchUi) { setSheet("help", false); setSheet("notes", false); }
+      return;
+    }
+    if (!touchUi) buildTouchUi();
+    let seen = false;
+    try { seen = localStorage.getItem(HELP_SEEN) === "1"; } catch (e) { seen = false; }
+    if (!seen) {
+      setSheet("help", true);
+      try { localStorage.setItem(HELP_SEEN, "1"); } catch (e) { /* storage unavailable */ }
+    }
+  }
+
+  function buildTouchUi() {
+    const rows = Object.keys(GESTURE_LABELS).filter((g) => deck.gestures && deck.gestures[g])
+      .map((g) => `<tr><td>${esc(GESTURE_LABELS[g])}</td><td>${esc(capital(ACTION_LABELS[deck.gestures[g]] || deck.gestures[g]))}</td></tr>`);
+    rows.push(`<tr><td>Tap</td><td>Links, badges, branch options and blocks, as with a mouse</td></tr>`);
+    const tours = Object.keys(deck.tours || {}).length > 0;
+    const html = `
+      <div class="lt-tc lt-tc-bar" id="lt-touch-bar">
+        ${presenter ? "" : '<button type="button" data-lt-tc="notes" aria-pressed="false" aria-controls="lt-touch-notes">Notes</button>'}
+        <button type="button" data-lt-tc="help" aria-pressed="false" aria-controls="lt-touch-help" aria-label="Touch controls">?</button>
+      </div>
+      <div class="lt-tc lt-tc-sheet" id="lt-touch-help" role="dialog" aria-label="Touch controls" hidden>
+        <h2><span>Touch controls</span><button type="button" data-lt-tc-close="help">Close</button></h2>
+        <div class="lt-tc-actions">
+          ${tours ? '<button type="button" data-lt-tc-act="tour"></button>' : ""}
+          <button type="button" data-lt-tc-act="home">Start of the deck</button>
+        </div>
+        <table>${rows.join("")}</table>
+        <p class="lt-tc-muted lt-tc-rotate">Turn your device sideways for a larger slide.</p>
+      </div>
+      <div class="lt-tc lt-tc-sheet lt-tc-notes" id="lt-touch-notes" role="dialog" aria-label="Speaker notes" hidden>
+        <h2><span>Speaker notes</span><button type="button" data-lt-tc-close="notes">Close</button></h2>
+        <p class="lt-tc-muted lt-tc-notes-title"></p>
+        <div class="lt-tc-notes-body"></div>
+      </div>
+      <div class="lt-tc lt-tc-toast" id="lt-touch-toast" aria-live="polite"></div>`;
+    document.body.insertAdjacentHTML("beforeend", html);
+    touchUi = { bar: $("#lt-touch-bar"), help: $("#lt-touch-help"), notes: $("#lt-touch-notes"), toast: $("#lt-touch-toast"),
+      tour: $('[data-lt-tc-act="tour"]') };
+    for (const b of $$("[data-lt-tc]", touchUi.bar)) {
+      b.addEventListener("click", () => {
+        const name = b.dataset.ltTc, other = name === "help" ? "notes" : "help";
+        setSheet(other, false);
+        setSheet(name, touchUi[name].hidden);
+      });
+    }
+    for (const b of $$("[data-lt-tc-close]")) b.addEventListener("click", () => setSheet(b.dataset.ltTcClose, false));
+    if (touchUi.tour) touchUi.tour.addEventListener("click", () => { closeZoom(); perform("tour"); refreshTourButton(); });
+    $('[data-lt-tc-act="home"]').addEventListener("click", () => { setSheet("help", false); closeOverlay(); perform("home"); });
+    const rotate = () => { $(".lt-tc-rotate").hidden = window.innerWidth > window.innerHeight; };
+    window.addEventListener("resize", rotate);
+    rotate();
+  }
+
+  const capital = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+  function setSheet(name, open) {
+    const sheet = touchUi[name];
+    sheet.hidden = !open;
+    const button = $(`[data-lt-tc="${name}"]`, touchUi.bar);
+    if (button) button.setAttribute("aria-pressed", String(open));
+    if (open && name === "notes") refreshTouchNotes();
+    if (open && name === "help") refreshTourButton();
+  }
+
+  function refreshTourButton() {
+    if (touchUi && touchUi.tour) touchUi.tour.textContent = `Tour: ${nav.tour || "off"}`;
+  }
+
+  // The notes sheet follows every render while it is open.
+  function refreshTouchNotes() {
+    if (!touchUi || touchUi.notes.hidden) return;
+    const s = slide(nav.cur.slide);
+    $(".lt-tc-notes-title", touchUi.notes).textContent = s.label;
+    const body = $(".lt-tc-notes-body", touchUi.notes);
+    body.innerHTML = s.notes || '<p class="lt-tc-muted">No notes for this slide.</p>';
+    renderMath(body);
+  }
+
+  function touchToast(text) {
+    if (!touchUi) return;
+    touchUi.toast.textContent = text;
+    touchUi.toast.classList.add("lt-on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => touchUi.toast.classList.remove("lt-on"), 650);
+  }
+
+  function resetGesture() {
+    gesture = null;
+    clearTimeout(longTimer);
+  }
+
+  // Touches that belong to something else: the touch controls themselves, form fields, the presenter's panel.
+  const touchExempt = (t) => t && t.closest && t.closest(".lt-tc, input, textarea, select, #lt-presenter-panel");
+  // Places that scroll under a finger: the overview and go-to lists, the sheets.
+  const touchScrolls = (t) => t && t.closest && t.closest("#lt-overlay, .lt-tc-sheet");
+  const pinchZoomed = () => window.visualViewport && window.visualViewport.scale > 1.05;
+
+  // The action of a gesture, run as a key would (spec 7.8): a gesture begun over an enlarged element only closes it
+  // (the press outside it already did, spec 7.7); while the overview or the go-to is open, only a gesture bound to
+  // `overview` or `goto` acts, and closes it.
+  function runGesture(name, g) {
+    if (g.zoomed) return;
+    const action = (deck.gestures || {})[name];
+    if (!action || !actions[action]) return;
+    if (zoomed) return closeZoom();
+    if (overlayOpen()) {
+      if (action === "overview" || action === "goto") closeOverlay();
+      return;
+    }
+    touchToast(ACTION_TOASTS[action] || action);
+    perform(action);
+    if (action === "tour") refreshTourButton();
+  }
+
+  function onTouchStart(e) {
+    if (!touchOn) return;
+    if (touchExempt(e.target) || pinchZoomed()) { resetGesture(); lastTap = null; return; }
+    // a single finger always starts a new gesture: a touchend can be lost when its target leaves the page (the
+    // overview closing under the finger), which would otherwise leave a stale gesture that swallows the next one
+    if (!gesture || e.touches.length === 1) {
+      const t = e.touches[0];
+      gesture = { x: t.clientX, y: t.clientY, t0: Date.now(), fingers: e.touches.length, moved: false, long: false,
+        pts: {}, zoomed: !!zoomed || pressOverZoom, target: e.target };
+    }
+    gesture.fingers = Math.max(gesture.fingers, e.touches.length);
+    for (const t of e.touches) if (!gesture.pts[t.identifier]) gesture.pts[t.identifier] = { x: t.clientX, y: t.clientY };
+    clearTimeout(longTimer);
+    if (gesture.fingers === 1) {
+      const g = gesture;
+      longTimer = setTimeout(() => {
+        if (gesture !== g || g.moved) return;
+        g.long = true;
+        lastTap = null;
+        runGesture("long-press", g);
+      }, LONG_MS);
+    }
+  }
+
+  function onTouchMove(e) {
+    if (!touchOn || !gesture) return;
+    // keep the browser from scrolling, bouncing or navigating back during a gesture, except in lists that scroll
+    if (e.cancelable && !touchScrolls(e.target)) e.preventDefault();
+    for (const t of e.touches) {
+      const p = gesture.pts[t.identifier];
+      if (p && Math.hypot(t.clientX - p.x, t.clientY - p.y) > TAP_MOVE) { gesture.moved = true; clearTimeout(longTimer); }
+    }
+  }
+
+  function onTouchEnd(e) {
+    if (!touchOn || !gesture || e.touches.length) return; // wait for the last finger
+    clearTimeout(longTimer);
+    const g = gesture;
+    gesture = null;
+    // the click the browser makes after a gesture would land on what the gesture just opened (the backdrop of the
+    // go-to closes on a click): it is cancelled for every gesture except a plain single tap
+    const swallow = () => { if (e.cancelable) e.preventDefault(); };
+    if (g.long) return swallow();
+    const t = e.changedTouches[0];
+    const p = g.pts[t.identifier] || { x: g.x, y: g.y };
+    const dx = t.clientX - p.x, dy = t.clientY - p.y, dt = Date.now() - g.t0;
+    if (g.moved && dt < SWIPE_MS && Math.max(Math.abs(dx), Math.abs(dy)) > SWIPE) {
+      lastTap = null;
+      const two = g.fingers >= 2 ? "two-finger-" : "";
+      if (Math.abs(dx) > Math.abs(dy) * 1.2) { swallow(); runGesture(`${two}swipe-${dx < 0 ? "left" : "right"}`, g); }
+      else if (Math.abs(dy) > Math.abs(dx) * 1.2) { swallow(); runGesture(`${two}swipe-${dy < 0 ? "up" : "down"}`, g); }
+      return;
+    }
+    if (g.moved || dt > TAP_MS) { lastTap = null; return; }
+    if (g.fingers === 2) { lastTap = null; swallow(); return runGesture("two-finger-tap", g); }
+    if (g.fingers !== 1) return;
+    const now = Date.now();
+    const tappable = !!(g.target && g.target.closest && g.target.closest(TAPPABLE));
+    if (lastTap && !tappable && now - lastTap.t < DOUBLE_MS && Math.hypot(t.clientX - lastTap.x, t.clientY - lastTap.y) < DOUBLE_GAP) {
+      lastTap = null;
+      swallow();
+      runGesture("double-tap", g);
+    } else {
+      lastTap = tappable || g.zoomed ? null : { t: now, x: t.clientX, y: t.clientY };
+    }
   }
 
   // ------------------------------------------------------------------ layout
@@ -1290,6 +1546,7 @@ const Lattice = (() => {
     }
     fit();
     render(null, { kind: "sync", dir: 0 });
+    setupTouch();
     document.documentElement.classList.add("lt-ready");
   }
 

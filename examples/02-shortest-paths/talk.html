@@ -2,15 +2,17 @@
 <html lang="en" data-lattice="1" data-theme="default">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="lattice 0.35.1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="generator" content="lattice 0.36.0">
 <title>Shortest Paths</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--lt-backdrop);color:var(--lt-ink);overflow:hidden}
 body{font-family:var(--lt-font-body);-webkit-font-smoothing:antialiased}
-#lt-root{position:fixed;inset:0;display:flex}
+/* the safe areas of a phone's notch and rounded corners (viewport-fit=cover); zero everywhere else */
+#lt-root{position:fixed;inset:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px)
+  env(safe-area-inset-left,0px);display:flex}
 #lt-stage{position:relative;flex:1;overflow:hidden}
 #lt-viewport{position:absolute;left:0;top:0;width:var(--lt-w);height:var(--lt-h);transform-origin:0 0;
   background:var(--lt-bg);overflow:hidden;box-shadow:0 0 0 1px var(--lt-rule)}
@@ -481,6 +483,39 @@ html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone
   padding:8px 12px;border-radius:6px;cursor:pointer;text-align:left}
 .lt-goto li.sel button,.lt-goto button:hover{background:var(--lt-accent-soft)}
 .lt-goto small{color:var(--lt-muted);font-family:var(--lt-font-code)}
+
+/* touch input (spec 7.8): only under html.lt-touch, set on phones and tablets; the controls exist only once it is on */
+html:not(.lt-touch) .lt-tc{display:none !important}
+html.lt-touch,html.lt-touch body{overscroll-behavior:none}
+html.lt-touch #lt-stage{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.lt-tc-bar{position:fixed;z-index:60;top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);
+  display:flex;gap:6px}
+.lt-tc button{font:600 13px/1 var(--lt-font-body);color:var(--lt-ink);background:var(--lt-bg);border:1px solid var(--lt-rule);
+  border-radius:999px;padding:8px 12px;min-height:34px;min-width:34px;cursor:pointer;touch-action:manipulation}
+.lt-tc-bar button{opacity:.72}
+.lt-tc button:focus-visible{outline:2px solid var(--lt-accent);outline-offset:2px;opacity:1}
+.lt-tc-bar button[aria-pressed="true"]{opacity:1;border-color:var(--lt-accent);color:var(--lt-accent)}
+.lt-tc-sheet{position:fixed;z-index:70;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
+  width:min(560px,calc(100vw - 32px));max-height:min(78vh,560px);overflow:auto;overscroll-behavior:contain;
+  background:var(--lt-bg);color:var(--lt-ink);border:1px solid var(--lt-rule);border-radius:14px;
+  box-shadow:0 10px 40px rgba(0,0,0,.22);padding:14px 16px 16px;font:15px/1.45 var(--lt-font-body);
+  -webkit-user-select:text;user-select:text;touch-action:pan-y}
+.lt-tc-sheet[hidden]{display:none}
+.lt-tc-sheet h2{margin:0 0 8px;font:650 16px/1.2 var(--lt-font-head);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.lt-tc-sheet table{border-collapse:collapse;width:100%}
+.lt-tc-sheet td{padding:6px 0;border-top:1px solid var(--lt-rule);vertical-align:top}
+.lt-tc-sheet td:first-child{font-weight:600;padding-right:14px;white-space:nowrap}
+.lt-tc-actions{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 12px}
+.lt-tc-actions button{border-color:var(--lt-accent);color:var(--lt-accent)}
+.lt-tc-muted{color:var(--lt-muted);font-size:13px;margin:10px 0 0}
+.lt-tc-muted[hidden]{display:none}
+.lt-tc-notes .lt-tc-notes-title{margin:0 0 6px}
+.lt-tc-notes-body p{margin:0 0 8px}
+.lt-tc-toast{position:fixed;z-index:65;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);
+  background:var(--lt-ink);color:var(--lt-bg);font:600 13px/1 var(--lt-font-body);padding:8px 12px;border-radius:999px;
+  pointer-events:none;opacity:0;transition:opacity .15s}
+.lt-tc-toast.lt-on{opacity:.88}
+@media (prefers-reduced-motion:reduce){.lt-tc-toast{transition:none}}
 
 /* presenter view */
 .lt-presenter #lt-stage{flex:0 0 64%}
@@ -1402,7 +1437,7 @@ so <span class="lt-math" data-display="0">y</span> would have been popped before
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.35.1","meta":{"title":"Shortest Paths","author":"Algorithms, week 5","date":null,"aspect":"16:9","theme":"default"},"start":"shortest-paths","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"next-checkpoint":["Shift+ArrowRight"],"prev-checkpoint":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["shortest-paths","problem","bfs","dijkstra","complexity","heap-what","heap-ops","questions","bellman-ford","dijkstra-proof"],"slides":{"shortest-paths":{"title":"Shortest Paths","label":"Shortest Paths","scope":"root","next":{"slide":"problem"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":9}},"problem":{"title":"The problem","label":"The problem","scope":"root","next":{"slide":"bfs"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"parts/intro.md","line":1},"notes":"<p>Ask the room for other applications before revealing the list.<\/p>\n"},"bfs":{"title":"Unweighted warm-up: BFS","label":"Unweighted warm-up: BFS","scope":"root","next":{"slide":"dijkstra"},"branches":[],"detours":[],"steps":21,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"bfs","kind":"component","instance":"bfs/bfs"}],"positions":[[0,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12],[2,13],[2,14],[2,15],[2,16],[2,17],[2,18],[3,18]],"offpath":false,"source":{"file":"parts/intro.md","line":14},"checkpoints":[1,19,20]},"dijkstra":{"title":"Dijkstra's algorithm","label":"Dijkstra's algorithm","scope":"root","next":{"slide":"complexity"},"branches":[],"detours":[],"steps":36,"tracks":[{"id":"code","kind":"component","instance":"dijkstra/code","follow":"trace"},{"id":"trace","kind":"component","instance":"dijkstra/trace"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26],[27,27],[28,28],[29,29],[30,30],[31,31],[32,32],[33,33],[34,34],[35,35]],"offpath":false,"source":{"file":"parts/dijkstra.md","line":1},"notes":"<p>The code on the left follows the animation: each frame names the line it executes.\nIf someone asks about negative weights, go to <a class=\"lt-link\" href=\"#/bellman-ford/0\" data-lt-link=\"bellman-ford\">Negative weights: Bellman-Ford<\/a>.\nFor the correctness argument, see <a class=\"lt-link\" href=\"#/dijkstra-proof/0\" data-lt-link=\"dijkstra-proof\">Why Dijkstra is correct<\/a>.<\/p>\n"},"complexity":{"title":"Complexity","label":"Complexity","scope":"root","next":{"slide":"questions"},"branches":[],"detours":["heap-refresher"],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"parts/dijkstra.md","line":22},"notes":"<p>Numbers in the chart are illustrative, generated for this example.<\/p>\n"},"heap-what":{"title":"What is a binary heap?","label":"What is a binary heap?","scope":"heap-refresher","next":{"slide":"heap-ops"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"shared/heaps.md","line":1}},"heap-ops":{"title":"Push: sift up","label":"Push: sift up","scope":"heap-refresher","next":"back","branches":[],"detours":[],"steps":6,"tracks":[{"id":"c1","kind":"component","instance":"heap-ops/c1"}],"positions":[[0],[1],[2],[3],[4],[5]],"offpath":false,"source":{"file":"shared/heaps.md","line":21}},"questions":{"title":"Questions?","label":"Questions?","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":16}},"bellman-ford":{"title":"Negative weights: Bellman-Ford","label":"Negative weights: Bellman-Ford","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"parts/backup.md","line":1}},"dijkstra-proof":{"title":"Why Dijkstra is correct","label":"Why Dijkstra is correct","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"parts/backup.md","line":14}}},"detours":{"heap-refresher":{"origin":"complexity","entry":"heap-what","label":"Refresher: binary heaps","key":"h","slides":["heap-what","heap-ops"]}},"instances":{"bfs/bfs":{"component":"graph-anim","slide":"bfs","data":"lt-data-bfs/bfs"},"dijkstra/code":{"component":"code","slide":"dijkstra","data":"lt-data-dijkstra/code"},"dijkstra/trace":{"component":"graph-anim","slide":"dijkstra","data":"lt-data-dijkstra/trace"},"complexity/c1":{"component":"plot","slide":"complexity","data":null},"heap-what/c1":{"component":"dot","slide":"heap-what","data":null},"heap-ops/c1":{"component":"array-anim","slide":"heap-ops","data":"lt-data-heap-ops/c1"},"bellman-ford/c1":{"component":"dot","slide":"bellman-ford","data":null}},"tours":{"short":["shortest-paths","problem","dijkstra","complexity","questions"],"full":["shortest-paths","problem","bfs","dijkstra","complexity","questions"]},"mainPath":["shortest-paths","problem","bfs","dijkstra","complexity","questions"],"overview":{"nodes":{"shortest-paths":{"x":58.5,"y":63.0,"w":101.0,"h":26.0,"label":"Shortest Paths"},"problem":{"x":184.0,"y":63.0,"w":90.0,"h":26.0,"label":"The problem"},"bfs":{"x":344.0,"y":63.0,"w":170.0,"h":26.0,"label":"Unweighted warm-up: BFS"},"dijkstra":{"x":525.0,"y":63.0,"w":132.0,"h":26.0,"label":"Dijkstra's algorithm"},"complexity":{"x":662.0,"y":63.0,"w":82.0,"h":26.0,"label":"Complexity"},"heap-what":{"x":807.0,"y":21.0,"w":148.0,"h":26.0,"label":"What is a binary heap?"},"heap-ops":{"x":1002.5,"y":21.0,"w":88.0,"h":26.0,"label":"Push: sift up"},"questions":{"x":807.0,"y":63.0,"w":81.0,"h":26.0,"label":"Questions?"},"bellman-ford":{"x":1002.5,"y":70.0,"w":183.0,"h":26.0,"label":"Negative weights: Bellman…"},"dijkstra-proof":{"x":1002.5,"y":127.0,"w":150.0,"h":26.0,"label":"Why Dijkstra is correct"}},"edges":[{"from":"shortest-paths","to":"problem","kind":"next","path":"M109.0,63.0 C116.7,63.0 124.6,63.0 132.3,63.0 L138.7,63.0"},{"from":"problem","to":"bfs","kind":"next","path":"M229.0,63.0 C236.5,63.0 244.5,63.0 252.7,63.0 L259.0,63.0"},{"from":"problem","to":"bellman-ford","kind":"link","path":"M224.2,76.1 C235.3,79.2 247.5,82.2 259.0,84.0 C532.2,126.3 606.1,125.3 881.0,96.0 C902.7,93.7 926.2,89.1 946.7,84.4 L952.6,83.0"},{"from":"bfs","to":"dijkstra","kind":"next","path":"M429.3,63.0 C437.1,63.0 444.9,63.0 452.6,63.0 L458.9,63.0"},{"from":"dijkstra","to":"complexity","kind":"next","path":"M591.1,63.0 C599.0,63.0 607.0,63.0 614.5,63.0 L620.8,63.0"},{"from":"dijkstra","to":"bellman-ford","kind":"link","path":"M575.5,76.1 C590.0,79.3 606.1,82.4 621.0,84.0 C735.9,96.5 765.6,90.7 881.0,84.0 C888.7,83.6 896.7,82.9 904.7,82.2 L910.8,81.7"},{"from":"dijkstra","to":"dijkstra-proof","kind":"link","path":"M558.4,76.1 C576.5,82.9 599.7,90.6 621.0,95.0 C723.1,116.2 843.4,123.4 921.0,125.8 L927.5,126.0"},{"from":"complexity","to":"heap-what","kind":"detour","path":"M703.3,50.8 C713.0,47.9 723.4,44.8 733.0,42.0 C739.9,40.0 747.2,37.8 754.4,35.8 L760.4,34.0"},{"from":"complexity","to":"questions","kind":"next","path":"M703.2,63.0 C720.9,63.0 741.7,63.0 760.0,63.0 L766.1,63.0"},{"from":"heap-what","to":"heap-ops","kind":"next","path":"M881.1,21.0 C904.8,21.0 930.5,21.0 952.0,21.0 L958.3,21.0"}],"width":1102.0,"height":148.0},"hash":"2d6dd1403ebd60e4"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.36.0","meta":{"title":"Shortest Paths","author":"Algorithms, week 5","date":null,"aspect":"16:9","theme":"default"},"start":"shortest-paths","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"next-checkpoint":["Shift+ArrowRight"],"prev-checkpoint":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"gestures":{"swipe-left":"next","swipe-right":"prev","swipe-up":"enter-detour","swipe-down":"return","two-finger-swipe-left":"next-checkpoint","two-finger-swipe-right":"prev-checkpoint","double-tap":"goto","long-press":"overview","two-finger-tap":"undo"},"touch":true,"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["shortest-paths","problem","bfs","dijkstra","complexity","heap-what","heap-ops","questions","bellman-ford","dijkstra-proof"],"slides":{"shortest-paths":{"title":"Shortest Paths","label":"Shortest Paths","scope":"root","next":{"slide":"problem"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":9}},"problem":{"title":"The problem","label":"The problem","scope":"root","next":{"slide":"bfs"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"parts/intro.md","line":1},"notes":"<p>Ask the room for other applications before revealing the list.<\/p>\n"},"bfs":{"title":"Unweighted warm-up: BFS","label":"Unweighted warm-up: BFS","scope":"root","next":{"slide":"dijkstra"},"branches":[],"detours":[],"steps":21,"tracks":[{"id":"reveal","kind":"reveal"},{"id":"bfs","kind":"component","instance":"bfs/bfs"}],"positions":[[0,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],[2,11],[2,12],[2,13],[2,14],[2,15],[2,16],[2,17],[2,18],[3,18]],"offpath":false,"source":{"file":"parts/intro.md","line":14},"checkpoints":[1,19,20]},"dijkstra":{"title":"Dijkstra's algorithm","label":"Dijkstra's algorithm","scope":"root","next":{"slide":"complexity"},"branches":[],"detours":[],"steps":36,"tracks":[{"id":"code","kind":"component","instance":"dijkstra/code","follow":"trace"},{"id":"trace","kind":"component","instance":"dijkstra/trace"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18],[19,19],[20,20],[21,21],[22,22],[23,23],[24,24],[25,25],[26,26],[27,27],[28,28],[29,29],[30,30],[31,31],[32,32],[33,33],[34,34],[35,35]],"offpath":false,"source":{"file":"parts/dijkstra.md","line":1},"notes":"<p>The code on the left follows the animation: each frame names the line it executes.\nIf someone asks about negative weights, go to <a class=\"lt-link\" href=\"#/bellman-ford/0\" data-lt-link=\"bellman-ford\">Negative weights: Bellman-Ford<\/a>.\nFor the correctness argument, see <a class=\"lt-link\" href=\"#/dijkstra-proof/0\" data-lt-link=\"dijkstra-proof\">Why Dijkstra is correct<\/a>.<\/p>\n"},"complexity":{"title":"Complexity","label":"Complexity","scope":"root","next":{"slide":"questions"},"branches":[],"detours":["heap-refresher"],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"parts/dijkstra.md","line":22},"notes":"<p>Numbers in the chart are illustrative, generated for this example.<\/p>\n"},"heap-what":{"title":"What is a binary heap?","label":"What is a binary heap?","scope":"heap-refresher","next":{"slide":"heap-ops"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"shared/heaps.md","line":1}},"heap-ops":{"title":"Push: sift up","label":"Push: sift up","scope":"heap-refresher","next":"back","branches":[],"detours":[],"steps":6,"tracks":[{"id":"c1","kind":"component","instance":"heap-ops/c1"}],"positions":[[0],[1],[2],[3],[4],[5]],"offpath":false,"source":{"file":"shared/heaps.md","line":21}},"questions":{"title":"Questions?","label":"Questions?","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":16}},"bellman-ford":{"title":"Negative weights: Bellman-Ford","label":"Negative weights: Bellman-Ford","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"parts/backup.md","line":1}},"dijkstra-proof":{"title":"Why Dijkstra is correct","label":"Why Dijkstra is correct","scope":"root","next":"back","branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":true,"source":{"file":"parts/backup.md","line":14}}},"detours":{"heap-refresher":{"origin":"complexity","entry":"heap-what","label":"Refresher: binary heaps","key":"h","slides":["heap-what","heap-ops"]}},"instances":{"bfs/bfs":{"component":"graph-anim","slide":"bfs","data":"lt-data-bfs/bfs"},"dijkstra/code":{"component":"code","slide":"dijkstra","data":"lt-data-dijkstra/code"},"dijkstra/trace":{"component":"graph-anim","slide":"dijkstra","data":"lt-data-dijkstra/trace"},"complexity/c1":{"component":"plot","slide":"complexity","data":null},"heap-what/c1":{"component":"dot","slide":"heap-what","data":null},"heap-ops/c1":{"component":"array-anim","slide":"heap-ops","data":"lt-data-heap-ops/c1"},"bellman-ford/c1":{"component":"dot","slide":"bellman-ford","data":null}},"tours":{"short":["shortest-paths","problem","dijkstra","complexity","questions"],"full":["shortest-paths","problem","bfs","dijkstra","complexity","questions"]},"mainPath":["shortest-paths","problem","bfs","dijkstra","complexity","questions"],"overview":{"nodes":{"shortest-paths":{"x":58.5,"y":63.0,"w":101.0,"h":26.0,"label":"Shortest Paths"},"problem":{"x":184.0,"y":63.0,"w":90.0,"h":26.0,"label":"The problem"},"bfs":{"x":344.0,"y":63.0,"w":170.0,"h":26.0,"label":"Unweighted warm-up: BFS"},"dijkstra":{"x":525.0,"y":63.0,"w":132.0,"h":26.0,"label":"Dijkstra's algorithm"},"complexity":{"x":662.0,"y":63.0,"w":82.0,"h":26.0,"label":"Complexity"},"heap-what":{"x":807.0,"y":21.0,"w":148.0,"h":26.0,"label":"What is a binary heap?"},"heap-ops":{"x":1002.5,"y":21.0,"w":88.0,"h":26.0,"label":"Push: sift up"},"questions":{"x":807.0,"y":63.0,"w":81.0,"h":26.0,"label":"Questions?"},"bellman-ford":{"x":1002.5,"y":70.0,"w":183.0,"h":26.0,"label":"Negative weights: Bellman…"},"dijkstra-proof":{"x":1002.5,"y":127.0,"w":150.0,"h":26.0,"label":"Why Dijkstra is correct"}},"edges":[{"from":"shortest-paths","to":"problem","kind":"next","path":"M109.0,63.0 C116.7,63.0 124.6,63.0 132.3,63.0 L138.7,63.0"},{"from":"problem","to":"bfs","kind":"next","path":"M229.0,63.0 C236.5,63.0 244.5,63.0 252.7,63.0 L259.0,63.0"},{"from":"problem","to":"bellman-ford","kind":"link","path":"M224.2,76.1 C235.3,79.2 247.5,82.2 259.0,84.0 C532.2,126.3 606.1,125.3 881.0,96.0 C902.7,93.7 926.2,89.1 946.7,84.4 L952.6,83.0"},{"from":"bfs","to":"dijkstra","kind":"next","path":"M429.3,63.0 C437.1,63.0 444.9,63.0 452.6,63.0 L458.9,63.0"},{"from":"dijkstra","to":"complexity","kind":"next","path":"M591.1,63.0 C599.0,63.0 607.0,63.0 614.5,63.0 L620.8,63.0"},{"from":"dijkstra","to":"bellman-ford","kind":"link","path":"M575.5,76.1 C590.0,79.3 606.1,82.4 621.0,84.0 C735.9,96.5 765.6,90.7 881.0,84.0 C888.7,83.6 896.7,82.9 904.7,82.2 L910.8,81.7"},{"from":"dijkstra","to":"dijkstra-proof","kind":"link","path":"M558.4,76.1 C576.5,82.9 599.7,90.6 621.0,95.0 C723.1,116.2 843.4,123.4 921.0,125.8 L927.5,126.0"},{"from":"complexity","to":"heap-what","kind":"detour","path":"M703.3,50.8 C713.0,47.9 723.4,44.8 733.0,42.0 C739.9,40.0 747.2,37.8 754.4,35.8 L760.4,34.0"},{"from":"complexity","to":"questions","kind":"next","path":"M703.2,63.0 C720.9,63.0 741.7,63.0 760.0,63.0 L766.1,63.0"},{"from":"heap-what","to":"heap-ops","kind":"next","path":"M881.1,21.0 C904.8,21.0 930.5,21.0 952.0,21.0 L958.3,21.0"}],"width":1102.0,"height":148.0},"hash":"7fadfedb313f9fa0"}</script>
 <script type="application/json" id="lt-data-bfs/bfs">{"layout":{"width":542.0,"height":161.0,"directed":false,"nodes":{"A":{"x":46.0,"y":81.0,"r":20.0},"B":{"x":136.0,"y":115.0,"r":20.0},"C":{"x":226.0,"y":46.0,"r":20.0},"D":{"x":316.0,"y":115.0,"r":20.0},"E":{"x":406.0,"y":46.0,"r":20.0},"F":{"x":496.0,"y":81.0,"r":20.0}},"edges":{"A--B":{"u":"A","v":"B","path":"M64.81,87.88 C79.97,93.74 101.67,102.12 116.92,108.01"},"A--C":{"u":"A","v":"C","path":"M65.71,77.32 C99.9,70.6 172.07,56.41 206.27,49.68"},"B--C":{"u":"B","v":"C","path":"M152.33,102.98 C168.48,90.32 193.76,70.49 209.85,57.88"},"B--D":{"u":"B","v":"D","path":"M156.05,115.0 C190.22,115.0 261.55,115.0 295.82,115.0"},"C--D":{"u":"C","v":"D","path":"M242.33,58.02 C258.48,70.68 283.76,90.51 299.85,103.12"},"C--E":{"u":"C","v":"E","path":"M246.05,46.0 C280.22,46.0 351.55,46.0 385.82,46.0"},"D--E":{"u":"D","v":"E","path":"M332.33,102.98 C348.48,90.32 373.76,70.49 389.85,57.88"},"D--F":{"u":"D","v":"F","path":"M335.71,111.43 C369.9,104.9 442.07,91.11 476.27,84.58"},"E--F":{"u":"E","v":"F","path":"M424.81,53.08 C440.08,59.16 461.96,67.86 477.22,73.93"}}},"frames":{"format":"full","count":19,"frames":[{"nodes":{"A":{"state":"frontier","label":0}},"caption":"Start at A, layer 0"},{"nodes":{"A":{"state":"active","label":0}},"caption":"Visit A"},{"nodes":{"A":{"state":"active","label":0},"B":{"state":"frontier","label":1}},"caption":"Visit A","edges":{"A--B":{"state":"tree"}}},{"nodes":{"A":{"state":"active","label":0},"B":{"state":"frontier","label":1},"C":{"state":"frontier","label":1}},"caption":"Discover B, C in layer 1","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":1},"C":{"state":"frontier","label":1}},"caption":"Visit A","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"active","label":1},"C":{"state":"frontier","label":1}},"caption":"Visit B","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"active","label":1},"C":{"state":"frontier","label":1},"D":{"state":"frontier","label":2}},"caption":"Discover D in layer 2","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"frontier","label":1},"D":{"state":"frontier","label":2}},"caption":"Visit B","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"active","label":1},"D":{"state":"frontier","label":2}},"caption":"Visit C","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"active","label":1},"D":{"state":"frontier","label":2},"E":{"state":"frontier","label":2}},"caption":"Discover E in layer 2","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"frontier","label":2},"E":{"state":"frontier","label":2}},"caption":"Visit C","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"active","label":2},"E":{"state":"frontier","label":2}},"caption":"Visit D","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"active","label":2},"E":{"state":"frontier","label":2},"F":{"state":"frontier","label":3}},"caption":"Discover F in layer 3","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"visited","label":2},"E":{"state":"frontier","label":2},"F":{"state":"frontier","label":3}},"caption":"Visit D","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"visited","label":2},"E":{"state":"active","label":2},"F":{"state":"frontier","label":3}},"caption":"Visit E","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"visited","label":2},"E":{"state":"visited","label":2},"F":{"state":"frontier","label":3}},"caption":"Visit E","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"visited","label":2},"E":{"state":"visited","label":2},"F":{"state":"active","label":3}},"caption":"Visit F","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"visited","label":2},"E":{"state":"visited","label":2},"F":{"state":"visited","label":3}},"caption":"Visit F","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":1},"C":{"state":"visited","label":1},"D":{"state":"visited","label":2},"E":{"state":"visited","label":2},"F":{"state":"visited","label":3}},"caption":"Every vertex is labelled with its number of edges from A","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"B--D":{"state":"tree"},"C--E":{"state":"tree"},"D--F":{"state":"tree"}}}]},"panel":null,"height":360}</script>
 <script type="application/json" id="lt-data-dijkstra/code">{"steps":[[3,4],[6],[10],[11,12],[10],[11,12],[5],[6],[10],[11,12],[10],[11,12],[10],[11,12],[5],[6],[10],[11,12],[5],[7,8],[6],[10],[11,12],[10],[11,12],[5],[7,8],[6],[10],[11,12],[5],[7,8],[6],[5],[7,8],[13]]}</script>
 <script type="application/json" id="lt-data-dijkstra/trace">{"layout":{"width":587.0,"height":167.0,"directed":false,"nodes":{"A":{"x":46.0,"y":97.0,"r":20.0},"B":{"x":145.0,"y":58.0,"r":20.0},"C":{"x":244.0,"y":121.0,"r":20.0},"D":{"x":343.0,"y":46.0,"r":20.0},"E":{"x":442.0,"y":118.0,"r":20.0},"F":{"x":541.0,"y":76.0,"r":20.0}},"edges":{"A--B":{"u":"A","v":"B","path":"M64.79,89.85 C82.18,82.85 108.53,72.26 125.99,65.24","label":"4","lx":95.5,"ly":70.0},"A--C":{"u":"A","v":"C","path":"M65.89,99.83 C81.68,102.15 104.78,105.46 125.0,108.0 C159.76,112.36 200.39,116.67 223.77,119.06","label":"2","lx":145.0,"ly":101.0},"B--C":{"u":"B","v":"C","path":"M162.45,68.69 C180.4,80.34 208.94,98.88 226.79,110.47","label":"1","lx":194.5,"ly":81.0},"B--D":{"u":"B","v":"D","path":"M165.15,56.83 C202.62,54.53 285.24,49.47 322.77,47.18","label":"5","lx":244.0,"ly":44.0},"C--D":{"u":"C","v":"D","path":"M260.58,108.95 C278.79,94.87 308.72,71.73 326.77,57.77","label":"8","lx":293.5,"ly":75.0},"C--E":{"u":"C","v":"E","path":"M264.15,120.71 C301.62,120.13 384.24,118.87 421.77,118.29","label":"10","lx":343.0,"ly":113.0},"D--E":{"u":"D","v":"E","path":"M359.58,57.57 C377.69,71.0 407.37,93.04 425.45,106.46","label":"2","lx":392.5,"ly":73.0},"D--F":{"u":"D","v":"F","path":"M362.79,48.88 C400.16,54.6 483.42,67.34 520.98,73.09","label":"6","lx":442.0,"ly":52.0},"E--F":{"u":"E","v":"F","path":"M460.79,110.3 C478.29,102.72 504.86,91.22 522.32,83.66","label":"2","lx":491.5,"ly":89.0}}},"frames":{"format":"full","count":36,"frames":[{"nodes":{"A":{"state":"frontier","label":0}},"panel":{"dist":{"A":0,"B":"∞","C":"∞","D":"∞","E":"∞","F":"∞"},"queue":["A:0"]},"caption":"dist[A] = 0, push A"},{"nodes":{"A":{"state":"active","label":0}},"panel":{"dist":{"A":0,"B":"∞","C":"∞","D":"∞","E":"∞","F":"∞"},"queue":[]},"caption":"Pop A at distance 0"},{"nodes":{"A":{"state":"active","label":0}},"panel":{"dist":{"A":0,"B":"∞","C":"∞","D":"∞","E":"∞","F":"∞"},"queue":[]},"caption":"Relax A-B: 0 + 4 vs inf","edges":{"A--B":{"state":"active"}}},{"nodes":{"A":{"state":"active","label":0},"B":{"state":"frontier","label":4}},"panel":{"dist":{"A":0,"B":4,"C":"∞","D":"∞","E":"∞","F":"∞"},"queue":["B:4"]},"caption":"Improve dist[B] to 4","edges":{"A--B":{"state":"tree"}}},{"nodes":{"A":{"state":"active","label":0},"B":{"state":"frontier","label":4}},"panel":{"dist":{"A":0,"B":4,"C":"∞","D":"∞","E":"∞","F":"∞"},"queue":["B:4"]},"caption":"Relax A-C: 0 + 2 vs inf","edges":{"A--B":{"state":"tree"},"A--C":{"state":"active"}}},{"nodes":{"A":{"state":"active","label":0},"B":{"state":"frontier","label":4},"C":{"state":"frontier","label":2}},"panel":{"dist":{"A":0,"B":4,"C":2,"D":"∞","E":"∞","F":"∞"},"queue":["C:2","B:4"]},"caption":"Improve dist[C] to 2","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":4},"C":{"state":"frontier","label":2}},"panel":{"dist":{"A":0,"B":4,"C":2,"D":"∞","E":"∞","F":"∞"},"queue":["C:2","B:4"]},"caption":"A is final","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":4},"C":{"state":"active","label":2}},"panel":{"dist":{"A":0,"B":4,"C":2,"D":"∞","E":"∞","F":"∞"},"queue":["B:4"]},"caption":"Pop C at distance 2","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":4},"C":{"state":"active","label":2}},"panel":{"dist":{"A":0,"B":4,"C":2,"D":"∞","E":"∞","F":"∞"},"queue":["B:4"]},"caption":"Relax C-B: 2 + 1 vs 4","edges":{"A--B":{"state":"tree"},"A--C":{"state":"tree"},"C--B":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":3},"C":{"state":"active","label":2}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":"∞","E":"∞","F":"∞"},"queue":["B:3","B:4"]},"caption":"Improve dist[B] to 3","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":3},"C":{"state":"active","label":2}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":"∞","E":"∞","F":"∞"},"queue":["B:3","B:4"]},"caption":"Relax C-D: 2 + 8 vs inf","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":3},"C":{"state":"active","label":2},"D":{"state":"frontier","label":10}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":10,"E":"∞","F":"∞"},"queue":["B:3","B:4","D:10"]},"caption":"Improve dist[D] to 10","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":3},"C":{"state":"active","label":2},"D":{"state":"frontier","label":10}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":10,"E":"∞","F":"∞"},"queue":["B:3","B:4","D:10"]},"caption":"Relax C-E: 2 + 10 vs inf","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"tree"},"C--E":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":3},"C":{"state":"active","label":2},"D":{"state":"frontier","label":10},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":10,"E":12,"F":"∞"},"queue":["B:3","B:4","D:10","E:12"]},"caption":"Improve dist[E] to 12","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"tree"},"C--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"frontier","label":3},"C":{"state":"visited","label":2},"D":{"state":"frontier","label":10},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":10,"E":12,"F":"∞"},"queue":["B:3","B:4","D:10","E:12"]},"caption":"C is final","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"tree"},"C--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"active","label":3},"C":{"state":"visited","label":2},"D":{"state":"frontier","label":10},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":10,"E":12,"F":"∞"},"queue":["B:4","D:10","E:12"]},"caption":"Pop B at distance 3","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"tree"},"C--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"active","label":3},"C":{"state":"visited","label":2},"D":{"state":"frontier","label":10},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":10,"E":12,"F":"∞"},"queue":["B:4","D:10","E:12"]},"caption":"Relax B-D: 3 + 5 vs 10","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--D":{"state":"tree"},"C--E":{"state":"tree"},"B--D":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"active","label":3},"C":{"state":"visited","label":2},"D":{"state":"frontier","label":8},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":12,"F":"∞"},"queue":["B:4","D:8","D:10","E:12"]},"caption":"Improve dist[D] to 8","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--E":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"frontier","label":8},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":12,"F":"∞"},"queue":["B:4","D:8","D:10","E:12"]},"caption":"B is final","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--E":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"frontier","label":8},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":12,"F":"∞"},"queue":["D:8","D:10","E:12"]},"caption":"Stale entry B:4, skip it","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--E":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"active","label":8},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":12,"F":"∞"},"queue":["D:10","E:12"]},"caption":"Pop D at distance 8","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--E":{"state":"tree"},"B--D":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"active","label":8},"E":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":12,"F":"∞"},"queue":["D:10","E:12"]},"caption":"Relax D-E: 8 + 2 vs 12","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"C--E":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"active","label":8},"E":{"state":"frontier","label":10}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":"∞"},"queue":["D:10","E:10","E:12"]},"caption":"Improve dist[E] to 10","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"active","label":8},"E":{"state":"frontier","label":10}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":"∞"},"queue":["D:10","E:10","E:12"]},"caption":"Relax D-F: 8 + 6 vs inf","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"D--F":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"active","label":8},"E":{"state":"frontier","label":10},"F":{"state":"frontier","label":14}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":14},"queue":["D:10","E:10","E:12","F:14"]},"caption":"Improve dist[F] to 14","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"frontier","label":10},"F":{"state":"frontier","label":14}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":14},"queue":["D:10","E:10","E:12","F:14"]},"caption":"D is final","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"frontier","label":10},"F":{"state":"frontier","label":14}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":14},"queue":["E:10","E:12","F:14"]},"caption":"Stale entry D:10, skip it","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"active","label":10},"F":{"state":"frontier","label":14}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":14},"queue":["E:12","F:14"]},"caption":"Pop E at distance 10","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"D--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"active","label":10},"F":{"state":"frontier","label":14}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":14},"queue":["E:12","F:14"]},"caption":"Relax E-F: 10 + 2 vs 14","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"D--F":{"state":"tree"},"E--F":{"state":"active"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"active","label":10},"F":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":["E:12","F:12","F:14"]},"caption":"Improve dist[F] to 12","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"visited","label":10},"F":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":["E:12","F:12","F:14"]},"caption":"E is final","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"visited","label":10},"F":{"state":"frontier","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":["F:12","F:14"]},"caption":"Stale entry E:12, skip it","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"visited","label":10},"F":{"state":"active","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":["F:14"]},"caption":"Pop F at distance 12","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"visited","label":10},"F":{"state":"visited","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":["F:14"]},"caption":"F is final","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"visited","label":10},"F":{"state":"visited","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":[]},"caption":"Stale entry F:14, skip it","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}},{"nodes":{"A":{"state":"visited","label":0},"B":{"state":"visited","label":3},"C":{"state":"visited","label":2},"D":{"state":"visited","label":8},"E":{"state":"visited","label":10},"F":{"state":"visited","label":12}},"panel":{"dist":{"A":0,"B":3,"C":2,"D":8,"E":10,"F":12},"queue":[]},"caption":"Queue empty: the tree edges form a shortest-path tree","edges":{"A--C":{"state":"tree"},"C--B":{"state":"tree"},"B--D":{"state":"tree"},"D--E":{"state":"tree"},"E--F":{"state":"tree"}}}]},"panel":["dist","queue"],"height":330}</script>
@@ -1979,6 +2014,7 @@ const Lattice = (() => {
     save();
     if (!how || how.kind !== "sync") broadcast();
     if (presenter) updatePresenter();
+    refreshTouchNotes();
   }
 
   // ------------------------------------------------------------------ HUD
@@ -2079,6 +2115,7 @@ const Lattice = (() => {
   const ZOOM_MS = 350;
   const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "AltGraph", "CapsLock", "OS", "Hyper", "Super"]);
   let swallowClick = false;
+  let pressOverZoom = false; // the latest press began while an element was enlarged
   const reducedMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function zoomLayer() {
@@ -2171,6 +2208,7 @@ const Lattice = (() => {
   function onZoomPointer(e) {
     if (e.type === "pointerdown") {
       swallowClick = false;
+      pressOverZoom = !!zoomed; // read by the gesture this press starts (pointerdown comes before touchstart)
       if (!zoomed || zoomed.card.contains(e.target)) return;
       swallowClick = true; // the mousedown and click of this press are swallowed too
       e.preventDefault();
@@ -2586,15 +2624,21 @@ const Lattice = (() => {
     const action = (e.shiftKey && map[`Shift+${e.key}`]) || map[e.key];
     if (action && actions[action]) {
       e.preventDefault();
-      if (CHECKPOINT_KEYS.has(action)) {
-        if (e.repeat) return; // holding the keys moves one checkpoint (spec 7.6)
-        const anchor = checkpointAnchor(action); // before stopPlaying: it reads the playback under way
-        stopPlaying();
-        return actions[action](anchor);
-      }
-      stopPlaying();
-      actions[action]();
+      if (CHECKPOINT_KEYS.has(action) && e.repeat) return; // holding the keys moves one checkpoint (spec 7.6)
+      perform(action);
     }
+  }
+
+  // A global action (spec 7.6) from a key or a gesture (spec 7.8): a playback under way stops, and the
+  // checkpoint actions count from their anchor, read before the playback is stopped.
+  function perform(action) {
+    if (CHECKPOINT_KEYS.has(action)) {
+      const anchor = checkpointAnchor(action);
+      stopPlaying();
+      return actions[action](anchor);
+    }
+    stopPlaying();
+    return actions[action]();
   }
 
   function onClick(e) {
@@ -2608,6 +2652,253 @@ const Lattice = (() => {
     if (detour) { e.preventDefault(); actions.enter(detour.dataset.ltDetour); return; }
     if (e.target.closest(".lt-pp-timer")) { timerStart = Date.now(); tickTimer(); return; }
     if (e.target.id === "lt-overlay") closeOverlay();
+  }
+
+  // ------------------------------------------------------------------ touch input (spec 7.8)
+  // On a phone or a tablet (the primary pointer is a finger: no hover, coarse), gestures run the deck's actions
+  // and a few buttons give the notes and the help. Elsewhere nothing of this exists: the class `lt-touch` scopes
+  // every style, and the buttons and sheets are created when touch mode first turns on. `?touch` and `?touch=0`
+  // force it on or off, and win over the front matter's `touch: false`. Passive windows never have it.
+  const TOUCH_QUERY = "(hover: none) and (pointer: coarse)";
+  const SWIPE = 45, TAP_MOVE = 12, LONG_MS = 550, DOUBLE_MS = 320, DOUBLE_GAP = 40, TAP_MS = 400, SWIPE_MS = 900;
+  const GESTURE_LABELS = {
+    "swipe-left": "Swipe left", "swipe-right": "Swipe right", "swipe-up": "Swipe up", "swipe-down": "Swipe down",
+    "two-finger-swipe-left": "Two-finger swipe left", "two-finger-swipe-right": "Two-finger swipe right",
+    "two-finger-swipe-up": "Two-finger swipe up", "two-finger-swipe-down": "Two-finger swipe down",
+    "double-tap": "Double tap", "long-press": "Long press", "two-finger-tap": "Two-finger tap",
+  };
+  const ACTION_TOASTS = {
+    next: "Next", prev: "Back", undo: "Undo", "next-checkpoint": "Next checkpoint", "prev-checkpoint": "Previous checkpoint",
+    "last-step": "Last step", "first-step": "First step", "skip-detour": "Skip detour", "enter-detour": "Detour",
+    return: "Return", overview: "Overview", goto: "Search", presenter: "Presenter", tour: "Tour", home: "Start",
+  };
+  // what a tap already does, as with a mouse: such a tap never counts toward a double tap
+  const TAPPABLE = "a, button, input, select, textarea, label, [data-jump], [data-lt-link], [data-lt-choose], " +
+    "[data-lt-detour], .lt-bbv-clickable .lt-bbv-node";
+  const HELP_SEEN = "lattice:touch-help-seen";
+  let touchOn = false;
+  let touchUi = null; // { bar, help, notes, toast, tour }
+  let gesture = null; // the gesture under way
+  let lastTap = null;
+  let longTimer = 0;
+  let toastTimer = 0;
+
+  // "on", "off" or "auto", and whether the URL overrides `touch: false`.
+  function touchSetting() {
+    const params = new URLSearchParams(location.search);
+    if (!params.has("touch")) return { mode: deck.touch === false ? "off" : "auto", conflict: false };
+    const on = !["0", "false", "off", "no"].includes(params.get("touch").toLowerCase());
+    return { mode: on ? "on" : "off", conflict: on && deck.touch === false };
+  }
+
+  function setupTouch() {
+    const { mode, conflict } = touchSetting();
+    if (conflict) {
+      console.warn("lattice: ?touch turns touch input on although the deck sets `touch: false` (the URL wins)");
+      flash("Touch input on (?touch overrides touch: false)");
+    }
+    if (mode === "off") return;
+    const query = mode === "auto" && window.matchMedia ? window.matchMedia(TOUCH_QUERY) : null;
+    const update = () => setTouch(mode === "on" || !!(query && query.matches));
+    if (query) {
+      if (query.addEventListener) query.addEventListener("change", update);
+      else if (query.addListener) query.addListener(update);
+    }
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onTouchEnd, { passive: false });
+    document.addEventListener("touchcancel", resetGesture, { passive: true });
+    update();
+  }
+
+  function setTouch(on) {
+    if (on === touchOn) return;
+    touchOn = on;
+    resetGesture();
+    lastTap = null;
+    document.documentElement.classList.toggle("lt-touch", on);
+    if (!on) {
+      if (touchUi) { setSheet("help", false); setSheet("notes", false); }
+      return;
+    }
+    if (!touchUi) buildTouchUi();
+    let seen = false;
+    try { seen = localStorage.getItem(HELP_SEEN) === "1"; } catch (e) { seen = false; }
+    if (!seen) {
+      setSheet("help", true);
+      try { localStorage.setItem(HELP_SEEN, "1"); } catch (e) { /* storage unavailable */ }
+    }
+  }
+
+  function buildTouchUi() {
+    const rows = Object.keys(GESTURE_LABELS).filter((g) => deck.gestures && deck.gestures[g])
+      .map((g) => `<tr><td>${esc(GESTURE_LABELS[g])}</td><td>${esc(capital(ACTION_LABELS[deck.gestures[g]] || deck.gestures[g]))}</td></tr>`);
+    rows.push(`<tr><td>Tap</td><td>Links, badges, branch options and blocks, as with a mouse</td></tr>`);
+    const tours = Object.keys(deck.tours || {}).length > 0;
+    const html = `
+      <div class="lt-tc lt-tc-bar" id="lt-touch-bar">
+        ${presenter ? "" : '<button type="button" data-lt-tc="notes" aria-pressed="false" aria-controls="lt-touch-notes">Notes</button>'}
+        <button type="button" data-lt-tc="help" aria-pressed="false" aria-controls="lt-touch-help" aria-label="Touch controls">?</button>
+      </div>
+      <div class="lt-tc lt-tc-sheet" id="lt-touch-help" role="dialog" aria-label="Touch controls" hidden>
+        <h2><span>Touch controls</span><button type="button" data-lt-tc-close="help">Close</button></h2>
+        <div class="lt-tc-actions">
+          ${tours ? '<button type="button" data-lt-tc-act="tour"></button>' : ""}
+          <button type="button" data-lt-tc-act="home">Start of the deck</button>
+        </div>
+        <table>${rows.join("")}</table>
+        <p class="lt-tc-muted lt-tc-rotate">Turn your device sideways for a larger slide.</p>
+      </div>
+      <div class="lt-tc lt-tc-sheet lt-tc-notes" id="lt-touch-notes" role="dialog" aria-label="Speaker notes" hidden>
+        <h2><span>Speaker notes</span><button type="button" data-lt-tc-close="notes">Close</button></h2>
+        <p class="lt-tc-muted lt-tc-notes-title"></p>
+        <div class="lt-tc-notes-body"></div>
+      </div>
+      <div class="lt-tc lt-tc-toast" id="lt-touch-toast" aria-live="polite"></div>`;
+    document.body.insertAdjacentHTML("beforeend", html);
+    touchUi = { bar: $("#lt-touch-bar"), help: $("#lt-touch-help"), notes: $("#lt-touch-notes"), toast: $("#lt-touch-toast"),
+      tour: $('[data-lt-tc-act="tour"]') };
+    for (const b of $$("[data-lt-tc]", touchUi.bar)) {
+      b.addEventListener("click", () => {
+        const name = b.dataset.ltTc, other = name === "help" ? "notes" : "help";
+        setSheet(other, false);
+        setSheet(name, touchUi[name].hidden);
+      });
+    }
+    for (const b of $$("[data-lt-tc-close]")) b.addEventListener("click", () => setSheet(b.dataset.ltTcClose, false));
+    if (touchUi.tour) touchUi.tour.addEventListener("click", () => { closeZoom(); perform("tour"); refreshTourButton(); });
+    $('[data-lt-tc-act="home"]').addEventListener("click", () => { setSheet("help", false); closeOverlay(); perform("home"); });
+    const rotate = () => { $(".lt-tc-rotate").hidden = window.innerWidth > window.innerHeight; };
+    window.addEventListener("resize", rotate);
+    rotate();
+  }
+
+  const capital = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+  function setSheet(name, open) {
+    const sheet = touchUi[name];
+    sheet.hidden = !open;
+    const button = $(`[data-lt-tc="${name}"]`, touchUi.bar);
+    if (button) button.setAttribute("aria-pressed", String(open));
+    if (open && name === "notes") refreshTouchNotes();
+    if (open && name === "help") refreshTourButton();
+  }
+
+  function refreshTourButton() {
+    if (touchUi && touchUi.tour) touchUi.tour.textContent = `Tour: ${nav.tour || "off"}`;
+  }
+
+  // The notes sheet follows every render while it is open.
+  function refreshTouchNotes() {
+    if (!touchUi || touchUi.notes.hidden) return;
+    const s = slide(nav.cur.slide);
+    $(".lt-tc-notes-title", touchUi.notes).textContent = s.label;
+    const body = $(".lt-tc-notes-body", touchUi.notes);
+    body.innerHTML = s.notes || '<p class="lt-tc-muted">No notes for this slide.</p>';
+    renderMath(body);
+  }
+
+  function touchToast(text) {
+    if (!touchUi) return;
+    touchUi.toast.textContent = text;
+    touchUi.toast.classList.add("lt-on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => touchUi.toast.classList.remove("lt-on"), 650);
+  }
+
+  function resetGesture() {
+    gesture = null;
+    clearTimeout(longTimer);
+  }
+
+  // Touches that belong to something else: the touch controls themselves, form fields, the presenter's panel.
+  const touchExempt = (t) => t && t.closest && t.closest(".lt-tc, input, textarea, select, #lt-presenter-panel");
+  // Places that scroll under a finger: the overview and go-to lists, the sheets.
+  const touchScrolls = (t) => t && t.closest && t.closest("#lt-overlay, .lt-tc-sheet");
+  const pinchZoomed = () => window.visualViewport && window.visualViewport.scale > 1.05;
+
+  // The action of a gesture, run as a key would (spec 7.8): a gesture begun over an enlarged element only closes it
+  // (the press outside it already did, spec 7.7); while the overview or the go-to is open, only a gesture bound to
+  // `overview` or `goto` acts, and closes it.
+  function runGesture(name, g) {
+    if (g.zoomed) return;
+    const action = (deck.gestures || {})[name];
+    if (!action || !actions[action]) return;
+    if (zoomed) return closeZoom();
+    if (overlayOpen()) {
+      if (action === "overview" || action === "goto") closeOverlay();
+      return;
+    }
+    touchToast(ACTION_TOASTS[action] || action);
+    perform(action);
+    if (action === "tour") refreshTourButton();
+  }
+
+  function onTouchStart(e) {
+    if (!touchOn) return;
+    if (touchExempt(e.target) || pinchZoomed()) { resetGesture(); lastTap = null; return; }
+    // a single finger always starts a new gesture: a touchend can be lost when its target leaves the page (the
+    // overview closing under the finger), which would otherwise leave a stale gesture that swallows the next one
+    if (!gesture || e.touches.length === 1) {
+      const t = e.touches[0];
+      gesture = { x: t.clientX, y: t.clientY, t0: Date.now(), fingers: e.touches.length, moved: false, long: false,
+        pts: {}, zoomed: !!zoomed || pressOverZoom, target: e.target };
+    }
+    gesture.fingers = Math.max(gesture.fingers, e.touches.length);
+    for (const t of e.touches) if (!gesture.pts[t.identifier]) gesture.pts[t.identifier] = { x: t.clientX, y: t.clientY };
+    clearTimeout(longTimer);
+    if (gesture.fingers === 1) {
+      const g = gesture;
+      longTimer = setTimeout(() => {
+        if (gesture !== g || g.moved) return;
+        g.long = true;
+        lastTap = null;
+        runGesture("long-press", g);
+      }, LONG_MS);
+    }
+  }
+
+  function onTouchMove(e) {
+    if (!touchOn || !gesture) return;
+    // keep the browser from scrolling, bouncing or navigating back during a gesture, except in lists that scroll
+    if (e.cancelable && !touchScrolls(e.target)) e.preventDefault();
+    for (const t of e.touches) {
+      const p = gesture.pts[t.identifier];
+      if (p && Math.hypot(t.clientX - p.x, t.clientY - p.y) > TAP_MOVE) { gesture.moved = true; clearTimeout(longTimer); }
+    }
+  }
+
+  function onTouchEnd(e) {
+    if (!touchOn || !gesture || e.touches.length) return; // wait for the last finger
+    clearTimeout(longTimer);
+    const g = gesture;
+    gesture = null;
+    // the click the browser makes after a gesture would land on what the gesture just opened (the backdrop of the
+    // go-to closes on a click): it is cancelled for every gesture except a plain single tap
+    const swallow = () => { if (e.cancelable) e.preventDefault(); };
+    if (g.long) return swallow();
+    const t = e.changedTouches[0];
+    const p = g.pts[t.identifier] || { x: g.x, y: g.y };
+    const dx = t.clientX - p.x, dy = t.clientY - p.y, dt = Date.now() - g.t0;
+    if (g.moved && dt < SWIPE_MS && Math.max(Math.abs(dx), Math.abs(dy)) > SWIPE) {
+      lastTap = null;
+      const two = g.fingers >= 2 ? "two-finger-" : "";
+      if (Math.abs(dx) > Math.abs(dy) * 1.2) { swallow(); runGesture(`${two}swipe-${dx < 0 ? "left" : "right"}`, g); }
+      else if (Math.abs(dy) > Math.abs(dx) * 1.2) { swallow(); runGesture(`${two}swipe-${dy < 0 ? "up" : "down"}`, g); }
+      return;
+    }
+    if (g.moved || dt > TAP_MS) { lastTap = null; return; }
+    if (g.fingers === 2) { lastTap = null; swallow(); return runGesture("two-finger-tap", g); }
+    if (g.fingers !== 1) return;
+    const now = Date.now();
+    const tappable = !!(g.target && g.target.closest && g.target.closest(TAPPABLE));
+    if (lastTap && !tappable && now - lastTap.t < DOUBLE_MS && Math.hypot(t.clientX - lastTap.x, t.clientY - lastTap.y) < DOUBLE_GAP) {
+      lastTap = null;
+      swallow();
+      runGesture("double-tap", g);
+    } else {
+      lastTap = tappable || g.zoomed ? null : { t: now, x: t.clientX, y: t.clientY };
+    }
   }
 
   // ------------------------------------------------------------------ layout
@@ -2700,6 +2991,7 @@ const Lattice = (() => {
     }
     fit();
     render(null, { kind: "sync", dir: 0 });
+    setupTouch();
     document.documentElement.classList.add("lt-ready");
   }
 

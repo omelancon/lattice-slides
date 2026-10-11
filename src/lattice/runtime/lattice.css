@@ -2,7 +2,9 @@
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--lt-backdrop);color:var(--lt-ink);overflow:hidden}
 body{font-family:var(--lt-font-body);-webkit-font-smoothing:antialiased}
-#lt-root{position:fixed;inset:0;display:flex}
+/* the safe areas of a phone's notch and rounded corners (viewport-fit=cover); zero everywhere else */
+#lt-root{position:fixed;inset:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px)
+  env(safe-area-inset-left,0px);display:flex}
 #lt-stage{position:relative;flex:1;overflow:hidden}
 #lt-viewport{position:absolute;left:0;top:0;width:var(--lt-w);height:var(--lt-h);transform-origin:0 0;
   background:var(--lt-bg);overflow:hidden;box-shadow:0 0 0 1px var(--lt-rule)}
@@ -473,6 +475,39 @@ html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone
   padding:8px 12px;border-radius:6px;cursor:pointer;text-align:left}
 .lt-goto li.sel button,.lt-goto button:hover{background:var(--lt-accent-soft)}
 .lt-goto small{color:var(--lt-muted);font-family:var(--lt-font-code)}
+
+/* touch input (spec 7.8): only under html.lt-touch, set on phones and tablets; the controls exist only once it is on */
+html:not(.lt-touch) .lt-tc{display:none !important}
+html.lt-touch,html.lt-touch body{overscroll-behavior:none}
+html.lt-touch #lt-stage{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.lt-tc-bar{position:fixed;z-index:60;top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);
+  display:flex;gap:6px}
+.lt-tc button{font:600 13px/1 var(--lt-font-body);color:var(--lt-ink);background:var(--lt-bg);border:1px solid var(--lt-rule);
+  border-radius:999px;padding:8px 12px;min-height:34px;min-width:34px;cursor:pointer;touch-action:manipulation}
+.lt-tc-bar button{opacity:.72}
+.lt-tc button:focus-visible{outline:2px solid var(--lt-accent);outline-offset:2px;opacity:1}
+.lt-tc-bar button[aria-pressed="true"]{opacity:1;border-color:var(--lt-accent);color:var(--lt-accent)}
+.lt-tc-sheet{position:fixed;z-index:70;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
+  width:min(560px,calc(100vw - 32px));max-height:min(78vh,560px);overflow:auto;overscroll-behavior:contain;
+  background:var(--lt-bg);color:var(--lt-ink);border:1px solid var(--lt-rule);border-radius:14px;
+  box-shadow:0 10px 40px rgba(0,0,0,.22);padding:14px 16px 16px;font:15px/1.45 var(--lt-font-body);
+  -webkit-user-select:text;user-select:text;touch-action:pan-y}
+.lt-tc-sheet[hidden]{display:none}
+.lt-tc-sheet h2{margin:0 0 8px;font:650 16px/1.2 var(--lt-font-head);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.lt-tc-sheet table{border-collapse:collapse;width:100%}
+.lt-tc-sheet td{padding:6px 0;border-top:1px solid var(--lt-rule);vertical-align:top}
+.lt-tc-sheet td:first-child{font-weight:600;padding-right:14px;white-space:nowrap}
+.lt-tc-actions{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 12px}
+.lt-tc-actions button{border-color:var(--lt-accent);color:var(--lt-accent)}
+.lt-tc-muted{color:var(--lt-muted);font-size:13px;margin:10px 0 0}
+.lt-tc-muted[hidden]{display:none}
+.lt-tc-notes .lt-tc-notes-title{margin:0 0 6px}
+.lt-tc-notes-body p{margin:0 0 8px}
+.lt-tc-toast{position:fixed;z-index:65;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);
+  background:var(--lt-ink);color:var(--lt-bg);font:600 13px/1 var(--lt-font-body);padding:8px 12px;border-radius:999px;
+  pointer-events:none;opacity:0;transition:opacity .15s}
+.lt-tc-toast.lt-on{opacity:.88}
+@media (prefers-reduced-motion:reduce){.lt-tc-toast{transition:none}}
 
 /* presenter view */
 .lt-presenter #lt-stage{flex:0 0 64%}

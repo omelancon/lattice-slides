@@ -17,7 +17,7 @@ from pygments.formatters import HtmlFormatter
 from . import __version__
 from .components.base import REGISTRY
 from .graphs import overview_layout
-from .model import DEFAULT_TRANSITIONS, Deck, key_bindings
+from .model import DEFAULT_TRANSITIONS, Deck, gesture_bindings, key_bindings
 from .themes import get_theme
 
 RUNTIME = resources.files("lattice") / "runtime"
@@ -136,6 +136,8 @@ def deck_json(deck: Deck, *, data_urls: bool = False) -> dict:
                  "aspect": deck.meta.aspect, "theme": deck.meta.theme},
         "start": deck.start,
         "keys": keys,
+        "gestures": gesture_bindings(deck.meta.gestures),
+        "touch": deck.meta.touch,
         "transitions": transitions,
         "order": list(deck.slides),
         "slides": slides,
@@ -214,7 +216,7 @@ def _document(deck: Deck, page: Page, *, head: str, tail: str) -> str:
 <html lang="en" data-lattice="1" data-theme="{html.escape(deck.meta.theme)}">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="generator" content="lattice {__version__}">
 <title>{title}</title>
 <style>:root{{--lt-w:{w}px;--lt-h:{h}px}}</style>

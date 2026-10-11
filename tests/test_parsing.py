@@ -452,3 +452,32 @@ def test_fence_diagnostics_have_locations(deck):
     root.write_text("# A\n::: callout\nx\n")
     found = [(x.code, x.severity, x.loc.line) for x in check_deck(root, use_cache=False).items]
     assert ("LT062", "warning", 2) in found
+
+
+def test_gestures_in_front_matter(deck):
+    """Spec 2.2 and 7.8: `gestures` names gestures and global actions; anything else is LT066."""
+    ok = deck({"talk.md": """
+        ---
+        gestures:
+          double-tap: none
+          long-press: goto
+          two-finger-swipe-up: skip-forward
+          swipe-up: null
+        touch: false
+        ---
+        # A
+    """})
+    diags = check_deck(ok, use_cache=False)
+    assert not {"LT066", "LT040", "LT048"} & codes(diags)
+    bad = deck({"bad.md": """
+        ---
+        gestures:
+          triple-tap: next
+          swipe-left: fly
+        ---
+        # A
+    """})
+    diags = check_deck(bad, use_cache=False)
+    messages = [d.message for d in diags.items if d.code == "LT066"]
+    assert len(messages) == 2
+    assert any("triple-tap" in m for m in messages) and any("fly" in m for m in messages)

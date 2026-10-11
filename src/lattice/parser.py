@@ -14,7 +14,7 @@ from .attrs import AttrError, Attrs, parse_attr_block, split_name_and_attrs, spl
 from .diagnostics import Diagnostics, SourceLoc
 from .ids import slugify
 from .markdown import container_name, new_env, token_groups
-from .model import Detour, FrontMatter, Slide
+from .model import Detour, FrontMatter, Slide, gesture_problems
 
 _TAG_RE = re.compile(r"<[^>]+>")
 _PLACEHOLDER_RE = re.compile(r"\x00T:([^\x00]*)\x00")
@@ -100,6 +100,8 @@ class Loader:
             return
         for key in (self.meta.model_extra or {}):
             self.d.warn("LT040", f"unknown front matter key {key!r}", loc)
+        for problem in gesture_problems(self.meta.gestures):
+            self.d.error("LT066", problem, loc)
 
     def segment(self, tokens, file: Path, scope, offpath: bool, stack, counter) -> list[Slide]:
         out: list[Slide] = []

@@ -2,10 +2,13 @@
 
 This todo list is intended for Olivier to pick future directions, not for immediate implementation.
 
-Updated 2026-10-10, after 0.35.1 (`implementation-report-2026-10-10-b.md`, section 4 for 0.35.1; 0.34.0 in `archive/implementation-report-2026-10-10.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
+Updated 2026-10-10, after 0.36.0 (`implementation-report-2026-10-10-c.md`; 0.35.0 and 0.35.1 in `archive/implementation-report-2026-10-10-b.md`). Items are tagged with the version that raised them. The items left open by the versioning and abstract interpretation phases (`archive/todo.md`) are carried over below; plans larger than an item are in the roadmap (`design-report.md`, section 6).
 
 ## Waiting on Olivier
 
+- [ ] 0.36.0: try a deck on your phone and on a tablet (only Chromium's emulation was available here): swipes, the two-finger swipes, double tap, long press, two-finger tap, the Notes and **?** sheets and their Tour and Start buttons. On an iPhone especially, check that a horizontal swipe never goes back in the browser's history and that the page never scrolls.
+- [ ] 0.36.0: no git commit: `git add docs/implementation-report-2026-10-10-c.md tests/test_touch.py docs/archive/implementation-report-2026-10-10-b.md`, `git rm docs/implementation-report-2026-10-10-b.md` (moved to the archive), then `git add -u`. The defense deck's `scripts/mobile-deck` (claude.ai project) can drop its touch layer once the deck is built with 0.36.0: `make_mobile.py` then only strips the page skeleton.
+- [ ] 0.36.0: the HUD shrinks with the slide, so on a phone held upright its text is tiny. Say if touch mode should give the HUD a larger, unscaled bar.
 - [ ] 0.35.1: open the presenter view (`p`) on a deck with long notes and judge the new order (Notes below Next, then Moves and Keybindings); long notes now push the moves down, so say if the moves should rather come before the notes.
 - [ ] 0.35.0: no git commit: `git add docs/implementation-report-2026-10-10-b.md docs/archive/implementation-report-2026-10-10.md`, `git rm docs/implementation-report-2026-10-10.md` (moved to the archive), then `git add -u`; push for the deck's `make` to see `generic_entry`.
 - [ ] 0.34.0: an exit that a fold makes unreachable keeps a late return index, allocated at the end (`return [4] r` in `incr`'s R1, shown before the fold). Say if indices should skip exits that a fold removed, or be allocated as exits appear.
