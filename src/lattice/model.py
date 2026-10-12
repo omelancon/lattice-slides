@@ -42,7 +42,10 @@ DEFAULT_KEYS: dict[str, list[str]] = {
     "goto": ["g"],
     "presenter": ["p"],
     "tour": ["t"],
-    "home": ["Shift+Home"],
+    # before `home`: a deck that still binds `home: Shift+Home` keeps it (the later action wins)
+    "last-step-instant": ["Shift+End"],
+    "first-step-instant": ["Shift+Home"],
+    "home": ["Shift+Backspace"],
 }
 
 # Former action names still accepted under `keys:` (spec 7.6): the ten-step skips became the checkpoint keys in 0.30.

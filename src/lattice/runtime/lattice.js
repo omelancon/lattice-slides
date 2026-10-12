@@ -211,6 +211,17 @@ const Lattice = (() => {
     playing = null;
   }
 
+  // SKIP-INSTANT (spec 7.2): straight to the target step, showing no intermediate step and animating nothing, as the
+  // scrubber does. Detour steps on the way are not entered; forward, it stops in front of a blocking one, like SKIP.
+  function jumpToStep(target) {
+    const cur = nav.cur;
+    let t = target;
+    for (let i = cur.step + 1; i <= t; i++) {
+      if ((stepDetour(cur.slide, i) || {}).blocking) { t = i - 1; flash("Cannot step detour"); break; }
+    }
+    if (t !== cur.step) go(cur.slide, t, { kind: "step", dir: Math.sign(t - cur.step), still: true });
+  }
+
   // The anchor of a checkpoint key (spec 7.6): the target of a playback that the same action started on
   // this slide and that is still under way, else the current step. Read before the playback is stopped.
   function checkpointAnchor(action) {
@@ -259,6 +270,8 @@ const Lattice = (() => {
     "prev-checkpoint"(anchor = nav.cur.step) { playSteps(prevCheckpoint(nav.cur.slide, anchor), "prev-checkpoint"); },
     "last-step"() { playSteps(steps(nav.cur.slide) - 1); },
     "first-step"() { playSteps(0); },
+    "last-step-instant"() { jumpToStep(steps(nav.cur.slide) - 1); },
+    "first-step-instant"() { jumpToStep(0); },
     "skip-detour"() {
       // Step over the detour step(s) that follow, without entering them (spec 7.2, SKIP-DETOUR).
       const cur = nav.cur;
@@ -562,17 +575,34 @@ const Lattice = (() => {
         sec.classList.add(`lt-anim-${tr}`);
       }
     }
-    // scrubbing, a change of the URL hash, previews and printing never animate (spec 10.1)
-    const still = how && (how.kind === "scrub" || how.kind === "hash");
+    // scrubbing, a change of the URL hash, the instant first and last steps, previews and printing never animate
+    // (spec 10.1); the other window shows such a move still too
+    const still = !!how && (how.kind === "scrub" || how.kind === "hash" || !!how.still);
     const adjacent = sameSlide && Math.abs(prev.step - nav.cur.step) === 1 && !passive && !still;
+    const sec = sections[id];
+    sec.classList.toggle("lt-still", still && sameSlide); // holds off the CSS transitions of the slide (reveals fading)
     applyStep(id, nav.cur.step, { sameSlide, fromStep: sameSlide ? prev.step : null, animate: adjacent, force: !sameSlide });
+    if (still && sameSlide) releaseStill(sec);
     updateHud();
     if (passive) return;
     updateHash();
     save();
-    if (!how || how.kind !== "sync") broadcast();
+    if (!how || how.kind !== "sync") broadcast(still);
     if (presenter) updatePresenter();
     refreshTouchNotes();
+  }
+  // The new styles of a still move are computed with transitions off (the flush), then transitions come back two
+  // frames later, after the measurements runtimes make in a microtask or a frame (arrows), so nothing glides to them.
+  // A move that is not still removes the class at once, in `render`.
+  let stillMoves = 0; // the latest still move releases the class, not an earlier one still waiting for its frames
+  function releaseStill(sec) {
+    void sec.offsetWidth;
+    const n = ++stillMoves;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (n !== stillMoves || !sec.classList.contains("lt-still")) return;
+      void sec.offsetWidth;
+      sec.classList.remove("lt-still");
+    }));
   }
 
   // ------------------------------------------------------------------ HUD
@@ -648,8 +678,8 @@ const Lattice = (() => {
   }
 
   // ------------------------------------------------------------------ sync (spec 7.5)
-  function broadcast() {
-    if (channel) channel.postMessage({ nav: JSON.parse(JSON.stringify(nav)) });
+  function broadcast(still = false) {
+    if (channel) channel.postMessage({ nav: JSON.parse(JSON.stringify(nav)), still });
   }
   function onRemote(msg) {
     if (msg && "zoom" in msg) {
@@ -660,7 +690,7 @@ const Lattice = (() => {
     if (!msg || !msg.nav || !deck.slides[msg.nav.cur.slide]) return;
     const prev = Object.assign({}, nav.cur);
     nav = msg.nav;
-    render(prev, { kind: "sync", dir: 0 });
+    render(prev, { kind: "sync", dir: 0, still: !!msg.still });
   }
 
 
@@ -1042,6 +1072,7 @@ const Lattice = (() => {
     "next-checkpoint": "next checkpoint", "prev-checkpoint": "previous checkpoint",
     "last-step": "last step of the slide",
     "first-step": "first step of the slide",
+    "last-step-instant": "last step of the slide, at once", "first-step-instant": "first step of the slide, at once",
     "skip-detour": "step over the next detour step",
     "enter-detour": "enter the first detour", return: "return from a detour or jump",
     overview: "overview", goto: "go to a slide", presenter: "presenter view", tour: "cycle through tours",
@@ -1339,7 +1370,8 @@ const Lattice = (() => {
   };
   const ACTION_TOASTS = {
     next: "Next", prev: "Back", undo: "Undo", "next-checkpoint": "Next checkpoint", "prev-checkpoint": "Previous checkpoint",
-    "last-step": "Last step", "first-step": "First step", "skip-detour": "Skip detour", "enter-detour": "Detour",
+    "last-step": "Last step", "first-step": "First step",
+    "last-step-instant": "Last step", "first-step-instant": "First step", "skip-detour": "Skip detour", "enter-detour": "Detour",
     return: "Return", overview: "Overview", goto: "Search", presenter: "Presenter", tour: "Tour", home: "Start",
   };
   // what a tap already does, as with a mouse: such a tap never counts toward a double tap

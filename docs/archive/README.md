@@ -35,4 +35,5 @@ Documents kept as they were written, for the history behind features. They are n
 | `implementation-report-2026-10-10.md` | Lattice 0.34.0: constant folding in ΛV (`fold`) |
 | `implementation-report-2026-10-10-b.md` | Lattice 0.35.0 and 0.35.1: ΛV without generic entries (`generic_entry`), notes below the preview in the presenter view |
 | `implementation-report-2026-10-10-c.md` | Lattice 0.36.0: touch input on phones and tablets |
+| `implementation-report-2026-10-10-d.md` | Lattice 0.37.0: sidecar notes written in the presenter view while rehearsing |
 | `thesis.pdf` | The thesis on basic block versioning that the 0.4.0 and 0.5.0 work follows |

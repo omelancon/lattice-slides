@@ -1,6 +1,6 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.37.0
+author: Lattice 0.38.0
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, touch, pdf-export, thanks]
@@ -1638,12 +1638,12 @@ contexts:
 | Backspace | Undo the last move, back along the [[history\|history]] (`undo`) |
 | Shift+Right, Shift+Left | The next or previous [[checkpoints\|checkpoint]], the end of one animation or series (`next-checkpoint`, `prev-checkpoint`) |
 | End, Home | Last or first step of the slide, played quickly (`last-step`, `first-step`) |
-| Down | Enter the slide's first detour (`enter-detour`) |
-| Shift+Down | Step over the next detour step without entering it (`skip-detour`) |
+| Shift+End, Shift+Home | The same at once, with no animation (`last-step-instant`, `first-step-instant`) |
+| Down, Shift+Down | Enter the slide's first detour (`enter-detour`); step over the next detour step (`skip-detour`) |
 | Up | Return from the current detour or jump (`return`) |
 | 1 to 9, the slide's keys | Choose a branch option or a detour (`choose`) |
 | `o`, `g`, `p`, `t` | Overview, go to a slide, presenter view, next tour (`overview`, `goto`, `presenter`, `tour`) |
-| Shift+Home | Back to the start, clearing the history (`home`) |
+| Shift+Backspace | Back to the start, clearing the history (`home`) |
 | Click a block | Enlarge a block of a versioning drawing; any key or a click outside closes it |
 
 Rebind actions in the front matter: `keys: {next: [ArrowRight, n]}` (`KeyboardEvent.key` names)

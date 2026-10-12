@@ -414,9 +414,9 @@ def test_presenter_names_the_checkpoints(tmp_path):
     assert not errors
 
 
-def test_end_home_and_shift_home(tmp_path):
+def test_end_home_and_shift_backspace(tmp_path):
     """Spec 7.6: End and Home play to the last and first step, ignoring checkpoints and keeping history;
-    Shift+Home goes to the start of the deck and clears it."""
+    Shift+Backspace goes to the start of the deck and clears it."""
     src = tmp_path / "talk.md"
     src.write_text(CHECKPOINT_DECK)
     out = tmp_path / "talk.html"
@@ -448,17 +448,19 @@ def test_end_home_and_shift_home(tmp_path):
             assert page.evaluate("Lattice.state().cur.step") > 0
             assert settle() == {"slide": "many", "step": 0}
             assert page.evaluate("Lattice.state().H") == [{"slide": "intro", "step": 0, "kind": "forward"}]
-            page.keyboard.press("Shift+Home")
+            page.keyboard.press("Shift+Backspace")
             s = page.evaluate("Lattice.state()")
             assert s["cur"] == {"slide": "intro", "step": 0} and s["H"] == []
 
-            # a deck that still binds `home: Home` keeps it: `home` comes after `first-step`
-            src.write_text("---\nkeys: {home: Home}\n---\n" + CHECKPOINT_DECK)
-            assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
-            page.goto(out.as_uri() + "#/many/5")
-            page.reload()
-            page.keyboard.press("Home")
-            assert page.evaluate("Lattice.state().cur") == {"slide": "intro", "step": 0}
+            # a deck that still binds `home: Home` keeps it: `home` comes after `first-step`; one that binds
+            # `home: Shift+Home` (its default before 0.38) too: `home` comes after `first-step-instant`
+            for key in ("Home", "Shift+Home"):
+                src.write_text(f"---\nkeys: {{home: {key}}}\n---\n" + CHECKPOINT_DECK)
+                assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+                page.goto(out.as_uri() + "#/many/5")
+                page.reload()
+                page.keyboard.press(key)
+                assert page.evaluate("Lattice.state().cur") == {"slide": "intro", "step": 0}
             browser.close()
     except Exception as e:
         if "Executable doesn't exist" in str(e):
@@ -784,7 +786,8 @@ def test_presenter_preview_and_scrubber(tmp_path):
             assert "Shift+\u2192" in keys and "End" in keys and "presenter view" in keys and "Space" in keys
             assert "next checkpoint" in keys and "previous checkpoint" in keys and "\u00d72" not in keys  # spec 7.6
             assert "10 steps" not in keys
-            assert "Shift+Home" in keys and "first step of the slide" in keys
+            assert "Shift+Home" in keys and "first step of the slide" in keys and "Shift+\u232b" in keys
+            assert "first step of the slide, at once" in keys and "last step of the slide, at once" in keys
             assert "\u232b" in keys and "undo the last move" in keys and "PageUp" not in keys  # spec 7.6
             assert page.is_hidden(".lt-pp-scrub")
             moves = page.inner_text(".lt-pp-moves")  # at the start: no previous slide, nothing to undo
@@ -2667,6 +2670,86 @@ def test_a_hash_change_to_an_adjacent_step_does_not_animate(tmp_path):
         raise
     assert not errors
 
+
+INSTANT_DECK = (
+    "# Probe {#pr}\n\n```probe-still {#p}\n```\n\n"
+    "# Reveal {#rv}\n{.reveal}\n- a\n- b\n- c\n\n"
+    "# Blocked {#bl}\n{.reveal}\n- a\n- b\n- c\n- d\n\n::: detour {#wall at=2 blocking=true}\n# Inside the wall\n:::\n"
+)
+
+
+def test_shift_end_and_shift_home_jump_without_playing(tmp_path):
+    """Spec 7.2 (SKIP-INSTANT) and 7.6: Shift+End and Shift+Home go to the last and first step of the slide at once,
+    with no step in between and nothing animated (runtimes get `animate: false`, reveals do not fade), in the other
+    window too; they keep the history, enter no detour step and stop in front of a blocking one."""
+    # the probe under another name: a component is registered once per process
+    (tmp_path / "lattice_plugins.py").write_text(PROBE_PLUGIN.replace('"probe"', '"probe-still"'))
+    (tmp_path / "probe.js").write_text(PROBE_JS.replace('"probe"', '"probe-still"'))
+    src = tmp_path / "talk.md"
+    src.write_text(INSTANT_DECK)
+    out = tmp_path / "talk.html"
+    assert main(["build", str(src), "-o", str(out), "--no-cache"]) == 0
+    try:
+        with pw.sync_playwright() as p:
+            browser = p.chromium.launch()
+            context = browser.new_context(viewport={"width": 1280, "height": 720})
+            page = context.new_page()
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.goto(out.as_uri())
+            page.wait_for_timeout(200)
+            audience = context.new_page()
+            audience.on("pageerror", lambda e: errors.append(str(e)))
+            audience.goto(out.as_uri())
+            audience.wait_for_timeout(200)
+
+            def shows_after(key):
+                for pg in (page, audience):
+                    pg.evaluate("window.__shows = []")
+                page.keyboard.press(key)
+                page.wait_for_timeout(150)
+                return page.evaluate("window.__shows"), audience.evaluate("window.__shows")
+
+            assert shows_after("Shift+End") == ([[3, False]], [[3, False]])  # no step 1 or 2 on the way
+            assert page.evaluate("Lattice.state().cur") == {"slide": "pr", "step": 3}
+            assert shows_after("Shift+Home") == ([[0, False]], [[0, False]])
+            page.keyboard.press("ArrowRight")
+            assert shows_after("Shift+Home") == ([[0, False]], [[0, False]])  # an adjacent step: still not animated
+            assert page.evaluate("Lattice.state().H") == []  # moves within a slide are not history
+
+            # reveals appear at once: the opacity is final right after the move, while Right fades them in
+            page.evaluate("location.hash = '#/rv/0'")
+            page.wait_for_timeout(300)
+            opacity = """(action) => { Lattice.actions()[action]();
+                return getComputedStyle(document.querySelector('#s-rv [data-lt-reveal="1"]')).opacity; }"""
+            assert float(page.evaluate(opacity, "next")) < 1  # the fade starts from transparent
+            page.evaluate("Lattice.actions()['first-step']()")
+            page.wait_for_timeout(400)
+            assert page.evaluate(opacity, "last-step-instant") == "1"
+            page.wait_for_timeout(100)
+            assert not page.evaluate("document.querySelector('#s-rv').classList.contains('lt-still')")
+            assert float(page.evaluate(opacity, "first-step-instant")) == 0  # and vanish at once
+            assert float(page.evaluate(opacity, "next")) < 1  # transitions are back after a still move
+
+            # a blocking detour step stops it, as it stops End; no detour is entered
+            page.evaluate("location.hash = '#/bl/0'")
+            page.wait_for_timeout(300)
+            history = page.evaluate("Lattice.state().H")
+            page.keyboard.press("Shift+End")
+            assert page.evaluate("Lattice.state().cur") == {"slide": "bl", "step": 2}  # the detour step is 3
+            assert "Cannot step detour" in page.inner_text("#lt-flash")
+            page.keyboard.press("Shift+ArrowDown")  # step over the detour step
+            page.keyboard.press("Shift+End")
+            assert page.evaluate("Lattice.state().cur") == {"slide": "bl", "step": 5}
+            page.keyboard.press("Shift+Home")  # backward, nothing stops it
+            s = page.evaluate("Lattice.state()")
+            assert s["cur"] == {"slide": "bl", "step": 0} and s["H"] == history
+            browser.close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium for Playwright is not installed")
+        raise
+    assert not errors
 
 SAME_TARGET_DECK = """
 # Same target {#same}

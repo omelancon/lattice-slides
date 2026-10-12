@@ -1,0 +1,24 @@
+# Implementation report: instant first and last steps (Lattice 0.38.0, 2026-10-12)
+
+The report of 0.37.0 is in `archive/implementation-report-2026-10-10-d.md`.
+
+Olivier's request: rebind "start of the deck, clearing history" to Shift+Backspace; make Shift+Home go to the start of the current slide, and Shift+End to its end, without playing animations.
+
+## 1. What was built
+
+- **Bindings** (`model.py`): `last-step-instant` (`Shift+End`) and `first-step-instant` (`Shift+Home`) are new actions; `home` moves to `Shift+Backspace`. `home` stays last in `DEFAULT_KEYS`, after the new actions, so a deck that binds `home: Shift+Home` (the default until now) keeps it, as a deck that binds `home: Home` already did. A gesture can name the new actions too (`gestures` accepts every action of the table).
+- **The move** (`lattice.js`, `jumpToStep`): the event SKIP-INSTANT of spec 7.2 sets the step at once. No intermediate step is shown, runtimes receive `animate: false` even for an adjacent step (as the scrubber and a change of the hash), detour steps on the way are not entered, and forward it stops in front of a blocking detour step with "Cannot step detour", as End does. Like every move within a slide, it never touches the history.
+- **Nothing animates, in either window.** Two things still animated a still move before: the reveal fade (a CSS transition, whatever `animate` says) and the other window, which showed every synced move as an ordinary step. Now `render` puts `lt-still` on the slide for a still move, which turns its CSS transitions off until the new styles are computed and two frames have passed (arrows measure in a microtask); a move that is not still takes the class off at once. The broadcast carries `still`, and the other window renders such a move without animation. This also applies to the scrubber and to a change of the URL hash, which spec 10.1 already said never animate: the audience window used to animate them when they moved one step.
+- **Labels**: the presenter's Keybindings section lists "last step of the slide, at once" and "first step of the slide, at once", and Shift+Backspace as `Shift+⌫`; the touch toasts name the new actions if a deck binds a gesture to them.
+
+## 2. Tests and verification
+
+- `tests/test_runtime.py`: `test_end_home_and_shift_backspace` (renamed from `test_end_home_and_shift_home`) presses Shift+Backspace for the start of the deck and checks that a deck binding `home: Home` or `home: Shift+Home` keeps it. The new `test_shift_end_and_shift_home_jump_without_playing` uses a probe component that records every `show`: Shift+End from step 0 shows only step 3, with `animate: false`, in the window that moved and in a second window synced over the `BroadcastChannel`; an adjacent Shift+Home is not animated either; reveals are fully opaque right after the move (Right, for comparison, starts them transparent) and vanish at once on the way back, and transitions come back afterwards; a blocking detour step stops Shift+End at the step before it; the history is never touched. Both halves were checked to fail without the change (without the CSS rule, the opacity is 0; without the `still` flag, the second window animates). The presenter test checks the new labels.
+- `pytest -rs`: 479 passed, 1 skipped (Firefox, not installed here), 1 failed: the manual's `plot-sources` in `test_layout.py`, as since 0.34.0 (it fails the same way without this change). Before the change, the suites it touches (`test_runtime.py`, `test_touch.py`, `test_graph.py`, `test_output.py`) passed: 80 passed, 1 skipped. Examples and the manual rebuilt; `scripts/check_docs.py`: 0 problems. Screenshots checked: the manual's `presenting-keys` and the presenter's Keybindings section. The new row of `presenting-keys` pushed its last line 6 px below the body, so Down and Shift+Down now share a row.
+- Docs: spec 7.1, 7.2 (the SKIP-INSTANT row), 7.5 (`still` in the broadcast), 7.6 (bindings), 10.1 and 15; README and manual (`presenting-keys`) key tables; design report (section 3.12, decision 48, roadmap, a note on decision 37); `docs/USER_SKILL.md` (the keys row and the snapshot hint: Shift+End and Shift+Home are a way to reach the end of a slide without counting presses); `docs/SKILL.md` (structure, the runtime suite); version 0.38.0.
+
+## 3. Left open
+
+- Shift+End stops in front of a blocking detour step, as End does (a blocking detour is the author asking never to roll past it). Say if an instant move should jump over it instead.
+- Shift+Backspace in Firefox: some configurations bind it to "forward" in the browser's history; the deck takes the key (`preventDefault`) as it does for Backspace, which was checked in Chromium only.
+- The old `docs/implementation-report-2026-10-10-c.md` and now `docs/implementation-report-2026-10-10-d.md` are still in `docs/`: their copies are in `docs/archive/`, and the originals must be removed by hand (see the todo).

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="generator" content="lattice 0.37.0">
+<meta name="generator" content="lattice 0.38.0">
 <title>Extending Lattice</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -64,6 +64,8 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 /* reveal */
 [data-lt-reveal]{transition:opacity .25s ease}
 .lt-hidden{opacity:0;visibility:hidden}
+/* a move that never animates (spec 10.1): no transition until its styles are computed */
+.lt-still *{transition:none !important}
 
 /* columns and callouts */
 .lt-columns{display:flex;gap:40px;min-height:0;flex:1}
@@ -718,7 +720,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.37.0","meta":{"title":"Extending Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"extending-lattice","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"next-checkpoint":["Shift+ArrowRight"],"prev-checkpoint":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"home":["Shift+Home"]},"gestures":{"swipe-left":"next","swipe-right":"prev","swipe-up":"enter-detour","swipe-down":"return","two-finger-swipe-left":"next-checkpoint","two-finger-swipe-right":"prev-checkpoint","double-tap":"goto","long-press":"overview","two-finger-tap":"undo"},"touch":true,"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"slides":{"extending-lattice":{"title":"Extending Lattice","label":"Extending Lattice","scope":"root","next":{"slide":"plugin-file"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"plugin-file":{"title":"A plugin is a Python file","label":"A plugin is a Python file","scope":"root","next":{"slide":"truth"},"branches":[],"detours":[],"steps":7,"tracks":[{"id":"c1","kind":"component","instance":"plugin-file/c1"}],"positions":[[0],[1],[2],[3],[4],[5],[6]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>Lattice imports <code>lattice_plugins.py<\/code> automatically; installed packages are enabled with <code>plugins:<\/code> in the front matter.<\/p>\n"},"truth":{"title":"Truth tables, computed at build time","label":"Truth tables, computed at build time","scope":"root","next":{"slide":"stack"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":26}},"stack":{"title":"The call stack of fib(4)","label":"The call stack of fib(4)","scope":"root","next":{"slide":"runtime"},"branches":[],"detours":[],"steps":19,"tracks":[{"id":"src","kind":"component","instance":"stack/src","follow":"calls"},{"id":"calls","kind":"component","instance":"stack/calls"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18]],"offpath":false,"source":{"file":"talk.md","line":44}},"runtime":{"title":"Its runtime, in a few lines","label":"Its runtime, in a few lines","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"runtime/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":58}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":66}}},"detours":{},"instances":{"plugin-file/c1":{"component":"code-steps","slide":"plugin-file","data":"lt-data-plugin-file/c1"},"truth/c1":{"component":"truth-table","slide":"truth","data":null},"stack/src":{"component":"code","slide":"stack","data":"lt-data-stack/src"},"stack/calls":{"component":"call-stack","slide":"stack","data":"lt-data-stack/calls"},"runtime/c1":{"component":"code-steps","slide":"runtime","data":"lt-data-runtime/c1"}},"tours":{},"mainPath":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"overview":{"nodes":{"extending-lattice":{"x":67.0,"y":21.0,"w":118.0,"h":26.0,"label":"Extending Lattice"},"plugin-file":{"x":232.5,"y":21.0,"w":153.0,"h":26.0,"label":"A plugin is a Python file"},"truth":{"x":427.0,"y":21.0,"w":176.0,"h":26.0,"label":"Truth tables, computed at…"},"stack":{"x":617.5,"y":21.0,"w":145.0,"h":26.0,"label":"The call stack of fib(4)"},"runtime":{"x":801.5,"y":21.0,"w":163.0,"h":26.0,"label":"Its runtime, in a few lin…"},"thanks":{"x":942.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"extending-lattice","to":"plugin-file","kind":"next","path":"M126.1,21.0 C133.8,21.0 141.8,21.0 149.8,21.0 L155.8,21.0"},{"from":"plugin-file","to":"truth","kind":"next","path":"M309.0,21.0 C316.8,21.0 324.8,21.0 332.8,21.0 L338.9,21.0"},{"from":"truth","to":"stack","kind":"next","path":"M515.1,21.0 C522.8,21.0 530.7,21.0 538.4,21.0 L544.8,21.0"},{"from":"stack","to":"runtime","kind":"next","path":"M690.2,21.0 C697.9,21.0 705.9,21.0 713.8,21.0 L719.9,21.0"},{"from":"runtime","to":"thanks","kind":"next","path":"M883.4,21.0 C891.4,21.0 899.2,21.0 906.4,21.0 L912.8,21.0"}],"width":980.0,"height":42.0},"hash":"f6fd075057c965f0"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.38.0","meta":{"title":"Extending Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"extending-lattice","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"next-checkpoint":["Shift+ArrowRight"],"prev-checkpoint":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"last-step-instant":["Shift+End"],"first-step-instant":["Shift+Home"],"home":["Shift+Backspace"]},"gestures":{"swipe-left":"next","swipe-right":"prev","swipe-up":"enter-detour","swipe-down":"return","two-finger-swipe-left":"next-checkpoint","two-finger-swipe-right":"prev-checkpoint","double-tap":"goto","long-press":"overview","two-finger-tap":"undo"},"touch":true,"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"slides":{"extending-lattice":{"title":"Extending Lattice","label":"Extending Lattice","scope":"root","next":{"slide":"plugin-file"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"plugin-file":{"title":"A plugin is a Python file","label":"A plugin is a Python file","scope":"root","next":{"slide":"truth"},"branches":[],"detours":[],"steps":7,"tracks":[{"id":"c1","kind":"component","instance":"plugin-file/c1"}],"positions":[[0],[1],[2],[3],[4],[5],[6]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>Lattice imports <code>lattice_plugins.py<\/code> automatically; installed packages are enabled with <code>plugins:<\/code> in the front matter.<\/p>\n"},"truth":{"title":"Truth tables, computed at build time","label":"Truth tables, computed at build time","scope":"root","next":{"slide":"stack"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":26}},"stack":{"title":"The call stack of fib(4)","label":"The call stack of fib(4)","scope":"root","next":{"slide":"runtime"},"branches":[],"detours":[],"steps":19,"tracks":[{"id":"src","kind":"component","instance":"stack/src","follow":"calls"},{"id":"calls","kind":"component","instance":"stack/calls"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18]],"offpath":false,"source":{"file":"talk.md","line":44}},"runtime":{"title":"Its runtime, in a few lines","label":"Its runtime, in a few lines","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"runtime/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":58}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":66}}},"detours":{},"instances":{"plugin-file/c1":{"component":"code-steps","slide":"plugin-file","data":"lt-data-plugin-file/c1"},"truth/c1":{"component":"truth-table","slide":"truth","data":null},"stack/src":{"component":"code","slide":"stack","data":"lt-data-stack/src"},"stack/calls":{"component":"call-stack","slide":"stack","data":"lt-data-stack/calls"},"runtime/c1":{"component":"code-steps","slide":"runtime","data":"lt-data-runtime/c1"}},"tours":{},"mainPath":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"overview":{"nodes":{"extending-lattice":{"x":67.0,"y":21.0,"w":118.0,"h":26.0,"label":"Extending Lattice"},"plugin-file":{"x":232.5,"y":21.0,"w":153.0,"h":26.0,"label":"A plugin is a Python file"},"truth":{"x":427.0,"y":21.0,"w":176.0,"h":26.0,"label":"Truth tables, computed at…"},"stack":{"x":617.5,"y":21.0,"w":145.0,"h":26.0,"label":"The call stack of fib(4)"},"runtime":{"x":801.5,"y":21.0,"w":163.0,"h":26.0,"label":"Its runtime, in a few lin…"},"thanks":{"x":942.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"extending-lattice","to":"plugin-file","kind":"next","path":"M126.1,21.0 C133.8,21.0 141.8,21.0 149.8,21.0 L155.8,21.0"},{"from":"plugin-file","to":"truth","kind":"next","path":"M309.0,21.0 C316.8,21.0 324.8,21.0 332.8,21.0 L338.9,21.0"},{"from":"truth","to":"stack","kind":"next","path":"M515.1,21.0 C522.8,21.0 530.7,21.0 538.4,21.0 L544.8,21.0"},{"from":"stack","to":"runtime","kind":"next","path":"M690.2,21.0 C697.9,21.0 705.9,21.0 713.8,21.0 L719.9,21.0"},{"from":"runtime","to":"thanks","kind":"next","path":"M883.4,21.0 C891.4,21.0 899.2,21.0 906.4,21.0 L912.8,21.0"}],"width":980.0,"height":42.0},"hash":"e6e40895f6d02143"}</script>
 <script type="application/json" id="lt-data-plugin-file/c1">{"steps":[[],[16,17,18,19,20,21],[23,24,25,26,27,28],[29,30,31,32,33,34,35,36,37],[38],[46,47,48,49,50,51,52],[54,55,56,57,58,59,60]]}</script>
 <script type="application/json" id="lt-data-stack/src">{"steps":[[2],[2],[2],[2],[3],[2],[3],[4],[2],[3],[4],[2],[2],[3],[2],[3],[4],[4],[1]]}</script>
 <script type="application/json" id="lt-data-stack/calls">{"frames":{"format":"full","count":19,"frames":[{"stack":[{"call":"fib(4)","note":"running"}],"caption":"Call fib(4)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"running"}],"caption":"Call fib(3)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"running"}],"caption":"Call fib(2)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running"}],"caption":"Call fib(0)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running","ret":0}],"caption":"Base case: fib(0) = 0"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)","ret":1}],"caption":"fib(2) = 1 + 0"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)","ret":2}],"caption":"fib(3) = 1 + 1"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"running"}],"caption":"Call fib(2)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running"}],"caption":"Call fib(0)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running","ret":0}],"caption":"Base case: fib(0) = 0"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)","ret":1}],"caption":"fib(2) = 1 + 0"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)","ret":3}],"caption":"fib(4) = 2 + 1"},{"stack":[],"caption":"fib(4) = 3 after 18 steps"}]}}</script>
@@ -937,6 +939,17 @@ const Lattice = (() => {
     playing = null;
   }
 
+  // SKIP-INSTANT (spec 7.2): straight to the target step, showing no intermediate step and animating nothing, as the
+  // scrubber does. Detour steps on the way are not entered; forward, it stops in front of a blocking one, like SKIP.
+  function jumpToStep(target) {
+    const cur = nav.cur;
+    let t = target;
+    for (let i = cur.step + 1; i <= t; i++) {
+      if ((stepDetour(cur.slide, i) || {}).blocking) { t = i - 1; flash("Cannot step detour"); break; }
+    }
+    if (t !== cur.step) go(cur.slide, t, { kind: "step", dir: Math.sign(t - cur.step), still: true });
+  }
+
   // The anchor of a checkpoint key (spec 7.6): the target of a playback that the same action started on
   // this slide and that is still under way, else the current step. Read before the playback is stopped.
   function checkpointAnchor(action) {
@@ -985,6 +998,8 @@ const Lattice = (() => {
     "prev-checkpoint"(anchor = nav.cur.step) { playSteps(prevCheckpoint(nav.cur.slide, anchor), "prev-checkpoint"); },
     "last-step"() { playSteps(steps(nav.cur.slide) - 1); },
     "first-step"() { playSteps(0); },
+    "last-step-instant"() { jumpToStep(steps(nav.cur.slide) - 1); },
+    "first-step-instant"() { jumpToStep(0); },
     "skip-detour"() {
       // Step over the detour step(s) that follow, without entering them (spec 7.2, SKIP-DETOUR).
       const cur = nav.cur;
@@ -1288,17 +1303,34 @@ const Lattice = (() => {
         sec.classList.add(`lt-anim-${tr}`);
       }
     }
-    // scrubbing, a change of the URL hash, previews and printing never animate (spec 10.1)
-    const still = how && (how.kind === "scrub" || how.kind === "hash");
+    // scrubbing, a change of the URL hash, the instant first and last steps, previews and printing never animate
+    // (spec 10.1); the other window shows such a move still too
+    const still = !!how && (how.kind === "scrub" || how.kind === "hash" || !!how.still);
     const adjacent = sameSlide && Math.abs(prev.step - nav.cur.step) === 1 && !passive && !still;
+    const sec = sections[id];
+    sec.classList.toggle("lt-still", still && sameSlide); // holds off the CSS transitions of the slide (reveals fading)
     applyStep(id, nav.cur.step, { sameSlide, fromStep: sameSlide ? prev.step : null, animate: adjacent, force: !sameSlide });
+    if (still && sameSlide) releaseStill(sec);
     updateHud();
     if (passive) return;
     updateHash();
     save();
-    if (!how || how.kind !== "sync") broadcast();
+    if (!how || how.kind !== "sync") broadcast(still);
     if (presenter) updatePresenter();
     refreshTouchNotes();
+  }
+  // The new styles of a still move are computed with transitions off (the flush), then transitions come back two
+  // frames later, after the measurements runtimes make in a microtask or a frame (arrows), so nothing glides to them.
+  // A move that is not still removes the class at once, in `render`.
+  let stillMoves = 0; // the latest still move releases the class, not an earlier one still waiting for its frames
+  function releaseStill(sec) {
+    void sec.offsetWidth;
+    const n = ++stillMoves;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (n !== stillMoves || !sec.classList.contains("lt-still")) return;
+      void sec.offsetWidth;
+      sec.classList.remove("lt-still");
+    }));
   }
 
   // ------------------------------------------------------------------ HUD
@@ -1374,8 +1406,8 @@ const Lattice = (() => {
   }
 
   // ------------------------------------------------------------------ sync (spec 7.5)
-  function broadcast() {
-    if (channel) channel.postMessage({ nav: JSON.parse(JSON.stringify(nav)) });
+  function broadcast(still = false) {
+    if (channel) channel.postMessage({ nav: JSON.parse(JSON.stringify(nav)), still });
   }
   function onRemote(msg) {
     if (msg && "zoom" in msg) {
@@ -1386,7 +1418,7 @@ const Lattice = (() => {
     if (!msg || !msg.nav || !deck.slides[msg.nav.cur.slide]) return;
     const prev = Object.assign({}, nav.cur);
     nav = msg.nav;
-    render(prev, { kind: "sync", dir: 0 });
+    render(prev, { kind: "sync", dir: 0, still: !!msg.still });
   }
 
 
@@ -1768,6 +1800,7 @@ const Lattice = (() => {
     "next-checkpoint": "next checkpoint", "prev-checkpoint": "previous checkpoint",
     "last-step": "last step of the slide",
     "first-step": "first step of the slide",
+    "last-step-instant": "last step of the slide, at once", "first-step-instant": "first step of the slide, at once",
     "skip-detour": "step over the next detour step",
     "enter-detour": "enter the first detour", return: "return from a detour or jump",
     overview: "overview", goto: "go to a slide", presenter: "presenter view", tour: "cycle through tours",
@@ -2065,7 +2098,8 @@ const Lattice = (() => {
   };
   const ACTION_TOASTS = {
     next: "Next", prev: "Back", undo: "Undo", "next-checkpoint": "Next checkpoint", "prev-checkpoint": "Previous checkpoint",
-    "last-step": "Last step", "first-step": "First step", "skip-detour": "Skip detour", "enter-detour": "Detour",
+    "last-step": "Last step", "first-step": "First step",
+    "last-step-instant": "Last step", "first-step-instant": "First step", "skip-detour": "Skip detour", "enter-detour": "Detour",
     return: "Return", overview: "Overview", goto: "Search", presenter: "Presenter", tour: "Tour", home: "Start",
   };
   // what a tap already does, as with a mouse: such a tap never counts toward a double tap

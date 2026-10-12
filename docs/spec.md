@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.37.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.38.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -662,7 +662,7 @@ Initial state: `cur = (start, 0)`, `H = []`, `tour = none` (subject to 7.4).
 
 `push(k)` means: append `(cur.slide, cur.step, k)` to `H`. `go(x, i)` means: set `cur = (x, i)` and render.
 
-`H` records every move that changes slide, and nothing else: NEXT and CHOOSE record `forward` entries, excursions `excursion` entries, PREV `backward` entries. Moves within a slide (steps, SKIP, the scrubber, a change of the URL hash to another step) are never recorded. The optional `closed` of a `backward` entry holds the entries a PREV removed when it left a detour (section 7.2); UNDO puts them back.
+`H` records every move that changes slide, and nothing else: NEXT and CHOOSE record `forward` entries, excursions `excursion` entries, PREV `backward` entries. Moves within a slide (steps, SKIP, SKIP-INSTANT, the scrubber, a change of the URL hash to another step) are never recorded. The optional `closed` of a `backward` entry holds the entries a PREV removed when it left a detour (section 7.2); UNDO puts them back.
 
 `pred(x)`, the **structural predecessor** of a slide, is the first of: the slide before `x` in the active tour; the slide before `x` on the main path; a slide whose `next` is `x` (one in the same scope first, then document order); a slide with a branch option targeting `x`; the origin of the detour whose entry is `x`; else none. `detourstep(x, i)` is the detour of the detour step `i` of `x` (section 6.4), or none; it may be blocking.
 
@@ -682,6 +682,7 @@ Initial state: `cur = (start, 0)`, `H = []`, `tour = none` (subject to 7.4).
 | **UNDO** | `H` not empty | `e = pop(H)`; if `e` has `closed`, append its entries to `H`; `go(e.slide, e.step)` |
 | | else | no-op ("Nothing to undo") |
 | **SKIP(t)** (`next-checkpoint`: to `nextcp(cur.slide, a)`, `prev-checkpoint`: to `prevcp(cur.slide, a)`, section 6.5, with `a` the anchor of section 7.6; `last-step`: to `S(cur.slide) - 1`; `first-step`: to 0) | | `cur.step` moves to `t`, within `0..S(cur.slide) - 1`, never leaving the slide and never touching `H`. The intermediate steps are played in rapid succession (single-step moves, so runtimes animate), and a new event cancels the playback. Detour steps passed on the way are not entered; a forward playback stops in front of a blocking detour step ("Cannot step detour") |
+| **SKIP-INSTANT(t)** (`last-step-instant`: to `S(cur.slide) - 1`; `first-step-instant`: to 0) | | as SKIP, but `cur.step` is set to `t` at once: no intermediate step is shown and nothing animates (runtimes receive `animate: false`, section 10.1, and the slide's own transitions, such as a reveal fading in, are skipped; the other window shows the move the same way, section 7.5). Detour steps passed are not entered; forward, it stops in front of a blocking detour step ("Cannot step detour"), at the step before it |
 | **SKIP-DETOUR** | `detourstep(cur.slide, cur.step + 1)` is a detour step | `cur.step` moves past it and any detour steps directly following it (clamped to `S(cur.slide) - 1`), without entering them and without touching `H` |
 | | else | no-op |
 | **CHOOSE(k)** | `k` is a branch option key of `cur.slide`, target `t` | `push(forward)`, `go(t, 0)` |
@@ -745,7 +746,7 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 - Opening the deck with `?presenter` (key `p` opens it in a new window) shows the current slide beside a panel holding, from top to bottom: a timer (click to reset) with the slide and step, a scrubber, a preview of what comes next, the notes just below it (with the editor of sidecar notes under `lattice serve`, section 3.14), the available moves (what NEXT does, what PREV does, the steps `next-checkpoint` and `prev-checkpoint` reach with the kinds of the steps they land on, branch options, detours, the return target and the slide UNDO goes back to, each with its key; the kind of a step, section 6.5, is shown by the types of the tracks it changes: `reveal`, `columns`, or a component name such as `bbv-anim` or `arrow`), and last a **Keybindings** section listing every global action of section 7.6 with its keys (as bound by the deck, in smaller type than the moves, plus the digit keys of branch options and detours, and the click that enlarges an element when the deck has components that offer it, section 7.7).
 - The **scrubber** is a slider over the steps of the current slide, shown when the slide has more than one step. Moving it sets `cur.step` directly: it is not an event of section 7.2 and leaves `H` unchanged, and runtimes receive `animate: false` (section 10.1).
 - The **preview** shows what NEXT would show: the next step of the current slide (the entry slide of the detour when that step is a detour step, which the moves list names as "detour: label", marked "(blocking)" when it is, followed by the `skip-detour` key); at the last step, the slide NEXT moves to (tour successor, `next` slide at step 0, or the return target at the step it restores). At a branch point or at the end of the path it shows a label instead. The preview is a second copy of the document opened with `?preview`: a passive window that ignores keys and clicks, keeps no history or storage, does not join the `BroadcastChannel`, never animates, and renders the position the presenter window sends it with `postMessage`.
-- Audience and presenter windows share state over a `BroadcastChannel` named `lattice:<deck-hash>`. After every event, the window that handled it broadcasts `{cur, H, tour}`; the other window adopts it without re-running the event. Either window may drive. An enlarged element (section 7.7) is shared the same way: opening one broadcasts `{zoom: {instance, key}}` and closing one `{zoom: null}`, and the other window opens or closes its own copy.
+- Audience and presenter windows share state over a `BroadcastChannel` named `lattice:<deck-hash>`. After every event, the window that handled it broadcasts `{cur, H, tour}`, with `still` set when the move never animates (SKIP-INSTANT, the scrubber, a change of the URL hash; section 10.1); the other window adopts it without re-running the event, and shows a `still` move without animation too. Either window may drive. An enlarged element (section 7.7) is shared the same way: opening one broadcasts `{zoom: {instance, key}}` and closing one `{zoom: null}`, and the other window opens or closes its own copy.
 
 ### 7.6 Default bindings
 
@@ -758,6 +759,8 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 | `prev-checkpoint` | `Shift+ArrowLeft` |
 | `last-step` | `End` |
 | `first-step` | `Home` |
+| `last-step-instant` | `Shift+End` |
+| `first-step-instant` | `Shift+Home` |
 | `skip-detour` | `Shift+ArrowDown` |
 | `enter-detour` | `ArrowDown` |
 | `return` | `ArrowUp` |
@@ -766,9 +769,9 @@ Deck: `intro` (1 step), `dijkstra` (3 steps, detour with `heap-what` then `heap-
 | `goto` | `g` |
 | `presenter` | `p` |
 | `tour` | `t` |
-| `home` | `Shift+Home` |
+| `home` | `Shift+Backspace` |
 
-**Checkpoint keys.** One press of `next-checkpoint` performs SKIP to the next checkpoint (section 6.5), one press of `prev-checkpoint` to the previous one (or step 0). The checkpoint is taken from the **anchor**: the current step, or, when the press arrives during the playback of an earlier press of the same action on the same slide, the checkpoint that playback is heading to, so two presses in a row go two checkpoints ahead however quickly they come. The auto-repeat of a held key (`KeyboardEvent.repeat`) is ignored for these two actions, so holding the keys moves one checkpoint only. At the last (first) checkpoint they do nothing: they never leave the slide. `last-step` and `first-step` ignore checkpoints; like every SKIP, all four stop in front of a blocking detour step on the way forward.
+**Checkpoint keys.** One press of `next-checkpoint` performs SKIP to the next checkpoint (section 6.5), one press of `prev-checkpoint` to the previous one (or step 0). The checkpoint is taken from the **anchor**: the current step, or, when the press arrives during the playback of an earlier press of the same action on the same slide, the checkpoint that playback is heading to, so two presses in a row go two checkpoints ahead however quickly they come. The auto-repeat of a held key (`KeyboardEvent.repeat`) is ignored for these two actions, so holding the keys moves one checkpoint only. At the last (first) checkpoint they do nothing: they never leave the slide. `last-step` and `first-step` ignore checkpoints; like every SKIP, all four stop in front of a blocking detour step on the way forward. `last-step-instant` and `first-step-instant` go to the same steps as `last-step` and `first-step` without playing the steps between (SKIP-INSTANT, section 7.2), for instance to show the end of a long animation at once. `home` is listed after them, so a deck that binds `home: Shift+Home` (its default before 0.38) keeps that binding.
 
 Bindings are overridable in front matter under `keys`. The names `skip-forward` and `skip-back` (the ten-step skips before 0.30) are accepted there as aliases of `next-checkpoint` and `prev-checkpoint`. A key is a `KeyboardEvent.key` value, optionally prefixed with `Shift+`; with Shift held, the `Shift+` binding is tried first, then the plain key (letters already arrive shifted, so `A` binds Shift+a). Slide-level keys (branch options and detours) never override global bindings: a collision is an error (LT018). Gestures run the same actions on touch devices (section 7.8).
 
@@ -1243,7 +1246,7 @@ Lattice.component("graph-anim", {
 });
 ```
 
-`info = { from: number | null, direction: -1 | 0 | 1, animate: boolean }`. `animate` is true only for single-step moves (NEXT or PREV within the slide); jumps, restores, changes of the URL hash (even to an adjacent step) and scrubbing use `false`.
+`info = { from: number | null, direction: -1 | 0 | 1, animate: boolean }`. `animate` is true only for single-step moves (NEXT or PREV within the slide); jumps, restores, changes of the URL hash (even to an adjacent step), SKIP-INSTANT (section 7.2) and scrubbing use `false`, even to an adjacent step, and so does the other window when it shows such a move (section 7.5).
 
 `zoom(inst, key)` is called by the core when `api.zoom(key)` asks for an element, or when the other window opened it (section 7.5). It returns `{ el, width, height, source }`: a new element to show in the card, its natural size in its own units, and the element of the slide it grows from; or `null` when `key` names nothing to show at the current position. `el` MUST depend only on `key` and the position last shown.
 
@@ -1707,3 +1710,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.36 | `plot` passes the options it does not know, and `legend`, to its `source` function; an option the function does not take is LT022, `legend` included; `title`, when set, goes to a source that takes it | 8.2, 8.8 |
 | 0.36 | Touch input: touch mode on phones and tablets (the pointer media query, `?touch`, `?touch=0`, `touch: false`), gestures for the global actions (`gestures` in front matter, LT066), notes and help sheets with tour and start buttons; the viewport meta has `viewport-fit=cover` and `#lt-root` keeps to the safe areas; DeckJSON `gestures` and `touch` | 2.2, 7.6, 7.8, 11.1, 11.2, 12 |
 | 0.37 | Sidecar notes (`NAME.notes.md`, sections `# ID`): appended to the static notes by the build, edited in the presenter view under `lattice serve` (saved as one types, without rebuild; the `notes` event of the live reload stream); DeckJSON `serve`; code blocks in notes are drawn in the notes, components there are shown as code; LT067, LT068 | 2.1, 3.14, 7.5, 11.2, 12 |
+| 0.38 | The SKIP-INSTANT event and its bindings `last-step-instant` (`Shift+End`) and `first-step-instant` (`Shift+Home`): the last or first step of the slide at once, without playing the steps between or animating; `home` moves to `Shift+Backspace`; a move that never animates is shown still in the other window too | 7.1, 7.2, 7.6, 10.1 |

@@ -56,6 +56,8 @@ kbd{font-family:var(--lt-font-code);font-size:.72em;display:inline-block;min-wid
 /* reveal */
 [data-lt-reveal]{transition:opacity .25s ease}
 .lt-hidden{opacity:0;visibility:hidden}
+/* a move that never animates (spec 10.1): no transition until its styles are computed */
+.lt-still *{transition:none !important}
 
 /* columns and callouts */
 .lt-columns{display:flex;gap:40px;min-height:0;flex:1}
