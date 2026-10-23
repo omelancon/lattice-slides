@@ -112,6 +112,7 @@ class FrontMatter(BaseModel):
     keys: dict[str, str | list[str]] = Field(default_factory=dict)
     touch: bool = True
     gestures: dict[str, str | None] = Field(default_factory=dict)
+    help_button: bool = False
     transitions: dict[str, str] = Field(default_factory=dict)
     tours: dict[str, list[str] | Literal["main"]] = Field(default_factory=dict)
     build: BuildConfig = Field(default_factory=BuildConfig)

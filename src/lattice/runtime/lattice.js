@@ -1312,6 +1312,7 @@ const Lattice = (() => {
       return;
     }
     if (e.target && e.target.closest && e.target.closest("input, textarea, select")) return;
+    if (helpOpen() && e.key === "Escape") { setHelp(false); e.preventDefault(); return; } // spec 7.9
     if (overlayOpen()) {
       if (e.key === "Escape" || (e.key === "o" && $(".lt-overview"))) { closeOverlay(); e.preventDefault(); }
       return;
@@ -1354,6 +1355,50 @@ const Lattice = (() => {
     if (e.target.closest(".lt-pp-timer")) { timerStart = Date.now(); tickTimer(); return; }
     if (e.target.id === "lt-overlay") closeOverlay();
   }
+
+  // ------------------------------------------------------------------ help button (spec 7.9)
+  // With `help_button: true`, a faint "?" in the top right corner opens a card listing the basic keys: the actions of
+  // the deck's gestures with the keys bound to them, the click, and the presenter view. Touch mode has its own "?"
+  // (spec 7.8), so CSS hides this one under `html.lt-touch`. Neither the presenter window (its panel lists every
+  // key) nor a passive window has it; decks without the option have no trace of it in the page.
+  let helpUi = null; // { button, backdrop, card }
+
+  function buildHelpButton() {
+    const shown = []; // the actions of the deck's gestures, in the order the touch help sheet lists them
+    for (const g of Object.keys(GESTURE_LABELS)) {
+      const a = deck.gestures && deck.gestures[g];
+      if (a && a !== "presenter" && !shown.includes(a)) shown.push(a);
+    }
+    const row = (keys, what) => `<tr><td>${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join(" ")}</td>` +
+      `<td>${esc(what)}</td></tr>`;
+    const rows = shown.filter((a) => (deck.keys[a] || []).length)
+      .map((a) => row(deck.keys[a], capital(ACTION_LABELS[a] || a)));
+    rows.push(row(["click"], "Links, badges, branch options and blocks"));
+    if ((deck.keys.presenter || []).length) {
+      rows.push(row(deck.keys.presenter, "Presenter view and more controls: notes, what comes next, every key"));
+    }
+    document.body.insertAdjacentHTML("beforeend", `
+      <button type="button" class="lt-help-btn" id="lt-help-button" aria-haspopup="dialog" aria-expanded="false"
+        aria-controls="lt-help" aria-label="Keyboard controls" title="Keyboard controls">?</button>
+      <div class="lt-help-backdrop" id="lt-help" hidden>
+        <div class="lt-help-card" role="dialog" aria-label="Keyboard controls">
+          <h2><span>Keyboard controls</span><button type="button" class="lt-help-close">Close</button></h2>
+          <table>${rows.join("")}</table>
+        </div>
+      </div>`);
+    helpUi = { button: $("#lt-help-button"), backdrop: $("#lt-help"), card: $(".lt-help-card") };
+    helpUi.button.addEventListener("click", () => setHelp(helpUi.backdrop.hidden));
+    $(".lt-help-close", helpUi.card).addEventListener("click", () => setHelp(false));
+    // a press outside the card closes it and does nothing else: the backdrop takes it
+    helpUi.backdrop.addEventListener("click", (e) => { if (!helpUi.card.contains(e.target)) setHelp(false); });
+  }
+
+  function setHelp(open) {
+    if (!helpUi) return;
+    helpUi.backdrop.hidden = !open;
+    helpUi.button.setAttribute("aria-expanded", String(open));
+  }
+  const helpOpen = () => !!helpUi && !helpUi.backdrop.hidden;
 
   // ------------------------------------------------------------------ touch input (spec 7.8)
   // On a phone or a tablet (the primary pointer is a finger: no hover, coarse), gestures run the deck's actions
@@ -1423,6 +1468,7 @@ const Lattice = (() => {
       if (touchUi) { setSheet("help", false); setSheet("notes", false); }
       return;
     }
+    setHelp(false); // the touch bar has its own help (spec 7.9)
     if (!touchUi) buildTouchUi();
     let seen = false;
     try { seen = localStorage.getItem(HELP_SEEN) === "1"; } catch (e) { seen = false; }
@@ -1697,6 +1743,7 @@ const Lattice = (() => {
       fetchSidecarNotes();
       window.addEventListener("lattice:notes", fetchSidecarNotes);
     }
+    if (deck.helpButton && !presenter) buildHelpButton(); // before touch mode, which closes it (spec 7.9)
     setupTouch();
     document.documentElement.classList.add("lt-ready");
   }

@@ -56,7 +56,7 @@ Renders are cached in `.lattice-cache/` next to the root file. When a result loo
 
 | Feature | Syntax in brief | Where |
 |---|---|---|
-| Front matter (title, theme, aspect, start, tours, keys, touch, gestures, transitions, plugins, build options) | YAML at the top of the root file only | manual `front-matter`, spec section 2.2 |
+| Front matter (title, theme, aspect, start, tours, keys, touch, gestures, help_button, transitions, plugins, build options) | YAML at the top of the root file only | manual `front-matter`, spec section 2.2 |
 | Several files | `::include{file="parts/x.md" offpath=true}` at top level or in a detour | manual `includes`, spec section 2.3 |
 | Slides, ids | `# Title {#id .class}`, bare `#`; ids are global across files | manual `slides-and-ids`, spec sections 3.3 and 3.6 |
 | Slide attributes | `next=id\|back\|none`, `offpath=true`, `layout=title`, `transition=fade`, `pdf=...`, helper classes `.center`, `.fullbleed`, `.small` | manual `slide-attributes`, spec section 3.5 |
@@ -130,6 +130,7 @@ A fenced block whose name is a registered component renders it; any other name i
 | Structure and history: Left walks the structure backward, Backspace undoes the last move, Up returns from an excursion | manual `history`, spec section 7.2 |
 | URL `#/slide-id/step`, transitions | manual `navigation-details`, spec section 7.4 |
 | Presenter view (`p`): notes, timer, scrubber, preview of the next step | manual `presenter-view`, spec section 7.5 |
+| Help button: `help_button: true` adds a faint **?** in the corner listing the basic keys (off on phones and tablets, which have their own) | manual `front-matter`, spec section 7.9 |
 | Touch input on phones and tablets: gestures for the moves, notes and help sheets; `?touch`, `?touch=0`, `touch: false`, `gestures:` | manual `touch`, spec section 7.8 |
 | Single file or directory output | manual `output`, spec sections 11.1 and 11.4 |
 | PDF export with an appendix of detours and branches | manual `pdf-export`, spec section 11.5 |

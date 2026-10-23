@@ -1,6 +1,6 @@
 # Lattice Specification
 
-*Normative specification of Lattice, current as of v0.38.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
+*Normative specification of Lattice, current as of v0.39.0 (changes since draft 1: section 15). The rationale is in `design-report.md`, user-facing usage in `../README.md` and the manual in `../user_manual/manual.md`, contributor workflow in `SKILL.md`. Where documents disagree, this one wins.*
 
 ---
 
@@ -60,6 +60,7 @@ The root file MAY start with a YAML front matter block delimited by `---` lines.
 | `keys` | map action to key or list of keys | section 7.6 | Key binding overrides |
 | `touch` | bool | `true` | Touch input on phones and tablets (section 7.8); `false` turns it off unless the URL asks for it |
 | `gestures` | map gesture to action, or `none` | section 7.8 | Gesture overrides (section 7.8); an unknown gesture or action is LT066 |
+| `help_button` | bool | `false` | A faint **?** in the top right corner that lists the basic keys, off touch mode (section 7.9) |
 | `transitions` | map edge kind to transition name (`slide`, `zoom`, `fade`, `none`) | `next: slide`, `branch: slide`, `detour: zoom`, `link: fade` | Default transitions; moving backward plays the reverse (`slide` from the left, `zoom` out) |
 | `tours` | map name to list of ids, or the string `main` | `{}` | Named tours (section 5.7) |
 | `build.cache` | bool | `true` | Enable the render cache |
@@ -812,6 +813,12 @@ The front matter's `gestures` maps a gesture to the name of a global action of s
 
 **Controls.** Two buttons in the top right corner: **Notes** opens a sheet with the speaker notes of the current slide (section 3.14), which follows every move while it is open (absent in presenter view, whose panel shows them); **?** opens the help sheet, which lists the deck's gestures with their actions, a button that cycles through the tours (SET_TOUR, as `tour`; shown when the deck has tours) and a button that goes to the start of the deck (HOME). The help sheet opens by itself the first time touch mode turns on in a browser (remembered in `localStorage` under `lattice:touch-help-seen`). Each gesture briefly names its action at the top of the screen. The sheets and the notices are not positions: they touch neither `cur`, `H`, the hash nor `sessionStorage`.
 
+### 7.9 Help button
+
+The front matter's `help_button: true` gives the deck a small, faint **?** button in the top right corner of the window (opaque while hovered, focused or open); it is off by default, and a deck without it has neither the button nor its card in the page. A click on it opens a **card** under it listing the basic keys, as bound by the deck (section 7.6): the actions of the deck's gestures (section 7.8), in the order of the touch help sheet, each with its keys; the click, which follows links and badges, chooses branch options and enlarges blocks (section 7.7); and last `presenter`, the presenter view and the further controls of its panel (section 7.5). An action with no key is left out. The card has none of the tour and start buttons of the touch help sheet. It closes with its **Close** button, with `Escape`, with a second click on **?**, and with a click anywhere outside it, which does nothing else (no link, badge or branch option is followed). Other keys keep their actions while it is open.
+
+The button exists only off touch mode: touch mode has the **?** of its own controls (section 7.8), so the button and its card are hidden while the root element has `lt-touch`, and the card closes when touch mode turns on. Neither the presenter window (whose panel lists every key) nor a passive window (section 7.5) has the button. Like the touch sheets, the card is not a position.
+
 ---
 
 ## 8. Component Contract (Python)
@@ -1346,6 +1353,7 @@ interface DeckJSON {
   keys: Record<string, string[]>;          // action -> keys
   gestures: Record<string, string>;        // gesture -> action, the gestures with an action (section 7.8)
   touch: boolean;                          // false: `touch: false` in front matter (section 7.8)
+  helpButton: boolean;                     // `help_button` in front matter (section 7.9)
   transitions: Record<"next" | "branch" | "detour" | "link", string>;
   order: string[];                         // slide ids, document order
   slides: Record<string, SlideJSON>;
@@ -1711,3 +1719,4 @@ A record of departures from the first draft. Each rule lives in the section cite
 | 0.36 | Touch input: touch mode on phones and tablets (the pointer media query, `?touch`, `?touch=0`, `touch: false`), gestures for the global actions (`gestures` in front matter, LT066), notes and help sheets with tour and start buttons; the viewport meta has `viewport-fit=cover` and `#lt-root` keeps to the safe areas; DeckJSON `gestures` and `touch` | 2.2, 7.6, 7.8, 11.1, 11.2, 12 |
 | 0.37 | Sidecar notes (`NAME.notes.md`, sections `# ID`): appended to the static notes by the build, edited in the presenter view under `lattice serve` (saved as one types, without rebuild; the `notes` event of the live reload stream); DeckJSON `serve`; code blocks in notes are drawn in the notes, components there are shown as code; LT067, LT068 | 2.1, 3.14, 7.5, 11.2, 12 |
 | 0.38 | The SKIP-INSTANT event and its bindings `last-step-instant` (`Shift+End`) and `first-step-instant` (`Shift+Home`): the last or first step of the slide at once, without playing the steps between or animating; `home` moves to `Shift+Backspace`; a move that never animates is shown still in the other window too | 7.1, 7.2, 7.6, 10.1 |
+| 0.39 | The help button: `help_button: true` in front matter puts a faint **?** in the top right corner, off touch mode, whose card lists the keys of the gesture actions, the click and the presenter view; DeckJSON `helpButton` | 2.2, 7.9, 11.2 |

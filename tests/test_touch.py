@@ -377,3 +377,93 @@ def test_a_gesture_over_an_enlarged_block_only_closes_it(tmp_path):
         assert not errors, errors
 
     run(check)
+
+
+HELP = DECK.replace("title: Touch", "title: Touch\nhelp_button: true")
+
+
+def help_rows(page):
+    return page.evaluate("""Array.from(document.querySelectorAll('#lt-help tr'))
+        .map((r) => Array.from(r.cells).map((c) => c.textContent.trim()))""")
+
+
+def test_help_button_on_a_desktop(tmp_path):
+    """Spec 7.9: without `help_button` the page has no help button; with it, a faint "?" in the top right corner opens
+    a card listing the keys of the deck's gesture actions, the click and the presenter view (as bound by the deck),
+    without the tour and start buttons of the touch sheet; Close, Escape and a click outside close it, and that click
+    does nothing else."""
+    plain = build(tmp_path)
+    out = build(tmp_path, HELP.replace("tours:", "keys:\n  next: n\ntours:"), name="help")
+
+    def check(browser):
+        ctx, page, errors, _ = open_page(browser, plain.as_uri(), DESKTOP)
+        assert page.locator(".lt-help-btn, #lt-help").count() == 0
+        ctx.close()
+        ctx, page, errors, _ = open_page(browser, out.as_uri(), DESKTOP)
+        button = page.locator("#lt-help-button")
+        assert button.is_visible() and page.is_hidden("#lt-help")
+        box = button.bounding_box()
+        assert box["x"] + box["width"] > 1280 - 20 and box["y"] < 20 and box["width"] < 40  # small, top right
+        assert float(button.evaluate("(b) => getComputedStyle(b).opacity")) < 0.5  # faint
+        button.click()
+        assert page.is_visible("#lt-help") and button.get_attribute("aria-expanded") == "true"
+        rows = help_rows(page)
+        keys = {what: k for k, what in rows}
+        assert keys["Next step or slide"] == "n"  # the deck's binding, not the default
+        assert keys["Previous step or slide"] == "\u2190"
+        assert keys["Enter the first detour"] == "\u2193" and keys["Return from a detour or jump"] == "\u2191"
+        assert keys["Next checkpoint"] == "Shift+\u2192" and keys["Previous checkpoint"] == "Shift+\u2190"
+        assert keys["Go to a slide"] == "g" and keys["Overview"] == "o"
+        assert keys["Undo the last move (history)"] == "\u232b"
+        assert rows[-2][0] == "click" and rows[-1][0] == "p" and "Presenter view" in rows[-1][1]
+        assert len(rows) == 11
+        assert page.locator("#lt-help button").all_text_contents() == ["Close"]  # no tour, no start of the deck
+        page.click(".lt-help-close")
+        assert page.is_hidden("#lt-help") and button.get_attribute("aria-expanded") == "false"
+        button.click()
+        page.keyboard.press("Escape")
+        assert page.is_hidden("#lt-help")
+        button.click()
+        link = page.locator("#lt-stage [data-lt-link]").first.bounding_box()
+        page.mouse.click(link["x"] + 3, link["y"] + link["height"] / 2)  # outside the card, over a link
+        page.wait_for_timeout(300)
+        assert page.is_hidden("#lt-help") and cur(page) == {"slide": "intro", "step": 0}
+        page.keyboard.press("n")  # keys act as usual once it is closed
+        assert cur(page) == {"slide": "many", "step": 0}
+        assert not touch_mode(page) and controls(page) == 0
+        assert not errors, errors
+        ctx.close()
+
+    run(check)
+
+
+def test_help_button_never_in_touch_mode_or_other_windows(tmp_path):
+    """Spec 7.9: phones and tablets (touch mode) have the "?" of the touch bar instead, and the help button hides, its
+    card closed, when a device enters touch mode; the presenter window, the preview and print mode have none."""
+    out = build(tmp_path, HELP, name="help")
+
+    def check(browser):
+        ctx, page, errors, _ = open_page(browser, out.as_uri(), PHONE)
+        assert touch_mode(page) and page.is_visible('[data-lt-tc="help"]')
+        assert not page.is_visible("#lt-help-button")
+        assert not errors, errors
+        ctx.close()
+        ctx = browser.new_context(**DESKTOP, has_touch=True)
+        ctx.add_init_script(FAKE_QUERY)
+        page = ctx.new_page()
+        page.goto(out.as_uri())
+        page.wait_for_timeout(500)
+        page.click("#lt-help-button")
+        assert page.is_visible("#lt-help")
+        page.evaluate("__phone(true)")
+        assert touch_mode(page) and not page.is_visible("#lt-help-button") and page.is_hidden("#lt-help")
+        page.evaluate("__phone(false)")
+        assert page.is_visible("#lt-help-button") and page.is_hidden("#lt-help")
+        ctx.close()
+        for query in ("?presenter", "?preview", "?print"):
+            ctx, page, errors, _ = open_page(browser, out.as_uri() + query, DESKTOP)
+            assert page.locator("#lt-help-button, #lt-help").count() == 0, query
+            assert not errors, errors
+            ctx.close()
+
+    run(check)

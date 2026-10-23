@@ -478,6 +478,28 @@ html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone
 .lt-goto li.sel button,.lt-goto button:hover{background:var(--lt-accent-soft)}
 .lt-goto small{color:var(--lt-muted);font-family:var(--lt-font-code)}
 
+/* help button (spec 7.9): `help_button: true` only, never in touch mode (which has its own "?") */
+.lt-help-btn{position:fixed;z-index:60;top:calc(env(safe-area-inset-top,0px) + 10px);right:calc(env(safe-area-inset-right,0px) + 10px);
+  width:26px;height:26px;padding:0;border-radius:50%;border:1px solid var(--lt-rule);background:var(--lt-bg);color:var(--lt-muted);
+  font:600 14px/1 var(--lt-font-body);cursor:pointer;opacity:.35;transition:opacity .15s}
+.lt-help-btn:hover,.lt-help-btn:focus-visible,.lt-help-btn[aria-expanded="true"]{opacity:1}
+.lt-help-btn:focus-visible,.lt-help-card button:focus-visible{outline:2px solid var(--lt-accent);outline-offset:2px}
+html.lt-touch .lt-help-btn,html.lt-touch .lt-help-backdrop{display:none}
+.lt-help-backdrop{position:fixed;inset:0;z-index:70;background:color-mix(in srgb,var(--lt-scrim) 45%,transparent)}
+.lt-help-backdrop[hidden]{display:none}
+.lt-help-card{position:absolute;top:calc(env(safe-area-inset-top,0px) + 46px);right:calc(env(safe-area-inset-right,0px) + 10px);
+  width:min(460px,calc(100vw - 20px));max-height:calc(100vh - 66px);overflow:auto;
+  background:var(--lt-bg);color:var(--lt-ink);border:1px solid var(--lt-rule);border-radius:14px;
+  box-shadow:0 10px 40px rgba(0,0,0,.22);padding:14px 16px 16px;font:15px/1.45 var(--lt-font-body)}
+.lt-help-card h2{margin:0 0 8px;font:650 16px/1.2 var(--lt-font-head);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.lt-help-card h2 button{font:600 13px/1 var(--lt-font-body);color:var(--lt-ink);background:var(--lt-bg);border:1px solid var(--lt-rule);
+  border-radius:999px;padding:7px 12px;cursor:pointer}
+.lt-help-card table{border-collapse:collapse;width:100%}
+.lt-help-card td{padding:6px 0;border-top:1px solid var(--lt-rule);vertical-align:top}
+.lt-help-card td:first-child{padding-right:14px;white-space:nowrap}
+.lt-help-card kbd{font-size:13px;color:var(--lt-accent)}
+html.lt-print .lt-help-btn,html.lt-print .lt-help-backdrop{display:none}
+
 /* touch input (spec 7.8): only under html.lt-touch, set on phones and tablets; the controls exist only once it is on */
 html:not(.lt-touch) .lt-tc{display:none !important}
 html.lt-touch,html.lt-touch body{overscroll-behavior:none}

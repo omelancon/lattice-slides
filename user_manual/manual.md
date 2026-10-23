@@ -1,6 +1,7 @@
 ---
 title: Lattice User Manual
-author: Lattice 0.38.0
+author: Lattice 0.39.0
+help_button: true
 tours:
   quick: [lattice-user-manual, what-is-a-deck, the-commands, slides-and-ids, text-and-math, the-graph, detours,
           branches, steps-and-tracks, timelines, pick-a-component, presenting-keys, presenter-view, touch, pdf-export, thanks]
@@ -58,10 +59,11 @@ Every command accepts `--no-cache`. Renders are cached in `.lattice-cache/` next
 | `title`, `author`, `date` | strings | Deck metadata (the title defaults to the file name) |
 | `theme` | `default`, `dark` | Built-in theme |
 | `aspect` | `16:9`, `16:10`, `4:3` | Slide aspect ratio |
-| `start` | a slide id | First slide (default: the first root slide that is not off path) |
+| `start` | a slide id | First slide (default: the first root slide on the path) |
 | `tours` | `name: [ids]` or `name: main` | Named tours for the `t` key and `lattice pdf --tour` |
 | `keys` | `action: key` or `action: [keys]` | Key binding overrides (see [[presenting-keys]]) |
 | `touch`, `gestures` | bool; `gesture: action` | Touch input and its gestures (see [[touch\|touch]]) |
+| `help_button` | bool | The faint **?** at the top right, listing the keys |
 | `transitions` | per edge kind: `slide`, `zoom`, `fade`, `none` | Transition when entering by a `next`, `branch`, `detour` or `link` edge |
 | `plugins` | list of packages | Installed plugins to activate (see [[plugins\|plugins]]) |
 | `build.cache`, `build.output`, `build.frames.*` | bool; `single` or `dir`; ints | The render cache, the output mode, the keyframe thresholds |

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="generator" content="lattice 0.38.0">
+<meta name="generator" content="lattice 0.39.0">
 <title>Extending Lattice</title>
 <style>:root{--lt-w:1280px;--lt-h:720px}</style>
 <style id="lt-theme">/* Lattice base styles. Themes set the custom properties used here. */
@@ -486,6 +486,28 @@ html:not(.lt-print):not(.lt-preview) .lt-bbv-clickable .lt-bbv-node:not(.lt-gone
 .lt-goto li.sel button,.lt-goto button:hover{background:var(--lt-accent-soft)}
 .lt-goto small{color:var(--lt-muted);font-family:var(--lt-font-code)}
 
+/* help button (spec 7.9): `help_button: true` only, never in touch mode (which has its own "?") */
+.lt-help-btn{position:fixed;z-index:60;top:calc(env(safe-area-inset-top,0px) + 10px);right:calc(env(safe-area-inset-right,0px) + 10px);
+  width:26px;height:26px;padding:0;border-radius:50%;border:1px solid var(--lt-rule);background:var(--lt-bg);color:var(--lt-muted);
+  font:600 14px/1 var(--lt-font-body);cursor:pointer;opacity:.35;transition:opacity .15s}
+.lt-help-btn:hover,.lt-help-btn:focus-visible,.lt-help-btn[aria-expanded="true"]{opacity:1}
+.lt-help-btn:focus-visible,.lt-help-card button:focus-visible{outline:2px solid var(--lt-accent);outline-offset:2px}
+html.lt-touch .lt-help-btn,html.lt-touch .lt-help-backdrop{display:none}
+.lt-help-backdrop{position:fixed;inset:0;z-index:70;background:color-mix(in srgb,var(--lt-scrim) 45%,transparent)}
+.lt-help-backdrop[hidden]{display:none}
+.lt-help-card{position:absolute;top:calc(env(safe-area-inset-top,0px) + 46px);right:calc(env(safe-area-inset-right,0px) + 10px);
+  width:min(460px,calc(100vw - 20px));max-height:calc(100vh - 66px);overflow:auto;
+  background:var(--lt-bg);color:var(--lt-ink);border:1px solid var(--lt-rule);border-radius:14px;
+  box-shadow:0 10px 40px rgba(0,0,0,.22);padding:14px 16px 16px;font:15px/1.45 var(--lt-font-body)}
+.lt-help-card h2{margin:0 0 8px;font:650 16px/1.2 var(--lt-font-head);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.lt-help-card h2 button{font:600 13px/1 var(--lt-font-body);color:var(--lt-ink);background:var(--lt-bg);border:1px solid var(--lt-rule);
+  border-radius:999px;padding:7px 12px;cursor:pointer}
+.lt-help-card table{border-collapse:collapse;width:100%}
+.lt-help-card td{padding:6px 0;border-top:1px solid var(--lt-rule);vertical-align:top}
+.lt-help-card td:first-child{padding-right:14px;white-space:nowrap}
+.lt-help-card kbd{font-size:13px;color:var(--lt-accent)}
+html.lt-print .lt-help-btn,html.lt-print .lt-help-backdrop{display:none}
+
 /* touch input (spec 7.8): only under html.lt-touch, set on phones and tablets; the controls exist only once it is on */
 html:not(.lt-touch) .lt-tc{display:none !important}
 html.lt-touch,html.lt-touch body{overscroll-behavior:none}
@@ -720,7 +742,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <aside id="lt-presenter-panel" hidden></aside>
 </div>
 <div id="lt-overlay" hidden></div>
-<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.38.0","meta":{"title":"Extending Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"extending-lattice","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"next-checkpoint":["Shift+ArrowRight"],"prev-checkpoint":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"last-step-instant":["Shift+End"],"first-step-instant":["Shift+Home"],"home":["Shift+Backspace"]},"gestures":{"swipe-left":"next","swipe-right":"prev","swipe-up":"enter-detour","swipe-down":"return","two-finger-swipe-left":"next-checkpoint","two-finger-swipe-right":"prev-checkpoint","double-tap":"goto","long-press":"overview","two-finger-tap":"undo"},"touch":true,"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"slides":{"extending-lattice":{"title":"Extending Lattice","label":"Extending Lattice","scope":"root","next":{"slide":"plugin-file"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"plugin-file":{"title":"A plugin is a Python file","label":"A plugin is a Python file","scope":"root","next":{"slide":"truth"},"branches":[],"detours":[],"steps":7,"tracks":[{"id":"c1","kind":"component","instance":"plugin-file/c1"}],"positions":[[0],[1],[2],[3],[4],[5],[6]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>Lattice imports <code>lattice_plugins.py<\/code> automatically; installed packages are enabled with <code>plugins:<\/code> in the front matter.<\/p>\n"},"truth":{"title":"Truth tables, computed at build time","label":"Truth tables, computed at build time","scope":"root","next":{"slide":"stack"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":26}},"stack":{"title":"The call stack of fib(4)","label":"The call stack of fib(4)","scope":"root","next":{"slide":"runtime"},"branches":[],"detours":[],"steps":19,"tracks":[{"id":"src","kind":"component","instance":"stack/src","follow":"calls"},{"id":"calls","kind":"component","instance":"stack/calls"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18]],"offpath":false,"source":{"file":"talk.md","line":44}},"runtime":{"title":"Its runtime, in a few lines","label":"Its runtime, in a few lines","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"runtime/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":58}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":66}}},"detours":{},"instances":{"plugin-file/c1":{"component":"code-steps","slide":"plugin-file","data":"lt-data-plugin-file/c1"},"truth/c1":{"component":"truth-table","slide":"truth","data":null},"stack/src":{"component":"code","slide":"stack","data":"lt-data-stack/src"},"stack/calls":{"component":"call-stack","slide":"stack","data":"lt-data-stack/calls"},"runtime/c1":{"component":"code-steps","slide":"runtime","data":"lt-data-runtime/c1"}},"tours":{},"mainPath":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"overview":{"nodes":{"extending-lattice":{"x":67.0,"y":21.0,"w":118.0,"h":26.0,"label":"Extending Lattice"},"plugin-file":{"x":232.5,"y":21.0,"w":153.0,"h":26.0,"label":"A plugin is a Python file"},"truth":{"x":427.0,"y":21.0,"w":176.0,"h":26.0,"label":"Truth tables, computed at…"},"stack":{"x":617.5,"y":21.0,"w":145.0,"h":26.0,"label":"The call stack of fib(4)"},"runtime":{"x":801.5,"y":21.0,"w":163.0,"h":26.0,"label":"Its runtime, in a few lin…"},"thanks":{"x":942.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"extending-lattice","to":"plugin-file","kind":"next","path":"M126.1,21.0 C133.8,21.0 141.8,21.0 149.8,21.0 L155.8,21.0"},{"from":"plugin-file","to":"truth","kind":"next","path":"M309.0,21.0 C316.8,21.0 324.8,21.0 332.8,21.0 L338.9,21.0"},{"from":"truth","to":"stack","kind":"next","path":"M515.1,21.0 C522.8,21.0 530.7,21.0 538.4,21.0 L544.8,21.0"},{"from":"stack","to":"runtime","kind":"next","path":"M690.2,21.0 C697.9,21.0 705.9,21.0 713.8,21.0 L719.9,21.0"},{"from":"runtime","to":"thanks","kind":"next","path":"M883.4,21.0 C891.4,21.0 899.2,21.0 906.4,21.0 L912.8,21.0"}],"width":980.0,"height":42.0},"hash":"e6e40895f6d02143"}</script>
+<script type="application/json" id="lt-deck">{"lattice":1,"version":"0.39.0","meta":{"title":"Extending Lattice","author":"Lattice examples","date":null,"aspect":"16:9","theme":"default"},"start":"extending-lattice","keys":{"next":["ArrowRight"," "],"prev":["ArrowLeft"],"next-checkpoint":["Shift+ArrowRight"],"prev-checkpoint":["Shift+ArrowLeft"],"last-step":["End"],"first-step":["Home"],"skip-detour":["Shift+ArrowDown"],"enter-detour":["ArrowDown"],"undo":["Backspace"],"return":["ArrowUp"],"overview":["o"],"goto":["g"],"presenter":["p"],"tour":["t"],"last-step-instant":["Shift+End"],"first-step-instant":["Shift+Home"],"home":["Shift+Backspace"]},"gestures":{"swipe-left":"next","swipe-right":"prev","swipe-up":"enter-detour","swipe-down":"return","two-finger-swipe-left":"next-checkpoint","two-finger-swipe-right":"prev-checkpoint","double-tap":"goto","long-press":"overview","two-finger-tap":"undo"},"touch":true,"helpButton":false,"transitions":{"next":"slide","branch":"slide","detour":"zoom","link":"fade"},"order":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"slides":{"extending-lattice":{"title":"Extending Lattice","label":"Extending Lattice","scope":"root","next":{"slide":"plugin-file"},"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":6}},"plugin-file":{"title":"A plugin is a Python file","label":"A plugin is a Python file","scope":"root","next":{"slide":"truth"},"branches":[],"detours":[],"steps":7,"tracks":[{"id":"c1","kind":"component","instance":"plugin-file/c1"}],"positions":[[0],[1],[2],[3],[4],[5],[6]],"offpath":false,"source":{"file":"talk.md","line":10},"notes":"<p>Lattice imports <code>lattice_plugins.py<\/code> automatically; installed packages are enabled with <code>plugins:<\/code> in the front matter.<\/p>\n"},"truth":{"title":"Truth tables, computed at build time","label":"Truth tables, computed at build time","scope":"root","next":{"slide":"stack"},"branches":[],"detours":[],"steps":4,"tracks":[{"id":"reveal","kind":"reveal"}],"positions":[[0],[1],[2],[3]],"offpath":false,"source":{"file":"talk.md","line":26}},"stack":{"title":"The call stack of fib(4)","label":"The call stack of fib(4)","scope":"root","next":{"slide":"runtime"},"branches":[],"detours":[],"steps":19,"tracks":[{"id":"src","kind":"component","instance":"stack/src","follow":"calls"},{"id":"calls","kind":"component","instance":"stack/calls"}],"positions":[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5],[6,6],[7,7],[8,8],[9,9],[10,10],[11,11],[12,12],[13,13],[14,14],[15,15],[16,16],[17,17],[18,18]],"offpath":false,"source":{"file":"talk.md","line":44}},"runtime":{"title":"Its runtime, in a few lines","label":"Its runtime, in a few lines","scope":"root","next":{"slide":"thanks"},"branches":[],"detours":[],"steps":3,"tracks":[{"id":"c1","kind":"component","instance":"runtime/c1"}],"positions":[[0],[1],[2]],"offpath":false,"source":{"file":"talk.md","line":58}},"thanks":{"title":"Thanks","label":"Thanks","scope":"root","next":null,"branches":[],"detours":[],"steps":1,"tracks":[],"positions":[[]],"offpath":false,"source":{"file":"talk.md","line":66}}},"detours":{},"instances":{"plugin-file/c1":{"component":"code-steps","slide":"plugin-file","data":"lt-data-plugin-file/c1"},"truth/c1":{"component":"truth-table","slide":"truth","data":null},"stack/src":{"component":"code","slide":"stack","data":"lt-data-stack/src"},"stack/calls":{"component":"call-stack","slide":"stack","data":"lt-data-stack/calls"},"runtime/c1":{"component":"code-steps","slide":"runtime","data":"lt-data-runtime/c1"}},"tours":{},"mainPath":["extending-lattice","plugin-file","truth","stack","runtime","thanks"],"overview":{"nodes":{"extending-lattice":{"x":67.0,"y":21.0,"w":118.0,"h":26.0,"label":"Extending Lattice"},"plugin-file":{"x":232.5,"y":21.0,"w":153.0,"h":26.0,"label":"A plugin is a Python file"},"truth":{"x":427.0,"y":21.0,"w":176.0,"h":26.0,"label":"Truth tables, computed at…"},"stack":{"x":617.5,"y":21.0,"w":145.0,"h":26.0,"label":"The call stack of fib(4)"},"runtime":{"x":801.5,"y":21.0,"w":163.0,"h":26.0,"label":"Its runtime, in a few lin…"},"thanks":{"x":942.5,"y":21.0,"w":59.0,"h":26.0,"label":"Thanks"}},"edges":[{"from":"extending-lattice","to":"plugin-file","kind":"next","path":"M126.1,21.0 C133.8,21.0 141.8,21.0 149.8,21.0 L155.8,21.0"},{"from":"plugin-file","to":"truth","kind":"next","path":"M309.0,21.0 C316.8,21.0 324.8,21.0 332.8,21.0 L338.9,21.0"},{"from":"truth","to":"stack","kind":"next","path":"M515.1,21.0 C522.8,21.0 530.7,21.0 538.4,21.0 L544.8,21.0"},{"from":"stack","to":"runtime","kind":"next","path":"M690.2,21.0 C697.9,21.0 705.9,21.0 713.8,21.0 L719.9,21.0"},{"from":"runtime","to":"thanks","kind":"next","path":"M883.4,21.0 C891.4,21.0 899.2,21.0 906.4,21.0 L912.8,21.0"}],"width":980.0,"height":42.0},"hash":"507830deb6fe46b9"}</script>
 <script type="application/json" id="lt-data-plugin-file/c1">{"steps":[[],[16,17,18,19,20,21],[23,24,25,26,27,28],[29,30,31,32,33,34,35,36,37],[38],[46,47,48,49,50,51,52],[54,55,56,57,58,59,60]]}</script>
 <script type="application/json" id="lt-data-stack/src">{"steps":[[2],[2],[2],[2],[3],[2],[3],[4],[2],[3],[4],[2],[2],[3],[2],[3],[4],[4],[1]]}</script>
 <script type="application/json" id="lt-data-stack/calls">{"frames":{"format":"full","count":19,"frames":[{"stack":[{"call":"fib(4)","note":"running"}],"caption":"Call fib(4)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"running"}],"caption":"Call fib(3)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"running"}],"caption":"Call fib(2)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running"}],"caption":"Call fib(0)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running","ret":0}],"caption":"Base case: fib(0) = 0"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)","ret":1}],"caption":"fib(2) = 1 + 0"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"waiting for fib(3)"},{"call":"fib(3)","note":"got 1, waiting for fib(1)","ret":2}],"caption":"fib(3) = 1 + 1"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"running"}],"caption":"Call fib(2)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running"}],"caption":"Call fib(1)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"waiting for fib(1)"},{"call":"fib(1)","note":"running","ret":1}],"caption":"Base case: fib(1) = 1"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running"}],"caption":"Call fib(0)"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)"},{"call":"fib(0)","note":"running","ret":0}],"caption":"Base case: fib(0) = 0"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)"},{"call":"fib(2)","note":"got 1, waiting for fib(0)","ret":1}],"caption":"fib(2) = 1 + 0"},{"stack":[{"call":"fib(4)","note":"got 2, waiting for fib(2)","ret":3}],"caption":"fib(4) = 2 + 1"},{"stack":[],"caption":"fib(4) = 3 after 18 steps"}]}}</script>
@@ -2040,6 +2062,7 @@ const Lattice = (() => {
       return;
     }
     if (e.target && e.target.closest && e.target.closest("input, textarea, select")) return;
+    if (helpOpen() && e.key === "Escape") { setHelp(false); e.preventDefault(); return; } // spec 7.9
     if (overlayOpen()) {
       if (e.key === "Escape" || (e.key === "o" && $(".lt-overview"))) { closeOverlay(); e.preventDefault(); }
       return;
@@ -2082,6 +2105,50 @@ const Lattice = (() => {
     if (e.target.closest(".lt-pp-timer")) { timerStart = Date.now(); tickTimer(); return; }
     if (e.target.id === "lt-overlay") closeOverlay();
   }
+
+  // ------------------------------------------------------------------ help button (spec 7.9)
+  // With `help_button: true`, a faint "?" in the top right corner opens a card listing the basic keys: the actions of
+  // the deck's gestures with the keys bound to them, the click, and the presenter view. Touch mode has its own "?"
+  // (spec 7.8), so CSS hides this one under `html.lt-touch`. Neither the presenter window (its panel lists every
+  // key) nor a passive window has it; decks without the option have no trace of it in the page.
+  let helpUi = null; // { button, backdrop, card }
+
+  function buildHelpButton() {
+    const shown = []; // the actions of the deck's gestures, in the order the touch help sheet lists them
+    for (const g of Object.keys(GESTURE_LABELS)) {
+      const a = deck.gestures && deck.gestures[g];
+      if (a && a !== "presenter" && !shown.includes(a)) shown.push(a);
+    }
+    const row = (keys, what) => `<tr><td>${keys.map((k) => `<kbd>${esc(keyName(k))}</kbd>`).join(" ")}</td>` +
+      `<td>${esc(what)}</td></tr>`;
+    const rows = shown.filter((a) => (deck.keys[a] || []).length)
+      .map((a) => row(deck.keys[a], capital(ACTION_LABELS[a] || a)));
+    rows.push(row(["click"], "Links, badges, branch options and blocks"));
+    if ((deck.keys.presenter || []).length) {
+      rows.push(row(deck.keys.presenter, "Presenter view and more controls: notes, what comes next, every key"));
+    }
+    document.body.insertAdjacentHTML("beforeend", `
+      <button type="button" class="lt-help-btn" id="lt-help-button" aria-haspopup="dialog" aria-expanded="false"
+        aria-controls="lt-help" aria-label="Keyboard controls" title="Keyboard controls">?</button>
+      <div class="lt-help-backdrop" id="lt-help" hidden>
+        <div class="lt-help-card" role="dialog" aria-label="Keyboard controls">
+          <h2><span>Keyboard controls</span><button type="button" class="lt-help-close">Close</button></h2>
+          <table>${rows.join("")}</table>
+        </div>
+      </div>`);
+    helpUi = { button: $("#lt-help-button"), backdrop: $("#lt-help"), card: $(".lt-help-card") };
+    helpUi.button.addEventListener("click", () => setHelp(helpUi.backdrop.hidden));
+    $(".lt-help-close", helpUi.card).addEventListener("click", () => setHelp(false));
+    // a press outside the card closes it and does nothing else: the backdrop takes it
+    helpUi.backdrop.addEventListener("click", (e) => { if (!helpUi.card.contains(e.target)) setHelp(false); });
+  }
+
+  function setHelp(open) {
+    if (!helpUi) return;
+    helpUi.backdrop.hidden = !open;
+    helpUi.button.setAttribute("aria-expanded", String(open));
+  }
+  const helpOpen = () => !!helpUi && !helpUi.backdrop.hidden;
 
   // ------------------------------------------------------------------ touch input (spec 7.8)
   // On a phone or a tablet (the primary pointer is a finger: no hover, coarse), gestures run the deck's actions
@@ -2151,6 +2218,7 @@ const Lattice = (() => {
       if (touchUi) { setSheet("help", false); setSheet("notes", false); }
       return;
     }
+    setHelp(false); // the touch bar has its own help (spec 7.9)
     if (!touchUi) buildTouchUi();
     let seen = false;
     try { seen = localStorage.getItem(HELP_SEEN) === "1"; } catch (e) { seen = false; }
@@ -2425,6 +2493,7 @@ const Lattice = (() => {
       fetchSidecarNotes();
       window.addEventListener("lattice:notes", fetchSidecarNotes);
     }
+    if (deck.helpButton && !presenter) buildHelpButton(); // before touch mode, which closes it (spec 7.9)
     setupTouch();
     document.documentElement.classList.add("lt-ready");
   }

@@ -138,6 +138,7 @@ def deck_json(deck: Deck, *, data_urls: bool = False) -> dict:
         "keys": keys,
         "gestures": gesture_bindings(deck.meta.gestures),
         "touch": deck.meta.touch,
+        "helpButton": deck.meta.help_button,
         "transitions": transitions,
         "order": list(deck.slides),
         "slides": slides,

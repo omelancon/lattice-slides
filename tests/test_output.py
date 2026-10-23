@@ -450,7 +450,7 @@ def test_panel_at_rejects_other_values(deck):
 
 
 def test_deck_json_touch_and_gestures(deck):
-    """Spec 7.8 and 11.2: the deck JSON carries `touch` and the gestures with an action, the defaults overridden by the
+    """Spec 7.8, 7.9 and 11.2: the deck JSON carries `touch`, `helpButton` and the gestures with an action, the defaults overridden by the
     front matter (`none` or null leaves a gesture without action; the old checkpoint names are aliases)."""
     from lattice.model import DEFAULT_GESTURES
 
@@ -460,17 +460,19 @@ def test_deck_json_touch_and_gestures(deck):
     html = emit_html(build_deck(root, use_cache=False))
     data = deck_json(html)
     assert data["touch"] is True
+    assert data["helpButton"] is False  # off by default (spec 7.9)
     assert data["gestures"] == {g: a for g, a in DEFAULT_GESTURES.items() if a}
     assert 'content="width=device-width, initial-scale=1, viewport-fit=cover"' in html
     root = deck({"other.md": """
         ---
         touch: false
+        help_button: true
         gestures: {double-tap: none, long-press: goto, swipe-up: null, two-finger-swipe-up: skip-forward}
         ---
         # A
     """})
     data = deck_json(emit_html(build_deck(root, use_cache=False)))
-    assert data["touch"] is False
+    assert data["touch"] is False and data["helpButton"] is True
     g = data["gestures"]
     assert "double-tap" not in g and "swipe-up" not in g
     assert g["long-press"] == "goto" and g["two-finger-swipe-up"] == "next-checkpoint" and g["swipe-left"] == "next"
